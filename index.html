@@ -25,7 +25,7 @@
   --glass:rgba(255,255,255,0.04);--glass-hover:rgba(255,255,255,0.065);
   --glass-border:rgba(255,255,255,0.1);--glass-shine:rgba(255,255,255,0.08);
   --radius-xs:4px;--radius-sm:7px;--radius-md:11px;--radius-lg:18px;
-  --brand-rgb:96,165,250;
+  --brand:#60a5fa;--brand-rgb:96,165,250;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 button{font:inherit;color:inherit;background:none;border:none;appearance:none;-webkit-appearance:none;cursor:pointer;}
@@ -55,7 +55,7 @@ h1 span{color:var(--accent);}
 .input-section{background:var(--glass);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);border:.5px solid var(--glass-border);border-radius:var(--radius-lg);padding:1.75rem;margin-bottom:2rem;box-shadow:inset 0 1px 0 var(--glass-shine),0 8px 32px rgba(0,0,0,0.4);display:flex;flex-direction:column;gap:1.5rem;}
 .input-panel{display:none;}.manual-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
 .manual-input{background:var(--bg);border:.5px solid var(--border2);border-radius:6px;padding:10px 14px;font-family:var(--font-body);font-size:13px;color:var(--fg);outline:none;transition:border-color .15s;}
-.manual-input:focus{border-color:var(--accent);}
+.manual-input:focus{border-color:var(--brand);}
 .manual-input.combined{flex:1;background:transparent;border:none;padding:10px 14px 10px 10px;min-width:0;color:var(--text);font-size:14px;}
 .manual-input.combined:focus{border:none;outline:none;}
 .search-bar{display:flex;align-items:stretch;background:rgba(0,0,0,0.35);border:.5px solid var(--glass-border);border-radius:var(--radius-md);flex:1 1 auto;min-width:0;transition:border-color .2s,box-shadow .2s,flex-grow .45s cubic-bezier(.22,1,.36,1),flex-basis .45s cubic-bezier(.22,1,.36,1);overflow:hidden;}
@@ -72,7 +72,7 @@ h1 span{color:var(--accent);}
 .search-bar:focus-within .search-icon{color:rgba(var(--brand-rgb),.9);}
 .search-bar .manual-select{background:var(--bg);border:none;border-left:.5px solid var(--border2);border-radius:0;padding:0 20px 0 14px;font-size:12px;color:var(--muted);cursor:pointer;font-family:var(--font-body);}
 .manual-select.island{background:var(--bg2);border:.5px solid var(--border2);border-radius:var(--radius-md);padding:0 16px;font-size:12px;color:var(--text);cursor:pointer;font-family:var(--font-body);flex-shrink:0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:border-color .15s,color .15s;}
-.manual-select.island:focus-visible{outline:none;border-color:var(--accent);}
+.manual-select.island:focus-visible{outline:none;border-color:var(--brand);}
 .manual-select.island:disabled{opacity:.45;cursor:default;}
 .season-placeholder{color:var(--muted);cursor:default;display:flex;align-items:center;justify-content:center;gap:6px;height:100%;}
 .season-placeholder.loading{color:var(--muted);opacity:.7;}
@@ -88,12 +88,12 @@ h1 span{color:var(--accent);}
 .season-popup.open{display:block;}
 .season-option{padding:7px 10px;font-size:12px;font-family:var(--font-body);color:var(--text);border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap;transition:background .12s,color .12s;}
 .season-option:hover,.season-option.highlighted{background:rgba(255,255,255,.08);}
-.season-option.selected{color:var(--accent);background:rgba(var(--accent-rgb),.12);font-weight:600;}
-#season-placeholder-btn,#season-trigger{background:var(--accent);border:.5px solid var(--accent);border-radius:var(--radius-md);color:#fff;font-weight:600;box-shadow:0 2px 10px rgba(var(--accent-rgb),.35),inset 0 1px 0 rgba(255,255,255,.2);transition:background .15s,border-color .15s,box-shadow .15s,transform .1s,color .15s,opacity .15s;}
-#season-placeholder-btn:not(:disabled):hover,#season-trigger:hover{background:rgba(var(--accent-rgb),.85);box-shadow:0 3px 14px rgba(var(--accent-rgb),.5),inset 0 1px 0 rgba(255,255,255,.25);}
+.season-option.selected{color:var(--brand);background:rgba(var(--brand-rgb),.12);font-weight:600;}
+#season-placeholder-btn,#season-trigger{background:var(--brand);border:.5px solid var(--brand);border-radius:var(--radius-md);color:#fff;font-weight:600;box-shadow:0 2px 10px rgba(var(--brand-rgb),.35),inset 0 1px 0 rgba(255,255,255,.2);transition:background .15s,border-color .15s,box-shadow .15s,transform .1s,color .15s,opacity .15s;}
+#season-placeholder-btn:not(:disabled):hover,#season-trigger:hover{background:rgba(var(--brand-rgb),.85);box-shadow:0 3px 14px rgba(var(--brand-rgb),.5),inset 0 1px 0 rgba(255,255,255,.25);}
 #season-placeholder-btn:not(:disabled):active,#season-trigger:active{transform:scale(.95);}
 #season-placeholder-btn:disabled{background:rgba(255,255,255,.04);border-color:var(--glass-border);color:var(--muted);box-shadow:none;}
-#season-placeholder-btn:focus-visible,#season-trigger:focus-visible,.season-dropdown.open #season-trigger{outline:none;box-shadow:0 0 0 3px rgba(var(--brand-rgb),.4),0 2px 10px rgba(var(--accent-rgb),.35);}
+#season-placeholder-btn:focus-visible,#season-trigger:focus-visible,.season-dropdown.open #season-trigger{outline:none;box-shadow:0 0 0 3px rgba(var(--brand-rgb),.4),0 2px 10px rgba(var(--brand-rgb),.35);}
 .result-panel{flex:0 0 0;min-width:0;opacity:0;overflow:hidden;white-space:nowrap;display:flex;align-items:center;justify-content:flex-end;transition:opacity .4s ease;}
 .result-panel.shown{flex:0 0 auto;opacity:1;padding:0 4px;}
 .player-card-byline{display:flex;align-items:stretch;gap:4px;flex-wrap:wrap;font-family:var(--font-body);}
@@ -223,10 +223,12 @@ h1 span{color:var(--accent);}
 .col-hdr-acs{min-width:30px;}
 .col-hdr-rank{min-width:72px;}
 .party-breakdown{display:flex;flex-direction:column;gap:6px;}
-.pb-dots{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:12px;}
-.pb-dot{width:6px;height:6px;padding:0;border:none;border-radius:50%;background:rgba(255,255,255,.2);cursor:pointer;transition:background .15s,transform .15s;}
+.pb-dots{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:auto;padding-top:14px;min-height:6px;box-sizing:content-box;}
+.pb-dot{width:6px;height:6px;padding:0;border:none;border-radius:50%;background:rgba(255,255,255,.2);cursor:pointer;opacity:1;transform:scale(1);transition:background .15s,transform .24s cubic-bezier(.34,1.56,.64,1),opacity .2s ease;}
 .pb-dot:hover{background:rgba(255,255,255,.4);}
 .pb-dot.active{background:var(--accent);transform:scale(1.35);}
+.pb-dot.dot-hidden{opacity:0;transform:scale(0);pointer-events:none;}
+.pb-dot.active.dot-hidden{transform:scale(0);}
 .pb-section-title{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;font-family:var(--font-display);}
 .pb-row{display:flex;flex-direction:column;justify-content:space-between;gap:10px;padding:13px 14px;flex:none;box-sizing:border-box;background:rgba(255,255,255,.03);border-radius:var(--radius-md);border:.5px solid rgba(255,255,255,.06);}
 .pb-row-head{display:flex;align-items:center;justify-content:space-between;}
@@ -410,7 +412,7 @@ const RANK_ICONS={
   26:"data:image/webp;base64,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",
   27:"data:image/webp;base64,UklGRv4EAABXRUJQVlA4WAoAAAAQAAAAJwAAJwAAQUxQSOQCAAABoG3btmnb6WPNfaxr27Zt27Zt27Zt68lWbNu2k40xe7iQL4iICYCfKTkh+B+GsPqdeEhwIQyP/nAJTmAGVezE4lwAE5CD3F+cBjqzH0KBCPD0C4lJRbAyWh5OEA62/FoIrbbkxdlPs0P8M5jGOqj4WGxFYtIrTwUBXJqBEl2+5KkBqPhsKTh+CermRa52Q7fe2bWuI0zjdIg/giqlkNps6LRmI3buWVUPmRslwFdB4RpIaNBrdpveO+bt27moOPLVgfggyN4QqNp9bvcmd6Mb5h/YMjMryleGeBKkNUlFqfbTBzU6Tn66ZOmhDSPjUKMwxAtQPxcKtJ47tuESqvKp+WvOrO8CUy8rxJ2gWklktOz1+K5ai2mVz8zZ/cH+tU2Q3iwRrgX5KiOh8cCRJzmlzlnyw4WLv35v685lZZCvBsSNgyqFkK/t1G4H+Xmvps9G185+mW8v2rtuBOKqGrgVFC+JlOaDhx0nX2w1eM+sW+RbW3atrIq0yvCYeXEKsrfpf5cRXm40+iSVnx1Y2w7oXheOG0Hat2OBYk3OM6bcPvd3Kj9e0z8O5d/tAuMu+acfOkCKbGOM/PVLWuVbE9NQ8ApbeUn5jq9Xgql2j0pLWv64NjtS9pCtPf1A3syLxNbvUWlp9VhpmNmqvsS4JxUJQ3+hpfJqbaDf9/THWjtfkG2VWuVLnYCa71KtT/ylByTfKfKTMcko9iSVfnxPS+V7DSEVHoUXpSPLUSr9SP2JJJVPFIS0310I8Sut5T/auAOcl6gklWcyI6M0MOJ3/kPZGI4rg3b/QuUqA0HT9xhR1QgvwavBJEZJWv4xFKj6JpWk8uVkiAcYHGSMpOU3zXItfOLOvXv37t2/WRwOvApSHmeMpPKFqiL4dxF4d1DsSyrJGFfB/JsI/DRoE6YlqeyL0L/4HcJkxkhaG64AEwQMdjAcjUbDfC8vJAhB2iMqSeXT6ZAA4KDoquUrVqxYsWRHHTgeAFZQOCD0AQAAsAoAnQEqKAAoAD4xFolDIiEhEcZ8IAMEoAnTKDRAnjbcC7T/QA6Ty/ANCl3QYu5mxzP/9jwAH6klzX2wG2NQCCc+du8gAavXCcBQ1pv0pEDtHBR8Hf8OK7+P3KThgAD+/+Tl7/+zgc//1OEKYKwNjCLbhLKVUMXR6gWLm0m/tcLHiABA55jXeeaUd6hwqPSZG+rbNok2EqCF+Cxtuye8YJvSoi78fDMPCNRv+UzbrcPW/KT6X5oJuz0c1V/xHqJqISBTnojr+POeK4TtsJLdB2hfU7z9eav//9wDKEqfKGMcP8YVnbqv+lSm0S7M9JvIsvC/NeaD+zyggKeBLhRM08kvv5zv8b/9ojv9/aqT8TEKeCNYGP7Zem7MYuPAv4Jy+9/1sug3t/i2HjPvZHOpff/QwSADu/4x/t1/JzjJvlhyv5xxRlNkfFcdh4jwLk70oEz98UMpaiVcKz6ehFsAz9I4mwLSqZ/+0SDjUqKfON80QeuEy54hb6lEUka44ti3nZr5a/iou2o2vpHNi6T8g+Gd+3kDu5AF99BAJJJ3HZs2V3SakGwOuwkAQAt9NZGfgnP81HHj+kxOcZz+I9YBfaRdtlFzPDHw+mf///H3oIzk5TykPe1rfSBwVcku+zWQyAw9Xw3f/jDlr6qpO1FuUR8AAAA="
 };
-function rankIcon(tier,size=16){const src=RANK_ICONS[tier];return src?`<img src="${src}" width="${size}" height="${size}" style="image-rendering:auto;flex-shrink:0;vertical-align:middle;filter:drop-shadow(0 0 5px rgba(var(--accent-rgb),.55))" alt="">`:"";}
+function rankIcon(tier,size=16){const src=RANK_ICONS[tier];return src?`<img src="${src}" width="${size}" height="${size}" style="image-rendering:auto;flex-shrink:0;vertical-align:middle;filter:drop-shadow(0 0 5px rgba(${hexToRgb(rColor(tier))},.55))" alt="">`:"";}
 
 const PARTY_LABELS={1:'Solo',2:'Duo',3:'Trio',4:'Quad',5:'5-Stack'};
 function partyIcon(sz){
@@ -504,7 +506,6 @@ function finalizeHeader(current,seasonLabelText){
   const boxes=[];
   if(current?.tier?.name){
     const color=rColor(current.tier.id);
-    setAccent(color);
     document.body.classList.add('rank-colored');
     const rr=current.rr!=null?` <span class="rr-sub">(${current.rr} RR)</span>`:'';
     boxes.push(`<span class="stat-box">${rankIcon(current.tier.id,16)} <span class="rank-word" style="color:${color}">${current.tier.name}</span>${rr}</span>`);
@@ -1289,23 +1290,55 @@ async function loadAll(prefetchSnapshot=null){
 // Renders `rows` (an array of built elements) into `containerEl` in pages of
 // `pageSize`, with click-through dot indicators in `dotsEl` when there's
 // more than one page. Used by the party-size, player-rank, and lobby-rank breakdowns.
+// Builds/updates the pagination dots for a list, animating dots in and out
+// when the number of pages changes (e.g. toggling K/D modes). If the count is
+// unchanged it just updates which dot is active (no re-animation).
+function syncDots(dotsEl,count,activeIdx,onClick){
+  dotsEl.style.display='flex';
+  const live=[...dotsEl.querySelectorAll('.pb-dot:not(.dot-removing)')];
+  if(live.length===count){
+    live.forEach((d,i)=>d.classList.toggle('active',i===activeIdx));
+    return;
+  }
+  // Fade/scale out the dots that are going away.
+  live.forEach(d=>{
+    d.classList.add('dot-removing','dot-hidden');
+    setTimeout(()=>d.remove(),260);
+  });
+  // Add the new set, entering from hidden on the next frame.
+  const created=[];
+  for(let i=0;i<count;i++){
+    const dot=document.createElement('button');
+    dot.type='button';
+    dot.className='pb-dot dot-hidden'+(i===activeIdx?' active':'');
+    dot.setAttribute('aria-label','Page '+(i+1));
+    const idx=i;
+    dot.addEventListener('click',()=>onClick(idx));
+    dotsEl.appendChild(dot);
+    created.push(dot);
+  }
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    created.forEach(d=>d.classList.remove('dot-hidden'));
+  }));
+}
+
 function paginateRows(containerEl,dotsEl,rows,pageSize,skipHeightLock,afterRender){
   containerEl.innerHTML='';
-  dotsEl.innerHTML='';
   const pageCount=Math.ceil(rows.length/pageSize);
   if(pageCount<=1){
     rows.forEach(r=>containerEl.appendChild(r));
-    dotsEl.style.display='none';
+    // Keep the row in layout (dots animate out) rather than display:none, so
+    // the bottom of the card doesn't shrink when switching to a single page.
+    syncDots(dotsEl,0,0,()=>{});
     if(afterRender)afterRender();
     return;
   }
-  dotsEl.style.display='flex';
   let currentIdx=0;
   function renderPage(idx,animate){
     if(!animate){
       containerEl.innerHTML='';
       rows.slice(idx*pageSize,idx*pageSize+pageSize).forEach(r=>containerEl.appendChild(r));
-      [...dotsEl.children].forEach((d,i)=>d.classList.toggle('active',i===idx));
+      [...dotsEl.querySelectorAll('.pb-dot:not(.dot-removing)')].forEach((d,i)=>d.classList.toggle('active',i===idx));
       currentIdx=idx;
       if(afterRender)afterRender();
       return;
@@ -1313,7 +1346,7 @@ function paginateRows(containerEl,dotsEl,rows,pageSize,skipHeightLock,afterRende
     if(idx===currentIdx)return;
     const dir=idx>currentIdx?1:-1;
     currentIdx=idx;
-    [...dotsEl.children].forEach((d,i)=>d.classList.toggle('active',i===idx));
+    [...dotsEl.querySelectorAll('.pb-dot:not(.dot-removing)')].forEach((d,i)=>d.classList.toggle('active',i===idx));
     containerEl.style.transition='opacity .15s ease,transform .15s ease';
     containerEl.style.opacity='0';
     containerEl.style.transform=`translateX(${dir*-14}px)`;
@@ -1329,14 +1362,7 @@ function paginateRows(containerEl,dotsEl,rows,pageSize,skipHeightLock,afterRende
       containerEl.style.transform='translateX(0)';
     },150);
   }
-  for(let i=0;i<pageCount;i++){
-    const dot=document.createElement('button');
-    dot.type='button';
-    dot.className='pb-dot';
-    dot.setAttribute('aria-label','Page '+(i+1));
-    dot.addEventListener('click',()=>renderPage(i,true));
-    dotsEl.appendChild(dot);
-  }
+  syncDots(dotsEl,pageCount,0,(i)=>renderPage(i,true));
   containerEl.style.minHeight='';
   if(!skipHeightLock)containerEl.style.overflow='hidden';
   renderPage(0,false);
@@ -1360,6 +1386,14 @@ function renderAll(){
   const soloMatches=allMatches.filter(m=>(m.partySize||1)===1);
   const avgs=soloMatches.map(m=>m.avgRank).filter(Boolean);
   const overall=avgs.length?avgs.reduce((a,b)=>a+b,0)/avgs.length:null;
+
+  // Theme the whole UI from the average lobby rank (not the player's own rank).
+  // Fall back to all matches if the player has no solo-queue games.
+  const accentAvg=overall!=null?overall:(()=>{
+    const a=allMatches.map(m=>m.avgRank).filter(Boolean);
+    return a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  })();
+  if(accentAvg!=null)setAccent(rColor(Math.round(accentAvg)));
 
   // Sum raw kills and deaths across all games for an accurate overall K/D
   const statGames=allMatches.filter(m=>m.myStats&&m.myStats.kills!=null&&m.myStats.deaths!=null);
@@ -1495,6 +1529,12 @@ function matchRankRowHeights(){
   const targetListH=TM_PER_PAGE*tmH+(TM_PER_PAGE-1)*TM_LIST_GAP;
   const pbRowH=(targetListH-(PB_PER_PAGE-1)*PB_LIST_GAP)/PB_PER_PAGE;
   ro.querySelectorAll('.pb-row').forEach(r=>{r.style.height=pbRowH+'px';});
+  // Lock the list itself to the full-page height too. Without this, a page
+  // with fewer than 4 rows collapses the container and the pagination dots
+  // ride up with it (paginateRows' own minHeight lock can capture a stale,
+  // pre-inflation measurement on first render — this overrides it with the
+  // correct target every time).
+  ro.style.minHeight=targetListH+'px';
 }
 
 function layoutTopRow(){
@@ -1581,20 +1621,7 @@ function renderTeammates(){
   if(tmSectionH>0) list.style.minHeight=tmSectionH+'px';
 
   const dots=document.getElementById('tm-dots');
-  if(pages>1){
-    dots.style.display='flex';
-    dots.innerHTML='';
-    for(let i=0;i<pages;i++){
-      const dot=document.createElement('button');
-      dot.type='button';
-      dot.className='pb-dot'+(i===tmPage?' active':'');
-      dot.setAttribute('aria-label','Page '+(i+1));
-      dot.addEventListener('click',()=>goToTmPage(i));
-      dots.appendChild(dot);
-    }
-  }else{
-    dots.style.display='none';
-  }
+  syncDots(dots,pages>1?pages:0,tmPage,(i)=>goToTmPage(i));
 
   // Ratchet the list minHeight so switching to a shorter page never moves the
   // pagination nav up. Double-rAF ensures layout is fully settled before measuring.
