@@ -128,7 +128,7 @@ h1 span{color:var(--accent);}
 .hero-sub{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;background:rgba(255,255,255,.04);border:.5px solid var(--glass-border);border-radius:var(--radius-xs);box-shadow:inset 0 1px 0 rgba(255,255,255,.05);}
 .hero-sub-lbl{color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-size:10px;font-weight:700;font-family:var(--font-display);}
 .hero-sub-val{color:var(--text);font-weight:700;font-size:12px;font-variant-numeric:tabular-nums;}
-.card-title{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text);line-height:20px;margin-bottom:14px;border-left:2px solid var(--accent);padding-left:7px;opacity:.85;transition:border-color .5s ease;}
+.card-title{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text);line-height:21px;height:21px;margin-bottom:14px;border-left:2px solid var(--accent);padding-left:7px;opacity:.85;transition:border-color .5s ease;box-sizing:border-box;}
 .rank-breakdown{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;padding-top:12px;border-top:.5px solid var(--border);}
 .rank-overview{display:flex;flex-direction:column;gap:6px;}
 .ro-tier-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
@@ -158,20 +158,21 @@ h1 span{color:var(--accent);}
 .playtime-total-lbl,.playtime-avgday-lbl{font-size:11px;color:var(--muted);font-family:var(--font-body);white-space:nowrap;text-transform:none;letter-spacing:normal;font-weight:400;}
 .playtime-canvas-wrap{position:relative;height:280px;}
 .teammate-list{display:flex;flex-direction:column;gap:6px;}
-.teammate-card{background:var(--glass);border:.5px solid var(--glass-border);border-radius:var(--radius-md);padding:11px 13px;box-shadow:inset 0 1px 0 var(--glass-shine);}
-.tm-row{display:flex;align-items:center;gap:7px;margin-bottom:10px;}
+.teammate-card{background:rgba(255,255,255,.03);border:.5px solid rgba(255,255,255,.06);border-radius:var(--radius-md);padding:11px 13px;display:flex;flex-direction:column;justify-content:space-between;gap:10px;box-sizing:border-box;}
+.tm-row{display:flex;align-items:center;gap:7px;}
 .tm-rank{font-size:11px;font-weight:700;font-family:var(--font-display);color:var(--muted);flex-shrink:0;background:rgba(255,255,255,.05);border:.5px solid var(--glass-border);border-radius:var(--radius-xs);padding:2px 6px;line-height:1.2;font-variant-numeric:tabular-nums;}
 .tm-name{font-size:15px;font-weight:700;font-family:var(--font-body);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;}
 .tm-tag{font-size:11px;color:var(--muted);font-family:var(--font-body);white-space:nowrap;flex-shrink:0;}
 .tm-meta{font-size:10px;color:var(--muted);font-family:var(--font-body);white-space:nowrap;flex-shrink:0;margin-left:auto;padding-left:8px;}
 .tm-meta .tm-meta-wr{font-weight:700;}
-.tm-stats{display:flex;align-items:center;gap:14px;}
-.tm-avg{flex-shrink:0;display:flex;align-items:center;}
-.tm-kd{display:flex;align-items:baseline;gap:5px;}
-.tm-kd-val{font-size:20px;font-weight:800;font-family:var(--font-display);font-variant-numeric:tabular-nums;line-height:1;}
-.tm-acs{display:flex;align-items:baseline;gap:5px;margin-left:auto;}
-.tm-acs-val{font-size:14px;font-weight:700;font-family:var(--font-display);color:var(--muted);font-variant-numeric:tabular-nums;line-height:1;}
-.tm-s-lbl{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);}
+.tm-stats{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.tm-stat{display:flex;flex-direction:column;gap:4px;flex-shrink:0;}
+.tm-stat-val{font-size:18px;font-weight:800;font-family:var(--font-display);font-variant-numeric:tabular-nums;line-height:1;color:var(--text);}
+.tm-stat-lbl{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);}
+.tm-rankstat{display:flex;align-items:center;gap:8px;min-width:0;}
+.tm-rankstat-txt{display:flex;flex-direction:column;gap:3px;line-height:1;min-width:0;}
+.tm-rankstat-name{font-size:14px;font-weight:800;font-family:var(--font-display);color:var(--text);white-space:nowrap;}
+.tm-rankstat-num{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);}
 .tm-pill{background:rgba(255,255,255,0.05);border:.5px solid var(--glass-border);border-radius:var(--radius-sm);padding:7px 12px;flex-shrink:0;display:flex;flex-direction:column;justify-content:center;align-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,0.07);}
 .tm-pill-val{font-size:13px;font-weight:700;font-family:var(--font-body);line-height:1.1;white-space:nowrap;font-variant-numeric:tabular-nums;}
 .tm-pill-lbl{font-size:9px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:2px;white-space:nowrap;}
@@ -591,7 +592,7 @@ let PLAYER='',TAG='',REGION='eu',PLATFORM='pc',TARGET_SEASON='',PUUID='';
 let actStartMs=null; // start-of-act timestamp for the selected season, used for avg hours/day
 let allMatches=[],activeFilter='all',activeRankFilter=null,activePartyFilter=null,mhVisible=PER_PAGE,mhData=[],mhLastDayKey=null;
 let allTeammates=[],tmPage=0,tmSectionH=0;
-const TM_PER_PAGE=5;
+const TM_PER_PAGE=4;
 const chartInstances={};
 
 
@@ -777,6 +778,9 @@ function seasonPopupKeydown(e){
 }
 
 let _prefetchId=0;
+// Bumped each time a new analysis starts; a run whose id no longer matches has
+// been superseded (e.g. the user picked a different act) and must stop writing.
+let _analysisGen=0;
 let _lastPrefetchKey='';
 let _prefetchCache=null; // {key, acctJ, mmrJ} — set once prefetchPlayerActs succeeds
 
@@ -805,12 +809,17 @@ function showSeasonSelect(){
 function onManualInput(){
   const raw=document.getElementById('m-nametag').value.trim();
   const hi=raw.lastIndexOf('#');
-  if(hi<1||hi===raw.length-1){
+  const valid=hi>=1&&hi!==raw.length-1;
+  const key=valid?`${raw.slice(0,hi)}#${raw.slice(hi+1)}`:null;
+  // Return to the "Load acts" state if the name is invalid, or if it's changed
+  // from the acts we already loaded — so the user can load acts for the new name.
+  if(!valid || (_lastPrefetchKey && key!==_lastPrefetchKey)){
     showSeasonIdle();
+    const sel=document.getElementById('m-season');
+    if(sel)sel.value='';
     _prefetchId++;
     _lastPrefetchKey='';
     _prefetchCache=null;
-    return;
   }
 }
 
@@ -1129,6 +1138,7 @@ function extractStats(p,fallbackRounds=null){
 
 /* ── LOAD ─────────────────────────────────────────────────── */
 async function loadAll(prefetchSnapshot=null){
+  const myGen=++_analysisGen; // supersede any in-flight analysis
   setProgress(3);
   try{
     // Step 0: resolve PUUID so we can find the player in historical matches
@@ -1153,6 +1163,7 @@ async function loadAll(prefetchSnapshot=null){
     }catch(_){
       // If account lookup fails, fall back to name+tag matching
     }
+    if(myGen!==_analysisGen)return;
     // Autocorrect the input's casing now that it's resolved (corrected casing
     // on success, the originally-typed value stays as a fallback on failure).
     {
@@ -1232,6 +1243,7 @@ async function loadAll(prefetchSnapshot=null){
       finalSeasonLabel=TARGET_SEASON?getSeasonPreviewLabel():'All';
     }
     // Reveal rank, season, and region together — nothing pops in separately.
+    if(myGen!==_analysisGen)return;
     finalizeHeader(finalCurrent,finalSeasonLabel||getSeasonPreviewLabel());
 
     // Kick off act-start-date lookup in parallel with match pagination below —
@@ -1251,6 +1263,7 @@ async function loadAll(prefetchSnapshot=null){
 
       const url=`${API_BASE}/valorant/v4/matches/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}?mode=competitive&size=${BATCH}&start=${start}`;
       const{j,rem}=await fetchWithRetry(url);
+      if(myGen!==_analysisGen)return; // superseded by a newer act selection
       const data=j.data||[];
       if(!data.length)break;
 
@@ -1265,6 +1278,7 @@ async function loadAll(prefetchSnapshot=null){
       start+=BATCH;
       const delay=rem!==null&&rem<=2?3000:DELAY_MS;
       await sleep(delay);
+      if(myGen!==_analysisGen)return; // superseded during the inter-batch wait
     }
 
     // Deduplicate by match_id
@@ -1275,11 +1289,14 @@ async function loadAll(prefetchSnapshot=null){
       seen.add(id);return true;
     });
     allMatches=deduped.map(processMatch);
+    if(myGen!==_analysisGen)return; // a newer analysis took over
     setProgress(100);
     setTimeout(()=>setProgress(0),600);
     actStartMs=await actStartPromise;
+    if(myGen!==_analysisGen)return;
     renderAll();
   }catch(e){
+    if(myGen!==_analysisGen)return; // superseded run — swallow its error
     setStatus('');
     document.getElementById('error-container').innerHTML=
       `<div class="error-box">Error: ${e.message}<br><br>Check browser console (F12) for details.</div>`;
@@ -1519,22 +1536,26 @@ function renderAll(){
 // of 5 teammate cards (plus their 4 gaps) in the card to the left. Measured
 // from a real teammate card so it stays correct regardless of font rendering.
 const TM_LIST_GAP=6, PB_LIST_GAP=6, PB_PER_PAGE=4;
+// Makes the duo cards and the K/D rows exactly one height so the two columns
+// align row-for-row. Clears every item first (so no stale height skews the
+// measurement), takes the tallest natural item across BOTH columns, then stamps
+// that single height on all of them.
 function matchRankRowHeights(){
-  const tmCard=document.querySelector('#teammate-list .teammate-card');
+  const list=document.getElementById('teammate-list');
   const ro=document.getElementById('sg-rank-overview');
-  if(!tmCard||!ro)return;
-  const tmH=tmCard.getBoundingClientRect().height;
-  if(!tmH)return;
-  // 5 teammate cards + 4 gaps == 4 pb rows + 3 gaps  →  solve for pb row height
-  const targetListH=TM_PER_PAGE*tmH+(TM_PER_PAGE-1)*TM_LIST_GAP;
-  const pbRowH=(targetListH-(PB_PER_PAGE-1)*PB_LIST_GAP)/PB_PER_PAGE;
-  ro.querySelectorAll('.pb-row').forEach(r=>{r.style.height=pbRowH+'px';});
-  // Lock the list itself to the full-page height too. Without this, a page
-  // with fewer than 4 rows collapses the container and the pagination dots
-  // ride up with it (paginateRows' own minHeight lock can capture a stale,
-  // pre-inflation measurement on first render — this overrides it with the
-  // correct target every time).
-  ro.style.minHeight=targetListH+'px';
+  const cards=list?[...list.querySelectorAll('.teammate-card')]:[];
+  const rows=ro?[...ro.querySelectorAll('.pb-row')]:[];
+  const all=cards.concat(rows);
+  if(!all.length)return;
+  all.forEach(el=>{el.style.height='';});
+  let itemH=0;
+  all.forEach(el=>{const h=el.getBoundingClientRect().height;if(h>itemH)itemH=h;});
+  itemH=Math.ceil(itemH);
+  if(!itemH)return;
+  all.forEach(el=>{el.style.height=itemH+'px';});
+  const listH=PB_PER_PAGE*itemH+(PB_PER_PAGE-1)*PB_LIST_GAP;
+  if(ro)ro.style.minHeight=listH+'px';
+  if(list)list.style.minHeight=listH+'px';
 }
 
 function layoutTopRow(){
@@ -1606,29 +1627,27 @@ function renderTeammates(){
         <span class="tm-meta">${t.games} games · <span class="tm-meta-wr" style="color:${wr>=50?'#22c55e':'#ef4444'}">${wr}%</span> WR</span>
       </div>
       <div class="tm-stats">
-        <span class="tm-avg" title="${avgRankName}${avgRankRaw!=null?` (${avgRankRaw.toFixed(1)})`:''}">${avgRankTier!=null?rankIcon(avgRankTier,32):'<span class="tm-acs-val">—</span>'}</span>
-        <div class="tm-kd"><span class="tm-kd-val ${kdClass}">${kd}</span><span class="tm-s-lbl">K/D</span></div>
-        <div class="tm-acs"><span class="tm-acs-val">${t.acsCount>0?Math.round(t.acsSum/t.acsCount):'—'}</span><span class="tm-s-lbl">ACS</span></div>
+        <div class="tm-rankstat" title="Avg Lobby: ${avgRankName}${avgRankRaw!=null?` (${avgRankRaw.toFixed(1)})`:''}">
+          ${avgRankTier!=null?rankIcon(avgRankTier,30):''}
+          <div class="tm-rankstat-txt">
+            <span class="tm-rankstat-name">${avgRankName}</span>
+            <span class="tm-rankstat-num">${avgRankRaw!=null?'≈ '+avgRankRaw.toFixed(1):'—'}</span>
+          </div>
+        </div>
+        <div class="tm-stat"><span class="tm-stat-val ${kdClass}">${kd}</span><span class="tm-stat-lbl">K/D</span></div>
+        <div class="tm-stat"><span class="tm-stat-val">${t.acsCount>0?Math.round(t.acsSum/t.acsCount):'—'}</span><span class="tm-stat-lbl">ACS</span></div>
       </div>
     `;
 
     list.appendChild(row);
   });
 
-  // Pin the list height to its full-page size so the nav never moves up when
-  // a page has fewer than TM_PER_PAGE rows. tmSectionH doubles as the list
-  // height floor here — measured from the first full render in the rAF below.
-  if(tmSectionH>0) list.style.minHeight=tmSectionH+'px';
-
   const dots=document.getElementById('tm-dots');
   syncDots(dots,pages>1?pages:0,tmPage,(i)=>goToTmPage(i));
 
-  // Ratchet the list minHeight so switching to a shorter page never moves the
-  // pagination nav up. Double-rAF ensures layout is fully settled before measuring.
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{
-    tmSectionH=Math.max(tmSectionH,list.offsetHeight);
-    list.style.minHeight=tmSectionH+'px';
-  }));
+  // Size the duo cards to match the K/D rows and lock the list height so the
+  // pagination nav never moves up on shorter pages. Deferred so layout settles.
+  requestAnimationFrame(()=>requestAnimationFrame(matchRankRowHeights));
 }
 
 function goToTmPage(idx){
