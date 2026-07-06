@@ -227,11 +227,18 @@ h1 span{color:var(--accent);}
 .col-hdr-rank{min-width:72px;}
 .party-breakdown{display:flex;flex-direction:column;gap:6px;}
 .pb-dots{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:auto;padding-top:14px;min-height:6px;box-sizing:content-box;}
-.card-nav{position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:22px;height:46px;display:flex;align-items:center;justify-content:center;padding:0;background:rgba(255,255,255,.05);border:.5px solid var(--glass-border);border-radius:var(--radius-sm);color:var(--muted);font-size:18px;line-height:1;font-family:var(--font-display);cursor:pointer;opacity:0;pointer-events:none;transition:opacity .15s,background .15s,color .15s;}
-.card-nav.show{opacity:.5;pointer-events:auto;}
-.card-nav.show:hover{opacity:1;background:rgba(255,255,255,.1);color:var(--text);}
-.card-nav-prev{left:5px;}
-.card-nav-next{right:5px;}
+/* Prev/next arrows live in a centered bar alongside the pagination dots at the
+   bottom of the card: ‹ • • ›. This keeps them clear of the card content
+   entirely, regardless of how many rows the card has. */
+.pb-nav{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:auto;padding-top:14px;}
+.pb-nav .pb-dots{margin-top:0;padding-top:0;}
+.card-nav{display:none;align-items:center;justify-content:center;width:20px;height:20px;padding:0;border:none;font-size:0;color:var(--muted);cursor:pointer;background:rgba(255,255,255,.06);border-radius:var(--radius-xs);transition:color .15s,background .15s;}
+.card-nav.show{display:inline-flex;}
+.card-nav::before{content:'';display:block;width:6px;height:6px;border:solid currentColor;border-width:0 1.5px 1.5px 0;}
+.card-nav-prev::before{transform:rotate(135deg);margin-left:2px;}
+.card-nav-next::before{transform:rotate(-45deg);margin-right:2px;}
+.card-nav:hover{color:var(--text);background:rgba(255,255,255,.11);}
+.card-nav:active{transform:scale(.88);}
 .pb-dot{width:6px;height:6px;padding:0;border:none;border-radius:50%;background:rgba(255,255,255,.2);cursor:pointer;opacity:1;transform:scale(1);transition:background .15s,transform .24s cubic-bezier(.34,1.56,.64,1),opacity .2s ease;}
 .pb-dot:hover{background:rgba(255,255,255,.4);}
 .pb-dot.active{background:var(--accent);transform:scale(1.35);}
@@ -337,15 +344,15 @@ h1 span{color:var(--accent);}
       <!-- Breakdown cards -->
       <div class="summary-row top-row" id="top-row">
         <div class="s-card teammates-section" id="teammates-section" style="display:none">
-          <button class="card-nav card-nav-prev" aria-label="Previous page">‹</button>
-          <button class="card-nav card-nav-next" aria-label="Next page">›</button>
           <div class="card-title">Duos</div>
           <div class="teammate-list" id="teammate-list"></div>
-          <div class="pb-dots" id="tm-dots" style="display:none;"></div>
+          <div class="pb-nav">
+            <button class="card-nav card-nav-prev" aria-label="Previous page">‹</button>
+            <div class="pb-dots" id="tm-dots" style="display:none;"></div>
+            <button class="card-nav card-nav-next" aria-label="Next page">›</button>
+          </div>
         </div>
         <div class="s-card" id="sg-rank-card" style="display:none">
-          <button class="card-nav card-nav-prev" aria-label="Previous page">‹</button>
-          <button class="card-nav card-nav-next" aria-label="Next page">›</button>
           <div class="card-title-row">
             <div class="card-title">K/D By</div>
             <div class="rank-mode-toggle" id="rank-mode-toggle">
@@ -355,7 +362,11 @@ h1 span{color:var(--accent);}
             </div>
           </div>
           <div class="rank-overview" id="sg-rank-overview"></div>
-          <div class="pb-dots" id="sg-rank-dots" style="display:none"></div>
+          <div class="pb-nav">
+            <button class="card-nav card-nav-prev" aria-label="Previous page">‹</button>
+            <div class="pb-dots" id="sg-rank-dots" style="display:none"></div>
+            <button class="card-nav card-nav-next" aria-label="Next page">›</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1307,9 +1318,9 @@ async function loadAll(prefetchSnapshot=null){
 // Builds/updates the pagination dots for a list, animating dots in and out
 // when the number of pages changes (e.g. toggling K/D modes). If the count is
 // unchanged it just updates which dot is active (no re-animation).
-// Drives the card's side prev/next arrows off its pagination dots — clicking an
-// arrow just triggers the appropriate dot (reusing its animated page change),
-// and the arrows show only when there's more than one page. Wraps around.
+// Drives the card's prev/next arrows (in the bottom bar beside the dots) off its
+// pagination dots — clicking an arrow just triggers the appropriate dot (reusing
+// its animated page change), and the arrows show only when there's more than one page. Wraps around.
 function updateCardNav(dotsEl,count){
   const card=dotsEl.closest('.s-card');
   if(!card)return;
