@@ -159,20 +159,21 @@ h1 span{color:var(--accent);}
 .playtime-canvas-wrap{position:relative;height:280px;}
 .teammate-list{display:flex;flex-direction:column;gap:6px;}
 .teammate-card{background:rgba(255,255,255,.03);border:.5px solid rgba(255,255,255,.06);border-radius:var(--radius-md);padding:11px 13px;display:flex;flex-direction:column;justify-content:space-between;gap:10px;box-sizing:border-box;}
-.tm-row{display:flex;align-items:center;gap:7px;}
+.tm-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.tm-identity{display:flex;align-items:center;gap:6px;min-width:0;}
 .tm-rank{font-size:11px;font-weight:700;font-family:var(--font-display);color:var(--muted);flex-shrink:0;background:rgba(255,255,255,.05);border:.5px solid var(--glass-border);border-radius:var(--radius-xs);padding:2px 6px;line-height:1.2;font-variant-numeric:tabular-nums;}
-.tm-name{font-size:15px;font-weight:700;font-family:var(--font-body);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;}
+.tm-name{font-size:16px;font-weight:700;font-family:var(--font-display);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;}
 .tm-tag{font-size:11px;color:var(--muted);font-family:var(--font-body);white-space:nowrap;flex-shrink:0;}
-.tm-meta{font-size:10px;color:var(--muted);font-family:var(--font-body);white-space:nowrap;flex-shrink:0;margin-left:auto;padding-left:8px;}
-.tm-meta .tm-meta-wr{font-weight:700;}
-.tm-stats{display:flex;align-items:center;justify-content:space-between;gap:12px;}
-.tm-stat{display:flex;flex-direction:column;gap:4px;flex-shrink:0;}
-.tm-stat-val{font-size:18px;font-weight:800;font-family:var(--font-display);font-variant-numeric:tabular-nums;line-height:1;color:var(--text);}
-.tm-stat-lbl{font-size:9px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);}
-.tm-rankstat{display:flex;align-items:center;gap:8px;min-width:0;}
-.tm-rankstat-txt{display:flex;flex-direction:column;gap:3px;line-height:1;min-width:0;}
-.tm-rankstat-name{font-size:14px;font-weight:800;font-family:var(--font-display);color:var(--text);white-space:nowrap;}
-.tm-rankstat-num{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);}
+.tm-count{font-size:11px;color:var(--muted);font-family:var(--font-body);white-space:nowrap;flex-shrink:0;}
+.tm-count .tm-wr{font-weight:700;}
+.tm-stats{display:flex;gap:0;align-items:flex-end;}
+.tm-stat{display:flex;flex-direction:column;gap:5px;flex:1;min-width:0;}
+.tm-stat-lbl{font-size:9px;font-weight:600;color:var(--muted);font-family:var(--font-display);letter-spacing:.1em;text-transform:uppercase;}
+.tm-stat-val{font-size:19px;font-weight:800;font-family:var(--font-display);color:var(--text);line-height:1.1;font-variant-numeric:tabular-nums;}
+.tm-stat-rank{flex:1.8;align-items:flex-end;text-align:right;}
+.tm-stat-rank-val{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-width:0;}
+.tm-stat-rank-name{font-size:14px;font-weight:800;font-family:var(--font-display);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;line-height:1.1;}
+.tm-stat-rank-num{font-size:14px;font-weight:800;color:var(--text);font-family:var(--font-display);font-variant-numeric:tabular-nums;flex-shrink:0;line-height:1.1;}
 .tm-pill{background:rgba(255,255,255,0.05);border:.5px solid var(--glass-border);border-radius:var(--radius-sm);padding:7px 12px;flex-shrink:0;display:flex;flex-direction:column;justify-content:center;align-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,0.07);}
 .tm-pill-val{font-size:13px;font-weight:700;font-family:var(--font-body);line-height:1.1;white-space:nowrap;font-variant-numeric:tabular-nums;}
 .tm-pill-lbl{font-size:9px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:2px;white-space:nowrap;}
@@ -210,6 +211,7 @@ h1 span{color:var(--accent);}
 .m-badge{text-align:right;flex-shrink:0;width:var(--match-badge-w,140px);}
 .m-badge-lbl{font-size:10px;color:var(--muted);font-family:var(--font-body);line-height:1;}
 .m-badge-val{font-size:13px;font-weight:700;line-height:1.3;font-variant-numeric:tabular-nums;}
+.m-badge-val.m-badge-settling{color:var(--muted);font-weight:600;font-style:italic;font-size:11px;}
 
 
 .my-stat{font-family:var(--font-body);font-size:12px;}
@@ -225,6 +227,11 @@ h1 span{color:var(--accent);}
 .col-hdr-rank{min-width:72px;}
 .party-breakdown{display:flex;flex-direction:column;gap:6px;}
 .pb-dots{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:auto;padding-top:14px;min-height:6px;box-sizing:content-box;}
+.card-nav{position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:22px;height:46px;display:flex;align-items:center;justify-content:center;padding:0;background:rgba(255,255,255,.05);border:.5px solid var(--glass-border);border-radius:var(--radius-sm);color:var(--muted);font-size:18px;line-height:1;font-family:var(--font-display);cursor:pointer;opacity:0;pointer-events:none;transition:opacity .15s,background .15s,color .15s;}
+.card-nav.show{opacity:.5;pointer-events:auto;}
+.card-nav.show:hover{opacity:1;background:rgba(255,255,255,.1);color:var(--text);}
+.card-nav-prev{left:5px;}
+.card-nav-next{right:5px;}
 .pb-dot{width:6px;height:6px;padding:0;border:none;border-radius:50%;background:rgba(255,255,255,.2);cursor:pointer;opacity:1;transform:scale(1);transition:background .15s,transform .24s cubic-bezier(.34,1.56,.64,1),opacity .2s ease;}
 .pb-dot:hover{background:rgba(255,255,255,.4);}
 .pb-dot.active{background:var(--accent);transform:scale(1.35);}
@@ -330,11 +337,15 @@ h1 span{color:var(--accent);}
       <!-- Breakdown cards -->
       <div class="summary-row top-row" id="top-row">
         <div class="s-card teammates-section" id="teammates-section" style="display:none">
+          <button class="card-nav card-nav-prev" aria-label="Previous page">‹</button>
+          <button class="card-nav card-nav-next" aria-label="Next page">›</button>
           <div class="card-title">Duos</div>
           <div class="teammate-list" id="teammate-list"></div>
           <div class="pb-dots" id="tm-dots" style="display:none;"></div>
         </div>
         <div class="s-card" id="sg-rank-card" style="display:none">
+          <button class="card-nav card-nav-prev" aria-label="Previous page">‹</button>
+          <button class="card-nav card-nav-next" aria-label="Next page">›</button>
           <div class="card-title-row">
             <div class="card-title">K/D By</div>
             <div class="rank-mode-toggle" id="rank-mode-toggle">
@@ -435,19 +446,6 @@ const DELAY_MS  = 1100;
 // Looks up when a given act (season UUID) started, used to compute avg
 // hours/day in the Playtime card. Best-effort — returns null on any failure
 // (network, missing field, no UUID) so callers can fall back gracefully.
-async function fetchActStartMs(seasonUuid){
-  if(!seasonUuid)return null;
-  try{
-    const res=await fetch(`https://valorant-api.com/v1/seasons/${seasonUuid}`);
-    if(!res.ok)return null;
-    const j=await res.json();
-    const start=j?.data?.startTime;
-    return start?new Date(start).getTime():null;
-  }catch(_){
-    return null;
-  }
-}
-
 function parseShort(short){
   const m=(short||'').match(/^e(\d+)a(\d+)$/i);
   return m?{ep:parseInt(m[1],10),act:parseInt(m[2],10)}:null;
@@ -589,7 +587,6 @@ function rClass(n){
 
 /* ── STATE ──────────────────────────────────────────────── */
 let PLAYER='',TAG='',REGION='eu',PLATFORM='pc',TARGET_SEASON='',PUUID='';
-let actStartMs=null; // start-of-act timestamp for the selected season, used for avg hours/day
 let allMatches=[],activeFilter='all',activeRankFilter=null,activePartyFilter=null,mhVisible=PER_PAGE,mhData=[],mhLastDayKey=null;
 let allTeammates=[],tmPage=0,tmSectionH=0;
 const TM_PER_PAGE=4;
@@ -934,7 +931,7 @@ function runAnalysis(){
   playerRegion='eu'; // overridden by account lookup
   playerPlatform='pc';
   playerSeason=document.getElementById('m-season').value;
-  PLAYER=playerName;TAG=playerTag;REGION=playerRegion;PLATFORM=playerPlatform;TARGET_SEASON=playerSeason;PUUID='';actStartMs=null;
+  PLAYER=playerName;TAG=playerTag;REGION=playerRegion;PLATFORM=playerPlatform;TARGET_SEASON=playerSeason;PUUID='';
   setAccent('#3b82f6');
   document.body.classList.remove('rank-colored');
   document.getElementById('results-section').style.display='block';
@@ -962,7 +959,8 @@ function runAnalysis(){
   loadAll(prefetchSnapshot);
 }
 
-/* ── API ─────────────────────────────────────────────────── */
+const MIN_RATED=7; // strict: a match needs at least this many rated players (of 10) for its lobby rank to count
+
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
 async function fetchWithRetry(url,_attempt=0){
@@ -1055,9 +1053,14 @@ function processMatch(m){
     ?startedAtDate.toLocaleDateString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})
     :'';
 
-  // Avg lobby rank
+  // Avg lobby rank — averaged over rated players only (Iron 1 = tier 3+).
+  // Strict quality gate: if fewer than MIN_RATED of the lobby are rated, too much
+  // of the lobby is unranked to trust the average, so drop it.
   const rankNums=players.map(p=>p.tier?.id??p.currenttier??0).filter(n=>n>=3);
-  const avgRank=rankNums.length?rankNums.reduce((a,b)=>a+b,0)/rankNums.length:null;
+  const ratedCount=rankNums.length;
+  const rawAvg=ratedCount?rankNums.reduce((a,b)=>a+b,0)/ratedCount:null;
+  const avgRank=ratedCount>=MIN_RATED?rawAvg:null;
+  const lowRated=rawAvg!=null&&ratedCount<MIN_RATED;
 
   // Total rounds in the match — same for all players, use as fallback for rounds_played
   const totalRounds=(myR!=null&&opR!=null)?myR+opR:null;
@@ -1104,7 +1107,7 @@ function processMatch(m){
   const myTierName=me?.tier?.patched??me?.currenttier_patched??rName(myTierId);
   // v4 match player object uses `rr`; v3 used `ranking_in_tier` — check both
   const myRR=null; // v4 match endpoint doesn't include per-match RR — fetched separately via mmr-history
-  return{mapName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,myStats,players:playersOut,myTierId,myTierName,myRR,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids};
+  return{mapName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids};
 }
 
 function extractStats(p,fallbackRounds=null){
@@ -1246,10 +1249,6 @@ async function loadAll(prefetchSnapshot=null){
     if(myGen!==_analysisGen)return;
     finalizeHeader(finalCurrent,finalSeasonLabel||getSeasonPreviewLabel());
 
-    // Kick off act-start-date lookup in parallel with match pagination below —
-    // it's only needed later, by renderPlaytime(), so no need to block on it here.
-    const actStartPromise=fetchActStartMs(TARGET_SEASON);
-
     // Step 2: paginate match history, stopping when we hit targetCount
     let collected=[];
 
@@ -1292,8 +1291,6 @@ async function loadAll(prefetchSnapshot=null){
     if(myGen!==_analysisGen)return; // a newer analysis took over
     setProgress(100);
     setTimeout(()=>setProgress(0),600);
-    actStartMs=await actStartPromise;
-    if(myGen!==_analysisGen)return;
     renderAll();
   }catch(e){
     if(myGen!==_analysisGen)return; // superseded run — swallow its error
@@ -1310,8 +1307,30 @@ async function loadAll(prefetchSnapshot=null){
 // Builds/updates the pagination dots for a list, animating dots in and out
 // when the number of pages changes (e.g. toggling K/D modes). If the count is
 // unchanged it just updates which dot is active (no re-animation).
+// Drives the card's side prev/next arrows off its pagination dots — clicking an
+// arrow just triggers the appropriate dot (reusing its animated page change),
+// and the arrows show only when there's more than one page. Wraps around.
+function updateCardNav(dotsEl,count){
+  const card=dotsEl.closest('.s-card');
+  if(!card)return;
+  const prev=card.querySelector('.card-nav-prev'),next=card.querySelector('.card-nav-next');
+  if(!prev||!next)return;
+  const go=(delta)=>{
+    const dots=[...dotsEl.querySelectorAll('.pb-dot:not(.dot-removing)')];
+    if(dots.length<2)return;
+    const cur=Math.max(0,dots.findIndex(d=>d.classList.contains('active')));
+    dots[(cur+delta+dots.length)%dots.length]?.click();
+  };
+  prev.onclick=()=>go(-1);
+  next.onclick=()=>go(1);
+  const show=count>1;
+  prev.classList.toggle('show',show);
+  next.classList.toggle('show',show);
+}
+
 function syncDots(dotsEl,count,activeIdx,onClick){
   dotsEl.style.display='flex';
+  updateCardNav(dotsEl,count);
   const live=[...dotsEl.querySelectorAll('.pb-dot:not(.dot-removing)')];
   if(live.length===count){
     live.forEach((d,i)=>d.classList.toggle('active',i===activeIdx));
@@ -1571,6 +1590,9 @@ function buildTeammates(){
   const tmap={};
   allMatches.forEach(m=>{
     if(!m.myStats)return;
+    // Skip full 5-stacks — a premade team of 5 isn't a "duo"; those teammates
+    // shouldn't count toward the most-played-with list.
+    if((m.partySize||1)>=5)return;
     const myTeam=m.players.filter(p=>p.team_id===m.players.find(q=>
       PUUID?q.puuid===PUUID:q.name?.toLowerCase()===PLAYER.toLowerCase()
     )?.team_id);
@@ -1620,22 +1642,21 @@ function renderTeammates(){
     row.className='teammate-card';
     const avgRankName=avgRankRaw!=null?avgLabel(avgRankRaw):'Unranked';
     row.innerHTML=`
-      <div class="tm-row">
-        <span class="tm-rank">#${globalRank}</span>
-        <span class="tm-name">${t.name}</span>
-        <span class="tm-tag">#${t.tag}</span>
-        <span class="tm-meta">${t.games} games · <span class="tm-meta-wr" style="color:${wr>=50?'#22c55e':'#ef4444'}">${wr}%</span> WR</span>
+      <div class="tm-head">
+        <div class="tm-identity">
+          <span class="tm-rank">#${globalRank}</span>
+          <span class="tm-name">${t.name}</span>
+          <span class="tm-tag">#${t.tag}</span>
+        </div>
+        <span class="tm-count">${t.games} games · <span class="tm-wr" style="color:${wr>=50?'#22c55e':'#ef4444'}">${wr}%</span> WR</span>
       </div>
       <div class="tm-stats">
-        <div class="tm-rankstat" title="Avg Lobby: ${avgRankName}${avgRankRaw!=null?` (${avgRankRaw.toFixed(1)})`:''}">
-          ${avgRankTier!=null?rankIcon(avgRankTier,30):''}
-          <div class="tm-rankstat-txt">
-            <span class="tm-rankstat-name">${avgRankName}</span>
-            <span class="tm-rankstat-num">${avgRankRaw!=null?'≈ '+avgRankRaw.toFixed(1):'—'}</span>
-          </div>
+        <div class="tm-stat"><div class="tm-stat-lbl">K/D</div><div class="tm-stat-val ${kdClass}">${kd}</div></div>
+        <div class="tm-stat"><div class="tm-stat-lbl">ACS</div><div class="tm-stat-val">${t.acsCount>0?Math.round(t.acsSum/t.acsCount):'—'}</div></div>
+        <div class="tm-stat tm-stat-rank">
+          <div class="tm-stat-lbl">Avg Lobby</div>
+          <div class="tm-stat-rank-val">${avgRankTier!=null?rankIcon(avgRankTier,22):''}<span class="tm-stat-rank-name">${avgRankName}</span>${avgRankRaw!=null?`<span class="tm-stat-rank-num">(${avgRankRaw.toFixed(1)})</span>`:''}</div>
         </div>
-        <div class="tm-stat"><span class="tm-stat-val ${kdClass}">${kd}</span><span class="tm-stat-lbl">K/D</span></div>
-        <div class="tm-stat"><span class="tm-stat-val">${t.acsCount>0?Math.round(t.acsSum/t.acsCount):'—'}</span><span class="tm-stat-lbl">ACS</span></div>
       </div>
     `;
 
@@ -1720,12 +1741,13 @@ function renderPlaytime(){
   const totalH=Math.floor(totalMs/3600000);
   const totalM=Math.round((totalMs%3600000)/60000);
 
-  // Average hours per day since the act started (falls back to the match
-  // history's own span if we couldn't resolve an act start date — e.g. "All
-  // acts" is selected, or the lookup failed).
-  const avgDayStartMs=actStartMs!=null&&actStartMs<=maxMs?actStartMs:minMs;
-  const spanDaysInclusive=Math.max(1,Math.round((maxMs-avgDayStartMs)/86400000)+1);
-  const avgHoursPerDay=(totalMs/3600000/spanDaysInclusive).toFixed(1);
+  // Average hours per day, counting only days the player actually played
+  // (idle days don't dilute the average).
+  const daysPlayed=new Set(withDur.map(m=>{
+    const d=new Date(m.startedAtMs);
+    return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime();
+  })).size;
+  const avgHoursPerDay=(totalMs/3600000/Math.max(1,daysPlayed)).toFixed(1);
 
   const card=document.createElement('div');
   card.className='chart-container';
@@ -1733,7 +1755,7 @@ function renderPlaytime(){
     <div class="card-title playtime-title">Playtime</div>
     <div class="playtime-head">
       <div class="playtime-total"><span class="playtime-total-val">${totalH}h ${totalM}m</span><span class="playtime-total-lbl">across ${withDur.length} match${withDur.length===1?'':'es'}</span></div>
-      <div class="playtime-avgday"><span class="playtime-avgday-val">${avgHoursPerDay}h</span><span class="playtime-avgday-lbl">per day avg</span></div>
+      <div class="playtime-avgday"><span class="playtime-avgday-val">${avgHoursPerDay}h</span><span class="playtime-avgday-lbl">per day played</span></div>
     </div>
     <div class="playtime-canvas-wrap"><canvas></canvas></div>
   `;
@@ -2086,7 +2108,10 @@ function buildMatchCard(m){
   const rt=won===true?'Win':won===false?'Loss':'Draw';
   const score=(myR!=null&&opR!=null)?`${myR}–${opR}`:'—';
   const rankTier=avgRank!=null?Math.round(avgRank):null;
-  const rankLabel=avgRank!=null?`${avgLabelShort(avgRank)} (${avgRank.toFixed(1)})`:'—';
+  const rankLabel=avgRank!=null?`${avgLabelShort(avgRank)} (${avgRank.toFixed(1)})`:(m.lowRated?'unrated lobby':'—');
+  const rankTitle=m.lowRated
+    ? `Only ${m.ratedCount} of the lobby were rated — too many unranked, excluded from stats`
+    : (avgRank!=null?`Avg lobby rank (${avgRank.toFixed(1)})`:'');
   const rankColorClass=rankTier!=null?rClass(rankTier):'';
 
   const myPuuid=PUUID||null;
@@ -2124,9 +2149,9 @@ function buildMatchCard(m){
         ${mvpTag}
       </div>
       <div class="mc-right">
-        <div class="m-badge">
+        <div class="m-badge"${rankTitle?` title="${rankTitle}"`:''}>
           <div class="m-badge-lbl">avg lobby</div>
-          <div class="m-badge-val ${rankColorClass}">${rankLabel}</div>
+          <div class="m-badge-val ${rankColorClass}${m.lowRated?' m-badge-settling':''}">${rankLabel}</div>
         </div>
         <span class="match-date">${startedAt}</span>
       </div>
