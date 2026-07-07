@@ -479,6 +479,11 @@ function partyIcon(sz){
 //       https://docs.henrikdev.xyz/valorant/changes/v4.5.0  (ratelimit headers)
 //       https://docs.henrikdev.xyz/valorant/error-codes     (429 = code 0)
 const API_BASE  = '/api';
+// Matchlist page size. Fixed at 10: HAR testing showed HenrikDev's v4 matches
+// endpoint caps the response at 10 regardless of a larger `size` param (with
+// mode=competitive), so requesting more is a silent no-op. (We previously tried
+// dynamic sizing up to 50 — the server returned 10 every time, confirming the
+// cap — so it was removed as dead complexity.)
 const BATCH     = 10;
 const PER_PAGE  = 15;
 
@@ -514,6 +519,10 @@ const GLIDE_CAP_MS = 8000;
 // Absolute ceiling on any single wait, so a bad reset value or a stuck window
 // can never hang the UI indefinitely.
 const MAX_WAIT_MS = 65000;
+// Minimum wait after a 429, so we can never retry into the same just-exhausted
+// window microseconds later (which caused back-to-back 429s). Even if every
+// header says "retry now," we hold at least this long before trying again.
+const RL_WAIT_FLOOR_MS = 2500;
 
 // Parses an API short code like "e11a4" into {ep:11, act:4}. Returns null if
 // it doesn't match the expected pattern.
@@ -1040,12 +1049,17 @@ function runAnalysis(){
 // its call sites are tagged "TEMP DEBUG".
 let __debugRunStart=0;   // ms timestamp when the current run began
 let __debugRunEnd=0;     // ms timestamp when it finished (0 while in progress)
-let __debugReqCount=0;   // API requests made this run
+let __debugReqCount=0;   // API requests made this run (kept for context)
+let __debugQuotaUsed=0;  // total quota UNITS consumed this run
 function __debugResetRate(){
-  __debugRunStart=Date.now();__debugRunEnd=0;__debugReqCount=0;
+  __debugRunStart=Date.now();__debugRunEnd=0;__debugReqCount=0;__debugQuotaUsed=0;
   const el=document.getElementById('debug-rate');if(el)el.style.display='none';
 }
 function __debugTrackReq(){__debugReqCount++;}            // call per API request
+// Add the quota units a single response actually consumed (its `remaining` drop).
+// Skips rollovers/unknowns (drop null) so we only sum real spend, not window
+// resets. This is what makes the rate meaningful — requests cost 1–11 units each.
+function __debugTrackCost(drop){ if(drop!=null&&drop>0)__debugQuotaUsed+=drop; }
 function __debugFinishRun(){__debugRunEnd=Date.now();__debugShowQuota({});} // freeze timer + repaint
 // Elapsed seconds for the run (live while running, frozen once finished).
 function __debugElapsedS(){
@@ -1061,9 +1075,9 @@ function __debugShowQuota(q){
   if(q.waited)bits.push(`waited ${(q.waited/1000).toFixed(1)}s`);
   const elapsed=__debugElapsedS();
   if(elapsed>0){
-    const rpm=__debugReqCount/(elapsed/60);
+    const qpm=__debugQuotaUsed/(elapsed/60);
     const done=__debugRunEnd?' done':'';
-    bits.push(`${elapsed.toFixed(1)}s${done} · ${__debugReqCount} reqs · ${rpm.toFixed(1)} req/min`);
+    bits.push(`${elapsed.toFixed(1)}s${done} · ${__debugReqCount} reqs · ${__debugQuotaUsed} quota · ${qpm.toFixed(1)} quota/min`);
   }
   el.textContent=`[debug] ${bits.join(' · ')||'…'}`;
   el.style.display=bits.length?'block':'none';
@@ -1111,16 +1125,16 @@ const rateLimit = {
 
     if(r!=null&&!Number.isNaN(r)){
       // Observe the real per-request cost by watching how far `remaining` drops
-      // between successive responses. Cost is wildly variable (1 for a cached
-      // page, up to ~11 for a full cache miss), so we keep a short rolling
-      // average of RECENT drops and let pacing react to it. Ignore rollovers
-      // (remaining jumped UP = new window) and the huge cold-start hits so the
-      // estimate tracks the current cache regime rather than the whole run.
+      // between successive responses (≈1 for a cached page, up to ~BATCH+1 for a
+      // full cache miss). Keep a short rolling window and let pacing react.
+      // Ignore rollovers (remaining jumped UP = new window) so the estimate
+      // tracks the current cache regime rather than the whole run.
       if(this.remaining!=null){
         const drop=this.remaining-r;
         if(drop>=0&&drop<=BATCH+1){
           this.recentCosts.push(drop);
           if(this.recentCosts.length>COST_SAMPLE)this.recentCosts.shift();
+          __debugTrackCost(drop); // TEMP DEBUG — accumulate real quota spend
         }
       }
       this.remaining=r;
@@ -1242,14 +1256,18 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
   const quota=rateLimit.ingest(r.headers);
 
   // 3) 429 — hit the limit despite pacing (shared/global limit, or first call of
-  //    a cold window). Wait using the real reset time: Retry-After if present,
-  //    else the reset time parsed from the ratelimit/x-ratelimit-reset header.
+  //    a cold window). We just ingested this response's headers above, so
+  //    msUntilReset() reflects THIS 429's fresh reset time. Wait the MAX of every
+  //    signal we have — Retry-After, the reset countdown, and a small floor — so
+  //    a tiny/stale Retry-After can't make us retry into the same dead window and
+  //    eat a second 429 (which is what caused the back-to-back 429s in testing).
   if(r.status===429){
     if(_rl>=MAX_RL_WAITS)throw new Error('Rate limited — please try again in a minute');
     const headerRetry=r.headers.get('retry-after');
+    const retryMs=headerRetry!=null?Math.max(parseInt(headerRetry,10),0)*1000:0;
+    const resetMs=rateLimit.msUntilReset();
     const wait=Math.min(
-      headerRetry!=null?Math.max(parseInt(headerRetry,10),1)*1000
-        :(rateLimit.msUntilReset()||5000)+250,
+      Math.max(retryMs, resetMs+250, RL_WAIT_FLOOR_MS),
       MAX_WAIT_MS
     );
     __debugShowQuota({...quota,waited:wait}); // TEMP DEBUG
@@ -1534,8 +1552,16 @@ async function loadAll(prefetchSnapshot=null){
 
     // Step 2: paginate match history, stopping when we hit targetCount
     let collected=[];
+    // Safety bound: the v4 matchlist response has no total/pagination metadata
+    // (only status+data), so an empty page is the sole reliable end signal. Since
+    // we no longer treat a short page as the end, guard against a pathological
+    // never-empty response with a hard offset ceiling. Competitive history is
+    // finite and this is far beyond any real account's game count.
+    const MAX_OFFSET=5000;
+    let guardPages=0, MAX_PAGES=600; // ~ MAX_OFFSET/min-page-size, belt-and-braces
 
     while(true){
+      if(start>=MAX_OFFSET||++guardPages>MAX_PAGES)break; // safety stop
       // Update status and progress bar together from the same value so they stay in sync
       const pct=targetCount?Math.round(collected.length/targetCount*100):null;
       setStatus(`Fetching matches ${start+1}–${start+BATCH} · ${collected.length}${targetCount?'/'+targetCount:''} found${pct?' ('+pct+'%)':''}…`,true);
@@ -1547,20 +1573,23 @@ async function loadAll(prefetchSnapshot=null){
       const{j}=await fetchWithRetry(url);
       if(myGen!==_analysisGen)return; // superseded by a newer act selection
       const data=j.data||[];
+      // TRUE end of history: the API returned nothing at this offset.
       if(!data.length)break;
 
       const onPage=TARGET_SEASON?data.filter(m=>isSeason(m)):data;
       onPage.forEach(m=>collected.push(m));
 
-      // End of history
-      if(data.length<BATCH)break;
-      // Scrolled past the season — full batch with zero matching games
+      // If we're fetching a specific act and have all its games, stop.
+      if(TARGET_SEASON&&targetCount&&collected.length>=targetCount)break;
+      // Scrolled past the season — a full-ish page with zero matching games
+      // means we've paged beyond the target act.
       if(TARGET_SEASON&&collected.length>0&&onPage.length===0)break;
 
-      start+=BATCH;
-      // No manual inter-batch delay here anymore: apiGet() paces itself from the
-      // live quota headers before every call, waiting out the window only when
-      // it actually needs to. See the rate-limit ledger above.
+      // Advance by the number of matches the API ACTUALLY returned (not the
+      // requested size) — robust even if the API returns fewer than asked.
+      start+=data.length;
+      // No manual inter-batch delay here: apiGet() paces itself from the live
+      // quota headers before every call. See the rate-limit ledger above.
       if(myGen!==_analysisGen)return;
     }
 
