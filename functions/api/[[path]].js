@@ -15,6 +15,19 @@
 const UPSTREAM = "https://api.henrikdev.xyz";
 const PREFIX = "/api";
 
+// Rate-limit / cache headers the browser client needs to read off each response.
+// These are forwarded verbatim from upstream and exposed to page JS below.
+const RATELIMIT_HEADERS = [
+  "ratelimit",              // IETF combined header (v4.5+): "per1min";r=..;t=..
+  "ratelimit-policy",       // companion policy header, if sent
+  "x-ratelimit-limit",
+  "x-ratelimit-remaining",
+  "x-ratelimit-reset",      // <- the reset time; this is what was missing
+  "retry-after",
+  "x-cache-status",         // upstream cache state (HIT/MISS), if sent
+  "x-cache-ttl",
+];
+
 export async function onRequestGet(context) {
   const { request, env, waitUntil } = context;
   const url = new URL(request.url);
@@ -30,6 +43,10 @@ export async function onRequestGet(context) {
   if (hit) {
     const r = new Response(hit.body, hit);
     r.headers.set("X-Proxy-Cache", "HIT");
+    // A cache hit spent no rate budget, so its stored ratelimit headers are
+    // stale/misleading — strip them so the client doesn't act on old numbers.
+    for (const h of RATELIMIT_HEADERS) r.headers.delete(h);
+    exposeHeaders(r.headers);
     return r;
   }
 
@@ -53,18 +70,33 @@ export async function onRequestGet(context) {
     },
   });
 
-  // Forward the headers the client's retry logic reads.
-  const rem = upstream.headers.get("x-ratelimit-remaining");
-  if (rem != null) res.headers.set("x-ratelimit-remaining", rem);
-  const retry = upstream.headers.get("retry-after");
-  if (retry != null) res.headers.set("retry-after", retry);
+  // Forward every rate-limit / cache header the client's pacing logic reads,
+  // verbatim from upstream (case-insensitive get, so "RateLimit" etc. all work).
+  for (const name of RATELIMIT_HEADERS) {
+    const v = upstream.headers.get(name);
+    if (v != null) res.headers.set(name, v);
+  }
   res.headers.set("X-Proxy-Cache", "MISS");
+  exposeHeaders(res.headers);
 
+  // Only cache genuinely cacheable successful responses. Note we cache the body
+  // WITH the ratelimit headers attached, but the HIT branch above deletes them
+  // on the way out, so a replay never feeds the client stale quota numbers.
   if (upstream.ok) {
     res.headers.set("Cache-Control", "public, max-age=120");
     waitUntil(cache.put(cacheKey, res.clone()));
   }
   return res;
+}
+
+// Tell the browser these response headers are readable by page JavaScript.
+// (Even same-origin, non-safelisted response headers must be opted-in here for
+// fetch()'s Headers.get() to return them.)
+function exposeHeaders(headers) {
+  headers.set(
+    "Access-Control-Expose-Headers",
+    [...RATELIMIT_HEADERS, "x-proxy-cache"].join(", ")
+  );
 }
 
 function json(obj, status) {
