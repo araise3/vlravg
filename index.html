@@ -1035,9 +1035,23 @@ function runAnalysis(){
 
 // ── TEMP DEBUG — quota inspector ──────────────────────────────────────────
 // Surfaces the live quota picture read from the ratelimit headers so we can
-// watch the client's pacing decisions in real time. Ripped out later — this
-// block and its call sites are tagged "TEMP DEBUG".
-function __debugResetRate(){const el=document.getElementById('debug-rate');if(el)el.style.display='none';}
+// watch the client's pacing decisions in real time. Also times the whole fetch
+// run and derives an overall req/min from it. Ripped out later — this block and
+// its call sites are tagged "TEMP DEBUG".
+let __debugRunStart=0;   // ms timestamp when the current run began
+let __debugRunEnd=0;     // ms timestamp when it finished (0 while in progress)
+let __debugReqCount=0;   // API requests made this run
+function __debugResetRate(){
+  __debugRunStart=Date.now();__debugRunEnd=0;__debugReqCount=0;
+  const el=document.getElementById('debug-rate');if(el)el.style.display='none';
+}
+function __debugTrackReq(){__debugReqCount++;}            // call per API request
+function __debugFinishRun(){__debugRunEnd=Date.now();__debugShowQuota({});} // freeze timer + repaint
+// Elapsed seconds for the run (live while running, frozen once finished).
+function __debugElapsedS(){
+  if(!__debugRunStart)return 0;
+  return ((__debugRunEnd||Date.now())-__debugRunStart)/1000;
+}
 function __debugShowQuota(q){
   const el=document.getElementById('debug-rate');if(!el)return;
   const bits=[];
@@ -1046,6 +1060,12 @@ function __debugShowQuota(q){
   if(q.reset!=null)bits.push(`resets ${q.reset}s`);
   if(q.cache)bits.push(`cache ${q.cache}`);
   if(q.waited)bits.push(`waited ${(q.waited/1000).toFixed(1)}s`);
+  const elapsed=__debugElapsedS();
+  if(elapsed>0){
+    const rpm=__debugReqCount/(elapsed/60);
+    const done=__debugRunEnd?' done':'';
+    bits.push(`${elapsed.toFixed(1)}s${done} · ${__debugReqCount} reqs · ${rpm.toFixed(1)} req/min`);
+  }
   el.textContent=`[debug] ${bits.join(' · ')||'…'}`;
   el.style.display=bits.length?'block':'none';
 }
@@ -1198,6 +1218,7 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
     await sleep(planned);
   }
   rateLimit.lastRequestAt=Date.now();
+  __debugTrackReq(); // TEMP DEBUG — count every network attempt (incl. retries/429s)
 
   let r;
   try{
@@ -1549,6 +1570,7 @@ async function loadAll(prefetchSnapshot=null){
     setProgress(100);
     setTimeout(()=>setProgress(0),600);
     renderAll();
+    __debugFinishRun(); // TEMP DEBUG — freeze the run timer + final req/min
   }catch(e){
     if(myGen!==_analysisGen)return; // superseded run — swallow its error
     setStatus('');
