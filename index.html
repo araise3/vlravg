@@ -11,7 +11,7 @@
 <meta property="og:description" content="See the true skill level of your Valorant lobbies — average lobby rank, K/D breakdowns, duos, and playtime.">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#3b82f6">
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 :root{
@@ -21,7 +21,7 @@
   --accent:#3b82f6;--accent-rgb:59,130,246;--text:#e8eaf0;--muted:#6b7280;
   --win:#22c55e;--loss:#ef4444;--draw:#f59e0b;
   --font-body:'Geist',Geist,system-ui,sans-serif;
-  --font-display:'Space Grotesk',Geist,system-ui,sans-serif;
+  --font-display:'Geist',system-ui,sans-serif;
   --glass:rgba(255,255,255,0.04);--glass-hover:rgba(255,255,255,0.065);
   --glass-border:rgba(255,255,255,0.1);--glass-shine:rgba(255,255,255,0.08);
   --radius-xs:4px;--radius-sm:7px;--radius-md:11px;--radius-lg:18px;
@@ -162,8 +162,9 @@ h1 span{color:var(--accent);}
 .tm-head{display:flex;align-items:center;justify-content:space-between;gap:8px;}
 .tm-identity{display:flex;align-items:center;gap:6px;min-width:0;}
 .tm-rank{font-size:11px;font-weight:700;font-family:var(--font-display);color:var(--muted);flex-shrink:0;background:rgba(255,255,255,.05);border:.5px solid var(--glass-border);border-radius:var(--radius-xs);padding:2px 6px;line-height:1.2;font-variant-numeric:tabular-nums;}
-.tm-name{font-size:16px;font-weight:700;font-family:var(--font-display);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;}
-.tm-tag{font-size:11px;color:var(--muted);font-family:var(--font-body);white-space:nowrap;flex-shrink:0;}
+.tm-name-wrap{display:flex;align-items:baseline;gap:3px;min-width:0;flex-shrink:1;}
+.tm-name{font-size:16px;font-weight:700;font-family:var(--font-body);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;}
+.tm-tag{font-size:16px;color:var(--muted);font-family:var(--font-body);white-space:nowrap;flex-shrink:0;}
 .tm-count{font-size:11px;color:var(--muted);font-family:var(--font-body);white-space:nowrap;flex-shrink:0;}
 .tm-count .tm-wr{font-weight:700;}
 .tm-stats{display:flex;gap:0;align-items:flex-end;}
@@ -232,11 +233,9 @@ h1 span{color:var(--accent);}
    entirely, regardless of how many rows the card has. */
 .pb-nav{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:auto;padding-top:14px;}
 .pb-nav .pb-dots{margin-top:0;padding-top:0;}
-.card-nav{display:none;align-items:center;justify-content:center;width:20px;height:20px;padding:0;border:none;font-size:0;color:var(--muted);cursor:pointer;background:rgba(255,255,255,.06);border-radius:var(--radius-xs);transition:color .15s,background .15s;}
+.card-nav{display:none;align-items:center;justify-content:center;width:20px;height:20px;padding:0;border:none;color:var(--muted);cursor:pointer;background:rgba(255,255,255,.06);border-radius:var(--radius-xs);transition:color .15s,background .15s;}
 .card-nav.show{display:inline-flex;}
-.card-nav::before{content:'';display:block;width:6px;height:6px;border:solid currentColor;border-width:0 1.5px 1.5px 0;}
-.card-nav-prev::before{transform:rotate(135deg);margin-left:2px;}
-.card-nav-next::before{transform:rotate(-45deg);margin-right:2px;}
+.card-nav svg{width:12px;height:12px;display:block;}
 .card-nav:hover{color:var(--text);background:rgba(255,255,255,.11);}
 .card-nav:active{transform:scale(.88);}
 .pb-dot{width:6px;height:6px;padding:0;border:none;border-radius:50%;background:rgba(255,255,255,.2);cursor:pointer;opacity:1;transform:scale(1);transition:background .15s,transform .24s cubic-bezier(.34,1.56,.64,1),opacity .2s ease;}
@@ -315,6 +314,8 @@ h1 span{color:var(--accent);}
     </div>
     <div id="status-bar" style="display:none;"><div class="spinner" id="spinner"></div><span id="status-text"></span></div>
     <div class="progress-wrap" style="display:none;"><div class="progress-fill" id="progress-fill"></div></div>
+    <!-- TEMP DEBUG — rate-limit inspector, remove this whole div once we're done digging into req/min behavior -->
+    <div id="debug-rate" style="display:none;font-family:monospace;font-size:10px;color:var(--muted);opacity:.75;margin-top:4px;letter-spacing:.02em;"></div>
   </div>
 
   <div id="results-section" style="display:none">
@@ -347,9 +348,9 @@ h1 span{color:var(--accent);}
           <div class="card-title">Duos</div>
           <div class="teammate-list" id="teammate-list"></div>
           <div class="pb-nav">
-            <button class="card-nav card-nav-prev" aria-label="Previous page">‹</button>
+            <button class="card-nav card-nav-prev" aria-label="Previous page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
             <div class="pb-dots" id="tm-dots" style="display:none;"></div>
-            <button class="card-nav card-nav-next" aria-label="Next page">›</button>
+            <button class="card-nav card-nav-next" aria-label="Next page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
           </div>
         </div>
         <div class="s-card" id="sg-rank-card" style="display:none">
@@ -363,9 +364,9 @@ h1 span{color:var(--accent);}
           </div>
           <div class="rank-overview" id="sg-rank-overview"></div>
           <div class="pb-nav">
-            <button class="card-nav card-nav-prev" aria-label="Previous page">‹</button>
+            <button class="card-nav card-nav-prev" aria-label="Previous page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
             <div class="pb-dots" id="sg-rank-dots" style="display:none"></div>
-            <button class="card-nav card-nav-next" aria-label="Next page">›</button>
+            <button class="card-nav card-nav-next" aria-label="Next page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
           </div>
         </div>
       </div>
@@ -445,12 +446,74 @@ function partyIcon(sz){
   return h;
 }
 
-// All HenrikDev calls go through a same-origin Cloudflare Worker proxy that
-// injects the API key server-side, so no key is ever shipped to the browser.
+// ─────────────────────────────────────────────────────────────────────────
+//  HenrikDev API client  (grounded in docs.henrikdev.xyz, v4.x)
+// ─────────────────────────────────────────────────────────────────────────
+// All calls go through a same-origin Cloudflare Worker proxy that injects the
+// API key server-side, so no key is ever shipped to the browser.
+//
+// WHY THIS IS BUILT THE WAY IT IS — three facts from the official docs drive
+// the whole design:
+//
+//  1. The rate limit is a QUOTA over a fixed 1-minute window, and a "unit" is
+//     NOT one request. Per the v4.0.0 rate-limit spec:
+//         1 API call            = +1
+//         + 1 per Riot fetch it triggers behind the scenes
+//     A cached matchlist page costs 1; an uncached size-10 page can cost up to
+//     ~11 (1 history + up to 10 individual matches). So you cannot pace by
+//     "requests per minute" — the *cost* of each request is variable and only
+//     known after the fact. This is exactly why fresh data 429'd while old,
+//     already-cached pages sailed through.
+//
+//  2. Since v4.5 the API returns IETF RateLimit headers that tell us the truth
+//     directly, no guessing:
+//         ratelimit: "per1min";r=<remaining quota>;t=<seconds until reset>
+//     We read r and t on EVERY response and pace off them proactively, waiting
+//     out the window when quota runs low — instead of reacting after a 429.
+//     (Falls back to the legacy x-ratelimit-remaining / retry-after if absent.)
+//
+//  3. Every response carries X-Cache-Status: HIT|MISS (+ X-Cache-TTL on HIT).
+//     HITs are cheap, so we don't need to slow down for them.
+//
+// Docs: https://docs.henrikdev.xyz/valorant/changes/v4.0.0  (cost model)
+//       https://docs.henrikdev.xyz/valorant/changes/v4.5.0  (ratelimit headers)
+//       https://docs.henrikdev.xyz/valorant/error-codes     (429 = code 0)
 const API_BASE  = '/api';
 const BATCH     = 10;
 const PER_PAGE  = 15;
-const DELAY_MS  = 1100;
+
+// ── Pacing philosophy: FASTEST ────────────────────────────────────────────
+// We do NOT preemptively halt for a full window when quota runs low. Doing so
+// trades a huge amount of wall-clock time (up to a full 60s window per pause)
+// to avoid 429s that are actually cheap: per HenrikDev's docs a 429 is a fast
+// rejection and may not even count against your budget, and real per-page cost
+// is usually far below the ~11-unit worst case because most individual matches
+// are already in HenrikDev's server cache. So instead we:
+//   • space requests lightly so we don't fire a burst into one instant, and
+//   • ride quota all the way down, letting the occasional 429 happen and
+//     waiting only the REAL reset time (from retry-after / the reset header)
+//     when one does — then immediately continue.
+// This matches the throughput of the old aggressive loop while keeping the
+// header-driven correctness (exact reset waits, specific error messages).
+//
+// Minimum spacing between requests. Small when quota is healthy; when quota is
+// nearly gone we stretch spacing across the remaining reset time so we glide
+// into the window boundary rather than slamming into a wall of 429s — but we
+// never stop outright, so a cheap cache-HIT page can still slip through.
+const MIN_SPACING_MS = 200;
+// Start gliding only when we have this few AFFORDABLE requests left in the
+// window (remaining ÷ observed cost), not this few raw units. On the warm/cheap
+// tail (cost≈1) a handful of units is many affordable requests, so we don't
+// glide; on the cold start (cost≈11) even a full window is few, so we ease off.
+const GLIDE_BELOW = 3;
+// How many recent per-request costs to average when estimating the next cost.
+const COST_SAMPLE = 5;
+// Cap on a single glide wait. Beyond this we'd rather just send and let a cheap
+// 429 (waited at the real reset) handle any overshoot than idle a whole window.
+const GLIDE_CAP_MS = 8000;
+// Absolute ceiling on any single wait, so a bad reset value or a stuck window
+// can never hang the UI indefinitely.
+const MAX_WAIT_MS = 65000;
 
 // Parses an API short code like "e11a4" into {ep:11, act:4}. Returns null if
 // it doesn't match the expected pattern.
@@ -569,7 +632,7 @@ function rName(n){return RANK_MAP[n]||'Unranked';}
 const TM_RANK_COL_W=(()=>{
   const canvas=document.createElement('canvas');
   const ctx=canvas.getContext('2d');
-  ctx.font='800 13px "Space Grotesk",Geist,system-ui,sans-serif';
+  ctx.font='800 13px "Geist",system-ui,sans-serif';
   return Math.ceil(Object.values(RANK_MAP).reduce((max,label)=>
     Math.max(max,ctx.measureText(label).width),0));
 })();
@@ -846,12 +909,12 @@ async function prefetchPlayerActs(){
   showSeasonLoading();
   try{
     const acctUrl=`${API_BASE}/valorant/v1/account/${encodeURIComponent(name)}/${tag}`;
-    const{j:acctJ}=await fetchWithRetry(acctUrl);
+    const{j:acctJ}=await apiGet(acctUrl,{interactive:true});
     if(myId!==_prefetchId)return;
     const region=(acctJ.data||acctJ).region||'eu';
 
     const mmrUrl=`${API_BASE}/valorant/v3/mmr/${region}/pc/${encodeURIComponent(name)}/${tag}`;
-    const{j:mmrJ}=await fetchWithRetry(mmrUrl);
+    const{j:mmrJ}=await apiGet(mmrUrl,{interactive:true});
     if(myId!==_prefetchId)return;
 
     const seasonal=(mmrJ.data||mmrJ).seasonal||[];
@@ -970,44 +1033,224 @@ function runAnalysis(){
   loadAll(prefetchSnapshot);
 }
 
+// ── TEMP DEBUG — quota inspector ──────────────────────────────────────────
+// Surfaces the live quota picture read from the ratelimit headers so we can
+// watch the client's pacing decisions in real time. Ripped out later — this
+// block and its call sites are tagged "TEMP DEBUG".
+function __debugResetRate(){const el=document.getElementById('debug-rate');if(el)el.style.display='none';}
+function __debugShowQuota(q){
+  const el=document.getElementById('debug-rate');if(!el)return;
+  const bits=[];
+  if(q.remaining!=null)bits.push(`${q.remaining} quota left`);
+  if(q.cost!=null)bits.push(`~${q.cost}/page`);
+  if(q.reset!=null)bits.push(`resets ${q.reset}s`);
+  if(q.cache)bits.push(`cache ${q.cache}`);
+  if(q.waited)bits.push(`waited ${(q.waited/1000).toFixed(1)}s`);
+  el.textContent=`[debug] ${bits.join(' · ')||'…'}`;
+  el.style.display=bits.length?'block':'none';
+}
+// ── END TEMP DEBUG ─────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────
+//  Rate-limit ledger — a tiny model of the server's per-1-min quota window,
+//  kept in sync from response headers so callers can look BEFORE they leap.
+// ─────────────────────────────────────────────────────────────────────────
+const rateLimit = {
+  remaining: null,   // quota units left in the current window
+  resetAt: 0,        // epoch ms when the window rolls over (from a real header)
+  lastRequestAt: 0,  // epoch ms of the previous send, for MIN_SPACING_MS
+  recentCosts: [],   // rolling window of observed per-request quota drops
+
+  // Learn from response headers. Handles the IETF `ratelimit` header
+  // (v4.5+: `"per1min";r=86;t=58`) and the legacy split headers
+  // (`x-ratelimit-remaining` for count, `x-ratelimit-reset` for reset time).
+  // The reset time is REQUIRED for correct pacing — the proxy must forward it
+  // (see the Worker note). Cache status may arrive as `x-cache-status` or the
+  // Worker's `x-proxy-cache` — accept either.
+  ingest(headers){
+    let r=null,t=null;
+
+    const rl=headers.get('ratelimit');
+    if(rl){
+      const mr=rl.match(/(?:^|[;\s])r=(\d+)/i);
+      const mt=rl.match(/(?:^|[;\s])t=(\d+)/i);
+      if(mr)r=parseInt(mr[1],10);
+      if(mt)t=parseInt(mt[1],10);
+    }
+    if(r==null){
+      const legacy=headers.get('x-ratelimit-remaining');
+      if(legacy!=null)r=parseInt(legacy,10);
+    }
+    if(t==null){
+      // `x-ratelimit-reset` may be seconds-remaining or an absolute epoch —
+      // normalise either into seconds-until-reset.
+      const reset=headers.get('x-ratelimit-reset');
+      if(reset!=null){
+        const n=parseInt(reset,10);
+        if(!Number.isNaN(n))t=n>1e6?Math.max(0,Math.round(n-Date.now()/1000)):n;
+      }
+    }
+
+    if(r!=null&&!Number.isNaN(r)){
+      // Observe the real per-request cost by watching how far `remaining` drops
+      // between successive responses. Cost is wildly variable (1 for a cached
+      // page, up to ~11 for a full cache miss), so we keep a short rolling
+      // average of RECENT drops and let pacing react to it. Ignore rollovers
+      // (remaining jumped UP = new window) and the huge cold-start hits so the
+      // estimate tracks the current cache regime rather than the whole run.
+      if(this.remaining!=null){
+        const drop=this.remaining-r;
+        if(drop>=0&&drop<=BATCH+1){
+          this.recentCosts.push(drop);
+          if(this.recentCosts.length>COST_SAMPLE)this.recentCosts.shift();
+        }
+      }
+      this.remaining=r;
+    }
+    if(t!=null&&!Number.isNaN(t))this.resetAt=Date.now()+t*1000;
+
+    return{
+      remaining:this.remaining,
+      reset:t,
+      cost:this.estCost(),
+      cache:headers.get('x-cache-status')||headers.get('x-proxy-cache')||null
+    };
+  },
+
+  // Rolling estimate of what the NEXT request will cost, in quota units. Uses
+  // the max of recent observed drops (conservative — we'd rather slightly
+  // over-reserve than 429), defaulting to the worst case until we've measured.
+  // Estimated cost of the NEXT request, in quota units — but only once we've
+  // actually MEASURED something. Returns null while unmeasured, so pacing knows
+  // to fire optimistically rather than glide on a pessimistic guess. (Gliding on
+  // an unmeasured worst-case is what was throttling the first calls of a run.)
+  estCost(){
+    if(!this.recentCosts.length)return null;
+    return Math.max(1,...this.recentCosts);
+  },
+
+  msUntilReset(){return Math.max(0,this.resetAt-Date.now());},
+
+  // How long to wait BEFORE the next send. Never halts for a full window.
+  //   • interactive call (account/mmr lookups during act selection) → never
+  //     glide; these are light and the user is waiting on them.
+  //   • cost not yet measured → don't glide; fire and LEARN the real cost first.
+  //   • otherwise cost-aware: glide only when few AFFORDABLE requests remain
+  //     (remaining ÷ measured cost), spreading them toward the reset boundary.
+  // The HAR showed pages cost ~11 cold but ~1 warm, so on the cheap tail this
+  // keeps firing near-continuously instead of throttling to one page per glide.
+  planDelay(interactive){
+    const since=Date.now()-this.lastRequestAt;
+    let want=MIN_SPACING_MS;
+    const cost=this.estCost();
+    if(!interactive&&cost!=null&&this.remaining!=null&&this.remaining>0){
+      const affordable=Math.floor(this.remaining/cost); // requests still affordable this window
+      if(affordable<=GLIDE_BELOW){
+        // Spread the affordable requests we have left across the reset window,
+        // capped well under a full window — a 429 is cheap, so we'd rather
+        // nudge-and-maybe-overshoot than idle for ~60s on one call.
+        const spread=Math.floor(this.msUntilReset()/Math.max(affordable,1));
+        want=Math.min(Math.max(spread,MIN_SPACING_MS),GLIDE_CAP_MS);
+      }
+    }
+    return since>=want?0:want-since;
+  }
+};
+
 const MIN_RATED=7; // strict: a match needs at least this many rated players (of 10) for its lobby rank to count
 
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
-async function fetchWithRetry(url,_attempt=0){
-  const MAX_RETRIES=4;
-  const RETRYABLE=[429,500,502,503,504,0]; // 0 = network error (CORS on 5xx, offline)
+// Pull a machine-readable error code out of HenrikDev's {status,errors:[{code,…}]}
+// body when available, so messages are specific (see docs → Error Codes).
+async function parseApiError(r){
   try{
-    const r=await fetch(url);
-    if(r.status===429){
-      const wait=Math.max(parseInt(r.headers.get('retry-after')||'5'),5)*1000;
-      setStatus(`Rate limited — waiting ${Math.ceil(wait/1000)}s…`,true);
-      await sleep(wait);
-      return fetchWithRetry(url,_attempt);
-    }
-    if(RETRYABLE.includes(r.status)){
-      if(_attempt>=MAX_RETRIES)throw new Error(`API ${r.status}: server error after ${MAX_RETRIES} retries`);
-      const wait=Math.min(1000*Math.pow(2,_attempt),16000); // 1s,2s,4s,8s,16s
-      setStatus(`Server error (${r.status}) — retrying in ${Math.ceil(wait/1000)}s… (${_attempt+1}/${MAX_RETRIES})`,true);
-      await sleep(wait);
-      return fetchWithRetry(url,_attempt+1);
-    }
-    if(!r.ok)throw new Error(`API ${r.status}: ${(await r.text()).slice(0,200)}`);
-    const j=await r.json();
-    const rem=r.headers.get('x-ratelimit-remaining');
-    return{j,rem:rem!=null?parseInt(rem):null};
-  }catch(e){
-    // NetworkError = fetch() itself threw (e.g. CORS blocked on a 504 with no headers)
-    if(e.name==='TypeError'||e.message?.includes('NetworkError')||e.message?.includes('fetch')){
-      if(_attempt>=MAX_RETRIES)throw new Error(`Network error after ${MAX_RETRIES} retries — check your connection`);
-      const wait=Math.min(1500*Math.pow(2,_attempt),20000);
-      setStatus(`Network error — retrying in ${Math.ceil(wait/1000)}s… (${_attempt+1}/${MAX_RETRIES})`,true);
-      await sleep(wait);
-      return fetchWithRetry(url,_attempt+1);
-    }
-    throw e; // non-retryable error, bubble up
-  }
+    const b=await r.json();
+    const e=b?.errors?.[0];
+    if(e)return `API ${r.status} (code ${e.code}): ${e.message||'error'}`;
+  }catch(_){/* non-JSON body */}
+  return `API ${r.status}`;
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+//  apiGet — the single entry point for every HenrikDev call.
+//
+//  Fastest pacing: it never preemptively halts. It applies light spacing from
+//  the rate-limit ledger (stretching only as quota nears empty), rides the
+//  budget down, and if a 429 does happen it waits the REAL reset time from the
+//  headers and continues. Cheap cached pages keep flowing even at low quota.
+//
+//  Returns { j, rem } — same shape the old fetchWithRetry returned, so all
+//  existing call sites work unchanged. `rem` is the authoritative quota
+//  remaining from the ratelimit header.
+// ─────────────────────────────────────────────────────────────────────────
+async function apiGet(url,opts={},_attempt=0,_rl=0){
+  const MAX_RETRIES=5;   // hard failures (network / 5xx)
+  const MAX_RL_WAITS=40; // 429 waits within one call (each waits the real reset)
+  const interactive=!!opts.interactive; // account/mmr lookups during act selection
+
+  // 1) Light proactive spacing from what we know about the quota window. This
+  //    is spacing, not a halt — see rateLimit.planDelay(). Interactive calls
+  //    skip gliding entirely so act selection stays snappy.
+  const planned=rateLimit.planDelay(interactive);
+  if(planned>0){
+    if(planned>1500)setStatus(`Easing off the rate limit — ${Math.ceil(planned/1000)}s…`,true);
+    await sleep(planned);
+  }
+  rateLimit.lastRequestAt=Date.now();
+
+  let r;
+  try{
+    r=await fetch(url);
+  }catch(e){
+    // fetch() itself threw → network/CORS failure (e.g. proxy 5xx with no CORS).
+    if(_attempt>=MAX_RETRIES)throw new Error('Network error — check your connection');
+    const wait=Math.min(1500*Math.pow(2,_attempt),20000);
+    setStatus(`Network error — retrying in ${Math.ceil(wait/1000)}s… (${_attempt+1}/${MAX_RETRIES})`,true);
+    await sleep(wait);
+    return apiGet(url,opts,_attempt+1,_rl);
+  }
+
+  // 2) Always learn from the headers, even on errors — they carry quota info.
+  const quota=rateLimit.ingest(r.headers);
+
+  // 3) 429 — hit the limit despite pacing (shared/global limit, or first call of
+  //    a cold window). Wait using the real reset time: Retry-After if present,
+  //    else the reset time parsed from the ratelimit/x-ratelimit-reset header.
+  if(r.status===429){
+    if(_rl>=MAX_RL_WAITS)throw new Error('Rate limited — please try again in a minute');
+    const headerRetry=r.headers.get('retry-after');
+    const wait=Math.min(
+      headerRetry!=null?Math.max(parseInt(headerRetry,10),1)*1000
+        :(rateLimit.msUntilReset()||5000)+250,
+      MAX_WAIT_MS
+    );
+    __debugShowQuota({...quota,waited:wait}); // TEMP DEBUG
+    setStatus(`Rate limit reached — waiting ${Math.ceil(wait/1000)}s for reset…`,true);
+    await sleep(wait);
+    return apiGet(url,opts,_attempt,_rl+1);
+  }
+
+  // 4) Transient server errors — exponential backoff.
+  if([500,502,503,504].includes(r.status)){
+    if(_attempt>=MAX_RETRIES)throw new Error(await parseApiError(r));
+    const wait=Math.min(1000*Math.pow(2,_attempt),16000); // 1,2,4,8,16s
+    setStatus(`Server error (${r.status}) — retrying in ${Math.ceil(wait/1000)}s… (${_attempt+1}/${MAX_RETRIES})`,true);
+    await sleep(wait);
+    return apiGet(url,opts,_attempt+1,_rl);
+  }
+
+  // 5) Other non-OK (400/401/403/404…) — not retryable, surface the real reason.
+  if(!r.ok)throw new Error(await parseApiError(r));
+
+  __debugShowQuota(quota); // TEMP DEBUG
+  const j=await r.json();
+  return{j,rem:rateLimit.remaining};
+}
+
+// Back-compat alias — older call sites referenced fetchWithRetry by name.
+const fetchWithRetry=apiGet;
+
 
 function isSeason(m){
   if(!TARGET_SEASON)return true;
@@ -1153,6 +1396,8 @@ function extractStats(p,fallbackRounds=null){
 /* ── LOAD ─────────────────────────────────────────────────── */
 async function loadAll(prefetchSnapshot=null){
   const myGen=++_analysisGen; // supersede any in-flight analysis
+  __debugResetRate(); // TEMP DEBUG — clear the quota readout for a fresh run
+  rateLimit.recentCosts=[]; // fresh cost estimate for this run's cache regime
   setProgress(3);
   try{
     // Step 0: resolve PUUID so we can find the player in historical matches
@@ -1164,7 +1409,7 @@ async function loadAll(prefetchSnapshot=null){
         acctJ=prefetchSnapshot.acctJ;
       }else{
         const acctUrl=`${API_BASE}/valorant/v1/account/${encodeURIComponent(PLAYER)}/${TAG}`;
-        ({j:acctJ}=await fetchWithRetry(acctUrl));
+        ({j:acctJ}=await apiGet(acctUrl,{interactive:true}));
       }
       const acctData=acctJ.data||acctJ;
       PUUID=acctData.puuid||'';
@@ -1197,7 +1442,7 @@ async function loadAll(prefetchSnapshot=null){
         mmrJ=prefetchSnapshot.mmrJ;
       }else{
         const mmrUrl=`${API_BASE}/valorant/v3/mmr/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}`;
-        ({j:mmrJ}=await fetchWithRetry(mmrUrl));
+        ({j:mmrJ}=await apiGet(mmrUrl,{interactive:true}));
       }
       const seasonal=(mmrJ.data||mmrJ).seasonal||[];
       const seasonOrder=getSeasonOrder(seasonal);
@@ -1272,7 +1517,7 @@ async function loadAll(prefetchSnapshot=null){
         :Math.min(10+start/4,85));
 
       const url=`${API_BASE}/valorant/v4/matches/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}?mode=competitive&size=${BATCH}&start=${start}`;
-      const{j,rem}=await fetchWithRetry(url);
+      const{j}=await fetchWithRetry(url);
       if(myGen!==_analysisGen)return; // superseded by a newer act selection
       const data=j.data||[];
       if(!data.length)break;
@@ -1286,9 +1531,10 @@ async function loadAll(prefetchSnapshot=null){
       if(TARGET_SEASON&&collected.length>0&&onPage.length===0)break;
 
       start+=BATCH;
-      const delay=rem!==null&&rem<=2?3000:DELAY_MS;
-      await sleep(delay);
-      if(myGen!==_analysisGen)return; // superseded during the inter-batch wait
+      // No manual inter-batch delay here anymore: apiGet() paces itself from the
+      // live quota headers before every call, waiting out the window only when
+      // it actually needs to. See the rate-limit ledger above.
+      if(myGen!==_analysisGen)return;
     }
 
     // Deduplicate by match_id
@@ -1656,10 +1902,9 @@ function renderTeammates(){
       <div class="tm-head">
         <div class="tm-identity">
           <span class="tm-rank">#${globalRank}</span>
-          <span class="tm-name">${t.name}</span>
-          <span class="tm-tag">#${t.tag}</span>
+          <span class="tm-name-wrap"><span class="tm-name">${t.name}</span><span class="tm-tag">#${t.tag}</span></span>
         </div>
-        <span class="tm-count">${t.games} games · <span class="tm-wr" style="color:${wr>=50?'#22c55e':'#ef4444'}">${wr}%</span> WR</span>
+        <span class="tm-count">${t.games} games <span class="tm-wr" style="color:${wr>=50?'#22c55e':'#ef4444'}">${wr}%</span> WR</span>
       </div>
       <div class="tm-stats">
         <div class="tm-stat"><div class="tm-stat-lbl">K/D</div><div class="tm-stat-val ${kdClass}">${kd}</div></div>
