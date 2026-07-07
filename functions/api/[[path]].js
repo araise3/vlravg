@@ -10,45 +10,34 @@
  *
  * Because the page and this function share one origin, no CORS or Origin
  * allowlist is needed — the browser just calls /api/... normally.
+ *
+ * This is a plain pass-through: it injects the key and forwards HenrikDev's
+ * response (status, body, and the rate-limit / reset headers the client paces
+ * off) verbatim. No edge caching — the client relies on HenrikDev's own
+ * server-side cache, and every request goes upstream so rate-limit headers are
+ * always live and accurate.
  */
 
 const UPSTREAM = "https://api.henrikdev.xyz";
 const PREFIX = "/api";
 
-// Rate-limit / cache headers the browser client needs to read off each response.
-// These are forwarded verbatim from upstream and exposed to page JS below.
+// Rate-limit / reset headers the browser client needs to read off each response.
+// Forwarded verbatim from upstream and exposed to page JS below.
 const RATELIMIT_HEADERS = [
   "ratelimit",              // IETF combined header (v4.5+): "per1min";r=..;t=..
-  "ratelimit-policy",       // companion policy header, if sent
+  "ratelimit-policy",
   "x-ratelimit-limit",
   "x-ratelimit-remaining",
-  "x-ratelimit-reset",      // <- the reset time; this is what was missing
+  "x-ratelimit-reset",      // reset time — client paces off this
   "retry-after",
-  "x-cache-status",         // upstream cache state (HIT/MISS), if sent
-  "x-cache-ttl",
 ];
 
 export async function onRequestGet(context) {
-  const { request, env, waitUntil } = context;
+  const { request, env } = context;
   const url = new URL(request.url);
 
   // /api/valorant/... -> https://api.henrikdev.xyz/valorant/...
   const upstreamUrl = UPSTREAM + url.pathname.slice(PREFIX.length) + url.search;
-
-  // Edge cache: identical player/act lookups are served from cache instead of
-  // spending your rate budget. Past acts basically never change; 120s is safe.
-  const cache = caches.default;
-  const cacheKey = new Request(upstreamUrl, { method: "GET" });
-  const hit = await cache.match(cacheKey);
-  if (hit) {
-    const r = new Response(hit.body, hit);
-    r.headers.set("X-Proxy-Cache", "HIT");
-    // A cache hit spent no rate budget, so its stored ratelimit headers are
-    // stale/misleading — strip them so the client doesn't act on old numbers.
-    for (const h of RATELIMIT_HEADERS) r.headers.delete(h);
-    exposeHeaders(r.headers);
-    return r;
-  }
 
   if (!env.HENRIK_KEY) {
     return json({ error: "Proxy misconfigured: HENRIK_KEY secret not set" }, 500);
@@ -70,33 +59,16 @@ export async function onRequestGet(context) {
     },
   });
 
-  // Forward every rate-limit / cache header the client's pacing logic reads,
-  // verbatim from upstream (case-insensitive get, so "RateLimit" etc. all work).
+  // Forward the rate-limit / reset headers verbatim so the client can pace.
   for (const name of RATELIMIT_HEADERS) {
     const v = upstream.headers.get(name);
     if (v != null) res.headers.set(name, v);
   }
-  res.headers.set("X-Proxy-Cache", "MISS");
-  exposeHeaders(res.headers);
+  // Make them readable by page JavaScript (non-safelisted response headers must
+  // be opted-in even same-origin).
+  res.headers.set("Access-Control-Expose-Headers", RATELIMIT_HEADERS.join(", "));
 
-  // Only cache genuinely cacheable successful responses. Note we cache the body
-  // WITH the ratelimit headers attached, but the HIT branch above deletes them
-  // on the way out, so a replay never feeds the client stale quota numbers.
-  if (upstream.ok) {
-    res.headers.set("Cache-Control", "public, max-age=120");
-    waitUntil(cache.put(cacheKey, res.clone()));
-  }
   return res;
-}
-
-// Tell the browser these response headers are readable by page JavaScript.
-// (Even same-origin, non-safelisted response headers must be opted-in here for
-// fetch()'s Headers.get() to return them.)
-function exposeHeaders(headers) {
-  headers.set(
-    "Access-Control-Expose-Headers",
-    [...RATELIMIT_HEADERS, "x-proxy-cache"].join(", ")
-  );
 }
 
 function json(obj, status) {

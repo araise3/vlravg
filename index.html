@@ -1058,7 +1058,6 @@ function __debugShowQuota(q){
   if(q.remaining!=null)bits.push(`${q.remaining} quota left`);
   if(q.cost!=null)bits.push(`~${q.cost}/page`);
   if(q.reset!=null)bits.push(`resets ${q.reset}s`);
-  if(q.cache)bits.push(`cache ${q.cache}`);
   if(q.waited)bits.push(`waited ${(q.waited/1000).toFixed(1)}s`);
   const elapsed=__debugElapsedS();
   if(elapsed>0){
@@ -1085,8 +1084,7 @@ const rateLimit = {
   // (v4.5+: `"per1min";r=86;t=58`) and the legacy split headers
   // (`x-ratelimit-remaining` for count, `x-ratelimit-reset` for reset time).
   // The reset time is REQUIRED for correct pacing — the proxy must forward it
-  // (see the Worker note). Cache status may arrive as `x-cache-status` or the
-  // Worker's `x-proxy-cache` — accept either.
+  // (see the Worker note).
   ingest(headers){
     let r=null,t=null;
 
@@ -1132,8 +1130,7 @@ const rateLimit = {
     return{
       remaining:this.remaining,
       reset:t,
-      cost:this.estCost(),
-      cache:headers.get('x-cache-status')||headers.get('x-proxy-cache')||null
+      cost:this.estCost()
     };
   },
 
@@ -1155,10 +1152,18 @@ const rateLimit = {
   //   • interactive call (account/mmr lookups during act selection) → never
   //     glide; these are light and the user is waiting on them.
   //   • cost not yet measured → don't glide; fire and LEARN the real cost first.
-  //   • otherwise cost-aware: glide only when few AFFORDABLE requests remain
-  //     (remaining ÷ measured cost), spreading them toward the reset boundary.
-  // The HAR showed pages cost ~11 cold but ~1 warm, so on the cheap tail this
-  // keeps firing near-continuously instead of throttling to one page per glide.
+  //   • otherwise glide ONLY when it actually helps: when the few affordable
+  //     requests we have left, spaced out, would roughly fill the remaining
+  //     reset window — i.e. we're genuinely about to cross a reset boundary and
+  //     can ride smoothly into the next window. If they WON'T fill the window
+  //     (expensive pages with lots of reset time left, or a short run that
+  //     finishes long before the window matters), gliding only delays an
+  //     unavoidable wall — so fire immediately instead.
+  //
+  // Concretely: the glide spacing = msUntilReset / affordable. If that spacing
+  // is small (≤ GLIDE_CAP_MS) the requests genuinely span the window → glide.
+  // If it's large, the affordable requests don't come close to filling the
+  // window → no point spreading them, just send.
   planDelay(interactive){
     const since=Date.now()-this.lastRequestAt;
     let want=MIN_SPACING_MS;
@@ -1166,11 +1171,12 @@ const rateLimit = {
     if(!interactive&&cost!=null&&this.remaining!=null&&this.remaining>0){
       const affordable=Math.floor(this.remaining/cost); // requests still affordable this window
       if(affordable<=GLIDE_BELOW){
-        // Spread the affordable requests we have left across the reset window,
-        // capped well under a full window — a 429 is cheap, so we'd rather
-        // nudge-and-maybe-overshoot than idle for ~60s on one call.
         const spread=Math.floor(this.msUntilReset()/Math.max(affordable,1));
-        want=Math.min(Math.max(spread,MIN_SPACING_MS),GLIDE_CAP_MS);
+        // Only glide if the spread is modest enough that these requests actually
+        // bridge to the reset. A spread larger than the cap means we'd finish
+        // (or hit the wall) with lots of window left — gliding wouldn't help, so
+        // fire now. Otherwise space them to ride smoothly into the next window.
+        if(spread<=GLIDE_CAP_MS)want=Math.max(spread,MIN_SPACING_MS);
       }
     }
     return since>=want?0:want-since;
