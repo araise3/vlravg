@@ -30,14 +30,21 @@
 *{margin:0;padding:0;box-sizing:border-box;}
 button{font:inherit;color:inherit;background:none;border:none;appearance:none;-webkit-appearance:none;cursor:pointer;}
 body{
+  background:var(--bg);
+  color:var(--text);font-family:var(--font-body);font-size:16px;min-height:100vh;
+  position:relative;isolation:isolate;
+}
+/* Gradient backdrop on its own position:fixed layer instead of the body's
+   background-attachment:fixed. A fixed element is painted once and just
+   composited (GPU) during scroll, whereas background-attachment:fixed forces a
+   full-viewport repaint every scroll frame — the main cause of the scroll lag,
+   made worse by the cards' backdrop-filter re-sampling it each frame. */
+body::after{
+  content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;
   background:
     radial-gradient(1100px 620px at 18% -10%, rgba(var(--accent-rgb),.11), transparent 60%),
     radial-gradient(900px 520px at 102% 4%, rgba(255,255,255,.035), transparent 55%),
-    radial-gradient(1200px 720px at 50% 115%, rgba(var(--accent-rgb),.06), transparent 60%),
-    var(--bg);
-  background-attachment:fixed;
-  color:var(--text);font-family:var(--font-body);font-size:16px;min-height:100vh;
-  position:relative;isolation:isolate;
+    radial-gradient(1200px 720px at 50% 115%, rgba(var(--accent-rgb),.06), transparent 60%);
 }
 body::before{
   content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
@@ -56,9 +63,10 @@ h1 span{color:var(--accent);}
 .input-panel{display:none;}.manual-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
 .manual-input{background:var(--bg);border:.5px solid var(--border2);border-radius:6px;padding:10px 14px;font-family:var(--font-body);font-size:13px;color:var(--fg);outline:none;transition:border-color .15s;}
 .manual-input:focus{border-color:var(--brand);}
-.manual-input.combined{flex:1;background:transparent;border:none;padding:10px 14px 10px 10px;min-width:0;color:var(--text);font-size:14px;}
+.manual-input.combined{flex:1;background:transparent;border:none;padding:10px 14px;min-width:0;color:var(--text);font-size:14px;}
 .manual-input.combined:focus{border:none;outline:none;}
 .search-bar{display:flex;align-items:stretch;background:rgba(0,0,0,0.35);border:.5px solid var(--glass-border);border-radius:var(--radius-md);flex:1 1 auto;min-width:0;transition:border-color .2s,box-shadow .2s,flex-grow .45s cubic-bezier(.22,1,.36,1),flex-basis .45s cubic-bezier(.22,1,.36,1);overflow:hidden;}
+.search-bar-shake{display:flex;align-items:stretch;flex:1;min-width:0;}
 .search-bar.notransition{transition:none!important;}
 .shake{animation:shake-bar .4s ease;}
 @keyframes shake-bar{
@@ -68,9 +76,12 @@ h1 span{color:var(--accent);}
   40%,60%{transform:translateX(4px);}
 }
 .search-bar:focus-within{border-color:rgba(var(--brand-rgb),.55);box-shadow:0 0 0 3px rgba(var(--brand-rgb),.12);}
-.search-icon{display:flex;align-items:center;padding-left:16px;color:var(--muted);flex-shrink:0;transition:color .2s;}
-.search-bar:focus-within .search-icon{color:rgba(var(--brand-rgb),.9);}
 .search-bar .manual-select{background:var(--bg);border:none;border-left:.5px solid var(--border2);border-radius:0;padding:0 20px 0 14px;font-size:12px;color:var(--muted);cursor:pointer;font-family:var(--font-body);}
+.search-btn{display:flex;align-items:center;justify-content:center;padding:0 12px;flex-shrink:0;border-radius:var(--radius-md);background:var(--brand);border:none;color:#fff;cursor:pointer;box-shadow:0 2px 10px rgba(var(--brand-rgb),.35),inset 0 1px 0 rgba(255,255,255,.2);transition:background .15s,box-shadow .15s,transform .1s;}
+.search-btn:hover{background:rgba(var(--brand-rgb),.85);box-shadow:0 3px 14px rgba(var(--brand-rgb),.5),inset 0 1px 0 rgba(255,255,255,.25);}
+.search-btn:active{transform:scale(.95);}
+.search-btn:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(var(--brand-rgb),.4),0 2px 10px rgba(var(--brand-rgb),.35);}
+.search-btn svg{display:block;}
 .manual-select.island{background:var(--bg2);border:.5px solid var(--border2);border-radius:var(--radius-md);padding:0 16px;font-size:12px;color:var(--text);cursor:pointer;font-family:var(--font-body);flex-shrink:0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:inset 0 1px 0 rgba(255,255,255,.05);transition:border-color .15s,color .15s;}
 .manual-select.island:focus-visible{outline:none;border-color:var(--brand);}
 .manual-select.island:disabled{opacity:.45;cursor:default;}
@@ -129,12 +140,8 @@ h1 span{color:var(--accent);}
 .hero-sub-lbl{color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-size:10px;font-weight:700;font-family:var(--font-display);}
 .hero-sub-val{color:var(--text);font-weight:700;font-size:12px;font-variant-numeric:tabular-nums;}
 .card-title{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text);line-height:21px;height:21px;margin-bottom:14px;border-left:2px solid var(--accent);padding-left:7px;opacity:.85;transition:border-color .5s ease;box-sizing:border-box;}
-.rank-breakdown{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;padding-top:12px;border-top:.5px solid var(--border);}
 .rank-overview{display:flex;flex-direction:column;gap:6px;}
 .ro-tier-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
-.rb-item{display:flex;align-items:center;gap:5px;font-size:11px;font-family:var(--font-display);color:var(--muted);background:rgba(255,255,255,.05);border:.5px solid rgba(255,255,255,.07);border-radius:var(--radius-xs);padding:4px 10px;font-weight:600;}
-.rb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.rb-count{font-weight:700;color:var(--text);margin-left:1px;font-variant-numeric:tabular-nums;}
 
 /* charts */
 .chart-container{background:linear-gradient(180deg,rgba(var(--accent-rgb),.05),transparent 45%),var(--glass);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);border:.5px solid var(--glass-border);border-top:2px solid var(--accent);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:12px;position:relative;overflow:hidden;isolation:isolate;transform:translateZ(0);box-shadow:inset 0 1px 0 var(--glass-shine),0 8px 32px rgba(0,0,0,0.4),0 4px 28px rgba(var(--accent-rgb),.05);transition:box-shadow .5s ease,border-top-color .5s ease;}
@@ -165,13 +172,14 @@ h1 span{color:var(--accent);}
 .tm-name-wrap{display:flex;align-items:baseline;gap:3px;min-width:0;flex-shrink:1;}
 .tm-name{font-size:16px;font-weight:700;font-family:var(--font-body);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;}
 .tm-tag{font-size:16px;color:var(--muted);font-family:var(--font-body);white-space:nowrap;flex-shrink:0;}
-.tm-count{font-size:11px;color:var(--muted);font-family:var(--font-body);white-space:nowrap;flex-shrink:0;}
+.tm-count{display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-size:11px;color:var(--muted);font-family:var(--font-body);white-space:nowrap;flex-shrink:0;line-height:1.2;}
 .tm-count .tm-wr{font-weight:700;}
-.tm-stats{display:flex;gap:0;align-items:flex-end;}
+.tm-stats{display:flex;gap:20px;align-items:flex-end;}
 .tm-stat{display:flex;flex-direction:column;gap:5px;flex:1;min-width:0;}
+.tm-stat:not(.tm-stat-rank){flex:0 1 auto;}
 .tm-stat-lbl{font-size:9px;font-weight:600;color:var(--muted);font-family:var(--font-display);letter-spacing:.1em;text-transform:uppercase;}
 .tm-stat-val{font-size:19px;font-weight:800;font-family:var(--font-display);color:var(--text);line-height:1.1;font-variant-numeric:tabular-nums;}
-.tm-stat-rank{flex:1.8;align-items:flex-end;text-align:right;}
+.tm-stat-rank{flex:1.8 1 auto;align-items:flex-end;text-align:right;min-width:var(--tm-rank-min-w,150px);}
 .tm-stat-rank-val{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-width:0;}
 .tm-stat-rank-name{font-size:14px;font-weight:800;font-family:var(--font-display);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;line-height:1.1;}
 .tm-stat-rank-num{font-size:14px;font-weight:800;color:var(--text);font-family:var(--font-display);font-variant-numeric:tabular-nums;flex-shrink:0;line-height:1.1;}
@@ -180,12 +188,35 @@ h1 span{color:var(--accent);}
 .tm-pill-lbl{font-size:9px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:2px;white-space:nowrap;}
 .tm-kd-good{color:#22c55e;}.tm-kd-bad{color:#ef4444;}.tm-kd-mid{color:#9ca3af;}
 .filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;}
-.filter-group{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
-.filter-sep{width:1px;height:20px;background:var(--border2);margin:0 4px;}
+.reset-toggle{display:inline-flex;align-items:center;gap:7px;margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;user-select:none;white-space:nowrap;}
+.reset-toggle[hidden]{display:none;}
+.reset-toggle:hover{color:var(--fg);}
+.reset-toggle input{width:14px;height:14px;accent-color:var(--accent);cursor:pointer;margin:0;flex-shrink:0;}
 .filter-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);white-space:nowrap;}
-.filter-btn{background:rgba(255,255,255,0.04);border:.5px solid var(--glass-border);border-radius:var(--radius-sm);padding:6px 16px;font-family:var(--font-display);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;letter-spacing:.05em;text-transform:uppercase;transition:all .15s;box-shadow:inset 0 1px 0 rgba(255,255,255,0.05);}
-.filter-btn:hover{background:var(--glass-hover);border-color:rgba(255,255,255,0.18);color:var(--text);}
-.filter-btn.active{color:var(--accent);border-color:var(--accent);background:rgba(var(--accent-rgb),.08);}
+
+/* Filter dropdown (tick-box multi-select) */
+.filter-dd{position:relative;}
+.filter-trigger{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:.5px solid var(--glass-border);border-radius:var(--radius-sm);padding:7px 12px;font-family:var(--font-display);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;letter-spacing:.04em;text-transform:uppercase;transition:color .15s,border-color .15s,background .15s;box-shadow:inset 0 1px 0 rgba(255,255,255,0.05);}
+.filter-trigger:hover{background:var(--glass-hover);border-color:rgba(255,255,255,0.18);color:var(--text);}
+.filter-dd.open .filter-trigger{color:var(--text);border-color:var(--accent);background:rgba(var(--accent-rgb),.08);}
+.filter-trigger svg{width:14px;height:14px;flex-shrink:0;}
+.filter-caret{transition:transform .2s ease;}
+.filter-dd.open .filter-caret{transform:rotate(180deg);}
+.filter-count{display:flex;align-items:center;justify-content:center;box-sizing:border-box;flex-shrink:0;width:17px;height:17px;padding:0;border-radius:50%;background:var(--accent);color:#0b0b0d;font-size:10px;font-weight:800;line-height:1;letter-spacing:0;text-transform:none;}
+.filter-panel{position:fixed;z-index:9999;min-width:210px;max-height:70vh;overflow-y:auto;background:#0d0d10;border:.5px solid var(--glass-border);border-radius:var(--radius-md);box-shadow:0 16px 40px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.04);padding:8px;display:none;isolation:isolate;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent;}
+.filter-panel.open{display:block;}
+.filter-panel-sec{padding:4px 2px;}
+.filter-panel-sec + .filter-panel-sec{border-top:.5px solid var(--border2);margin-top:4px;padding-top:8px;}
+.filter-panel-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);margin:0 6px 6px;}
+.filter-check{display:flex;align-items:center;gap:9px;padding:6px 6px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;color:var(--text);font-family:var(--font-body);transition:background .12s;user-select:none;}
+.filter-check:hover{background:rgba(255,255,255,.05);}
+.filter-check input{appearance:none;-webkit-appearance:none;width:16px;height:16px;margin:0;border:.5px solid var(--glass-border);border-radius:4px;background:rgba(255,255,255,.04);position:relative;cursor:pointer;flex-shrink:0;transition:background .12s,border-color .12s;}
+.filter-check input:checked{background:var(--accent);border-color:var(--accent);}
+.filter-check input:checked::after{content:'';position:absolute;left:5px;top:1.5px;width:4px;height:8px;border:solid #0b0b0d;border-width:0 2px 2px 0;transform:rotate(45deg);}
+.filter-check .swatch{width:8px;height:8px;border-radius:2px;flex-shrink:0;margin-left:-2px;}
+.filter-clear{display:block;width:100%;margin-top:6px;padding:7px;background:none;border:none;border-top:.5px solid var(--border2);border-radius:0 0 var(--radius-sm) var(--radius-sm);color:var(--muted);font-family:var(--font-display);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:color .15s;}
+.filter-clear:hover{color:var(--text);}
+.filter-clear:disabled{opacity:.4;cursor:default;}
 .matches{display:flex;flex-direction:column;gap:8px;}
 .match-day-header{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;font-family:var(--font-body);padding-top:10px;}
 .match-day-header:first-child{padding-top:0;}
@@ -221,17 +252,18 @@ h1 span{color:var(--accent);}
 .players-grid{display:none;margin-top:8px;gap:6px;}
 .match-card.expanded .players-grid{display:grid;grid-template-columns:1fr 1fr;}
 .team-col{}
-.team-col-header{display:flex;align-items:center;padding:2px 10px;margin-bottom:3px;gap:6px;}
+.team-col-header{display:flex;align-items:center;padding:2px 12px;margin-bottom:3px;gap:6px;}
 .team-label{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);flex:1;}
 .col-hdr{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);text-align:right;flex-shrink:0;}
 .col-hdr-acs{min-width:30px;}
+.col-hdr-kd{min-width:38px;}
 .col-hdr-rank{min-width:72px;}
 .party-breakdown{display:flex;flex-direction:column;gap:6px;}
 .pb-dots{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:auto;padding-top:14px;min-height:6px;box-sizing:content-box;}
 /* Prev/next arrows live in a centered bar alongside the pagination dots at the
    bottom of the card: ‹ • • ›. This keeps them clear of the card content
    entirely, regardless of how many rows the card has. */
-.pb-nav{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:auto;padding-top:14px;}
+.pb-nav{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:auto;padding-top:14px;min-height:34px;}
 .pb-nav .pb-dots{margin-top:0;padding-top:0;}
 .card-nav{display:none;align-items:center;justify-content:center;width:20px;height:20px;padding:0;border:none;color:var(--muted);cursor:pointer;background:rgba(255,255,255,.06);border-radius:var(--radius-xs);transition:color .15s,background .15s;}
 .card-nav.show{display:inline-flex;}
@@ -268,9 +300,16 @@ h1 span{color:var(--accent);}
 .player-rank-txt{font-family:var(--font-body);font-size:11px;flex-shrink:0;text-align:right;min-width:72px;}
 .player-acs{font-size:11px;font-weight:700;color:var(--text);flex-shrink:0;min-width:30px;text-align:right;font-variant-numeric:tabular-nums;}
 .player-acs.acs-null{color:var(--muted);}
+.player-kd{font-size:11px;font-weight:700;color:var(--text);flex-shrink:0;min-width:38px;text-align:right;font-variant-numeric:tabular-nums;}
+.player-kd.kd-null{color:var(--muted);}
 .mvp-badge{font-size:8px;font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:var(--radius-xs);flex-shrink:0;text-transform:uppercase;line-height:1.4;}
 .mvp-badge.match-mvp{background:rgba(234,179,8,.15);color:#eab308;border:.5px solid rgba(234,179,8,.35);}
 .mvp-badge.team-mvp{background:rgba(156,163,175,.1);color:#9ca3af;border:.5px solid rgba(156,163,175,.25);}
+/* Placement-week games after a total reset: greyed in history, marked with a tag */
+.match-card.post-reset{opacity:.45;}
+.match-card.post-reset:hover,.match-card.post-reset.expanded{opacity:.85;}
+#matches-container.counting-reset .match-card.post-reset{opacity:1;}
+.mc-reset-tag{font-size:8px;font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:var(--radius-xs);flex-shrink:0;text-transform:uppercase;line-height:1.4;background:rgba(148,163,184,.12);color:var(--muted);border:.5px dashed var(--border2);}
 .r-unr{color:#6b7280}.r-iron{color:#7a7a7e}.r-bronze{color:#b07428}.r-silver{color:#c2c8cf}
 .r-gold{color:#e8a820}.r-plat{color:#36b5c0}.r-diamond{color:#c07de0}.r-asc{color:#2db87a}
 .r-imm{color:#d03248}.r-rad{color:#f0e0b0}
@@ -291,9 +330,13 @@ h1 span{color:var(--accent);}
   <div class="input-section">
     <div style="display:flex;gap:4px;align-items:stretch;position:relative;" id="search-row">
       <div class="search-bar" id="search-bar" style="flex:1 1 auto;">
-        <span class="search-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
-        <input class="manual-input combined" id="m-nametag" type="text" placeholder="name#tag"
-          oninput="onManualInput()" onkeydown="if(event.key==='Enter')runAnalysis()"/>
+        <div class="search-bar-shake" id="search-bar-shake">
+          <input class="manual-input combined" id="m-nametag" type="text" placeholder="name#tag"
+            oninput="onManualInput()" onkeydown="if(event.key==='Enter')runAnalysis()"/>
+        </div>
+        <button type="button" class="search-btn" id="search-btn" onclick="runAnalysis()" aria-label="Search">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </button>
       </div>
       <div id="result-season-group" style="position:absolute;top:0;right:0;bottom:0;display:flex;align-items:stretch;gap:4px;">
         <div class="result-panel" id="result-panel"><span class="player-card-byline" id="header-rank-badge"></span></div>
@@ -339,13 +382,18 @@ h1 span{color:var(--accent);}
               </div>
             </div>
           </div>
-          <div class="rank-breakdown" id="sg-rank-breakdown-solo"></div>
         </div>
       </div>
       <!-- Breakdown cards -->
       <div class="summary-row top-row" id="top-row">
         <div class="s-card teammates-section" id="teammates-section" style="display:none">
-          <div class="card-title">Duos</div>
+          <div class="card-title-row">
+            <div class="card-title">Duos</div>
+            <label class="reset-toggle" id="tm-5stack-toggle" hidden title="Full 5-stacks are excluded by default since a premade 5 isn't really a 'duo'. Turn this on to count those teammates too.">
+              <input type="checkbox" id="tm-5stack-cb" onchange="toggleFiveStackDuos(this.checked)">
+              <span>Include 5-stacks</span>
+            </label>
+          </div>
           <div class="teammate-list" id="teammate-list"></div>
           <div class="pb-nav">
             <button class="card-nav card-nav-prev" aria-label="Previous page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
@@ -384,20 +432,35 @@ h1 span{color:var(--accent);}
     <div id="match-list-section" style="display:none">
       <div class="section-title">Match History</div>
       <div class="filter-bar" id="filter-bar">
-        <div class="filter-group">
-          <span class="filter-label">Result</span>
-          <button class="filter-btn active" onclick="setResultFilter('all',event)">All</button>
-          <button class="filter-btn" onclick="setResultFilter('win',event)">Wins</button>
-          <button class="filter-btn" onclick="setResultFilter('loss',event)">Losses</button>
+        <div class="filter-dd" id="filter-dd">
+          <button class="filter-trigger" id="filter-trigger" onclick="toggleFilterPanel(event)" aria-haspopup="true" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+            <span>Filter</span>
+            <span class="filter-count" id="filter-count" hidden>0</span>
+            <svg class="filter-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          <div class="filter-panel" id="filter-panel">
+            <div class="filter-panel-sec">
+              <div class="filter-panel-label">Result</div>
+              <label class="filter-check"><input type="checkbox" onchange="toggleResultFilter('win',this.checked)"><span>Wins</span></label>
+              <label class="filter-check"><input type="checkbox" onchange="toggleResultFilter('loss',this.checked)"><span>Losses</span></label>
+            </div>
+            <div class="filter-panel-sec" id="rank-check-group" hidden>
+              <div class="filter-panel-label">Rank</div>
+            </div>
+            <div class="filter-panel-sec" id="party-check-group" hidden>
+              <div class="filter-panel-label">Party</div>
+            </div>
+            <div class="filter-panel-sec" id="map-check-group" hidden>
+              <div class="filter-panel-label">Map</div>
+            </div>
+            <button class="filter-clear" id="filter-clear" onclick="clearAllFilters()" disabled>Clear all</button>
+          </div>
         </div>
-        <div class="filter-sep"></div>
-        <div class="filter-group" id="rank-filter-group">
-          <span class="filter-label">Rank</span>
-        </div>
-        <div class="filter-sep"></div>
-        <div class="filter-group" id="party-filter-group">
-          <span class="filter-label">Party</span>
-        </div>
+        <label class="reset-toggle" id="reset-toggle" hidden title="Placement-week games after a total rank reset are greyed out and left out of your stats by default. Turn this on to count them.">
+          <input type="checkbox" id="reset-toggle-cb" onchange="toggleIncludeReset(this.checked)">
+          <span>Count placement-week games (<span id="reset-toggle-count">0</span>)</span>
+        </label>
       </div>
       <div id="matches-container"></div>
       <button class="load-more-btn" id="load-more-btn" style="display:none" onclick="loadMoreMatches()">Load More</button>
@@ -526,9 +589,6 @@ const RL_WAIT_FLOOR_MS = 2500;
 
 // Parses an API short code like "e11a4" into {ep:11, act:4}. Returns null if
 // it doesn't match the expected pattern.
-// Looks up when a given act (season UUID) started, used to compute avg
-// hours/day in the Playtime card. Best-effort — returns null on any failure
-// (network, missing field, no UUID) so callers can fall back gracefully.
 function parseShort(short){
   const m=(short||'').match(/^e(\d+)a(\d+)$/i);
   return m?{ep:parseInt(m[1],10),act:parseInt(m[2],10)}:null;
@@ -646,6 +706,25 @@ const TM_RANK_COL_W=(()=>{
     Math.max(max,ctx.measureText(label).width),0));
 })();
 
+// The teammate-card rank column previously sized itself off the rank NAME
+// alone (TM_RANK_COL_W above), which is why long names like "Ascendant 3"
+// got squeezed and ellipsis-truncated once the "(NN RR)" pill sat next to
+// them — that pill's width was never accounted for. This measures the true
+// worst case (icon + name + RR pill, with the actual gaps used in markup)
+// and reserves it as a CSS var, so the name always has room and the shorter
+// K/D/ACS columns give up space instead.
+(()=>{
+  const canvas=document.createElement('canvas');
+  const ctx=canvas.getContext('2d');
+  ctx.font='800 14px "Geist",system-ui,sans-serif'; // matches .tm-stat-rank-name / -num
+  const widestName=Math.ceil(Object.values(RANK_MAP).reduce((max,label)=>
+    Math.max(max,ctx.measureText(label).width),0));
+  const widestRR=Math.ceil(ctx.measureText('(99 RR)').width);
+  const ICON_W=22,GAP=6; // matches rankIcon(...,22) and .tm-stat-rank-val gap:6px
+  const total=ICON_W+GAP+widestName+GAP+widestRR+2; // +2 rounding buffer
+  document.documentElement.style.setProperty('--tm-rank-min-w',total+'px');
+})();
+
 const RANK_COLORS={
   0:'#6b7280',1:'#6b7280',2:'#6b7280',
   3:'#7a7a7e',4:'#7a7a7e',5:'#7a7a7e',
@@ -661,6 +740,16 @@ const RANK_COLORS={
 function rColor(n){return RANK_COLORS[n]||'#6b7280';}
 function avgLabel(a){return RANK_MAP[Math.round(a)]||'—';}
 function avgLabelShort(a){return RANK_MAP_SHORT[Math.round(a)]||'—';}
+// Split an avg tier value into a rank division + RR. Whole numbers center each
+// division (it spans value±0.5), so round() picks the division and the distance
+// from its lower edge (tier-0.5) gives 0-99 RR — i.e. 0.01 of the value = 1 RR.
+function tierRR(v){
+  let tier=Math.round(v);
+  let rr=Math.round((v-tier+0.5)*100);
+  if(rr>=100){rr-=100;tier+=1;}
+  if(rr<0){rr+=100;tier-=1;}
+  return{tier,rr};
+}
 function rClass(n){
   if(n<=2)return 'r-unr';if(n<=5)return 'r-iron';if(n<=8)return 'r-bronze';
   if(n<=11)return 'r-silver';if(n<=14)return 'r-gold';if(n<=17)return 'r-plat';
@@ -670,8 +759,8 @@ function rClass(n){
 
 /* ── STATE ──────────────────────────────────────────────── */
 let PLAYER='',TAG='',REGION='eu',PLATFORM='pc',TARGET_SEASON='',PUUID='';
-let allMatches=[],activeFilter='all',activeRankFilter=null,activePartyFilter=null,mhVisible=PER_PAGE,mhData=[],mhLastDayKey=null;
-let allTeammates=[],tmPage=0,tmSectionH=0;
+let allMatches=[],statMatches=[],mhIncludeReset=false,resultFilters=new Set(),rankFilters=new Set(),partyFilters=new Set(),mapFilters=new Set(),mhVisible=PER_PAGE,mhData=[],mhLastDayKey=null;
+let allTeammates=[],tmPage=0,tmSectionH=0,tmIncludeFiveStack=false;
 const TM_PER_PAGE=4;
 const chartInstances={};
 
@@ -966,7 +1055,7 @@ function shakeElement(id){
   el.classList.add('shake');
   el.addEventListener('animationend',()=>el.classList.remove('shake'),{once:true});
 }
-function shakeSearchBar(){shakeElement('search-bar');}
+function shakeSearchBar(){shakeElement('search-bar-shake');}
 
 // Measures how much room the result pills + season control actually need
 // (they live in an absolutely-positioned group pinned to the right, so they
@@ -1028,7 +1117,7 @@ function runAnalysis(){
   document.getElementById('header-rank-badge').innerHTML='';
   document.getElementById('result-panel').classList.remove('shown');
   settleSearchBarWidth();
-  allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;activeFilter='all';activeRankFilter=null;activePartyFilter=null;
+  allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;resultFilters.clear();rankFilters.clear();partyFilters.clear();mapFilters.clear();
   allTeammates=[];tmPage=0;
   // If the season dropdown's prefetch already fetched this exact player (the
   // common case — it runs while the player is still typing), reuse those
@@ -1037,7 +1126,8 @@ function runAnalysis(){
   const prefetchSnapshot=(_lastPrefetchKey===submittedKey&&_prefetchCache?.key===submittedKey)?_prefetchCache:null;
   _lastPrefetchKey='';
   _prefetchCache=null;
-  document.querySelectorAll('.filter-btn').forEach((b,i)=>b.classList.toggle('active',i===0));
+  document.querySelectorAll('#filter-panel input[type=checkbox]').forEach(cb=>cb.checked=false);
+  updateFilterCount();
   document.getElementById('results-section').scrollIntoView({behavior:'smooth',block:'start'});
   loadAll(prefetchSnapshot);
 }
@@ -1373,14 +1463,19 @@ function processMatch(m){
     const score=s.score??s.combat_score??0;
     const rp=s.rounds_played??s.roundsPlayed??totalRounds;
     const _acs=rp&&rp>0?score/rp:null;
+    const _kills=s.kills??0;
+    const _deaths=s.deaths??0;
+    // KD: null means unknown (no data), not 0
+    const _kd=_deaths>0?Math.round((_kills/_deaths)*100)/100:_kills>0?_kills:null;
     return{
       name:p.name,tag:p.tag,puuid:p.puuid,
       team_id:p.team_id?.toLowerCase(),
       party_id:p.party_id??null,
       _tier:p.tier?.id??p.currenttier??0,
       _label:p.tier?.patched??p.currenttier_patched??rName(p.tier?.id??p.currenttier??0),
-      _kills:p.stats?.kills??0,
-      _deaths:p.stats?.deaths??0,
+      _kills,
+      _deaths,
+      _kd,
       _acs,
     };
   });
@@ -1406,7 +1501,7 @@ function processMatch(m){
   const myTierName=me?.tier?.patched??me?.currenttier_patched??rName(myTierId);
   // v4 match player object uses `rr`; v3 used `ranking_in_tier` — check both
   const myRR=null; // v4 match endpoint doesn't include per-match RR — fetched separately via mmr-history
-  return{mapName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids};
+  return{mapName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
 }
 
 function extractStats(p,fallbackRounds=null){
@@ -1438,9 +1533,128 @@ function extractStats(p,fallbackRounds=null){
   return{kills:k,deaths:d,assists,score,rounds_played:rounds_played??null,kd,acs,adr,hsPct,dmg};
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// Hardcoded fallback act metadata — a static snapshot of the exact same shape
+// loadSeasonDates() builds live from valorant-api.com/v1/seasons (uuid →
+// {start, resetAct}), generated directly from a real pull of that endpoint.
+// Past acts never change their start date, so this stays accurate
+// indefinitely; it just won't know about an act added after this snapshot —
+// that's fine, since live data is always tried first and takes over again
+// the instant valorant-api.com is reachable.
+const HARDCODED_ACT_META={
+  '3f61c772-4560-cd3f-5d3f-a7ab5abda6b3':{start:1590994800000,resetAct:true}, // Episode 1 Act I
+  '0530b9c4-4980-f2ee-df5d-09864cd00542':{start:1596499200000,resetAct:false}, // Episode 1 Act II
+  '46ea6166-4573-1128-9cea-60a15640059b':{start:1602547200000,resetAct:false}, // Episode 1 Act III
+  '97b6e739-44cc-ffa7-49ad-398ba502ceb0':{start:1610409600000,resetAct:true}, // Episode 2 Act I
+  'ab57ef51-4e59-da91-cc8d-51a5a2b9b8ff':{start:1614643200000,resetAct:false}, // Episode 2 Act II
+  '52e9749a-429b-7060-99fe-4595426a0cf7':{start:1619481600000,resetAct:false}, // Episode 2 Act III
+  '2a27e5d2-4d30-c9e2-b15a-93b8909a442c':{start:1624320000000,resetAct:true}, // Episode 3 Act I
+  '4cb622e1-4244-6da3-7276-8daaf1c01be2':{start:1631059200000,resetAct:false}, // Episode 3 Act II
+  'a16955a5-4ad0-f761-5e9e-389df1c892fb':{start:1635811200000,resetAct:false}, // Episode 3 Act III
+  '573f53ac-41a5-3a7d-d9ce-d6a6298e5704':{start:1641859200000,resetAct:true}, // Episode 4 Act I
+  'd929bc38-4ab6-7da4-94f0-ee84f8ac141e':{start:1646092800000,resetAct:false}, // Episode 4 Act II
+  '3e47230a-463c-a301-eb7d-67bb60357d4f':{start:1650931200000,resetAct:false}, // Episode 4 Act III
+  '67e373c7-48f7-b422-641b-079ace30b427':{start:1655769600000,resetAct:true}, // Episode 5 Act I
+  '7a85de9a-4032-61a9-61d8-f4aa2b4a84b6':{start:1661212800000,resetAct:false}, // Episode 5 Act II
+  'aca29595-40e4-01f5-3f35-b1b3d304c96e':{start:1666051200000,resetAct:false}, // Episode 5 Act III
+  '9c91a445-4f78-1baa-a3ea-8f8aadf4914d':{start:1673308800000,resetAct:true}, // Episode 6 Act I
+  '34093c29-4306-43de-452f-3f944bde22be':{start:1678147200000,resetAct:false}, // Episode 6 Act II
+  '2de5423b-4aad-02ad-8d9b-c0a931958861':{start:1682380800000,resetAct:false}, // Episode 6 Act III
+  '0981a882-4e7d-371a-70c4-c3b4f46c504a':{start:1687824000000,resetAct:true}, // Episode 7 Act I
+  '03dfd004-45d4-ebfd-ab0a-948ce780dac4':{start:1693267200000,resetAct:false}, // Episode 7 Act II
+  '4401f9fd-4170-2e4c-4bc3-f3b4d7d150d1':{start:1698710400000,resetAct:false}, // Episode 7 Act III
+  'ec876e6c-43e8-fa63-ffc1-2e8d4db25525':{start:1704758400000,resetAct:true}, // Episode 8 Act I
+  '22d10d66-4d2a-a340-6c54-408c7bd53807':{start:1709596800000,resetAct:false}, // Episode 8 Act II
+  '4539cac3-47ae-90e5-3d01-b3812ca3274e':{start:1714435200000,resetAct:false}, // Episode 8 Act III
+  '52ca6698-41c1-e7de-4008-8994d2221209':{start:1719360000000,resetAct:true}, // Episode 9 Act I
+  '292f58db-4c17-89a7-b1c0-ba988f0e9d98':{start:1724803200000,resetAct:false}, // Episode 9 Act II
+  'dcde7346-4085-de4f-c463-2489ed47983b':{start:1729641600000,resetAct:false}, // Episode 9 Act III
+  '476b0893-4c2e-abd6-c5fe-708facff0772':{start:1736294400000,resetAct:true}, // V25 Act I
+  '16118998-4705-5813-86dd-0292a2439d90':{start:1741132800000,resetAct:false}, // V25 Act II
+  'aef237a0-494d-3a14-a1c8-ec8de84e309c':{start:1745971200000,resetAct:false}, // V25 Act III
+  'ac12e9b3-47e6-9599-8fa1-0bb473e5efc7':{start:1750809600000,resetAct:true}, // V25 Act IV
+  '5adc33fa-4f30-2899-f131-6fba64c5dd3a':{start:1755648000000,resetAct:false}, // V25 Act V
+  '4c4b8cff-43eb-13d3-8f14-96b783c90cd2':{start:1760486400000,resetAct:false}, // V25 Act VI
+  '3ea2b318-423b-cf86-25da-7cbb0eefbe2d':{start:1767744000000,resetAct:true}, // V26 Act I
+  '9d85c932-4820-c060-09c3-668636d4df1b':{start:1773792000000,resetAct:false}, // V26 Act II
+  'ce2783e8-44fc-dd48-3da3-33b5ba6c4a22':{start:1777420800000,resetAct:false}, // V26 Act III
+  '4f0864e2-40af-28a4-de2c-0e9e64e75f23':{start:1782259200000,resetAct:true}, // V26 Act IV
+  '8102cd81-43a0-d0d7-bd59-47b8fe9bed1b':{start:1787097600000,resetAct:false}, // V26 Act V
+  'd816f426-48ea-f052-117f-9697a155b319':{start:1791936000000,resetAct:false}, // V26 Act VI
+};
+
+// Act metadata from valorant-api.com (keyless, CORS-open, so the browser can call
+// it directly regardless of our own API proxy). Maps act UUID → {start, resetAct}
+// where resetAct means it's the first act of its episode/season container — i.e.
+// the full placement reset (which happens twice a year). Best-effort: stays null
+// on failure, and getActInfo() then falls back to HARDCODED_ACT_META.
+let _actMeta=null,_seasonDatesPromise=null;
+function loadSeasonDates(){
+  if(_seasonDatesPromise)return _seasonDatesPromise;
+  _seasonDatesPromise=fetch('https://valorant-api.com/v1/seasons')
+    .then(r=>r.ok?r.json():Promise.reject(r.status))
+    .then(j=>{
+      // Acts carry a parentUuid (their episode/season); episodes/seasons don't.
+      const acts=(j.data||[]).filter(s=>s.uuid&&s.startTime&&s.parentUuid)
+        .map(s=>({uuid:s.uuid.toLowerCase(),parent:s.parentUuid,t:Date.parse(s.startTime)}))
+        .filter(s=>!isNaN(s.t));
+      // The earliest-starting act under each parent is that season's reset act.
+      const firstByParent={};
+      acts.forEach(s=>{
+        const f=firstByParent[s.parent];
+        if(!f||s.t<f.t)firstByParent[s.parent]=s;
+      });
+      const resetUuids=new Set(Object.values(firstByParent).map(s=>s.uuid));
+      const meta={};
+      acts.forEach(s=>{meta[s.uuid]={start:s.t,resetAct:resetUuids.has(s.uuid)};});
+      _actMeta=meta;
+      return meta;
+    })
+    .catch(()=>{_actMeta=null;return null;});
+  return _seasonDatesPromise;
+}
+
+// Looks up a match's act start info by whichever source is available, in
+// order of trust: live valorant-api data (by UUID) → hardcoded snapshot (also
+// by UUID) → null (caller falls back further to the history heuristic).
+function getActInfo(m){
+  if(!m.seasonId)return null;
+  const id=m.seasonId.toLowerCase();
+  return (_actMeta&&_actMeta[id])||HARDCODED_ACT_META[id]||null;
+}
+
+// Same lookup, but by season UUID directly (used where we have TARGET_SEASON
+// rather than a match object on hand).
+function getActInfoByUuid(uuid){
+  if(!uuid)return null;
+  const id=uuid.toLowerCase();
+  return (_actMeta&&_actMeta[id])||HARDCODED_ACT_META[id]||null;
+}
+
+// Twice a year Valorant does a "total" rank reset — everyone recalibrates through
+// five placement games, so ranks (and the avg-lobby-rank figure) run low for about
+// a week. That reset lands on the first act of each episode/season container (e.g.
+// Episode 9 Act I, or V26 Act IV, which opens the year's second half). We flag
+// matches in the first RESET_GRACE_DAYS of such an act (m.postReset=true) so they
+// can be greyed out in the history and left out of stats by default (a toggle can
+// re-include them). Act start dates + reset status come from getActInfo(), which
+// tries live valorant-api data first, then the hardcoded snapshot. A match whose
+// act isn't in either source (e.g. a brand-new act launched after this snapshot,
+// while valorant-api is also unreachable) simply isn't tagged as post-reset.
+const RESET_GRACE_DAYS=7;
+function tagPostResetPlacements(matches,days=RESET_GRACE_DAYS){
+  const WINDOW=days*86400000;
+  matches.forEach(m=>{
+    const info=getActInfo(m);
+    m.postReset=!!(info&&info.resetAct&&m.startedAtMs!=null&&m.startedAtMs<info.start+WINDOW);
+  });
+  return matches;
+}
+
 /* ── LOAD ─────────────────────────────────────────────────── */
 async function loadAll(prefetchSnapshot=null){
   const myGen=++_analysisGen; // supersede any in-flight analysis
+  loadSeasonDates(); // fire off act-start dates now; awaited before we filter matches
   __debugResetRate(); // TEMP DEBUG — clear the quota readout for a fresh run
   rateLimit.recentCosts=[]; // fresh cost estimate for this run's cache regime
   setProgress(3);
@@ -1600,7 +1814,8 @@ async function loadAll(prefetchSnapshot=null){
       if(!id||seen.has(id))return false;
       seen.add(id);return true;
     });
-    allMatches=deduped.map(processMatch);
+    await loadSeasonDates(); // ensure real act-start dates are in before filtering
+    allMatches=tagPostResetPlacements(deduped.map(processMatch));
     if(myGen!==_analysisGen)return; // a newer analysis took over
     setProgress(100);
     setTimeout(()=>setProgress(0),600);
@@ -1728,70 +1943,66 @@ function paginateRows(containerEl,dotsEl,rows,pageSize,skipHeightLock,afterRende
   }
 }
 
-function renderAll(){
-  const n=allMatches.length;
-  if(!n){setStatus('No matches found for this season.');return;}
+// Renders every stat panel from statMatches — the post-reset-placement games are
+// excluded unless the user toggles them in (mhIncludeReset). Kept separate from
+// renderAll so the toggle can refresh stats without rebuilding the history list.
+function renderStats(skipPlaytime){
+  statMatches=mhIncludeReset?allMatches:allMatches.filter(m=>!m.postReset);
+  const n=statMatches.length;
+  // Reflect the toggle: show it only when there are placement-week games to skip.
+  const resetCount=allMatches.filter(m=>m.postReset).length;
+  const resetToggle=document.getElementById('reset-toggle');
+  if(resetToggle){
+    resetToggle.hidden=resetCount===0;
+    const cb=document.getElementById('reset-toggle-cb');
+    if(cb)cb.checked=mhIncludeReset;
+    const lbl=document.getElementById('reset-toggle-count');
+    if(lbl)lbl.textContent=resetCount;
+  }
+  // When counted, they're no longer "filtered out", so lift the greying (the
+  // PLACEMENTS tag stays so they remain identifiable). No history re-render needed.
+  const mc=document.getElementById('matches-container');
+  if(mc)mc.classList.toggle('counting-reset',mhIncludeReset);
 
   // Avg lobby rank (overall + last 20) only counts solo queue games — party size 1
-  const soloMatches=allMatches.filter(m=>(m.partySize||1)===1);
+  const soloMatches=statMatches.filter(m=>(m.partySize||1)===1);
   const avgs=soloMatches.map(m=>m.avgRank).filter(Boolean);
   const overall=avgs.length?avgs.reduce((a,b)=>a+b,0)/avgs.length:null;
 
   // Theme the whole UI from the average lobby rank (not the player's own rank).
   // Fall back to all matches if the player has no solo-queue games.
   const accentAvg=overall!=null?overall:(()=>{
-    const a=allMatches.map(m=>m.avgRank).filter(Boolean);
+    const a=statMatches.map(m=>m.avgRank).filter(Boolean);
     return a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
   })();
   if(accentAvg!=null)setAccent(rColor(Math.round(accentAvg)));
 
   // Sum raw kills and deaths across all games for an accurate overall K/D
-  const statGames=allMatches.filter(m=>m.myStats&&m.myStats.kills!=null&&m.myStats.deaths!=null);
+  const statGames=statMatches.filter(m=>m.myStats&&m.myStats.kills!=null&&m.myStats.deaths!=null);
   const totalKills=statGames.reduce((a,m)=>a+m.myStats.kills,0);
   const totalDeaths=statGames.reduce((a,m)=>a+m.myStats.deaths,0);
   const avgKD=statGames.length?(totalDeaths>0?+(totalKills/totalDeaths).toFixed(2):totalKills):null;
 
-  const wins=allMatches.filter(m=>m.won===true).length;
+  const wins=statMatches.filter(m=>m.won===true).length;
   const wr=n?Math.round(wins/n*100):0;
   const wrColor=wr>=50?'#22c55e':'#ef4444';
   document.getElementById('sg-games').textContent=n;
   document.getElementById('sg-wr').innerHTML=`<span style="color:${wrColor}">${wr}%</span>`;
-  const avgRankTier=overall!=null?Math.round(overall):null;
-  document.getElementById('sg-avg-rank').innerHTML=(avgRankTier!=null?rankIcon(avgRankTier,40)+' ':'')+(overall!=null?`<span>${avgLabel(overall)}<span class="s-value-suffix"> (${overall.toFixed(1)})</span></span>`:avgLabel(overall));
+  const overallRR=overall!=null?tierRR(overall):null;
+  const avgRankTier=overallRR?overallRR.tier:null;
+  document.getElementById('sg-avg-rank').innerHTML=(avgRankTier!=null?rankIcon(avgRankTier,40)+' ':'')+(overall!=null?`<span>${avgLabel(avgRankTier)}<span class="s-value-suffix"> (${overallRR.rr} RR)</span></span>`:avgLabel(overall));
   // Last 20 games avg rank
   const last20=avgs.slice(-20);
   const recent20=last20.length?last20.reduce((a,b)=>a+b,0)/last20.length:null;
+  const recent20RR=recent20!=null?tierRR(recent20):null;
   document.getElementById('sg-avg-rank-sub').innerHTML=recent20!=null
-    ?`<span class="hero-sub"><span class="hero-sub-lbl">Last 20 solo</span><span class="hero-sub-val">${avgLabel(recent20)} (${recent20.toFixed(1)})</span></span>`
+    ?`<span class="hero-sub"><span class="hero-sub-lbl">Last 20 solo</span><span class="hero-sub-val">${avgLabel(recent20RR.tier)} (${recent20RR.rr} RR)</span></span>`
     :'&nbsp;';
 
-  // Rank breakdown — per sub-rank (Asc 1, Asc 2, Imm 1 etc.)
-  // Using global RANK_COLORS
-  function renderRankBreakdown(matches,containerId,getTier){
-    const rankCounts={};
-    matches.forEach(m=>{
-      const raw=getTier(m);
-      if(raw==null)return;
-      const t=Math.round(raw);
-      rankCounts[t]=(rankCounts[t]||0)+1;
-    });
-    const breakdown=document.getElementById(containerId);
-    breakdown.innerHTML='';
-    // Show in descending order (highest rank first)
-    Object.keys(rankCounts).map(Number).sort((a,b)=>b-a).forEach(t=>{
-      const count=rankCounts[t];
-      if(!count||t<3)return;
-      const item=document.createElement('div');
-      item.className='rb-item';
-      item.innerHTML=`${rankIcon(t,14)}<span style="color:${rColor(t)}">${RANK_MAP_SHORT[t]||t}</span><span class="rb-count">${count}</span>`;
-      breakdown.appendChild(item);
-    });
-  }
-  renderRankBreakdown(soloMatches,'sg-rank-breakdown-solo',m=>m.avgRank);
   document.getElementById('sg-kd').textContent=avgKD!=null?avgKD.toFixed(2):'—';
 
   // Avg ACS — total combat score ÷ total rounds (weighted, matches tracker.gg)
-  const acsGames=allMatches.filter(m=>m.myStats?.acs!=null&&m.myStats?.rounds_played>0);
+  const acsGames=statMatches.filter(m=>m.myStats?.acs!=null&&m.myStats?.rounds_played>0);
   const totalAcsScore=acsGames.reduce((a,m)=>a+m.myStats.score,0);
   const totalAcsRounds=acsGames.reduce((a,m)=>a+m.myStats.rounds_played,0);
   const avgAcs=totalAcsRounds>0?Math.round(totalAcsScore/totalAcsRounds):null;
@@ -1805,18 +2016,25 @@ function renderAll(){
   _badgeCtx.font='700 13px Geist,system-ui,sans-serif';
   const _maxBadgeW=allMatches.reduce((max,m)=>{
     if(m.avgRank==null)return max;
-    const lbl=`${avgLabelShort(m.avgRank)} (${m.avgRank.toFixed(1)})`;
+    const _rr=tierRR(m.avgRank);
+    const lbl=`${avgLabelShort(_rr.tier)} (${_rr.rr} RR)`;
     return Math.max(max,_badgeCtx.measureText(lbl).width);
   },0);
   const _badgeW=Math.ceil(_maxBadgeW)+16;
   document.documentElement.style.setProperty('--match-badge-w',_badgeW+'px');
 
   document.getElementById('summary-grid').style.display='flex';
-  renderPlaytime();
+  // Playtime is always computed from allMatches (see renderPlaytime), so it's
+  // completely unaffected by mhIncludeReset — rebuilding/destroying the Chart.js
+  // instance here would just be a pointless flash every time this toggle flips.
+  if(!skipPlaytime)renderPlaytime();
   document.getElementById('show-history-btn').style.display='block';
   buildTeammates();
-  layoutTopRow();
-  requestAnimationFrame(()=>requestAnimationFrame(matchRankRowHeights));
+}
+
+function renderAll(){
+  if(!allMatches.length){setStatus('No matches found for this season.');return;}
+  renderStats();
 
   // Populate rank filter buttons based on what ranks actually appear in the data
   const RANK_GROUP_DEFS=[
@@ -1824,38 +2042,55 @@ function renderAll(){
     {label:'Bronze',tiers:[6,7,8], color:rColor(6)},
     {label:'Silver',tiers:[9,10,11],color:rColor(9)},
     {label:'Gold',  tiers:[12,13,14],color:rColor(12)},
-    {label:'Plat',  tiers:[15,16,17],color:rColor(15)},
+    {label:'Platinum',tiers:[15,16,17],color:rColor(15)},
     {label:'Diamond',tiers:[18,19,20],color:rColor(18)},
-    {label:'Asc',   tiers:[21,22,23],color:rColor(21)},
-    {label:'Imm',   tiers:[24,25,26],color:rColor(24)},
+    {label:'Ascendant',tiers:[21,22,23],color:rColor(21)},
+    {label:'Immortal',tiers:[24,25,26],color:rColor(24)},
     {label:'Radiant',tiers:[27],    color:rColor(27)},
   ];
-  const rankGroup=document.getElementById('rank-filter-group');
-  // keep the label, remove old buttons
-  rankGroup.querySelectorAll('.filter-btn').forEach(b=>b.remove());
+  const rankGroup=document.getElementById('rank-check-group');
+  // keep the label, remove old checkbox rows
+  rankGroup.querySelectorAll('.filter-check').forEach(b=>b.remove());
+  let anyRank=false;
   RANK_GROUP_DEFS.forEach(g=>{
     const hasMatches=allMatches.some(m=>m.avgRank!=null&&g.tiers.includes(Math.round(m.avgRank)));
     if(!hasMatches)return;
-    const btn=document.createElement('button');
-    btn.className='filter-btn';
-    btn.style.cssText=`border-left:3px solid ${g.color};`;
-    btn.textContent=g.label;
-    btn.onclick=(e)=>setRankFilter(g.label,e);
-    rankGroup.appendChild(btn);
+    anyRank=true;
+    const lbl=document.createElement('label');
+    lbl.className='filter-check';
+    lbl.innerHTML=`<input type="checkbox"><span class="swatch" style="background:${g.color}"></span><span>${g.label}</span>`;
+    lbl.querySelector('input').addEventListener('change',e=>toggleRankFilter(g.label,e.target.checked));
+    rankGroup.appendChild(lbl);
   });
+  rankGroup.hidden=!anyRank;
 
-  // Populate party size filter buttons
-  const partyGroup=document.getElementById('party-filter-group');
-  partyGroup.querySelectorAll('.filter-btn').forEach(b=>b.remove());
+  // Populate party size filter checkboxes
+  const partyGroup=document.getElementById('party-check-group');
+  partyGroup.querySelectorAll('.filter-check').forEach(b=>b.remove());
   const PARTY_LABELS={1:'Solo',2:'Duo',3:'Trio',4:'Quad',5:'5-Stack'};
   const partySizes=[...new Set(allMatches.map(m=>m.partySize||1))].sort((a,b)=>a-b);
   partySizes.forEach(sz=>{
-    const btn=document.createElement('button');
-    btn.className='filter-btn';
-    btn.textContent=PARTY_LABELS[sz]||`${sz}-stack`;
-    btn.onclick=(e)=>setPartyFilter(sz,e);
-    partyGroup.appendChild(btn);
+    const lbl=document.createElement('label');
+    lbl.className='filter-check';
+    lbl.innerHTML=`<input type="checkbox"><span>${PARTY_LABELS[sz]||sz+'-stack'}</span>`;
+    lbl.querySelector('input').addEventListener('change',e=>togglePartyFilter(sz,e.target.checked));
+    partyGroup.appendChild(lbl);
   });
+  partyGroup.hidden=partySizes.length<=1; // nothing to filter if everyone's the same
+
+  // Populate map filter checkboxes
+  const mapGroup=document.getElementById('map-check-group');
+  mapGroup.querySelectorAll('.filter-check').forEach(b=>b.remove());
+  const maps=[...new Set(allMatches.map(m=>m.mapName).filter(n=>n&&n!=='Unknown'))].sort();
+  maps.forEach(name=>{
+    const lbl=document.createElement('label');
+    lbl.className='filter-check';
+    lbl.innerHTML=`<input type="checkbox"><span>${name}</span>`;
+    lbl.querySelector('input').addEventListener('change',e=>toggleMapFilter(name,e.target.checked));
+    mapGroup.appendChild(lbl);
+  });
+  mapGroup.hidden=maps.length<=1; // nothing to filter if only one map
+  updateFilterCount();
   setStatus('',false);
   renderMatches();
 }
@@ -1879,16 +2114,28 @@ function matchRankRowHeights(){
   const cards=list?[...list.querySelectorAll('.teammate-card')]:[];
   const rows=ro?[...ro.querySelectorAll('.pb-row')]:[];
   const all=cards.concat(rows);
-  if(!all.length)return;
+  if(!all.length)return false;
   all.forEach(el=>{el.style.height='';});
   let itemH=0;
   all.forEach(el=>{const h=el.getBoundingClientRect().height;if(h>itemH)itemH=h;});
   itemH=Math.ceil(itemH);
-  if(!itemH)return;
+  if(!itemH)return false;
   all.forEach(el=>{el.style.height=itemH+'px';});
   const listH=PB_PER_PAGE*itemH+(PB_PER_PAGE-1)*PB_LIST_GAP;
   if(ro)ro.style.minHeight=listH+'px';
   if(list)list.style.minHeight=listH+'px';
+  return true;
+}
+// getBoundingClientRect() forces a synchronous layout, so if the section is
+// already visible (the common case — toggling a filter, paginating, etc.)
+// this measures and locks heights immediately, same tick, before the browser
+// ever paints. That avoids a one-frame flash where fresh cards briefly show
+// their natural (possibly mismatched) heights before snapping to the locked
+// height — which is what showed up as the cards "jiggling" on toggle. The
+// rAF-deferred retry is now only a fallback for the genuine edge case where
+// the container isn't laid out yet (e.g. a parent still mid display:none).
+function scheduleMatchRankRowHeights(){
+  if(!matchRankRowHeights())requestAnimationFrame(()=>requestAnimationFrame(matchRankRowHeights));
 }
 
 function layoutTopRow(){
@@ -1902,11 +2149,21 @@ function layoutTopRow(){
 
 function buildTeammates(){
   const tmap={};
-  allMatches.forEach(m=>{
+  // Only show the toggle at all when there are actual 5-stack games to count —
+  // otherwise it'd be a control with no effect.
+  const fiveStackCount=statMatches.filter(m=>(m.partySize||1)>=5).length;
+  const toggleEl=document.getElementById('tm-5stack-toggle');
+  if(toggleEl){
+    toggleEl.hidden=fiveStackCount===0;
+    const cb=document.getElementById('tm-5stack-cb');
+    if(cb)cb.checked=tmIncludeFiveStack;
+  }
+
+  statMatches.forEach(m=>{
     if(!m.myStats)return;
-    // Skip full 5-stacks — a premade team of 5 isn't a "duo"; those teammates
-    // shouldn't count toward the most-played-with list.
-    if((m.partySize||1)>=5)return;
+    // Full 5-stacks are excluded by default — a premade team of 5 isn't a
+    // "duo" — unless the person has explicitly opted in via the toggle above.
+    if(!tmIncludeFiveStack&&(m.partySize||1)>=5)return;
     const myTeam=m.players.filter(p=>p.team_id===m.players.find(q=>
       PUUID?q.puuid===PUUID:q.name?.toLowerCase()===PLAYER.toLowerCase()
     )?.team_id);
@@ -1934,10 +2191,27 @@ function buildTeammates(){
   allTeammates=Object.values(tmap).sort((a,b)=>b.games-a.games);
   tmPage=0;
 
-  if(!allTeammates.length){document.getElementById('teammates-section').style.display='none';return;}
+  const hasTeammates=allTeammates.length>0;
+  document.getElementById('teammates-section').style.display=hasTeammates?'block':'none';
+  // renderTeammates() (when it runs) already schedules matchRankRowHeights itself
+  // — calling it again here as well was causing a double layout-thrash (heights
+  // reset to auto and re-measured/re-locked twice in quick succession) every
+  // time this rebuilt interactively, which is what showed up as glitching when
+  // toggling the 5-stack/reset switches. So this is now the only place that
+  // schedules it, and only once, regardless of which branch runs.
+  if(hasTeammates){
+    renderTeammates();
+  }else{
+    scheduleMatchRankRowHeights();
+  }
+  layoutTopRow();
+}
 
-  document.getElementById('teammates-section').style.display='block';
-  renderTeammates();
+// Flip whether full 5-stacks count toward the Duos list, then rebuild it.
+// buildTeammates() itself takes care of the layout/sizing follow-up.
+function toggleFiveStackDuos(checked){
+  tmIncludeFiveStack=!!checked;
+  buildTeammates();
 }
 
 function renderTeammates(){
@@ -1951,24 +2225,25 @@ function renderTeammates(){
     const wr=Math.round(t.wins/t.games*100);
     const kdClass=parseFloat(kd)>1?'tm-kd-good':parseFloat(kd)<1?'tm-kd-bad':'tm-kd-mid';
     const avgRankRaw=t.rankCount>0?t.rankSum/t.rankCount:null;
-    const avgRankTier=avgRankRaw!=null?Math.round(avgRankRaw):null;
+    const avgRankRR=avgRankRaw!=null?tierRR(avgRankRaw):null;
+    const avgRankTier=avgRankRR?avgRankRR.tier:null;
     const row=document.createElement('div');
     row.className='teammate-card';
-    const avgRankName=avgRankRaw!=null?avgLabel(avgRankRaw):'Unranked';
+    const avgRankName=avgRankTier!=null?avgLabel(avgRankTier):'Unranked';
     row.innerHTML=`
       <div class="tm-head">
         <div class="tm-identity">
           <span class="tm-rank">#${globalRank}</span>
           <span class="tm-name-wrap"><span class="tm-name">${t.name}</span><span class="tm-tag">#${t.tag}</span></span>
         </div>
-        <span class="tm-count">${t.games} games <span class="tm-wr" style="color:${wr>=50?'#22c55e':'#ef4444'}">${wr}%</span> WR</span>
+        <span class="tm-count"><span class="tm-count-games">${t.games} games</span><span class="tm-wr" style="color:${wr>=50?'#22c55e':'#ef4444'}">${wr}% WR</span></span>
       </div>
       <div class="tm-stats">
         <div class="tm-stat"><div class="tm-stat-lbl">K/D</div><div class="tm-stat-val ${kdClass}">${kd}</div></div>
         <div class="tm-stat"><div class="tm-stat-lbl">ACS</div><div class="tm-stat-val">${t.acsCount>0?Math.round(t.acsSum/t.acsCount):'—'}</div></div>
         <div class="tm-stat tm-stat-rank">
           <div class="tm-stat-lbl">Avg Lobby</div>
-          <div class="tm-stat-rank-val">${avgRankTier!=null?rankIcon(avgRankTier,22):''}<span class="tm-stat-rank-name">${avgRankName}</span>${avgRankRaw!=null?`<span class="tm-stat-rank-num">(${avgRankRaw.toFixed(1)})</span>`:''}</div>
+          <div class="tm-stat-rank-val">${avgRankTier!=null?rankIcon(avgRankTier,22):''}<span class="tm-stat-rank-name">${avgRankName}</span>${avgRankRR!=null?`<span class="tm-stat-rank-num">(${avgRankRR.rr} RR)</span>`:''}</div>
         </div>
       </div>
     `;
@@ -1980,8 +2255,8 @@ function renderTeammates(){
   syncDots(dots,pages>1?pages:0,tmPage,(i)=>goToTmPage(i));
 
   // Size the duo cards to match the K/D rows and lock the list height so the
-  // pagination nav never moves up on shorter pages. Deferred so layout settles.
-  requestAnimationFrame(()=>requestAnimationFrame(matchRankRowHeights));
+  // pagination nav never moves up on shorter pages.
+  scheduleMatchRankRowHeights();
 }
 
 function goToTmPage(idx){
@@ -2010,39 +2285,89 @@ function renderPlaytime(){
   container.innerHTML='';
   if(chartInstances.playtime){chartInstances.playtime.destroy();delete chartInstances.playtime;}
 
+  // Playtime always counts every match, including post-reset placement games —
+  // unlike the rank/K-D stats above, it isn't gated by mhIncludeReset, since
+  // time spent playing placements is real playtime either way.
   const withDur=allMatches.filter(m=>m.startedAtMs!=null&&m.durationMs!=null&&m.durationMs>0);
   if(!withDur.length){document.getElementById('playtime-section').style.display='none';return;}
 
-  // Pick a bucket size based on how much time the match history spans, so a
-  // week of games shows daily bars while a full year rolls up into months.
+  // Pick a bucket size that keeps the number of bars in a sensible range
+  // regardless of how far apart matches are — rather than jumping straight
+  // from 1-day to 7-day to 30-day buckets, which left awkward cases like 3
+  // weeks of data rendering as only 3 (very wide) bars. Instead we scale
+  // through a "nice" set of bucket sizes (in days) and pick the smallest one
+  // that keeps the bar count at or under TARGET_BARS.
   const minMs=Math.min(...withDur.map(m=>m.startedAtMs));
   const maxMs=Math.max(...withDur.map(m=>m.startedAtMs));
-  const spanDays=(maxMs-minMs)/86400000;
-  const granularity=spanDays<=14?'day':spanDays<=90?'week':'month';
-  const granularityLabel=granularity==='day'?'Day':granularity==='week'?'Week':'Month';
+  const spanDays=(maxMs-minMs)/86400000+1; // inclusive of both end days
+  const TARGET_BARS=12;
+  const NICE_BUCKET_DAYS=[1,2,3,5,7,14,21,30,45,60,90,120,182,365];
+  const bucketDays=NICE_BUCKET_DAYS.find(n=>Math.ceil(spanDays/n)<=TARGET_BARS)
+    ??NICE_BUCKET_DAYS[NICE_BUCKET_DAYS.length-1];
+  // 28+ day buckets read far more naturally aligned to real calendar months
+  // (variable length) than as a rolling N-day window, so switch to that once
+  // we're in "roughly monthly" territory.
+  const useMonths=bucketDays>=28;
+  // Multiples of 7 (7, 14, 21) look better aligned to real Monday-start weeks
+  // than to an arbitrary rolling window starting on whatever day the first
+  // match happened to fall on.
+  const weeksPerBucket=(!useMonths&&bucketDays%7===0)?bucketDays/7:null;
+
+  const dayStart=ms=>{const d=new Date(ms);return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime();};
+  const rangeStartMs=dayStart(minMs);
+  // Monday of the week containing the first match, used as the anchor for
+  // week-aligned buckets so grouping matches how a calendar actually reads.
+  const firstMonday=(()=>{
+    const d=new Date(rangeStartMs);
+    const dow=d.getDay();
+    return new Date(d.getFullYear(),d.getMonth(),d.getDate()+((dow===0?-6:1)-dow)).getTime();
+  })();
+
+  // Formats a start/end pair as "22–28 Jun" (same month) or "29 Jun–5 Jul"
+  // (spanning months), so a multi-day bucket never reads as a single date.
+  function rangeLabel(startDate,endDate){
+    const sm=startDate.toLocaleDateString('en-GB',{month:'short'});
+    const em=endDate.toLocaleDateString('en-GB',{month:'short'});
+    return sm===em?`${startDate.getDate()}–${endDate.getDate()} ${sm}`:`${startDate.getDate()} ${sm}–${endDate.getDate()} ${em}`;
+  }
 
   const buckets={};
   withDur.forEach(m=>{
-    const d=new Date(m.startedAtMs);
-    let sortVal,label;
-    if(granularity==='day'){
-      const start=new Date(d.getFullYear(),d.getMonth(),d.getDate());
-      sortVal=start.getTime();
-      label=start.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
-    }else if(granularity==='week'){
-      const dow=d.getDay();
-      const mondayOffset=(dow===0?-6:1)-dow;
-      const monday=new Date(d.getFullYear(),d.getMonth(),d.getDate()+mondayOffset);
-      sortVal=monday.getTime();
-      label=monday.toLocaleDateString('en-GB',{day:'2-digit',month:'short'});
+    const day=dayStart(m.startedAtMs);
+    let sortVal;
+    if(useMonths){
+      const d=new Date(day);
+      sortVal=new Date(d.getFullYear(),d.getMonth(),1).getTime();
+    }else if(weeksPerBucket){
+      const daysSinceMonday=Math.floor((day-firstMonday)/86400000);
+      const idx=Math.floor(daysSinceMonday/(7*weeksPerBucket));
+      sortVal=firstMonday+idx*7*weeksPerBucket*86400000;
+    }else if(bucketDays===1){
+      sortVal=day;
     }else{
-      const start=new Date(d.getFullYear(),d.getMonth(),1);
-      sortVal=start.getTime();
-      label=start.toLocaleDateString('en-GB',{month:'short',year:'2-digit'});
+      // Arbitrary N-day rolling window anchored to the first match's day.
+      const daysSinceStart=Math.floor((day-rangeStartMs)/86400000);
+      const idx=Math.floor(daysSinceStart/bucketDays);
+      sortVal=rangeStartMs+idx*bucketDays*86400000;
     }
-    if(!buckets[sortVal])buckets[sortVal]={label,ms:0,count:0};
-    buckets[sortVal].ms+=m.durationMs;
-    buckets[sortVal].count++;
+    if(!buckets[sortVal])buckets[sortVal]={ms:0,count:0,minDay:day,maxDay:day};
+    const b=buckets[sortVal];
+    b.ms+=m.durationMs;
+    b.count++;
+    if(day<b.minDay)b.minDay=day;
+    if(day>b.maxDay)b.maxDay=day;
+  });
+
+  // Label each bucket off the actual earliest/latest day it contains matches
+  // for — not the theoretical full bucket window. A 2-day bucket where only
+  // the second day has games should read "3 Jul", not "2–3 Jul" (which
+  // implied a match happened on the 2nd too).
+  Object.values(buckets).forEach(b=>{
+    b.label=useMonths
+      ?new Date(b.minDay).toLocaleDateString('en-GB',{month:'short',year:'2-digit'})
+      :(b.minDay===b.maxDay
+        ?new Date(b.minDay).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})
+        :rangeLabel(new Date(b.minDay),new Date(b.maxDay)));
   });
 
   const sortedKeys=Object.keys(buckets).map(Number).sort((a,b)=>a-b);
@@ -2054,13 +2379,18 @@ function renderPlaytime(){
   const totalH=Math.floor(totalMs/3600000);
   const totalM=Math.round((totalMs%3600000)/60000);
 
-  // Average hours per day, counting only days the player actually played
-  // (idle days don't dilute the average).
-  const daysPlayed=new Set(withDur.map(m=>{
-    const d=new Date(m.startedAtMs);
-    return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime();
-  })).size;
-  const avgHoursPerDay=(totalMs/3600000/Math.max(1,daysPlayed)).toFixed(1);
+  // Average hours per day. Now that we know each act's real start date
+  // (fetched via loadSeasonDates → _actMeta, or the hardcoded snapshot when
+  // that fetch fails), we can measure this against the season itself — total
+  // playtime ÷ calendar days elapsed since the season started — rather than
+  // only the days the player happened to play. Only shown when we actually
+  // know the targeted season's start date (live data or the hardcoded
+  // snapshot); with no season targeted, or one absent from both sources,
+  // the figure is simply omitted rather than falling back to an estimate.
+  const seasonStartMs=getActInfoByUuid(TARGET_SEASON)?.start??null;
+  const avgHoursPerDay=seasonStartMs!=null
+    ?(totalMs/3600000/Math.max(1,Math.ceil((Date.now()-seasonStartMs)/86400000))).toFixed(1)
+    :null;
 
   const card=document.createElement('div');
   card.className='chart-container';
@@ -2068,7 +2398,7 @@ function renderPlaytime(){
     <div class="card-title playtime-title">Playtime</div>
     <div class="playtime-head">
       <div class="playtime-total"><span class="playtime-total-val">${totalH}h ${totalM}m</span><span class="playtime-total-lbl">across ${withDur.length} match${withDur.length===1?'':'es'}</span></div>
-      <div class="playtime-avgday"><span class="playtime-avgday-val">${avgHoursPerDay}h</span><span class="playtime-avgday-lbl">per day played</span></div>
+      ${avgHoursPerDay!=null?`<div class="playtime-avgday"><span class="playtime-avgday-val">${avgHoursPerDay}h</span><span class="playtime-avgday-lbl">per day since season start</span></div>`:''}
     </div>
     <div class="playtime-canvas-wrap"><canvas></canvas></div>
   `;
@@ -2103,7 +2433,14 @@ function renderPlaytime(){
         borderWidth:1,
         borderRadius:5,
         borderSkipped:false,
-        maxBarThickness:46,
+        // Previously capped at a flat 46px, which left huge gaps whenever there
+        // were only a few bars (e.g. 3 weeks of data in a wide chart). Now bars
+        // fill most of their category slot (barPercentage/categoryPercentage)
+        // and only hit the hard ceiling (maxBarThickness) once there are many
+        // categories crammed in (e.g. daily granularity over two weeks).
+        barPercentage:0.7,
+        categoryPercentage:0.85,
+        maxBarThickness:90,
       }]
     },
     options:{
@@ -2117,10 +2454,11 @@ function renderPlaytime(){
           borderColor:`rgba(${accentRgb},.4)`,
           borderWidth:1,
           padding:10,
+          displayColors:false,
           titleFont:{family:'Geist',size:11,weight:'700'},
           bodyFont:{family:'Geist',size:11},
           callbacks:{
-            title:(items)=>`${granularityLabel} of ${items[0].label}`,
+            title:()=>[], // no date heading — empty array fully collapses the title row
             label:(item)=>{
               const h=item.raw;
               const hh=Math.floor(h);
@@ -2134,7 +2472,7 @@ function renderPlaytime(){
       scales:{
         x:{
           grid:{display:false},
-          ticks:{color:'#6b7280',font:{family:'Geist',size:10},maxRotation:0,autoSkip:true,maxTicksLimit:7},
+          ticks:{color:'#6b7280',font:{family:'Geist',size:10},maxRotation:0,autoSkip:true,maxTicksLimit:labels.length},
           border:{display:true,color:'rgba(255,255,255,.12)'}
         },
         y:{
@@ -2162,7 +2500,7 @@ let currentRankMode='player';
 // they differ only in how each match is bucketed.
 function buildKdRankRows(bucketFn){
   const rb={};
-  allMatches.filter(m=>m.myStats).forEach(m=>{
+  statMatches.filter(m=>m.myStats).forEach(m=>{
     const info=bucketFn(m);
     if(!info)return;
     const t=info.tier;
@@ -2325,39 +2663,117 @@ function setProgress(pct){
   if(pct===0)setTimeout(()=>document.querySelector('.progress-wrap').style.display='none',400);
 }
 
-function setResultFilter(f,e){
-  activeFilter=f;mhVisible=PER_PAGE;
-  document.querySelectorAll('#filter-bar .filter-group:first-child .filter-btn').forEach(b=>b.classList.remove('active'));
-  if(e?.target)e.target.classList.add('active');
-  renderMatches();
+function toggleResultFilter(v,checked){
+  checked?resultFilters.add(v):resultFilters.delete(v);
+  afterFilterChange();
 }
-function setRankFilter(f,e){
-  activeRankFilter=activeRankFilter===f?null:f;mhVisible=PER_PAGE;
-  document.querySelectorAll('#rank-filter-group .filter-btn').forEach(b=>b.classList.remove('active'));
-  if(activeRankFilter!=null&&e?.target)e.target.classList.add('active');
-  renderMatches();
+function toggleRankFilter(label,checked){
+  checked?rankFilters.add(label):rankFilters.delete(label);
+  afterFilterChange();
 }
-function setPartyFilter(f,e){
-  activePartyFilter=activePartyFilter===f?null:f;mhVisible=PER_PAGE;
-  document.querySelectorAll('#party-filter-group .filter-btn').forEach(b=>b.classList.remove('active'));
-  if(activePartyFilter!=null&&e?.target)e.target.classList.add('active');
-  renderMatches();
+function togglePartyFilter(sz,checked){
+  checked?partyFilters.add(sz):partyFilters.delete(sz);
+  afterFilterChange();
 }
-// Keep old setFilter as alias for backward compat
-function setFilter(f,e){setResultFilter(f,e);}
+function toggleMapFilter(name,checked){
+  checked?mapFilters.add(name):mapFilters.delete(name);
+  afterFilterChange();
+}
+function afterFilterChange(){updateFilterCount();renderMatches();}
+
+// Total number of active tick-boxes across all groups.
+function activeFilterCount(){return resultFilters.size+rankFilters.size+partyFilters.size+mapFilters.size;}
+function updateFilterCount(){
+  const n=activeFilterCount();
+  const badge=document.getElementById('filter-count');
+  if(badge){badge.textContent=n;badge.hidden=n===0;}
+  const clear=document.getElementById('filter-clear');
+  if(clear)clear.disabled=n===0;
+}
+function clearAllFilters(){
+  resultFilters.clear();rankFilters.clear();partyFilters.clear();mapFilters.clear();
+  document.querySelectorAll('#filter-panel input[type=checkbox]').forEach(cb=>cb.checked=false);
+  afterFilterChange();
+}
+
+// Count the greyed-out placement-week games in the stats (or not). Only the stat
+// panels change — the match history and its greying stay exactly as they are.
+function toggleIncludeReset(checked){
+  mhIncludeReset=!!checked;
+  renderStats(true);
+}
+
+// Open/close the filter dropdown; positions the panel to the LEFT of the trigger
+// (beside the matches) and closes on outside click.
+function toggleFilterPanel(e){
+  e?.stopPropagation();
+  const dd=document.getElementById('filter-dd');
+  const panel=document.getElementById('filter-panel');
+  const open=!dd.classList.contains('open');
+  dd.classList.toggle('open',open);
+  panel.classList.toggle('open',open);
+  document.getElementById('filter-trigger').setAttribute('aria-expanded',open?'true':'false');
+  if(open){
+    positionFilterPanel();
+    document.addEventListener('click',_filterOutsideClick,true);
+    window.addEventListener('scroll',positionFilterPanel,true);
+    window.addEventListener('resize',positionFilterPanel);
+  }else{
+    document.removeEventListener('click',_filterOutsideClick,true);
+    window.removeEventListener('scroll',positionFilterPanel,true);
+    window.removeEventListener('resize',positionFilterPanel);
+  }
+}
+// Place the panel to the LEFT of the trigger, in the gutter beside the match
+// list. Falls back to dropping below the trigger when there isn't room on the
+// left (e.g. narrow viewports), and clamps vertically to stay on screen.
+function positionFilterPanel(){
+  const dd=document.getElementById('filter-dd');
+  const panel=document.getElementById('filter-panel');
+  if(!dd.classList.contains('open'))return;
+  const trigger=document.getElementById('filter-trigger');
+  const r=trigger.getBoundingClientRect();
+  const pw=panel.offsetWidth||220, ph=panel.offsetHeight||260, gap=8;
+  let left=r.left-pw-gap;      // to the left of the trigger
+  let top=r.top;               // aligned with the trigger's top
+  if(left<6){                  // not enough room on the left → drop below instead
+    left=Math.min(r.left,window.innerWidth-pw-6);
+    top=r.bottom+6;
+  }
+  top=Math.max(6,Math.min(top,window.innerHeight-ph-6)); // keep on screen
+  panel.style.left=left+'px';
+  panel.style.top=top+'px';
+}
+function _filterOutsideClick(ev){
+  const dd=document.getElementById('filter-dd');
+  const panel=document.getElementById('filter-panel');
+  if(dd&&!dd.contains(ev.target)&&!panel.contains(ev.target)){
+    dd.classList.remove('open');
+    panel.classList.remove('open');
+    document.getElementById('filter-trigger').setAttribute('aria-expanded','false');
+    document.removeEventListener('click',_filterOutsideClick,true);
+    window.removeEventListener('scroll',positionFilterPanel,true);
+    window.removeEventListener('resize',positionFilterPanel);
+  }
+}
+
 function filtered(){
   let out=allMatches;
-  if(activeFilter==='win')out=out.filter(m=>m.won===true);
-  else if(activeFilter==='loss')out=out.filter(m=>m.won===false);
-  if(activeRankFilter!=null){
+  // Result: empty set = show all; otherwise keep matches whose outcome is ticked.
+  if(resultFilters.size)out=out.filter(m=>resultFilters.has(m.won===true?'win':m.won===false?'loss':'draw'));
+  // Rank: empty = all; otherwise match is kept if its rank group is ticked (OR).
+  if(rankFilters.size){
     const RANK_GROUPS_FILTER={
       'Iron':[3,4,5],'Bronze':[6,7,8],'Silver':[9,10,11],'Gold':[12,13,14],
-      'Plat':[15,16,17],'Diamond':[18,19,20],'Asc':[21,22,23],'Imm':[24,25,26],'Radiant':[27]
+      'Platinum':[15,16,17],'Diamond':[18,19,20],'Ascendant':[21,22,23],'Immortal':[24,25,26],'Radiant':[27]
     };
-    const tiers=RANK_GROUPS_FILTER[activeRankFilter]||[];
-    out=out.filter(m=>m.avgRank!=null&&tiers.includes(Math.round(m.avgRank)));
+    const tiers=new Set([...rankFilters].flatMap(l=>RANK_GROUPS_FILTER[l]||[]));
+    out=out.filter(m=>m.avgRank!=null&&tiers.has(Math.round(m.avgRank)));
   }
-  if(activePartyFilter!=null)out=out.filter(m=>(m.partySize||1)===activePartyFilter);
+  // Party: empty = all; otherwise keep matches whose party size is ticked (OR).
+  if(partyFilters.size)out=out.filter(m=>partyFilters.has(m.partySize||1));
+  // Map: empty = all; otherwise keep matches on any ticked map (OR).
+  if(mapFilters.size)out=out.filter(m=>mapFilters.has(m.mapName));
   return out;
 }
 
@@ -2390,7 +2806,9 @@ function buildPlayersGrid(m){
       :isTeamMvp?`<span class="mvp-badge team-mvp">TEAM</span>`:'';
     const acsVal=p._acs!=null?Math.round(p._acs):'—';
     const acsCls=p._acs!=null?'player-acs':'player-acs acs-null';
-    return `<div class="${cls}"><span class="player-name-wrap"><span class="${nameClass}" title="${p.name}#${p.tag}">${p.name}</span><span class="player-tag">#${p.tag}</span>${mvpBadge}</span><span class="${acsCls}">${acsVal}</span><span class="player-rank-txt ${rClass(p._tier)}">${p._label}</span></div>`;
+    const kdVal=p._kd!=null?p._kd.toFixed(2):'—';
+    const kdCls=p._kd!=null?'player-kd':'player-kd kd-null';
+    return `<div class="${cls}"><span class="player-name-wrap"><span class="${nameClass}" title="${p.name}#${p.tag}">${p.name}</span><span class="player-tag">#${p.tag}</span>${mvpBadge}</span><span class="${acsCls}">${acsVal}</span><span class="${kdCls}">${kdVal}</span><span class="player-rank-txt ${rClass(p._tier)}">${p._label}</span></div>`;
   }
 
   const grid=document.createElement('div');
@@ -2400,6 +2818,7 @@ function buildPlayersGrid(m){
       <div class="team-col-header">
         <span class="team-label">Your team</span>
         <span class="col-hdr col-hdr-acs">ACS</span>
+        <span class="col-hdr col-hdr-kd">KD</span>
         <span class="col-hdr col-hdr-rank">Rank</span>
       </div>
       ${myTeam.map(makeRow).join('')}
@@ -2408,6 +2827,7 @@ function buildPlayersGrid(m){
       <div class="team-col-header">
         <span class="team-label">Enemy team</span>
         <span class="col-hdr col-hdr-acs">ACS</span>
+        <span class="col-hdr col-hdr-kd">KD</span>
         <span class="col-hdr col-hdr-rank">Rank</span>
       </div>
       ${enemyTeam.map(makeRow).join('')}
@@ -2420,11 +2840,13 @@ function buildMatchCard(m){
   const rc=won===true?'win':won===false?'loss':'draw';
   const rt=won===true?'Win':won===false?'Loss':'Draw';
   const score=(myR!=null&&opR!=null)?`${myR}–${opR}`:'—';
-  const rankTier=avgRank!=null?Math.round(avgRank):null;
-  const rankLabel=avgRank!=null?`${avgLabelShort(avgRank)} (${avgRank.toFixed(1)})`:(m.lowRated?'unrated lobby':'—');
+  // Show the avg-lobby tier as a rank division + RR (see tierRR).
+  let rankTier=null,rankRR=null;
+  if(avgRank!=null){const _t=tierRR(avgRank);rankTier=_t.tier;rankRR=_t.rr;}
+  const rankLabel=avgRank!=null?`${avgLabelShort(rankTier)} (${rankRR} RR)`:(m.lowRated?'unrated lobby':'—');
   const rankTitle=m.lowRated
     ? `Only ${m.ratedCount} of the lobby were rated — too many unranked, excluded from stats`
-    : (avgRank!=null?`Avg lobby rank (${avgRank.toFixed(1)})`:'');
+    : (avgRank!=null?`Avg lobby rank — ${avgLabel(rankTier)}, ${rankRR} RR`:'');
   const rankColorClass=rankTier!=null?rClass(rankTier):'';
 
   const myPuuid=PUUID||null;
@@ -2434,24 +2856,10 @@ function buildMatchCard(m){
     ?`<span class="mvp-badge match-mvp">MVP</span>`
     :isTeamMvp?`<span class="mvp-badge team-mvp">TEAM</span>`:'';
 
-  const statDefs=[
-    {l:'ACS',k:'acs',   fmt:v=>v!=null?Math.round(v):'—'},
-    {l:'K/D',k:'kd',fmt:v=>v?.toFixed(2)??'—'},
-    {l:'K',  k:'kills',  fmt:v=>v??'—'},
-    {l:'D',  k:'deaths', fmt:v=>v??'—'},
-    {l:'A',  k:'assists',fmt:v=>v??'—'},
-  ];
-
-  const statsHtml=myStats
-    ? statDefs.map(s=>{
-        const v=s.fmt(myStats[s.k]);
-        if(v==null)return '';
-        return `<div class="mc-stat"><span class="mc-stat-lbl">${s.l}</span><span class="mc-stat-val">${v}</span></div>`;
-      }).join('')
-    : '';
+  const resetTag=m.postReset?`<span class="mc-reset-tag" title="Placement-week game after a total rank reset — excluded from stats unless you toggle it on">PLACEMENTS</span>`:'';
 
   const card=document.createElement('div');
-  card.className='match-card';
+  card.className='match-card'+(m.postReset?' post-reset':'');
   card.innerHTML=`
     <div class="match-row">
       <div class="result-bar ${rc}"></div>
@@ -2460,6 +2868,7 @@ function buildMatchCard(m){
         <span class="match-map">${mapName}</span>
         <span class="match-score">${score}</span>
         ${mvpTag}
+        ${resetTag}
       </div>
       <div class="mc-right">
         <div class="m-badge"${rankTitle?` title="${rankTitle}"`:''}>
@@ -2468,8 +2877,7 @@ function buildMatchCard(m){
         </div>
         <span class="match-date">${startedAt}</span>
       </div>
-    </div>
-    ${statsHtml?`<div class="mc-stats-row">${statsHtml}</div>`:''}`;
+    </div>`;
   card.addEventListener('click',()=>{
     if(window.getSelection()&&window.getSelection().toString().length>0)return;
     card.classList.toggle('expanded');
