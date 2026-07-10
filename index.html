@@ -22,7 +22,7 @@
   --win:#22c55e;--loss:#ef4444;--draw:#f59e0b;
   --font-body:'Geist',Geist,system-ui,sans-serif;
   --font-display:'Geist',system-ui,sans-serif;
-  --glass:rgba(255,255,255,0.04);--glass-hover:rgba(255,255,255,0.065);
+  --glass:rgba(255,255,255,0.055);--glass-hover:rgba(255,255,255,0.08);
   --glass-border:rgba(255,255,255,0.1);--glass-shine:rgba(255,255,255,0.08);
   --radius-xs:4px;--radius-sm:7px;--radius-md:11px;--radius-lg:18px;
   --brand:#60a5fa;--brand-rgb:96,165,250;
@@ -37,8 +37,13 @@ body{
 /* Gradient backdrop on its own position:fixed layer instead of the body's
    background-attachment:fixed. A fixed element is painted once and just
    composited (GPU) during scroll, whereas background-attachment:fixed forces a
-   full-viewport repaint every scroll frame — the main cause of the scroll lag,
-   made worse by the cards' backdrop-filter re-sampling it each frame. */
+   full-viewport repaint every scroll frame — a major cause of scroll lag.
+   The cards deliberately do NOT use backdrop-filter: nothing scrolls behind
+   them (this backdrop is fixed), so the blur only softened a static surface
+   for no real visual gain, while costing a per-frame backdrop re-sample and,
+   worse, a big re-rasterization spike on the first scroll after the page had
+   been idle (the compositor drops the cached blur while idle). They now use a
+   plain translucent tint, which is cheap alpha compositing with no such spike. */
 body::after{
   content:'';position:fixed;inset:0;z-index:-2;pointer-events:none;
   background:
@@ -59,7 +64,7 @@ h1 span{color:var(--accent);}
 .sub{font-size:14px;color:var(--muted);margin-top:6px;font-family:var(--font-body);}
 
 /* input section */
-.input-section{background:var(--glass);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);border:.5px solid var(--glass-border);border-radius:var(--radius-lg);padding:1.75rem;margin-bottom:2rem;box-shadow:inset 0 1px 0 var(--glass-shine),0 8px 32px rgba(0,0,0,0.4);display:flex;flex-direction:column;gap:1.5rem;}
+.input-section{background:var(--glass);border:.5px solid var(--glass-border);border-radius:var(--radius-lg);padding:1.75rem;margin-bottom:2rem;box-shadow:inset 0 1px 0 var(--glass-shine),0 8px 32px rgba(0,0,0,0.4);display:flex;flex-direction:column;gap:1.5rem;}
 .input-panel{display:none;}.manual-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
 .manual-input{background:var(--bg);border:.5px solid var(--border2);border-radius:6px;padding:10px 14px;font-family:var(--font-body);font-size:13px;color:var(--fg);outline:none;transition:border-color .15s;}
 .manual-input:focus{border-color:var(--brand);}
@@ -111,7 +116,7 @@ h1 span{color:var(--accent);}
 .stat-box{display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.35);border:.5px solid var(--glass-border);border-radius:var(--radius-md);padding:10px 14px;font-size:14px;color:var(--text);white-space:nowrap;flex-shrink:0;line-height:1;}
 .stat-box .rank-word{font-weight:400;}
 .stat-box .rr-sub{font-size:1em;color:var(--text);}
-.example-chip{display:inline-block;font-family:var(--font-body);font-size:11px;background:var(--bg3);border:.5px solid var(--border2);border-radius:var(--radius-xs);padding:3px 8px;color:var(--muted);cursor:pointer;margin-top:8px;transition:all .15s;}
+.example-chip{display:inline-block;font-family:var(--font-body);font-size:11px;background:var(--bg3);border:.5px solid var(--border2);border-radius:var(--radius-xs);padding:3px 8px;color:var(--muted);cursor:pointer;margin-top:8px;transition:background .15s,border-color .15s,color .15s,box-shadow .15s,transform .15s;}
 .example-chip:hover{color:var(--accent);border-color:var(--accent);}
 
 /* status */
@@ -127,28 +132,30 @@ h1 span{color:var(--accent);}
 .summary-row.top-row{grid-template-columns:1fr 1fr;}
 .summary-row.full-row{grid-template-columns:1fr;}
 @media(max-width:640px){.summary-row.top-row{grid-template-columns:1fr;}}
-.s-card{background:var(--glass);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);border:.5px solid var(--glass-border);border-top:2px solid var(--accent);border-radius:var(--radius-lg);padding:1.5rem 1.75rem 1.4rem;position:relative;overflow:hidden;isolation:isolate;transform:translateZ(0);display:flex;flex-direction:column;box-shadow:inset 0 1px 0 var(--glass-shine),0 8px 32px rgba(0,0,0,0.4),0 4px 28px rgba(var(--accent-rgb),.06);transition:box-shadow .5s ease,border-top-color .5s ease;}
+.s-card{background:var(--glass);border:.5px solid var(--glass-border);border-top:2px solid var(--accent);border-radius:var(--radius-lg);padding:1.5rem 1.75rem 1.4rem;position:relative;overflow:hidden;isolation:isolate;transform:translateZ(0);display:flex;flex-direction:column;box-shadow:inset 0 1px 0 var(--glass-shine),0 8px 32px rgba(0,0,0,0.4),0 4px 28px rgba(var(--accent-rgb),.06);transition:box-shadow .5s ease,border-top-color .5s ease;}
 .s-card:not(.hero-card){border-top:1px solid var(--glass-border);box-shadow:inset 0 1px 0 var(--glass-shine),0 8px 24px rgba(0,0,0,.35);}
-.hero-card{padding:1.85rem 2rem 1.6rem;}
+.hero-card{padding:1.5rem 2rem 1.6rem;}
 .hero-card::before{content:'';position:absolute;top:-40%;left:-10%;width:70%;height:140%;background:radial-gradient(circle,rgba(var(--accent-rgb),.16),transparent 65%);pointer-events:none;z-index:-1;transition:background .5s ease;}
 .s-label{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;font-family:var(--font-display);font-weight:700;}
 .s-value{font-size:1.6rem;font-weight:700;line-height:1;word-break:break-word;letter-spacing:-.02em;font-variant-numeric:tabular-nums;} .s-value.small{font-size:1.1rem;}
 .hero-card .s-value{font-size:clamp(1.7rem,2.1vw + 1.3rem,2.6rem);}
 .s-value-suffix{font-size:.45em;font-weight:600;color:var(--muted);letter-spacing:0;white-space:nowrap;}
 .s-sub{font-size:12px;color:var(--muted);margin-top:10px;font-family:var(--font-body);}
-.hero-sub{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;background:rgba(255,255,255,.04);border:.5px solid var(--glass-border);border-radius:var(--radius-xs);box-shadow:inset 0 1px 0 rgba(255,255,255,.05);}
-.hero-sub-lbl{color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-size:10px;font-weight:700;font-family:var(--font-display);}
-.hero-sub-val{color:var(--text);font-weight:700;font-size:12px;font-variant-numeric:tabular-nums;}
+.hero-recent{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:13px;}
+.hero-recent-label{font-size:13px;font-weight:700;color:var(--text);opacity:.85;font-family:var(--font-body);flex-shrink:0;}
+.hero-recent-body{display:flex;align-items:center;gap:6px;font-size:13px;}
+.hero-recent-rank{font-size:13px;font-weight:400;font-family:var(--font-body);color:var(--text);}
+.hero-recent-rr{font-size:13px;font-weight:400;color:var(--text);}
 .card-title{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text);line-height:21px;height:21px;margin-bottom:14px;border-left:2px solid var(--accent);padding-left:7px;opacity:.85;transition:border-color .5s ease;box-sizing:border-box;}
 .rank-overview{display:flex;flex-direction:column;gap:6px;}
 .ro-tier-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
 
 /* charts */
-.chart-container{background:linear-gradient(180deg,rgba(var(--accent-rgb),.05),transparent 45%),var(--glass);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);border:.5px solid var(--glass-border);border-top:2px solid var(--accent);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:12px;position:relative;overflow:hidden;isolation:isolate;transform:translateZ(0);box-shadow:inset 0 1px 0 var(--glass-shine),0 8px 32px rgba(0,0,0,0.4),0 4px 28px rgba(var(--accent-rgb),.05);transition:box-shadow .5s ease,border-top-color .5s ease;}
+.chart-container{background:linear-gradient(180deg,rgba(var(--accent-rgb),.05),transparent 45%),var(--glass);border:.5px solid var(--glass-border);border-top:2px solid var(--accent);border-radius:var(--radius-lg);padding:1.5rem;margin-bottom:12px;position:relative;overflow:hidden;isolation:isolate;transform:translateZ(0);box-shadow:inset 0 1px 0 var(--glass-shine),0 8px 32px rgba(0,0,0,0.4),0 4px 28px rgba(var(--accent-rgb),.05);transition:box-shadow .5s ease,border-top-color .5s ease;}
 
 /* match list */
 .section-title{font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#fff;margin-bottom:12px;border-left:2px solid var(--accent);padding-left:8px;transition:border-color .5s ease;}
-.show-history-btn{display:block;width:100%;background:var(--glass);backdrop-filter:blur(24px) saturate(160%);-webkit-backdrop-filter:blur(24px) saturate(160%);border:.5px solid var(--glass-border);border-radius:var(--radius-lg);padding:14px;font-family:var(--font-display);font-size:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:all .15s;margin-bottom:2rem;text-align:center;box-shadow:inset 0 1px 0 var(--glass-shine),0 8px 32px rgba(0,0,0,0.4);}
+.show-history-btn{display:block;width:100%;background:var(--glass);border:.5px solid var(--glass-border);border-radius:var(--radius-lg);padding:14px;font-family:var(--font-display);font-size:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s,transform .15s;margin-bottom:2rem;text-align:center;box-shadow:inset 0 1px 0 var(--glass-shine),0 8px 32px rgba(0,0,0,0.4);}
 .show-history-btn:hover{border-color:var(--accent);color:var(--fg);background:var(--glass-hover);}
 .teammates-section{min-width:0;}
 .card-title-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;}
@@ -158,6 +165,7 @@ h1 span{color:var(--accent);}
 .rmt-btn:hover{color:var(--text);}
 .rmt-btn.active{background:var(--accent);color:#fff;}
 .playtime-section{margin-bottom:2rem;}
+#rank-trend-section{margin-bottom:14px;}
 .playtime-title{margin-bottom:18px;}
 .playtime-head{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-bottom:16px;}
 .playtime-total,.playtime-avgday{display:flex;align-items:baseline;gap:6px;min-width:0;flex-wrap:wrap;flex-shrink:0;}
@@ -181,8 +189,8 @@ h1 span{color:var(--accent);}
 .tm-stat-val{font-size:19px;font-weight:800;font-family:var(--font-display);color:var(--text);line-height:1.1;font-variant-numeric:tabular-nums;}
 .tm-stat-rank{flex:1.8 1 auto;align-items:flex-end;text-align:right;min-width:var(--tm-rank-min-w,150px);}
 .tm-stat-rank-val{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-width:0;}
-.tm-stat-rank-name{font-size:14px;font-weight:800;font-family:var(--font-display);color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;line-height:1.1;}
-.tm-stat-rank-num{font-size:14px;font-weight:800;color:var(--text);font-family:var(--font-display);font-variant-numeric:tabular-nums;flex-shrink:0;line-height:1.1;}
+.tm-stat-rank-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:800;font-family:var(--font-display);color:var(--text);line-height:1.1;}
+.tm-stat-rank-num{font-variant-numeric:tabular-nums;}
 .tm-pill{background:rgba(255,255,255,0.05);border:.5px solid var(--glass-border);border-radius:var(--radius-sm);padding:7px 12px;flex-shrink:0;display:flex;flex-direction:column;justify-content:center;align-items:center;box-shadow:inset 0 1px 0 rgba(255,255,255,0.07);}
 .tm-pill-val{font-size:13px;font-weight:700;font-family:var(--font-body);line-height:1.1;white-space:nowrap;font-variant-numeric:tabular-nums;}
 .tm-pill-lbl{font-size:9px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:2px;white-space:nowrap;}
@@ -192,6 +200,10 @@ h1 span{color:var(--accent);}
 .reset-toggle[hidden]{display:none;}
 .reset-toggle:hover{color:var(--fg);}
 .reset-toggle input{width:14px;height:14px;accent-color:var(--accent);cursor:pointer;margin:0;flex-shrink:0;}
+.hero-scope-toggle{display:flex;align-items:center;justify-content:flex-end;gap:6px;height:21px;line-height:21px;margin-bottom:14px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--muted);cursor:pointer;user-select:none;}
+.hero-scope-toggle[hidden]{display:none;}
+.hero-scope-toggle:hover{color:var(--text);}
+.hero-scope-toggle input{width:13px;height:13px;accent-color:var(--accent);cursor:pointer;margin:0;flex-shrink:0;}
 .filter-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);white-space:nowrap;}
 
 /* Filter dropdown (tick-box multi-select) */
@@ -201,8 +213,7 @@ h1 span{color:var(--accent);}
 .filter-dd.open .filter-trigger{color:var(--text);border-color:var(--accent);background:rgba(var(--accent-rgb),.08);}
 .filter-trigger svg{width:14px;height:14px;flex-shrink:0;}
 .filter-caret{transition:transform .2s ease;}
-.filter-dd.open .filter-caret{transform:rotate(180deg);}
-.filter-count{display:flex;align-items:center;justify-content:center;box-sizing:border-box;flex-shrink:0;width:17px;height:17px;padding:0;border-radius:50%;background:var(--accent);color:#0b0b0d;font-size:10px;font-weight:800;line-height:1;letter-spacing:0;text-transform:none;}
+.filter-dd.open .filter-caret{transform:rotate(90deg);}
 .filter-panel{position:fixed;z-index:9999;min-width:210px;max-height:70vh;overflow-y:auto;background:#0d0d10;border:.5px solid var(--glass-border);border-radius:var(--radius-md);box-shadow:0 16px 40px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.04);padding:8px;display:none;isolation:isolate;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent;}
 .filter-panel.open{display:block;}
 .filter-panel-sec{padding:4px 2px;}
@@ -213,7 +224,6 @@ h1 span{color:var(--accent);}
 .filter-check input{appearance:none;-webkit-appearance:none;width:16px;height:16px;margin:0;border:.5px solid var(--glass-border);border-radius:4px;background:rgba(255,255,255,.04);position:relative;cursor:pointer;flex-shrink:0;transition:background .12s,border-color .12s;}
 .filter-check input:checked{background:var(--accent);border-color:var(--accent);}
 .filter-check input:checked::after{content:'';position:absolute;left:5px;top:1.5px;width:4px;height:8px;border:solid #0b0b0d;border-width:0 2px 2px 0;transform:rotate(45deg);}
-.filter-check .swatch{width:8px;height:8px;border-radius:2px;flex-shrink:0;margin-left:-2px;}
 .filter-clear{display:block;width:100%;margin-top:6px;padding:7px;background:none;border:none;border-top:.5px solid var(--border2);border-radius:0 0 var(--radius-sm) var(--radius-sm);color:var(--muted);font-family:var(--font-display);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:color .15s;}
 .filter-clear:hover{color:var(--text);}
 .filter-clear:disabled{opacity:.4;cursor:default;}
@@ -316,12 +326,12 @@ h1 span{color:var(--accent);}
 .error-box{background:rgba(239,68,68,.1);border:.5px solid rgba(239,68,68,.3);border-radius:8px;padding:1.2rem;font-family:var(--font-body);font-size:13px;color:#fca5a5;line-height:1.8;}
 .empty{text-align:center;padding:3rem;color:var(--muted);font-family:var(--font-body);font-size:13px;}
 .page-nav{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:1.5rem;}
-.page-btn{background:rgba(255,255,255,0.04);border:.5px solid var(--glass-border);border-radius:var(--radius-sm);padding:8px 18px;font-family:var(--font-body);font-size:14px;font-weight:600;color:var(--text);cursor:pointer;transition:all .15s;box-shadow:inset 0 1px 0 var(--glass-shine);}
+.page-btn{background:rgba(255,255,255,0.04);border:.5px solid var(--glass-border);border-radius:var(--radius-sm);padding:8px 18px;font-family:var(--font-body);font-size:14px;font-weight:600;color:var(--text);cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s,transform .15s;box-shadow:inset 0 1px 0 var(--glass-shine);}
 .page-btn:hover:not(:disabled){background:var(--glass-hover);border-color:rgba(255,255,255,0.18);}
 .page-btn:hover:not(:disabled){background:var(--bg3);border-color:var(--accent);color:var(--accent);}
 .page-btn:disabled{opacity:.3;cursor:default;}
 .page-info{font-family:var(--font-body);font-size:12px;color:var(--muted);}
-.load-more-btn{display:block;width:100%;background:var(--bg2);border:.5px solid var(--border2);border-radius:var(--radius-md);padding:12px;font-family:var(--font-display);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:all .15s;margin-top:1rem;}
+.load-more-btn{display:block;width:100%;background:var(--bg2);border:.5px solid var(--border2);border-radius:var(--radius-md);padding:12px;font-family:var(--font-display);font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s,transform .15s;margin-top:1rem;}
 .load-more-btn:hover{border-color:var(--accent);color:var(--fg);}
 </style>
 </head>
@@ -370,10 +380,16 @@ h1 span{color:var(--accent);}
             <div style="flex:1.7;min-width:0;">
               <div class="card-title">Avg Lobby Rank</div>
               <div class="s-value" id="sg-avg-rank" style="display:flex;align-items:center;gap:10px;">—</div>
-              <div class="s-sub" id="sg-avg-rank-sub">&nbsp;</div>
+              <div class="hero-recent" id="hero-recent" style="display:none">
+                <div class="hero-recent-label">Last 20:</div>
+                <div class="hero-recent-body" id="hero-recent-body"></div>
+              </div>
             </div>
             <div style="padding-left:1.5rem;flex:1.8;min-width:0;display:flex;flex-direction:column;align-self:stretch;">
-              <div class="card-title">Stats</div>
+              <label class="hero-scope-toggle" id="reset-toggle" hidden title="Placement-week games after a total rank reset are greyed out and left out of your stats by default. Turn this on to count them.">
+                <input type="checkbox" id="reset-toggle-cb" onchange="toggleIncludeReset(this.checked)">
+                <span>Count placements (<span id="reset-toggle-count">0</span>)</span>
+              </label>
               <div style="display:flex;gap:8px;flex:1;align-items:stretch;">
                 <div class="tm-pill" style="flex:1;padding:14px 10px;"><div class="tm-pill-val" id="sg-kd" style="font-size:1.4rem;">—</div><div class="tm-pill-lbl">Avg K/D</div></div>
                 <div class="tm-pill" style="flex:1;padding:14px 10px;"><div class="tm-pill-val" id="sg-acs" style="font-size:1.4rem;">—</div><div class="tm-pill-lbl">Avg ACS</div></div>
@@ -420,6 +436,11 @@ h1 span{color:var(--accent);}
       </div>
     </div>
 
+    <!-- avg lobby rank trend -->
+    <div class="playtime-section" id="rank-trend-section" style="display:none">
+      <div id="rank-trend-container"></div>
+    </div>
+
     <!-- playtime -->
     <div class="playtime-section" id="playtime-section" style="display:none">
       <div id="playtime-container"></div>
@@ -436,14 +457,13 @@ h1 span{color:var(--accent);}
           <button class="filter-trigger" id="filter-trigger" onclick="toggleFilterPanel(event)" aria-haspopup="true" aria-expanded="false">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
             <span>Filter</span>
-            <span class="filter-count" id="filter-count" hidden>0</span>
             <svg class="filter-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
           </button>
           <div class="filter-panel" id="filter-panel">
             <div class="filter-panel-sec">
               <div class="filter-panel-label">Result</div>
-              <label class="filter-check"><input type="checkbox" onchange="toggleResultFilter('win',this.checked)"><span>Wins</span></label>
-              <label class="filter-check"><input type="checkbox" onchange="toggleResultFilter('loss',this.checked)"><span>Losses</span></label>
+              <label class="filter-check"><input type="checkbox" onchange="toggleResultFilter('win',this.checked)"><span style="color:var(--win)">Wins</span></label>
+              <label class="filter-check"><input type="checkbox" onchange="toggleResultFilter('loss',this.checked)"><span style="color:var(--loss)">Losses</span></label>
             </div>
             <div class="filter-panel-sec" id="rank-check-group" hidden>
               <div class="filter-panel-label">Rank</div>
@@ -457,10 +477,6 @@ h1 span{color:var(--accent);}
             <button class="filter-clear" id="filter-clear" onclick="clearAllFilters()" disabled>Clear all</button>
           </div>
         </div>
-        <label class="reset-toggle" id="reset-toggle" hidden title="Placement-week games after a total rank reset are greyed out and left out of your stats by default. Turn this on to count them.">
-          <input type="checkbox" id="reset-toggle-cb" onchange="toggleIncludeReset(this.checked)">
-          <span>Count placement-week games (<span id="reset-toggle-count">0</span>)</span>
-        </label>
       </div>
       <div id="matches-container"></div>
       <button class="load-more-btn" id="load-more-btn" style="display:none" onclick="loadMoreMatches()">Load More</button>
@@ -710,18 +726,20 @@ const TM_RANK_COL_W=(()=>{
 // alone (TM_RANK_COL_W above), which is why long names like "Ascendant 3"
 // got squeezed and ellipsis-truncated once the "(NN RR)" pill sat next to
 // them — that pill's width was never accounted for. This measures the true
-// worst case (icon + name + RR pill, with the actual gaps used in markup)
-// and reserves it as a CSS var, so the name always has room and the shorter
-// K/D/ACS columns give up space instead.
+// worst case (icon + name + a single space + RR text) and reserves it as a
+// CSS var, so the name always has room and the shorter K/D/ACS columns give
+// up space instead. Only one flex-gap now (icon→text) since name and RR are
+// a single flex item with just a literal space between them (matching the
+// hero card's "Last 20" line) rather than a second 6px flex-gap.
 (()=>{
   const canvas=document.createElement('canvas');
   const ctx=canvas.getContext('2d');
-  ctx.font='800 14px "Geist",system-ui,sans-serif'; // matches .tm-stat-rank-name / -num
+  ctx.font='800 14px "Geist",system-ui,sans-serif'; // matches .tm-stat-rank-text
   const widestName=Math.ceil(Object.values(RANK_MAP).reduce((max,label)=>
     Math.max(max,ctx.measureText(label).width),0));
-  const widestRR=Math.ceil(ctx.measureText('(99 RR)').width);
-  const ICON_W=22,GAP=6; // matches rankIcon(...,22) and .tm-stat-rank-val gap:6px
-  const total=ICON_W+GAP+widestName+GAP+widestRR+2; // +2 rounding buffer
+  const widestRR=Math.ceil(ctx.measureText(' (99 RR)').width); // includes the leading space
+  const ICON_W=22,GAP=6; // matches rankIcon(...,22) and .tm-stat-rank-val gap:6px (icon→text only)
+  const total=ICON_W+GAP+widestName+widestRR+2; // +2 rounding buffer
   document.documentElement.style.setProperty('--tm-rank-min-w',total+'px');
 })();
 
@@ -760,6 +778,13 @@ function rClass(n){
 /* ── STATE ──────────────────────────────────────────────── */
 let PLAYER='',TAG='',REGION='eu',PLATFORM='pc',TARGET_SEASON='',PUUID='';
 let allMatches=[],statMatches=[],mhIncludeReset=false,resultFilters=new Set(),rankFilters=new Set(),partyFilters=new Set(),mapFilters=new Set(),mhVisible=PER_PAGE,mhData=[],mhLastDayKey=null;
+// Single reused canvas 2D context for text-width measurement, created lazily on
+// first use — avoids allocating a fresh <canvas> every renderStats call.
+let _measureCtx=null;
+function measureCtx(){
+  if(!_measureCtx)_measureCtx=document.createElement('canvas').getContext('2d');
+  return _measureCtx;
+}
 let allTeammates=[],tmPage=0,tmSectionH=0,tmIncludeFiveStack=false;
 const TM_PER_PAGE=4;
 const chartInstances={};
@@ -1108,7 +1133,7 @@ function runAnalysis(){
   document.body.classList.remove('rank-colored');
   document.getElementById('results-section').style.display='block';
   // Reset UI
-  ['summary-grid','playtime-section','teammates-section','match-list-section','show-history-btn'].forEach(id=>{
+  ['summary-grid','rank-trend-section','playtime-section','teammates-section','match-list-section','show-history-btn'].forEach(id=>{
     document.getElementById(id).style.display='none';
   });
   document.getElementById('matches-container').innerHTML='';
@@ -1449,7 +1474,12 @@ function processMatch(m){
   const ratedCount=rankNums.length;
   const rawAvg=ratedCount?rankNums.reduce((a,b)=>a+b,0)/ratedCount:null;
   const avgRank=ratedCount>=MIN_RATED?rawAvg:null;
-  const lowRated=rawAvg!=null&&ratedCount<MIN_RATED;
+  // A lobby with ZERO rated players (everyone Unranked — common right after a
+  // reset) has rawAvg===null, which previously made this whole condition
+  // false via the `rawAvg!=null&&` guard — incorrectly treating a fully
+  // unranked lobby as if it wasn't low-rated at all, instead of flagging it
+  // as unrated like every other under-MIN_RATED lobby.
+  const lowRated=ratedCount<MIN_RATED;
 
   // Total rounds in the match — same for all players, use as fallback for rounds_played
   const totalRounds=(myR!=null&&opR!=null)?myR+opR:null;
@@ -1489,6 +1519,15 @@ function processMatch(m){
     return tp.length?tp.reduce((a,b)=>b._acs>a._acs?b:a).puuid:null;
   }).filter(Boolean));
 
+  // ACS placement within the match (1 = highest ACS), assigned once here so
+  // render-time code (K/D-by-rank buckets, the teammates list) can read it
+  // directly instead of re-sorting every match's players on every re-render.
+  // acsPlayers holds references into playersOut, so this mutates those objects.
+  [...acsPlayers].sort((a,b)=>b._acs-a._acs).forEach((p,i)=>{p._acsPlace=i+1;});
+  const mePlayerOut=playersOut.find(p=>PUUID?p.puuid===PUUID:
+    `${p.name}#${p.tag}`.toLowerCase()===`${PLAYER}#${TAG}`.toLowerCase());
+  const myAcsPlace=mePlayerOut?._acsPlace??null;
+
   // Party size — count teammates sharing the same party_id as me
   const myPartyId=me?.party_id??null;
   const myTeamPlayers=players.filter(p=>p.team_id?.toLowerCase()===myTeamId);
@@ -1501,7 +1540,7 @@ function processMatch(m){
   const myTierName=me?.tier?.patched??me?.currenttier_patched??rName(myTierId);
   // v4 match player object uses `rr`; v3 used `ranking_in_tier` — check both
   const myRR=null; // v4 match endpoint doesn't include per-match RR — fetched separately via mmr-history
-  return{mapName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
+  return{mapName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,partySize,myPartyId,myAcsPlace,matchMvpPuuid,teamMvpPuuids,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
 }
 
 function extractStats(p,fallbackRounds=null){
@@ -1943,13 +1982,25 @@ function paginateRows(containerEl,dotsEl,rows,pageSize,skipHeightLock,afterRende
   }
 }
 
-// Renders every stat panel from statMatches — the post-reset-placement games are
-// excluded unless the user toggles them in (mhIncludeReset). Kept separate from
-// renderAll so the toggle can refresh stats without rebuilding the history list.
+// Renders every stat panel. Avg Lobby Rank, Duos, and the K/D-by-rank card use
+// statMatches, which excludes post-reset placement games unless the person
+// toggles them in (mhIncludeReset) — since rank genuinely resets/recalibrates
+// during placements. The Stats panel (K/D, ACS, Games, Win Rate) always counts
+// placement games regardless, via statsPanelMatches below, since those raw
+// results are real. Kept separate from renderAll so toggles can refresh stats
+// without rebuilding the history list.
 function renderStats(skipPlaytime){
   statMatches=mhIncludeReset?allMatches:allMatches.filter(m=>!m.postReset);
-  const n=statMatches.length;
+  // The Stats panel (K/D, ACS, Games, Win Rate) always counts placement-week
+  // games, regardless of the reset toggle — unlike avg lobby rank, which
+  // genuinely resets and recalibrates during placements, raw kills/deaths/
+  // wins/ACS from those games are real results and shouldn't be hidden by
+  // default. Mirrors the same reasoning already applied to playtime.
+  const statsPanelMatches=allMatches;
+  const n=statsPanelMatches.length;
   // Reflect the toggle: show it only when there are placement-week games to skip.
+  // This control now lives in the hero card (replacing the old all-parties
+  // toggle slot) instead of the match history filter bar.
   const resetCount=allMatches.filter(m=>m.postReset).length;
   const resetToggle=document.getElementById('reset-toggle');
   if(resetToggle){
@@ -1964,7 +2015,9 @@ function renderStats(skipPlaytime){
   const mc=document.getElementById('matches-container');
   if(mc)mc.classList.toggle('counting-reset',mhIncludeReset);
 
-  // Avg lobby rank (overall + last 20) only counts solo queue games — party size 1
+  // Avg lobby rank (overall + last 20) only counts solo queue games — party
+  // rank inflates lobby strength since a stack often queues into weaker
+  // lobbies for its rank.
   const soloMatches=statMatches.filter(m=>(m.partySize||1)===1);
   const avgs=soloMatches.map(m=>m.avgRank).filter(Boolean);
   const overall=avgs.length?avgs.reduce((a,b)=>a+b,0)/avgs.length:null;
@@ -1978,12 +2031,12 @@ function renderStats(skipPlaytime){
   if(accentAvg!=null)setAccent(rColor(Math.round(accentAvg)));
 
   // Sum raw kills and deaths across all games for an accurate overall K/D
-  const statGames=statMatches.filter(m=>m.myStats&&m.myStats.kills!=null&&m.myStats.deaths!=null);
+  const statGames=statsPanelMatches.filter(m=>m.myStats&&m.myStats.kills!=null&&m.myStats.deaths!=null);
   const totalKills=statGames.reduce((a,m)=>a+m.myStats.kills,0);
   const totalDeaths=statGames.reduce((a,m)=>a+m.myStats.deaths,0);
   const avgKD=statGames.length?(totalDeaths>0?+(totalKills/totalDeaths).toFixed(2):totalKills):null;
 
-  const wins=statMatches.filter(m=>m.won===true).length;
+  const wins=statsPanelMatches.filter(m=>m.won===true).length;
   const wr=n?Math.round(wins/n*100):0;
   const wrColor=wr>=50?'#22c55e':'#ef4444';
   document.getElementById('sg-games').textContent=n;
@@ -1991,18 +2044,24 @@ function renderStats(skipPlaytime){
   const overallRR=overall!=null?tierRR(overall):null;
   const avgRankTier=overallRR?overallRR.tier:null;
   document.getElementById('sg-avg-rank').innerHTML=(avgRankTier!=null?rankIcon(avgRankTier,40)+' ':'')+(overall!=null?`<span>${avgLabel(avgRankTier)}<span class="s-value-suffix"> (${overallRR.rr} RR)</span></span>`:avgLabel(overall));
-  // Last 20 games avg rank
+  // Last 20 games avg rank — its own standout section under the rank value
+  // (using the space freed up by removing the rank-breakdown chips).
   const last20=avgs.slice(-20);
   const recent20=last20.length?last20.reduce((a,b)=>a+b,0)/last20.length:null;
   const recent20RR=recent20!=null?tierRR(recent20):null;
-  document.getElementById('sg-avg-rank-sub').innerHTML=recent20!=null
-    ?`<span class="hero-sub"><span class="hero-sub-lbl">Last 20 solo</span><span class="hero-sub-val">${avgLabel(recent20RR.tier)} (${recent20RR.rr} RR)</span></span>`
-    :'&nbsp;';
+  const heroRecent=document.getElementById('hero-recent');
+  if(recent20!=null){
+    heroRecent.style.display='flex';
+    document.getElementById('hero-recent-body').innerHTML=
+      `<span class="hero-recent-rank">${avgLabel(recent20RR.tier)}<span class="hero-recent-rr"> (${recent20RR.rr} RR)</span></span>`;
+  }else{
+    heroRecent.style.display='none';
+  }
 
   document.getElementById('sg-kd').textContent=avgKD!=null?avgKD.toFixed(2):'—';
 
   // Avg ACS — total combat score ÷ total rounds (weighted, matches tracker.gg)
-  const acsGames=statMatches.filter(m=>m.myStats?.acs!=null&&m.myStats?.rounds_played>0);
+  const acsGames=statsPanelMatches.filter(m=>m.myStats?.acs!=null&&m.myStats?.rounds_played>0);
   const totalAcsScore=acsGames.reduce((a,m)=>a+m.myStats.score,0);
   const totalAcsRounds=acsGames.reduce((a,m)=>a+m.myStats.rounds_played,0);
   const avgAcs=totalAcsRounds>0?Math.round(totalAcsScore/totalAcsRounds):null;
@@ -2010,20 +2069,33 @@ function renderStats(skipPlaytime){
 
   renderRankByRankCard();
 
-  // Measure longest avg lobby label across all matches and fix m-badge width
-  const _badgeCanvas=document.createElement('canvas');
-  const _badgeCtx=_badgeCanvas.getContext('2d');
+  // Widest avg-lobby badge label, used to fix the badge column width. Only the
+  // distinct labels matter (there are at most ~28 possible rank+RR strings), so
+  // measure each unique label once rather than once per match, and reuse a
+  // cached canvas context instead of allocating a new <canvas> each render.
+  const _badgeCtx=measureCtx();
   _badgeCtx.font='700 13px Geist,system-ui,sans-serif';
-  const _maxBadgeW=allMatches.reduce((max,m)=>{
-    if(m.avgRank==null)return max;
+  const _seenLabels=new Set();
+  let _maxBadgeW=0;
+  for(const m of allMatches){
+    if(m.avgRank==null)continue;
     const _rr=tierRR(m.avgRank);
     const lbl=`${avgLabelShort(_rr.tier)} (${_rr.rr} RR)`;
-    return Math.max(max,_badgeCtx.measureText(lbl).width);
-  },0);
+    if(_seenLabels.has(lbl))continue;
+    _seenLabels.add(lbl);
+    _maxBadgeW=Math.max(_maxBadgeW,_badgeCtx.measureText(lbl).width);
+  }
   const _badgeW=Math.ceil(_maxBadgeW)+16;
   document.documentElement.style.setProperty('--match-badge-w',_badgeW+'px');
 
   document.getElementById('summary-grid').style.display='flex';
+  // Rank trend always counts placement-week games — a real trend chart benefits
+  // from showing the full trajectory including a placement dip, unlike the
+  // single "current rank" figure in the hero card which stays toggle-gated to
+  // avoid a placement week diluting a one-number snapshot. So this uses
+  // allMatches (like renderPlaytime) rather than statMatches, and is likewise
+  // unaffected by mhIncludeReset — skip rebuilding it on that toggle too.
+  if(!skipPlaytime)renderRankTrend(allMatches.filter(m=>(m.partySize||1)===1));
   // Playtime is always computed from allMatches (see renderPlaytime), so it's
   // completely unaffected by mhIncludeReset — rebuilding/destroying the Chart.js
   // instance here would just be a pointless flash every time this toggle flips.
@@ -2058,7 +2130,9 @@ function renderAll(){
     anyRank=true;
     const lbl=document.createElement('label');
     lbl.className='filter-check';
-    lbl.innerHTML=`<input type="checkbox"><span class="swatch" style="background:${g.color}"></span><span>${g.label}</span>`;
+    // Representative icon for the group — the 1 sub-tier (e.g. Ascendant 1).
+    const repTier=g.tiers[0];
+    lbl.innerHTML=`<input type="checkbox">${rankIcon(repTier,16)}<span>${g.label}</span>`;
     lbl.querySelector('input').addEventListener('change',e=>toggleRankFilter(g.label,e.target.checked));
     rankGroup.appendChild(lbl);
   });
@@ -2072,7 +2146,7 @@ function renderAll(){
   partySizes.forEach(sz=>{
     const lbl=document.createElement('label');
     lbl.className='filter-check';
-    lbl.innerHTML=`<input type="checkbox"><span>${PARTY_LABELS[sz]||sz+'-stack'}</span>`;
+    lbl.innerHTML=`<input type="checkbox"><span style="display:inline-flex">${partyIcon(sz)}</span><span>${PARTY_LABELS[sz]||sz+'-stack'}</span>`;
     lbl.querySelector('input').addEventListener('change',e=>togglePartyFilter(sz,e.target.checked));
     partyGroup.appendChild(lbl);
   });
@@ -2164,11 +2238,12 @@ function buildTeammates(){
     // Full 5-stacks are excluded by default — a premade team of 5 isn't a
     // "duo" — unless the person has explicitly opted in via the toggle above.
     if(!tmIncludeFiveStack&&(m.partySize||1)>=5)return;
-    const myTeam=m.players.filter(p=>p.team_id===m.players.find(q=>
-      PUUID?q.puuid===PUUID:q.name?.toLowerCase()===PLAYER.toLowerCase()
-    )?.team_id);
+    // Resolve "me" and my team once per match rather than once per teammate.
+    const mePlayer=m.players.find(q=>PUUID?q.puuid===PUUID:q.name?.toLowerCase()===PLAYER.toLowerCase());
+    const myTeamId=mePlayer?.team_id;
+    const myTeam=m.players.filter(p=>p.team_id===myTeamId);
     myTeam.forEach(p=>{
-      if(PUUID?p.puuid===PUUID:p.name?.toLowerCase()===PLAYER.toLowerCase())return;
+      if(p===mePlayer)return;
       // Only count players who were in the same party (duo/trio/5-stack)
       if(!m.myPartyId||p.party_id!==m.myPartyId)return;
       const key=p.puuid||`${p.name}#${p.tag}`;
@@ -2180,10 +2255,8 @@ function buildTeammates(){
       if(m.avgRank!=null){tmap[key].rankSum+=m.avgRank;tmap[key].rankCount++;}
       if(p._acs!=null){
         tmap[key].acsSum+=p._acs;tmap[key].acsCount++;
-        // ACS rank among all players in the match (1 = highest)
-        const ranked=m.players.filter(q=>q._acs!=null).sort((a,b)=>b._acs-a._acs);
-        const place=ranked.findIndex(q=>q.puuid?q.puuid===p.puuid:`${q.name}#${q.tag}`===key);
-        if(place!==-1){tmap[key].placeSum+=place+1;tmap[key].placeCount++;}
+        // ACS placement (1 = highest) is precomputed per player at load.
+        if(p._acsPlace!=null){tmap[key].placeSum+=p._acsPlace;tmap[key].placeCount++;}
       }
     });
   });
@@ -2243,7 +2316,7 @@ function renderTeammates(){
         <div class="tm-stat"><div class="tm-stat-lbl">ACS</div><div class="tm-stat-val">${t.acsCount>0?Math.round(t.acsSum/t.acsCount):'—'}</div></div>
         <div class="tm-stat tm-stat-rank">
           <div class="tm-stat-lbl">Avg Lobby</div>
-          <div class="tm-stat-rank-val">${avgRankTier!=null?rankIcon(avgRankTier,22):''}<span class="tm-stat-rank-name">${avgRankName}</span>${avgRankRR!=null?`<span class="tm-stat-rank-num">(${avgRankRR.rr} RR)</span>`:''}</div>
+          <div class="tm-stat-rank-val">${avgRankTier!=null?rankIcon(avgRankTier,22):''}<span class="tm-stat-rank-text">${avgRankName}${avgRankRR!=null?`<span class="tm-stat-rank-num"> (${avgRankRR.rr} RR)</span>`:''}</span></div>
         </div>
       </div>
     `;
@@ -2277,6 +2350,222 @@ function goToTmPage(idx){
     list.style.opacity='1';
     list.style.transform='translateX(0)';
   },150);
+}
+
+/* ── AVG LOBBY RANK TREND ───────────────────────────────────
+   Line chart of avg lobby rank over time — the natural next step from the
+   "Last 20 vs overall" figure in the hero card, but as an actual trend
+   instead of a single before/after snapshot. Reuses the exact same
+   "nice bucket size" date-bucketing algorithm as renderPlaytime (below) so
+   both charts read consistently, but averages rank per bucket instead of
+   summing duration, and renders as a line instead of bars since we care
+   about the shape of the movement, not discrete totals per period. */
+function renderRankTrend(matches){
+  const container=document.getElementById('rank-trend-container');
+  container.innerHTML='';
+  if(chartInstances.rankTrend){chartInstances.rankTrend.destroy();delete chartInstances.rankTrend;}
+
+  // Chronological order matters for a trend line — allMatches is usually
+  // newest-first (match history order), so sort ascending here.
+  const ranked=matches.filter(m=>m.startedAtMs!=null&&m.avgRank!=null)
+    .slice().sort((a,b)=>a.startedAtMs-b.startedAtMs);
+  if(ranked.length<2){document.getElementById('rank-trend-section').style.display='none';return;}
+
+  const minMs=ranked[0].startedAtMs;
+  const maxMs=ranked[ranked.length-1].startedAtMs;
+  const spanDays=(maxMs-minMs)/86400000+1;
+  const TARGET_POINTS=12;
+  const NICE_BUCKET_DAYS=[1,2,3,5,7,14,21,30,45,60,90,120,182,365];
+  const bucketDays=NICE_BUCKET_DAYS.find(n=>Math.ceil(spanDays/n)<=TARGET_POINTS)
+    ??NICE_BUCKET_DAYS[NICE_BUCKET_DAYS.length-1];
+  const useMonths=bucketDays>=28;
+  const weeksPerBucket=(!useMonths&&bucketDays%7===0)?bucketDays/7:null;
+
+  const dayStart=ms=>{const d=new Date(ms);return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime();};
+  const rangeStartMs=dayStart(minMs);
+  const firstMonday=(()=>{
+    const d=new Date(rangeStartMs);
+    const dow=d.getDay();
+    return new Date(d.getFullYear(),d.getMonth(),d.getDate()+((dow===0?-6:1)-dow)).getTime();
+  })();
+  function rangeLabel(startDate,endDate){
+    const sm=startDate.toLocaleDateString('en-GB',{month:'short'});
+    const em=endDate.toLocaleDateString('en-GB',{month:'short'});
+    return sm===em?`${startDate.getDate()}–${endDate.getDate()} ${sm}`:`${startDate.getDate()} ${sm}–${endDate.getDate()} ${em}`;
+  }
+
+  const buckets={};
+  ranked.forEach(m=>{
+    const day=dayStart(m.startedAtMs);
+    let sortVal;
+    if(useMonths){
+      const d=new Date(day);
+      sortVal=new Date(d.getFullYear(),d.getMonth(),1).getTime();
+    }else if(weeksPerBucket){
+      const daysSinceMonday=Math.floor((day-firstMonday)/86400000);
+      const idx=Math.floor(daysSinceMonday/(7*weeksPerBucket));
+      sortVal=firstMonday+idx*7*weeksPerBucket*86400000;
+    }else if(bucketDays===1){
+      sortVal=day;
+    }else{
+      const daysSinceStart=Math.floor((day-rangeStartMs)/86400000);
+      const idx=Math.floor(daysSinceStart/bucketDays);
+      sortVal=rangeStartMs+idx*bucketDays*86400000;
+    }
+    if(!buckets[sortVal])buckets[sortVal]={sum:0,count:0,minDay:day,maxDay:day};
+    const b=buckets[sortVal];
+    b.sum+=m.avgRank;
+    b.count++;
+    if(day<b.minDay)b.minDay=day;
+    if(day>b.maxDay)b.maxDay=day;
+  });
+  Object.values(buckets).forEach(b=>{
+    b.label=useMonths
+      ?new Date(b.minDay).toLocaleDateString('en-GB',{month:'short',year:'2-digit'})
+      :(b.minDay===b.maxDay
+        ?new Date(b.minDay).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})
+        :rangeLabel(new Date(b.minDay),new Date(b.maxDay)));
+  });
+
+  const sortedKeys=Object.keys(buckets).map(Number).sort((a,b)=>a-b);
+  const labels=sortedKeys.map(k=>buckets[k].label);
+  const avgTiers=sortedKeys.map(k=>buckets[k].sum/buckets[k].count);
+  const counts=sortedKeys.map(k=>buckets[k].count);
+
+  const lastRR=tierRR(ranked[ranked.length-1].avgRank);
+  // Overall movement across the whole visible range, in RR-equivalent points
+  // (1 tier = 100 RR on this decimal scale), so a climb across ranks and a
+  // climb within one rank both show on the same footing.
+  const deltaRR=Math.round((ranked[ranked.length-1].avgRank-ranked[0].avgRank)*100);
+
+  const card=document.createElement('div');
+  card.className='chart-container';
+  card.innerHTML=`
+    <div class="card-title playtime-title">Avg Lobby Rank Trend</div>
+    <div class="playtime-head">
+      <div class="playtime-total"><span class="playtime-total-val" style="display:inline-flex;align-items:center;gap:6px;">${rankIcon(lastRR.tier,22)}${avgLabel(lastRR.tier)} (${lastRR.rr} RR)</span></div>
+      <div class="playtime-avgday"><span class="playtime-avgday-val" style="color:${deltaRR>0?'#22c55e':deltaRR<0?'#ef4444':'inherit'}">${deltaRR>0?'▲ +':deltaRR<0?'▼ ':''}${Math.abs(deltaRR)} RR</span><span class="playtime-avgday-lbl">across ${ranked.length} solo games</span></div>
+    </div>
+    <div class="playtime-canvas-wrap"><canvas></canvas></div>
+  `;
+  container.appendChild(card);
+  document.getElementById('rank-trend-section').style.display='block';
+
+  const canvas=card.querySelector('canvas');
+  const accentRgb=getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb').trim()||'59,130,246';
+
+  // Y-axis min/max padded by half a tier on each side so the line never
+  // touches the very top/bottom edge of the chart area.
+  // Round to the nearest tier BEFORE padding by 0.5, so the axis bounds land
+  // exactly on a true tier boundary (tier±0.5, per tierRR's convention).
+  // Padding the raw decimal value directly was landing mid-tier instead,
+  // which let the edge band's color bleed into the start of the next tier's
+  // band — invisibly, since adjacent sub-tiers of the same rank share an
+  // identical color (all three Immortal tiers are the same red) — making
+  // that edge band look taller than the uniform ones in the middle.
+  const yMin=Math.round(Math.min(...avgTiers))-0.5;
+  const yMax=Math.round(Math.max(...avgTiers))+0.5;
+
+  // Colors the plot area in horizontal bands, one per rank tier, using each
+  // tier's actual color (same rColor() used everywhere else for this rank).
+  // A tier's true span is [tier-0.5, tier+0.5] per tierRR()'s "whole numbers
+  // center each division" convention — so this draws bands aligned to that,
+  // meaning each labeled gridline sits centered inside its own band's color
+  // rather than at a band edge, consistent with how rank math works
+  // elsewhere in the app.
+  const rankBandsPlugin={
+    id:'rankBands',
+    beforeDraw(chart){
+      const {ctx,chartArea,scales:{y}}=chart;
+      if(!chartArea)return;
+      ctx.save();
+      const top=Math.floor(y.min-0.5),bottom=Math.ceil(y.max+0.5);
+      for(let t=top;t<bottom;t++){
+        const bandTopVal=Math.min(t+0.5,y.max);
+        const bandBottomVal=Math.max(t-0.5,y.min);
+        if(bandBottomVal>=bandTopVal)continue;
+        const pxTop=y.getPixelForValue(bandTopVal);
+        const pxBottom=y.getPixelForValue(bandBottomVal);
+        ctx.fillStyle=`rgba(${hexToRgb(rColor(t))},.16)`;
+        ctx.fillRect(chartArea.left,pxTop,chartArea.right-chartArea.left,pxBottom-pxTop);
+      }
+      ctx.restore();
+    }
+  };
+
+  chartInstances.rankTrend=new Chart(canvas,{
+    type:'line',
+    plugins:[rankBandsPlugin],
+    data:{
+      labels,
+      datasets:[{
+        label:'Avg Lobby Rank',
+        data:avgTiers,
+        borderColor:`rgba(${accentRgb},1)`,
+        backgroundColor:(ctx)=>{
+          const area=ctx.chart.chartArea;
+          if(!area)return `rgba(${accentRgb},.15)`;
+          const g=ctx.chart.ctx.createLinearGradient(0,area.top,0,area.bottom);
+          g.addColorStop(0,`rgba(${accentRgb},.28)`);
+          g.addColorStop(1,`rgba(${accentRgb},0)`);
+          return g;
+        },
+        fill:true,
+        tension:0.35,
+        borderWidth:2.5,
+        pointRadius:3,
+        pointHoverRadius:5,
+        pointBackgroundColor:`rgba(${accentRgb},1)`,
+        pointBorderColor:'#0d0d10',
+        pointBorderWidth:1.5,
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      layout:{padding:{top:22,bottom:4}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(10,10,12,.95)',
+          borderColor:`rgba(${accentRgb},.4)`,
+          borderWidth:1,
+          padding:10,
+          displayColors:false,
+          titleFont:{family:'Geist',size:11,weight:'700'},
+          bodyFont:{family:'Geist',size:11},
+          callbacks:{
+            title:()=>[],
+            label:(item)=>{
+              const rr=tierRR(item.raw);
+              const c=counts[item.dataIndex];
+              return[`${avgLabel(rr.tier)} (${rr.rr} RR)`,`${c} game${c===1?'':'s'}`];
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          grid:{display:false},
+          ticks:{color:'#6b7280',font:{family:'Geist',size:10},maxRotation:0,autoSkip:true,maxTicksLimit:labels.length},
+          border:{display:true,color:'rgba(255,255,255,.12)'}
+        },
+        y:{
+          min:yMin,
+          max:yMax,
+          grid:{color:'rgba(255,255,255,.05)',z:-1},
+          ticks:{
+            color:'#6b7280',font:{family:'Geist',size:10},
+            // One tick per whole tier so the axis reads as rank names
+            // ("Asc 2", "Imm 1"...) instead of raw decimal values.
+            stepSize:1,
+            callback:(v)=>avgLabelShort(Math.round(v)),
+          },
+          border:{display:false}
+        }
+      }
+    }
+  });
 }
 
 /* ── PLAYTIME ────────────────────────────────────────────── */
@@ -2511,9 +2800,10 @@ function buildKdRankRows(bucketFn){
     if(m.myStats.deaths!=null)rb[t].totalDeaths+=m.myStats.deaths;
     if(m.myStats.acs!=null){
       rb[t].acsSum+=m.myStats.acs;rb[t].acsCount++;
-      const ranked=m.players.filter(p=>p._acs!=null).sort((a,b)=>b._acs-a._acs);
-      const meIdx=ranked.findIndex(p=>PUUID?p.puuid===PUUID:`${p.name}#${p.tag}`.toLowerCase()===`${PLAYER}#${TAG}`.toLowerCase());
-      if(meIdx!==-1){rb[t].placeSum+=meIdx+1;rb[t].placeCount++;}
+      // My ACS placement in the match is precomputed once at load (m.myAcsPlace),
+      // so this no longer re-sorts every match's players on each of the 3 mode
+      // builds per render.
+      if(m.myAcsPlace!=null){rb[t].placeSum+=m.myAcsPlace;rb[t].placeCount++;}
     }
   });
 
@@ -2685,8 +2975,6 @@ function afterFilterChange(){updateFilterCount();renderMatches();}
 function activeFilterCount(){return resultFilters.size+rankFilters.size+partyFilters.size+mapFilters.size;}
 function updateFilterCount(){
   const n=activeFilterCount();
-  const badge=document.getElementById('filter-count');
-  if(badge){badge.textContent=n;badge.hidden=n===0;}
   const clear=document.getElementById('filter-clear');
   if(clear)clear.disabled=n===0;
 }
@@ -2757,16 +3045,19 @@ function _filterOutsideClick(ev){
   }
 }
 
+// Rank group → tier ids, used to translate ticked rank-filter labels into the
+// set of avg-lobby tiers to keep. Module-level constant (was previously rebuilt
+// inside filtered() on every filter change).
+const RANK_GROUPS_FILTER={
+  'Iron':[3,4,5],'Bronze':[6,7,8],'Silver':[9,10,11],'Gold':[12,13,14],
+  'Platinum':[15,16,17],'Diamond':[18,19,20],'Ascendant':[21,22,23],'Immortal':[24,25,26],'Radiant':[27]
+};
 function filtered(){
   let out=allMatches;
   // Result: empty set = show all; otherwise keep matches whose outcome is ticked.
   if(resultFilters.size)out=out.filter(m=>resultFilters.has(m.won===true?'win':m.won===false?'loss':'draw'));
   // Rank: empty = all; otherwise match is kept if its rank group is ticked (OR).
   if(rankFilters.size){
-    const RANK_GROUPS_FILTER={
-      'Iron':[3,4,5],'Bronze':[6,7,8],'Silver':[9,10,11],'Gold':[12,13,14],
-      'Platinum':[15,16,17],'Diamond':[18,19,20],'Ascendant':[21,22,23],'Immortal':[24,25,26],'Radiant':[27]
-    };
     const tiers=new Set([...rankFilters].flatMap(l=>RANK_GROUPS_FILTER[l]||[]));
     out=out.filter(m=>m.avgRank!=null&&tiers.has(Math.round(m.avgRank)));
   }
@@ -2795,7 +3086,7 @@ function buildPlayersGrid(m){
   const enemyTeam=m.players.filter(p=>p.team_id!==myTeamId).sort(byAcs);
 
   function makeRow(p){
-    const isMe=PUUID?p.puuid===PUUID:p.name?.toLowerCase()===PLAYER.toLowerCase()&&p.tag?.toLowerCase()===TAG.toLowerCase();
+    const isMe=p===me;
     const isParty=myPartyId&&p.party_id===myPartyId;
     const cls=['player-row',isMe?'is-me':'',isParty?'is-party':''].filter(Boolean).join(' ');
     const nameClass='player-name'+(isParty?' party-name':'');
