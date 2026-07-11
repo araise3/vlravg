@@ -228,8 +228,10 @@ h1 span{color:var(--accent);}
 .filter-clear:hover{color:var(--text);}
 .filter-clear:disabled{opacity:.4;cursor:default;}
 .matches{display:flex;flex-direction:column;gap:8px;}
-.match-day-header{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;font-family:var(--font-body);padding-top:10px;}
+.match-day-header{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;font-family:var(--font-body);padding-top:10px;}
 .match-day-header:first-child{padding-top:0;}
+.match-day-avg{font-size:11px;font-weight:600;letter-spacing:normal;text-transform:none;color:var(--muted);font-family:var(--font-body);white-space:nowrap;}
+.match-day-avg span{font-weight:700;font-variant-numeric:tabular-nums;}
 .match-card{background:rgba(255,255,255,0.04);border:.5px solid var(--glass-border);border-radius:var(--radius-md);padding:8px 14px;cursor:pointer;transition:border-color .15s,background .15s;overflow:hidden;box-shadow:inset 0 1px 0 var(--glass-shine);}
 .match-card:hover{border-color:rgba(255,255,255,0.18);background:rgba(255,255,255,0.065);}
 .match-card.expanded{border-color:rgba(var(--accent-rgb),.35);}
@@ -269,7 +271,7 @@ h1 span{color:var(--accent);}
 .col-hdr-kd{min-width:38px;}
 .col-hdr-rank{min-width:72px;}
 .party-breakdown{display:flex;flex-direction:column;gap:6px;}
-.pb-dots{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:auto;padding-top:14px;min-height:6px;box-sizing:content-box;}
+.pb-dots{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:auto;padding-top:14px;min-height:6px;box-sizing:content-box;position:relative;}
 /* Prev/next arrows live in a centered bar alongside the pagination dots at the
    bottom of the card: ‹ • • ›. This keeps them clear of the card content
    entirely, regardless of how many rows the card has. */
@@ -285,6 +287,7 @@ h1 span{color:var(--accent);}
 .pb-dot.active{background:var(--accent);transform:scale(1.35);}
 .pb-dot.dot-hidden{opacity:0;transform:scale(0);pointer-events:none;}
 .pb-dot.active.dot-hidden{transform:scale(0);}
+.pb-dot.dot-removing{position:absolute;}
 .pb-section-title{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;font-family:var(--font-display);}
 .pb-row{display:flex;flex-direction:column;justify-content:space-between;gap:10px;padding:13px 14px;flex:none;box-sizing:border-box;background:rgba(255,255,255,.03);border-radius:var(--radius-md);border:.5px solid rgba(255,255,255,.06);}
 .pb-row-head{display:flex;align-items:center;justify-content:space-between;}
@@ -777,7 +780,7 @@ function rClass(n){
 
 /* ── STATE ──────────────────────────────────────────────── */
 let PLAYER='',TAG='',REGION='eu',PLATFORM='pc',TARGET_SEASON='',PUUID='';
-let allMatches=[],statMatches=[],mhIncludeReset=false,resultFilters=new Set(),rankFilters=new Set(),partyFilters=new Set(),mapFilters=new Set(),mhVisible=PER_PAGE,mhData=[],mhLastDayKey=null;
+let allMatches=[],statMatches=[],mhIncludeReset=false,resultFilters=new Set(),rankFilters=new Set(),partyFilters=new Set(),mapFilters=new Set(),mhVisible=PER_PAGE,mhData=[],mhLastDayKey=null,mhDayStats={};
 // Single reused canvas 2D context for text-width measurement, created lazily on
 // first use — avoids allocating a fresh <canvas> every renderStats call.
 let _measureCtx=null;
@@ -1142,7 +1145,7 @@ function runAnalysis(){
   document.getElementById('header-rank-badge').innerHTML='';
   document.getElementById('result-panel').classList.remove('shown');
   settleSearchBarWidth();
-  allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;resultFilters.clear();rankFilters.clear();partyFilters.clear();mapFilters.clear();
+  allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;mhDayStats={};resultFilters.clear();rankFilters.clear();partyFilters.clear();mapFilters.clear();
   allTeammates=[];tmPage=0;
   // If the season dropdown's prefetch already fetched this exact player (the
   // common case — it runs while the player is still typing), reuse those
@@ -2432,19 +2435,21 @@ function renderRankTrend(matches){
   const avgTiers=sortedKeys.map(k=>buckets[k].sum/buckets[k].count);
   const counts=sortedKeys.map(k=>buckets[k].count);
 
-  const lastRR=tierRR(ranked[ranked.length-1].avgRank);
-  // Overall movement across the whole visible range, in RR-equivalent points
-  // (1 tier = 100 RR on this decimal scale), so a climb across ranks and a
-  // climb within one rank both show on the same footing.
-  const deltaRR=Math.round((ranked[ranked.length-1].avgRank-ranked[0].avgRank)*100);
+  // Avg lobby rank across all solo games played on the most recent day (not
+  // just the single latest match), so it reads as "how was I doing today"
+  // rather than being swayed by one outlier game.
+  const lastDayKey=new Date(ranked[ranked.length-1].startedAtMs).toDateString();
+  const lastDayMatches=ranked.filter(m=>new Date(m.startedAtMs).toDateString()===lastDayKey);
+  const lastDayAvg=lastDayMatches.reduce((a,m)=>a+m.avgRank,0)/lastDayMatches.length;
+  const lastRR=tierRR(lastDayAvg);
 
   const card=document.createElement('div');
   card.className='chart-container';
   card.innerHTML=`
-    <div class="card-title playtime-title">Avg Lobby Rank Trend</div>
+    <div class="card-title playtime-title">Avg Lobby Rank Trend (Solo)</div>
     <div class="playtime-head">
-      <div class="playtime-total"><span class="playtime-total-val" style="display:inline-flex;align-items:center;gap:6px;">${rankIcon(lastRR.tier,22)}${avgLabel(lastRR.tier)} (${lastRR.rr} RR)</span></div>
-      <div class="playtime-avgday"><span class="playtime-avgday-val" style="color:${deltaRR>0?'#22c55e':deltaRR<0?'#ef4444':'inherit'}">${deltaRR>0?'▲ +':deltaRR<0?'▼ ':''}${Math.abs(deltaRR)} RR</span><span class="playtime-avgday-lbl">across ${ranked.length} solo games</span></div>
+      <div class="playtime-total"><span class="playtime-total-val" style="display:inline-flex;align-items:center;gap:6px;">${rankIcon(lastRR.tier,22)}${avgLabel(lastRR.tier)} (${lastRR.rr} RR)</span><span class="playtime-total-lbl">avg across ${lastDayMatches.length} game${lastDayMatches.length===1?'':'s'} on ${dayHeaderLabel(ranked[ranked.length-1].startedAtMs)}</span></div>
+      <div class="playtime-avgday"><span class="playtime-avgday-val">${ranked.length}</span><span class="playtime-avgday-lbl">solo games counted</span></div>
     </div>
     <div class="playtime-canvas-wrap"><canvas></canvas></div>
   `;
@@ -3193,7 +3198,14 @@ function buildMatchRows(slice,startDayKey){
     if(dayKey!==lastDayKey){
       const header=document.createElement('div');
       header.className='match-day-header';
-      header.textContent=dayHeaderLabel(m.startedAtMs);
+      const stat=mhDayStats[dayKey];
+      let avgHtml='';
+      if(stat&&stat.count>0){
+        const dayAvg=stat.sum/stat.count;
+        const{tier,rr}=tierRR(dayAvg);
+        avgHtml=`<span class="match-day-avg">avg lobby <span class="${rClass(tier)}">${avgLabelShort(tier)} (${rr} RR)</span></span>`;
+      }
+      header.innerHTML=`<span>${dayHeaderLabel(m.startedAtMs)}</span>${avgHtml}`;
       frag.appendChild(header);
       lastDayKey=dayKey;
     }
@@ -3219,6 +3231,18 @@ function updateLoadMoreBtn(total){
 // the underlying filtered/sorted set is different and everything needs redoing.
 function renderMatches(){
   mhData=filtered().slice().sort((a,b)=>(b.startedAtMs??0)-(a.startedAtMs??0));
+  // Per-day avg lobby rank, aggregated across the FULL filtered set (mhData) —
+  // not just whatever page is currently visible — so a day's figure in the
+  // header stays correct and stable regardless of Load More/pagination, and
+  // respects active filters the same way the match cards themselves do.
+  mhDayStats={};
+  mhData.forEach(m=>{
+    if(m.startedAtMs==null||m.avgRank==null)return;
+    const k=new Date(m.startedAtMs).toDateString();
+    if(!mhDayStats[k])mhDayStats[k]={sum:0,count:0};
+    mhDayStats[k].sum+=m.avgRank;
+    mhDayStats[k].count++;
+  });
   const slice=mhData.slice(0,mhVisible);
   const el=document.getElementById('matches-container');
   el.innerHTML='';
