@@ -249,9 +249,9 @@ h1 span{color:var(--accent);}
 .match-score{font-family:var(--font-body);font-size:13px;color:var(--muted);}
 .match-date{font-family:var(--font-body);font-size:11px;color:var(--muted);opacity:.6;white-space:nowrap;}
 .m-result-tag{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border-radius:var(--radius-xs);flex-shrink:0;}
-.m-result-tag.win{background:rgba(34,197,94,.13);color:var(--win);}
-.m-result-tag.loss{background:rgba(239,68,68,.13);color:var(--loss);}
-.m-result-tag.draw{background:rgba(245,158,11,.13);color:var(--draw);}
+.m-result-tag.win{background:#22c55e;color:#fff;}
+.m-result-tag.loss{background:#ef4444;color:#fff;}
+.m-result-tag.draw{background:#f59e0b;color:#fff;}
 .m-badge{text-align:right;flex-shrink:0;width:var(--match-badge-w,140px);}
 .m-badge-lbl{font-size:10px;color:var(--muted);font-family:var(--font-body);line-height:1;}
 .m-badge-val{font-size:13px;font-weight:700;line-height:1.3;font-variant-numeric:tabular-nums;}
@@ -263,12 +263,31 @@ h1 span{color:var(--accent);}
 .my-stat-val{color:var(--text);font-weight:600;}
 .players-grid{display:none;margin-top:8px;gap:6px;}
 .match-card.expanded .players-grid{display:grid;grid-template-columns:1fr 1fr;}
+.clutch-debug{display:none;margin-top:8px;}
+.match-card.expanded .clutch-debug{display:block;}
+.clutch-debug-toggle{font-size:10px;font-weight:700;color:var(--muted);background:rgba(255,255,255,.04);border:.5px solid var(--glass-border);border-radius:var(--radius-xs);padding:4px 9px;cursor:pointer;font-family:var(--font-display);letter-spacing:.04em;text-transform:uppercase;transition:color .15s,border-color .15s;}
+.clutch-debug-toggle:hover{color:var(--text);border-color:rgba(255,255,255,.25);}
+.clutch-debug-panel{margin-top:8px;padding:10px;background:rgba(0,0,0,.25);border:.5px solid var(--glass-border);border-radius:var(--radius-sm);display:flex;flex-direction:column;gap:6px;}
+.clutch-debug-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:4px 0;border-bottom:.5px solid rgba(255,255,255,.05);}
+.clutch-debug-row:last-of-type{border-bottom:none;}
+.clutch-debug-round-lbl{font-size:11px;color:var(--muted);font-family:var(--font-body);white-space:nowrap;}
+.clutch-debug-btns{display:flex;gap:4px;}
+.clutch-debug-btn{font-size:10px;font-weight:700;padding:4px 8px;border-radius:var(--radius-xs);border:.5px solid transparent;background:rgba(255,255,255,.05);color:var(--muted);cursor:pointer;font-family:var(--font-display);transition:background .15s,color .15s,border-color .15s;}
+.clutch-debug-btn:hover{color:var(--text);}
+.clutch-debug-btn.seg-win.active{background:rgba(34,197,94,.18);color:#22c55e;border-color:rgba(34,197,94,.4);}
+.clutch-debug-btn.seg-loss.active{background:rgba(239,68,68,.18);color:#ef4444;border-color:rgba(239,68,68,.4);}
+.clutch-debug-btn.seg-exit.active{background:rgba(245,158,11,.18);color:#f59e0b;border-color:rgba(245,158,11,.4);}
+.clutch-debug-btn.seg-save.active{background:rgba(100,116,139,.25);color:#94a3b8;border-color:rgba(100,116,139,.5);}
+.clutch-debug-download{margin-top:4px;font-size:11px;font-weight:700;color:var(--text);background:rgba(var(--accent-rgb),.12);border:.5px solid rgba(var(--accent-rgb),.35);border-radius:var(--radius-xs);padding:7px 10px;cursor:pointer;font-family:var(--font-display);align-self:flex-start;transition:background .15s;}
+.clutch-debug-download:hover{background:rgba(var(--accent-rgb),.2);}
+.clutch-debug-hint{font-size:10px;color:var(--muted);font-family:var(--font-body);margin-top:2px;}
 .team-col{}
 .team-col-header{display:flex;align-items:center;padding:2px 12px;margin-bottom:3px;gap:6px;}
 .team-label{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);flex:1;}
 .col-hdr{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);text-align:right;flex-shrink:0;}
 .col-hdr-acs{min-width:30px;}
 .col-hdr-kd{min-width:38px;}
+.col-hdr-1v2{min-width:32px;}
 .col-hdr-rank{min-width:72px;}
 .party-breakdown{display:flex;flex-direction:column;gap:6px;}
 .pb-dots{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:auto;padding-top:14px;min-height:6px;box-sizing:content-box;position:relative;}
@@ -302,6 +321,24 @@ h1 span{color:var(--accent);}
 .pb-stat-right{flex:0;text-align:right;margin-left:auto;white-space:nowrap;}
 .pb-stat-lbl{font-size:9px;font-weight:600;color:var(--muted);font-family:var(--font-display);letter-spacing:.1em;text-transform:uppercase;}
 .pb-stat-val{font-size:19px;font-weight:800;font-family:var(--font-display);color:var(--text);line-height:1.1;font-variant-numeric:tabular-nums;}
+.clutch-behavior{margin-top:16px;padding-top:14px;border-top:.5px solid var(--border);}
+.clutch-behavior-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+.clutch-behavior-title{font-size:11px;color:var(--muted);font-family:var(--font-body);}
+.clutch-behavior-avg{font-size:12px;font-weight:700;color:var(--text);font-family:var(--font-display);white-space:nowrap;}
+.clutch-behavior-bar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.05);}
+.clutch-behavior-bar>div{height:100%;}
+.clutch-behavior-bar .seg-win{background:#22c55e;}
+.clutch-behavior-bar .seg-loss{background:#ef4444;}
+.clutch-behavior-bar .seg-exit{background:#f59e0b;}
+.clutch-behavior-bar .seg-save{background:#64748b;}
+.clutch-behavior-legend{display:flex;gap:16px;margin-top:9px;flex-wrap:wrap;}
+.clutch-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-family:var(--font-body);}
+.clutch-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.clutch-legend-dot.seg-win{background:#22c55e;}
+.clutch-legend-dot.seg-loss{background:#ef4444;}
+.clutch-legend-dot.seg-exit{background:#f59e0b;}
+.clutch-legend-dot.seg-save{background:#64748b;}
+.clutch-legend-item strong{color:var(--text);font-weight:700;}
 .player-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:.5px solid var(--border2);border-radius:var(--radius-sm);padding:6px 12px;font-size:12px;gap:6px;min-height:32px;}
 .player-row.is-me{}
 .player-row.is-party{}
@@ -315,6 +352,9 @@ h1 span{color:var(--accent);}
 .player-acs.acs-null{color:var(--muted);}
 .player-kd{font-size:11px;font-weight:700;color:var(--text);flex-shrink:0;min-width:38px;text-align:right;font-variant-numeric:tabular-nums;}
 .player-kd.kd-null{color:var(--muted);}
+.player-1v2{font-size:11px;font-weight:700;color:var(--muted);flex-shrink:0;min-width:32px;text-align:right;font-variant-numeric:tabular-nums;}
+.player-1v2.p1v2-null{color:var(--muted);opacity:.5;}
+.player-1v2.p1v2-exit{color:#f59e0b;}
 .mvp-badge{font-size:8px;font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:var(--radius-xs);flex-shrink:0;text-transform:uppercase;line-height:1.4;}
 .mvp-badge.match-mvp{background:rgba(234,179,8,.15);color:#eab308;border:.5px solid rgba(234,179,8,.35);}
 .mvp-badge.team-mvp{background:rgba(156,163,175,.1);color:#9ca3af;border:.5px solid rgba(156,163,175,.25);}
@@ -394,12 +434,27 @@ h1 span{color:var(--accent);}
                 <span>Count placements (<span id="reset-toggle-count">0</span>)</span>
               </label>
               <div style="display:flex;gap:8px;flex:1;align-items:stretch;">
-                <div class="tm-pill" style="flex:1;padding:14px 10px;"><div class="tm-pill-val" id="sg-kd" style="font-size:1.4rem;">—</div><div class="tm-pill-lbl">Avg K/D</div></div>
-                <div class="tm-pill" style="flex:1;padding:14px 10px;"><div class="tm-pill-val" id="sg-acs" style="font-size:1.4rem;">—</div><div class="tm-pill-lbl">Avg ACS</div></div>
-                <div class="tm-pill" style="flex:1;padding:14px 10px;"><div class="tm-pill-val" id="sg-games" style="font-size:1.4rem;">—</div><div class="tm-pill-lbl">Games</div></div>
-                <div class="tm-pill" style="flex:1;padding:14px 10px;"><div class="tm-pill-val" id="sg-wr" style="font-size:1.4rem;">—</div><div class="tm-pill-lbl">Win Rate</div></div>
+                <div class="tm-pill" id="sg-kd-pill" style="flex:1;padding:14px 10px;"><div class="tm-pill-val" id="sg-kd" style="font-size:1.4rem;">—</div><div class="tm-pill-lbl" id="sg-kd-lbl">Avg K/D</div></div>
+                <div class="tm-pill" id="sg-acs-pill" style="flex:1;padding:14px 10px;"><div class="tm-pill-val" id="sg-acs" style="font-size:1.4rem;">—</div><div class="tm-pill-lbl" id="sg-acs-lbl">Avg ACS</div></div>
+                <div class="tm-pill" id="sg-games-pill" style="flex:1;padding:14px 10px;"><div class="tm-pill-val" id="sg-games" style="font-size:1.4rem;">—</div><div class="tm-pill-lbl" id="sg-games-lbl">Games</div></div>
+                <div class="tm-pill" id="sg-wr-pill" style="flex:1;padding:14px 10px;"><div class="tm-pill-val" id="sg-wr" style="font-size:1.4rem;">—</div><div class="tm-pill-lbl" id="sg-wr-lbl">Win Rate</div></div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+      <!-- Clutches -->
+      <div class="summary-row full-row" id="clutch-section-row" style="display:none">
+        <div class="s-card" id="clutch-card">
+          <div class="card-title">Clutches</div>
+          <div style="display:flex;gap:8px;" id="clutch-grid"></div>
+          <div class="clutch-behavior" id="clutch-behavior" style="display:none">
+            <div class="clutch-behavior-head">
+              <span class="clutch-behavior-title">Clutch outcomes — win, loss, or didn't really try</span>
+              <span class="clutch-behavior-avg" id="clutch-avg-time"></span>
+            </div>
+            <div class="clutch-behavior-bar" id="clutch-behavior-bar"></div>
+            <div class="clutch-behavior-legend" id="clutch-behavior-legend"></div>
           </div>
         </div>
       </div>
@@ -569,41 +624,22 @@ const API_BASE  = '/api';
 const BATCH     = 10;
 const PER_PAGE  = 15;
 
-// ── Pacing philosophy: FASTEST ────────────────────────────────────────────
-// We do NOT preemptively halt for a full window when quota runs low. Doing so
-// trades a huge amount of wall-clock time (up to a full 60s window per pause)
-// to avoid 429s that are actually cheap: per HenrikDev's docs a 429 is a fast
-// rejection and may not even count against your budget, and real per-page cost
-// is usually far below the ~11-unit worst case because most individual matches
-// are already in HenrikDev's server cache. So instead we:
-//   • space requests lightly so we don't fire a burst into one instant, and
-//   • ride quota all the way down, letting the occasional 429 happen and
-//     waiting only the REAL reset time (from retry-after / the reset header)
-//     when one does — then immediately continue.
-// This matches the throughput of the old aggressive loop while keeping the
-// header-driven correctness (exact reset waits, specific error messages).
+// ── Pacing philosophy ──────────────────────────────────────────────────────
+// Request pacing (spacing calls out, gliding as quota runs low) now lives
+// entirely in the worker — see functions/api/[[path]].js — coordinated
+// across every concurrent user of the app hitting the same HenrikDev key,
+// not just this one browser tab. The client no longer sees real quota
+// numbers at all; it just fires requests and, on a 429, reads how long to
+// wait from the response body instead of headers. Per HenrikDev's docs a 429
+// is a fast rejection and may not even count against the budget, so this
+// stays simple: fire, and if the worker says wait, wait the real time it
+// gives us and continue.
 //
-// Minimum spacing between requests. Small when quota is healthy; when quota is
-// nearly gone we stretch spacing across the remaining reset time so we glide
-// into the window boundary rather than slamming into a wall of 429s — but we
-// never stop outright, so a cheap cache-HIT page can still slip through.
-const MIN_SPACING_MS = 200;
-// Start gliding only when we have this few AFFORDABLE requests left in the
-// window (remaining ÷ observed cost), not this few raw units. On the warm/cheap
-// tail (cost≈1) a handful of units is many affordable requests, so we don't
-// glide; on the cold start (cost≈11) even a full window is few, so we ease off.
-const GLIDE_BELOW = 3;
-// How many recent per-request costs to average when estimating the next cost.
-const COST_SAMPLE = 5;
-// Cap on a single glide wait. Beyond this we'd rather just send and let a cheap
-// 429 (waited at the real reset) handle any overshoot than idle a whole window.
-const GLIDE_CAP_MS = 8000;
-// Absolute ceiling on any single wait, so a bad reset value or a stuck window
-// can never hang the UI indefinitely.
+// Absolute ceiling on any single wait, so a bad reset value or a stuck
+// window can never hang the UI indefinitely.
 const MAX_WAIT_MS = 65000;
-// Minimum wait after a 429, so we can never retry into the same just-exhausted
-// window microseconds later (which caused back-to-back 429s). Even if every
-// header says "retry now," we hold at least this long before trying again.
+// Minimum wait after a 429, so we can never retry into the same
+// just-exhausted window microseconds later.
 const RL_WAIT_FLOOR_MS = 2500;
 
 // Parses an API short code like "e11a4" into {ep:11, act:4}. Returns null if
@@ -1034,13 +1070,13 @@ async function prefetchPlayerActs(){
   const myId=++_prefetchId;
   showSeasonLoading();
   try{
-    const acctUrl=`${API_BASE}/valorant/v1/account/${encodeURIComponent(name)}/${tag}`;
-    const{j:acctJ}=await apiGet(acctUrl,{interactive:true});
+    const acctUrl=`${API_BASE}/account/${encodeURIComponent(name)}/${tag}`;
+    const{j:acctJ}=await apiGet(acctUrl);
     if(myId!==_prefetchId)return;
     const region=(acctJ.data||acctJ).region||'eu';
 
-    const mmrUrl=`${API_BASE}/valorant/v3/mmr/${region}/pc/${encodeURIComponent(name)}/${tag}`;
-    const{j:mmrJ}=await apiGet(mmrUrl,{interactive:true});
+    const mmrUrl=`${API_BASE}/rank/${region}/pc/${encodeURIComponent(name)}/${tag}`;
+    const{j:mmrJ}=await apiGet(mmrUrl);
     if(myId!==_prefetchId)return;
 
     const seasonal=(mmrJ.data||mmrJ).seasonal||[];
@@ -1083,7 +1119,7 @@ function shakeElement(id){
   el.classList.add('shake');
   el.addEventListener('animationend',()=>el.classList.remove('shake'),{once:true});
 }
-function shakeSearchBar(){shakeElement('search-bar-shake');}
+function shakeSearchBar(){shakeElement('search-bar');}
 
 // Measures how much room the result pills + season control actually need
 // (they live in an absolutely-positioned group pinned to the right, so they
@@ -1136,7 +1172,7 @@ function runAnalysis(){
   document.body.classList.remove('rank-colored');
   document.getElementById('results-section').style.display='block';
   // Reset UI
-  ['summary-grid','rank-trend-section','playtime-section','teammates-section','match-list-section','show-history-btn'].forEach(id=>{
+  ['summary-grid','rank-trend-section','clutch-section-row','playtime-section','teammates-section','match-list-section','show-history-btn'].forEach(id=>{
     document.getElementById(id).style.display='none';
   });
   document.getElementById('matches-container').innerHTML='';
@@ -1162,22 +1198,17 @@ function runAnalysis(){
 
 // ── TEMP DEBUG — quota inspector ──────────────────────────────────────────
 // Surfaces the live quota picture read from the ratelimit headers so we can
-// watch the client's pacing decisions in real time. Also times the whole fetch
+// watch the client's request timing in real time. Also times the whole fetch
 // run and derives an overall req/min from it. Ripped out later — this block and
 // its call sites are tagged "TEMP DEBUG".
 let __debugRunStart=0;   // ms timestamp when the current run began
 let __debugRunEnd=0;     // ms timestamp when it finished (0 while in progress)
 let __debugReqCount=0;   // API requests made this run (kept for context)
-let __debugQuotaUsed=0;  // total quota UNITS consumed this run
 function __debugResetRate(){
-  __debugRunStart=Date.now();__debugRunEnd=0;__debugReqCount=0;__debugQuotaUsed=0;
+  __debugRunStart=Date.now();__debugRunEnd=0;__debugReqCount=0;
   const el=document.getElementById('debug-rate');if(el)el.style.display='none';
 }
 function __debugTrackReq(){__debugReqCount++;}            // call per API request
-// Add the quota units a single response actually consumed (its `remaining` drop).
-// Skips rollovers/unknowns (drop null) so we only sum real spend, not window
-// resets. This is what makes the rate meaningful — requests cost 1–11 units each.
-function __debugTrackCost(drop){ if(drop!=null&&drop>0)__debugQuotaUsed+=drop; }
 function __debugFinishRun(){__debugRunEnd=Date.now();__debugShowQuota({});} // freeze timer + repaint
 // Elapsed seconds for the run (live while running, frozen once finished).
 function __debugElapsedS(){
@@ -1187,15 +1218,12 @@ function __debugElapsedS(){
 function __debugShowQuota(q){
   const el=document.getElementById('debug-rate');if(!el)return;
   const bits=[];
-  if(q.remaining!=null)bits.push(`${q.remaining} quota left`);
-  if(q.cost!=null)bits.push(`~${q.cost}/page`);
-  if(q.reset!=null)bits.push(`resets ${q.reset}s`);
   if(q.waited)bits.push(`waited ${(q.waited/1000).toFixed(1)}s`);
   const elapsed=__debugElapsedS();
   if(elapsed>0){
-    const qpm=__debugQuotaUsed/(elapsed/60);
+    const rpm=__debugReqCount/(elapsed/60);
     const done=__debugRunEnd?' done':'';
-    bits.push(`${elapsed.toFixed(1)}s${done} · ${__debugReqCount} reqs · ${__debugQuotaUsed} quota · ${qpm.toFixed(1)} quota/min`);
+    bits.push(`${elapsed.toFixed(1)}s${done} · ${__debugReqCount} reqs · ${rpm.toFixed(1)} req/min`);
   }
   el.textContent=`[debug] ${bits.join(' · ')||'…'}`;
   el.style.display=bits.length?'block':'none';
@@ -1206,114 +1234,10 @@ function __debugShowQuota(q){
 //  Rate-limit ledger — a tiny model of the server's per-1-min quota window,
 //  kept in sync from response headers so callers can look BEFORE they leap.
 // ─────────────────────────────────────────────────────────────────────────
-const rateLimit = {
-  remaining: null,   // quota units left in the current window
-  resetAt: 0,        // epoch ms when the window rolls over (from a real header)
-  lastRequestAt: 0,  // epoch ms of the previous send, for MIN_SPACING_MS
-  recentCosts: [],   // rolling window of observed per-request quota drops
-
-  // Learn from response headers. Handles the IETF `ratelimit` header
-  // (v4.5+: `"per1min";r=86;t=58`) and the legacy split headers
-  // (`x-ratelimit-remaining` for count, `x-ratelimit-reset` for reset time).
-  // The reset time is REQUIRED for correct pacing — the proxy must forward it
-  // (see the Worker note).
-  ingest(headers){
-    let r=null,t=null;
-
-    const rl=headers.get('ratelimit');
-    if(rl){
-      const mr=rl.match(/(?:^|[;\s])r=(\d+)/i);
-      const mt=rl.match(/(?:^|[;\s])t=(\d+)/i);
-      if(mr)r=parseInt(mr[1],10);
-      if(mt)t=parseInt(mt[1],10);
-    }
-    if(r==null){
-      const legacy=headers.get('x-ratelimit-remaining');
-      if(legacy!=null)r=parseInt(legacy,10);
-    }
-    if(t==null){
-      // `x-ratelimit-reset` may be seconds-remaining or an absolute epoch —
-      // normalise either into seconds-until-reset.
-      const reset=headers.get('x-ratelimit-reset');
-      if(reset!=null){
-        const n=parseInt(reset,10);
-        if(!Number.isNaN(n))t=n>1e6?Math.max(0,Math.round(n-Date.now()/1000)):n;
-      }
-    }
-
-    if(r!=null&&!Number.isNaN(r)){
-      // Observe the real per-request cost by watching how far `remaining` drops
-      // between successive responses (≈1 for a cached page, up to ~BATCH+1 for a
-      // full cache miss). Keep a short rolling window and let pacing react.
-      // Ignore rollovers (remaining jumped UP = new window) so the estimate
-      // tracks the current cache regime rather than the whole run.
-      if(this.remaining!=null){
-        const drop=this.remaining-r;
-        if(drop>=0&&drop<=BATCH+1){
-          this.recentCosts.push(drop);
-          if(this.recentCosts.length>COST_SAMPLE)this.recentCosts.shift();
-          __debugTrackCost(drop); // TEMP DEBUG — accumulate real quota spend
-        }
-      }
-      this.remaining=r;
-    }
-    if(t!=null&&!Number.isNaN(t))this.resetAt=Date.now()+t*1000;
-
-    return{
-      remaining:this.remaining,
-      reset:t,
-      cost:this.estCost()
-    };
-  },
-
-  // Rolling estimate of what the NEXT request will cost, in quota units. Uses
-  // the max of recent observed drops (conservative — we'd rather slightly
-  // over-reserve than 429), defaulting to the worst case until we've measured.
-  // Estimated cost of the NEXT request, in quota units — but only once we've
-  // actually MEASURED something. Returns null while unmeasured, so pacing knows
-  // to fire optimistically rather than glide on a pessimistic guess. (Gliding on
-  // an unmeasured worst-case is what was throttling the first calls of a run.)
-  estCost(){
-    if(!this.recentCosts.length)return null;
-    return Math.max(1,...this.recentCosts);
-  },
-
-  msUntilReset(){return Math.max(0,this.resetAt-Date.now());},
-
-  // How long to wait BEFORE the next send. Never halts for a full window.
-  //   • interactive call (account/mmr lookups during act selection) → never
-  //     glide; these are light and the user is waiting on them.
-  //   • cost not yet measured → don't glide; fire and LEARN the real cost first.
-  //   • otherwise glide ONLY when it actually helps: when the few affordable
-  //     requests we have left, spaced out, would roughly fill the remaining
-  //     reset window — i.e. we're genuinely about to cross a reset boundary and
-  //     can ride smoothly into the next window. If they WON'T fill the window
-  //     (expensive pages with lots of reset time left, or a short run that
-  //     finishes long before the window matters), gliding only delays an
-  //     unavoidable wall — so fire immediately instead.
-  //
-  // Concretely: the glide spacing = msUntilReset / affordable. If that spacing
-  // is small (≤ GLIDE_CAP_MS) the requests genuinely span the window → glide.
-  // If it's large, the affordable requests don't come close to filling the
-  // window → no point spreading them, just send.
-  planDelay(interactive){
-    const since=Date.now()-this.lastRequestAt;
-    let want=MIN_SPACING_MS;
-    const cost=this.estCost();
-    if(!interactive&&cost!=null&&this.remaining!=null&&this.remaining>0){
-      const affordable=Math.floor(this.remaining/cost); // requests still affordable this window
-      if(affordable<=GLIDE_BELOW){
-        const spread=Math.floor(this.msUntilReset()/Math.max(affordable,1));
-        // Only glide if the spread is modest enough that these requests actually
-        // bridge to the reset. A spread larger than the cap means we'd finish
-        // (or hit the wall) with lots of window left — gliding wouldn't help, so
-        // fire now. Otherwise space them to ride smoothly into the next window.
-        if(spread<=GLIDE_CAP_MS)want=Math.max(spread,MIN_SPACING_MS);
-      }
-    }
-    return since>=want?0:want-since;
-  }
-};
+// Rate limiting (pacing, quota tracking, gliding) now lives entirely in the
+// worker — see functions/api/[[path]].js. The client has no quota state of
+// its own anymore; apiGet() below just fires requests and reacts to a 429 by
+// reading retryAfterMs out of the response body.
 
 const MIN_RATED=7; // strict: a match needs at least this many rated players (of 10) for its lobby rank to count
 
@@ -1333,29 +1257,18 @@ async function parseApiError(r){
 // ─────────────────────────────────────────────────────────────────────────
 //  apiGet — the single entry point for every HenrikDev call.
 //
-//  Fastest pacing: it never preemptively halts. It applies light spacing from
-//  the rate-limit ledger (stretching only as quota nears empty), rides the
-//  budget down, and if a 429 does happen it waits the REAL reset time from the
-//  headers and continues. Cheap cached pages keep flowing even at low quota.
+//  Pacing (spacing requests, gliding as quota runs low) now lives entirely in
+//  the worker, coordinated across every concurrent user of the app — see
+//  functions/api/[[path]].js. This function just fires requests and, on a
+//  429, waits however long the worker's response body says to.
 //
-//  Returns { j, rem } — same shape the old fetchWithRetry returned, so all
-//  existing call sites work unchanged. `rem` is the authoritative quota
-//  remaining from the ratelimit header.
+//  Returns { j } — `rem` was dropped from the return shape since the client
+//  no longer has quota numbers to report; no call site was reading it.
 // ─────────────────────────────────────────────────────────────────────────
 async function apiGet(url,opts={},_attempt=0,_rl=0){
   const MAX_RETRIES=5;   // hard failures (network / 5xx)
   const MAX_RL_WAITS=40; // 429 waits within one call (each waits the real reset)
-  const interactive=!!opts.interactive; // account/mmr lookups during act selection
 
-  // 1) Light proactive spacing from what we know about the quota window. This
-  //    is spacing, not a halt — see rateLimit.planDelay(). Interactive calls
-  //    skip gliding entirely so act selection stays snappy.
-  const planned=rateLimit.planDelay(interactive);
-  if(planned>0){
-    if(planned>1500)setStatus(`Easing off the rate limit — ${Math.ceil(planned/1000)}s…`,true);
-    await sleep(planned);
-  }
-  rateLimit.lastRequestAt=Date.now();
   __debugTrackReq(); // TEMP DEBUG — count every network attempt (incl. retries/429s)
 
   let r;
@@ -1370,31 +1283,26 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
     return apiGet(url,opts,_attempt+1,_rl);
   }
 
-  // 2) Always learn from the headers, even on errors — they carry quota info.
-  const quota=rateLimit.ingest(r.headers);
-
-  // 3) 429 — hit the limit despite pacing (shared/global limit, or first call of
-  //    a cold window). We just ingested this response's headers above, so
-  //    msUntilReset() reflects THIS 429's fresh reset time. Wait the MAX of every
-  //    signal we have — Retry-After, the reset countdown, and a small floor — so
-  //    a tiny/stale Retry-After can't make us retry into the same dead window and
-  //    eat a second 429 (which is what caused the back-to-back 429s in testing).
+  // 1) 429 — the worker either declined before calling upstream (shared quota
+  //    already exhausted this window) or relayed a real 429 from HenrikDev.
+  //    Either way, the body tells us exactly how long to wait — no headers
+  //    involved anymore. Floor the wait so we can never retry into the same
+  //    just-exhausted window microseconds later.
   if(r.status===429){
     if(_rl>=MAX_RL_WAITS)throw new Error('Rate limited — please try again in a minute');
-    const headerRetry=r.headers.get('retry-after');
-    const retryMs=headerRetry!=null?Math.max(parseInt(headerRetry,10),0)*1000:0;
-    const resetMs=rateLimit.msUntilReset();
-    const wait=Math.min(
-      Math.max(retryMs, resetMs+250, RL_WAIT_FLOOR_MS),
-      MAX_WAIT_MS
-    );
-    __debugShowQuota({...quota,waited:wait}); // TEMP DEBUG
+    let retryMs=RL_WAIT_FLOOR_MS;
+    try{
+      const body=await r.json();
+      if(typeof body.retryAfterMs==='number')retryMs=Math.max(body.retryAfterMs,RL_WAIT_FLOOR_MS);
+    }catch(_){/* fall back to the floor if the body isn't as expected */}
+    const wait=Math.min(retryMs,MAX_WAIT_MS);
+    __debugShowQuota({waited:wait}); // TEMP DEBUG
     setStatus(`Rate limit reached — waiting ${Math.ceil(wait/1000)}s for reset…`,true);
     await sleep(wait);
     return apiGet(url,opts,_attempt,_rl+1);
   }
 
-  // 4) Transient server errors — exponential backoff.
+  // 2) Transient server errors — exponential backoff.
   if([500,502,503,504].includes(r.status)){
     if(_attempt>=MAX_RETRIES)throw new Error(await parseApiError(r));
     const wait=Math.min(1000*Math.pow(2,_attempt),16000); // 1,2,4,8,16s
@@ -1403,12 +1311,12 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
     return apiGet(url,opts,_attempt+1,_rl);
   }
 
-  // 5) Other non-OK (400/401/403/404…) — not retryable, surface the real reason.
+  // 3) Other non-OK (400/401/403/404…) — not retryable, surface the real reason.
   if(!r.ok)throw new Error(await parseApiError(r));
 
-  __debugShowQuota(quota); // TEMP DEBUG
+  __debugShowQuota({}); // TEMP DEBUG
   const j=await r.json();
-  return{j,rem:rateLimit.remaining};
+  return{j};
 }
 
 // Back-compat alias — older call sites referenced fetchWithRetry by name.
@@ -1422,6 +1330,11 @@ function isSeason(m){
 }
 /* ── PROCESS MATCH ──────────────────────────────────────── */
 function processMatch(m){
+  // TEMP DEBUG — keep every raw match object around on window so a specific
+  // one can be found and copied out of the console (for calibrating the
+  // clutch-outcome logic against real examples). Remove once no longer needed.
+  (window.__rawMatches??=[]).push(m);
+
   const meta=m.metadata||{};
   const players=m.players||[];
 
@@ -1430,6 +1343,237 @@ function processMatch(m){
     p.name?.toLowerCase().trim()===PLAYER.toLowerCase().trim()&&p.tag?.toLowerCase().trim()===TAG.toLowerCase().trim()
   );
   const myTeamId=me?.team_id?.toLowerCase();
+
+  // 1vX clutch detection — reconstructed from the raw kills array (each kill
+  // event carries an explicit round index + killer/victim team), since the
+  // API doesn't expose a pre-computed clutch flag anywhere (checked: neither
+  // the round object nor its per-player round-stats entries have one).
+  // Since myAlive only ever counts down through a round, it becomes 1 at most
+  // once — whatever enemyAlive happens to be at that exact moment is the
+  // clutch type (1v1 through 1v5).
+  //
+  // Every clutch situation resolves into exactly ONE of four outcomes:
+  //   WIN  — team won the round (killed everyone / defused / both — the API
+  //          doesn't let us cheaply distinguish which, so this stays one
+  //          bucket for now).
+  //   LOSS — a genuine attempt that failed: died while actually trying
+  //          (held for a while before dying), or got caught immediately
+  //          with nothing to show for it. Either way: they died, or the
+  //          round was lost while they were actively contesting it.
+  //   EXIT — never really tried to WIN the round, just took a trade/pick for
+  //          stat value (got a kill) — whether or not they died afterward.
+  //   SAVE — never tried and never got value either: survived to the round's
+  //          end (spike went off / timer ran out) without a single kill —
+  //          i.e. held their gun and let it happen rather than contesting.
+  //
+  // The dividing line between "genuine attempt" (LOSS) and "didn't really
+  // try" (EXIT) is primarily about whether they were actually ENGAGED through
+  // their available window, not just the state at their final kill/death —
+  // see IDLE_RATIO_THRESHOLD below for why that mattered.
+  const clutchAllByPuuid=new Map();
+  const clutchRoundsByPuuid=new Map(); // puuid -> [{round, type, outcome}, ...] — per-round detail, used by the clutch debug panel
+  // Round-timer and post-plant spike-timer durations — Riot's raw round data
+  // doesn't expose "time remaining," only the round-relative timestamp each
+  // event happened at (time_in_round_in_ms) and, when applicable, when the
+  // spike was planted (rounds[r].plant.round_time_in_ms). Combined with these
+  // two constants, that's enough to derive how much time was actually left on
+  // the clock/spike at any given moment.
+  // The documented nominal values are 100s/45s, but checking real match data
+  // (113 matches) found kills landing up to 106.7s into unplanted rounds and
+  // 51.1s after plant in rounds that still ended by detonation — consistently
+  // ~6-7s past the nominal timer in both cases. That's small and uniform
+  // enough to read as a shared "round conclusion" grace period (trailing
+  // damage/kills already in flight resolving after the timer nominally hits
+  // zero) rather than the constants themselves being wrong, so both are
+  // padded by 8s to comfortably cover it. Getting this right matters — a
+  // window that ends too early caused idleRatio to come out above 1.0 for
+  // genuine late-round action, which would silently mis-flag it as idle.
+  const ROUND_TIMER_MS=108000;
+  const SPIKE_TIMER_MS=53000;
+  // How much of their available window (from becoming last-alive, or the
+  // plant if later, through to detonation/round-timer-expiry) can go by with
+  // zero engagement before a late kill stops counting as a real attempt.
+  // Real examples exposed why this matters: a player who sits completely
+  // still for 30-50+ seconds of a 35-45s window, then only fights back in the
+  // final few seconds because an enemy happened to walk up to them, was never
+  // making a play for the win — the earlier silence (not pushing, rotating,
+  // or even repositioning toward the objective) is the actual signal, not
+  // however the last few seconds happened to look. 0.5 = idle for at least
+  // half their available window.
+  const IDLE_RATIO_THRESHOLD=0.5;
+  if(Array.isArray(m.kills)&&Array.isArray(m.rounds)){
+    const killsByRound=[];
+    m.kills.forEach(k=>{(killsByRound[k.round]??=[]).push(k);});
+    killsByRound.forEach(arr=>arr.sort((a,b)=>(a.time_in_round_in_ms??0)-(b.time_in_round_in_ms??0)));
+    // Real-death pre-pass — resurrection abilities (Clove's ultimate, most
+    // notably) mean a "death" in the kill feed isn't always permanent: a
+    // player can die, then get credited a kill afterward (confirmed against
+    // real match data — a player died, then got 3 more kills later in the
+    // same round). Death is only treated as final here if there's no later
+    // kill credited to that same puuid in the same round; otherwise it's
+    // skipped when tallying who's still alive. This also naturally covers
+    // duplicate death log entries (the earlier-confirmed data quirk where
+    // the same real death shows up twice at different timestamps) — with no
+    // kill credit in between, the FIRST occurrence is correctly kept as the
+    // real one, same as before.
+    const realDeathByRound=[];
+    for(let r=0;r<killsByRound.length;r++){
+      const rk=killsByRound[r]||[];
+      const victimTimes={},killerTimes={};
+      for(const k of rk){
+        const vp=k.victim?.puuid,kp=k.killer?.puuid,t=k.time_in_round_in_ms??0;
+        if(vp)(victimTimes[vp]??=[]).push(t);
+        if(kp&&kp!==vp)(killerTimes[kp]??=[]).push(t);
+      }
+      const realDeath={};
+      for(const puuid in victimTimes){
+        const vts=victimTimes[puuid];
+        const kts=killerTimes[puuid]||[];
+        for(const t of vts){
+          if(!kts.some(kt=>kt>t)){realDeath[puuid]=t;break;}
+        }
+      }
+      realDeathByRound[r]=realDeath;
+    }
+    for(const p of players){
+      const pTeam=p.team_id?.toLowerCase();
+      const byType={1:{win:0,loss:0,exit:0,save:0},2:{win:0,loss:0,exit:0,save:0},3:{win:0,loss:0,exit:0,save:0},4:{win:0,loss:0,exit:0,save:0},5:{win:0,loss:0,exit:0,save:0}};
+      const clutchRounds=[]; // [{round, type, outcome}, ...] for the debug panel
+      for(let r=0;r<m.rounds.length;r++){
+        const roundData=m.rounds[r];
+        const roundKills=killsByRound[r]||[];
+        const plantMs=roundData.plant?.round_time_in_ms??null;
+        const defuseMs=roundData.defuse?.round_time_in_ms??null;
+        // Attack/defense for this round, from who planted — only known when a
+        // plant actually happened; stays null otherwise (round timed out or
+        // was decided by elimination with no plant, which could be either side).
+        const planterTeam=roundData.plant?.player?.team?.toLowerCase()??null;
+        const side=planterTeam?(planterTeam===pTeam?'attack':'defense'):null;
+        let myAlive=5,enemyAlive=5,meAlive=true,clutchType=null,clutchStartMs=null,killsAfterClutch=0,deathMs=null;
+        let enemyAliveAfterLastKill=null,killTimes=[];
+        const realDeath=realDeathByRound[r]||{};
+        for(const k of roundKills){
+          const victimPuuid=k.victim?.puuid;
+          const killMs=k.time_in_round_in_ms??0;
+          // Only treat this as an actual elimination for alive-count purposes
+          // if it's this player's real, final death this round (see the
+          // pre-pass above) — skips both resurrection "deaths" and duplicate
+          // log entries. Kill crediting below still processes regardless —
+          // dealing the blow is a real kill even if the victim later revives.
+          const isRealDeath=victimPuuid&&realDeath[victimPuuid]===killMs;
+          if(isRealDeath){
+            const victimTeam=k.victim?.team?.toLowerCase();
+            if(victimTeam===pTeam)myAlive--;else if(victimTeam)enemyAlive--;
+            // Fix 1: check whether THIS kill is the tracked player's own
+            // death BEFORE checking whether they just became the last one
+            // alive. Their own death can itself be the event that drops
+            // myAlive to 1 (a teammate is still alive after them) — that
+            // must never be read as "I'm the last one standing," since the
+            // opposite is true: I'm the one who died, and whoever's left is
+            // the real clutch player.
+            if(victimPuuid===p.puuid){meAlive=false;deathMs=killMs;break;}
+            if(meAlive&&myAlive===1&&clutchType==null){clutchType=enemyAlive;clutchStartMs=killMs;}
+          }
+          // Exclude self-inflicted deaths (killer.puuid===victim.puuid — e.g.
+          // dying to the spike detonation itself) from counting as a "kill";
+          // those are the player's own death, not value they created.
+          if(clutchType!=null&&k.killer?.puuid===p.puuid&&k.killer.puuid!==victimPuuid){
+            killsAfterClutch++;enemyAliveAfterLastKill=enemyAlive;killTimes.push(killMs);
+          }
+        }
+        if(clutchType!=null&&clutchType>=1&&clutchType<=5){
+          const won=roundData.winning_team?.toLowerCase()===pTeam;
+          let outcome;
+          if(won){
+            outcome='win';
+          }else if(killsAfterClutch===0){
+            // No kill at all — unambiguous regardless of timing. Died with
+            // nothing to show for it is just a loss (however fast or slow);
+            // survived the whole round without ever firing a shot is a save.
+            // Save applies the same way regardless of side or plant status —
+            // weapon carryover (keeping your gun next round instead of
+            // getting reset to a Classic) only depends on whether you
+            // personally survived, not on the specific credit-tier formula
+            // Riot applies at a team level. An attacker who survives after a
+            // teammate's plant gets defused actually nets MORE credits than
+            // the "no plant at all" case (full loss bonus vs the reduced
+            // rate) while keeping their gun just the same — so gating this
+            // on plant status would've called the worse outcome a "save"
+            // and the better one not, which doesn't hold up.
+            outcome=deathMs==null?'save':'loss';
+            // No need for the idle-window check below — there's no kill to
+            // second-guess the genuineness of, and running it here was the
+            // actual bug: a player who died fighting BEFORE the spike was
+            // even planted had their (real, pre-plant) death fall outside a
+            // window that only starts counting from the plant, making a
+            // genuine death look like pure silence and default to "save."
+          }else{
+            // Got at least one kill. Were they actually engaged through
+            // their available window, or silent until it was basically
+            // over? Window = from becoming last-alive (or the plant, if
+            // that comes later) through to detonation — or the round timer
+            // if never planted. When the round actually ended by defuse,
+            // its real completion timestamp is used as the window's true
+            // end instead of assuming the full spike timer elapsed — a
+            // defuse can finish well before the spike would've gone off
+            // (confirmed against real data: the flat estimate overshot the
+            // true window by 30+ seconds in one case), which silently makes
+            // genuinely idle behavior look "mostly engaged" by comparison
+            // against an inflated denominator.
+            const windowStart=(plantMs!=null)?Math.max(clutchStartMs,plantMs):clutchStartMs;
+            const windowEnd=(plantMs!=null)?(defuseMs??(plantMs+SPIKE_TIMER_MS)):ROUND_TIMER_MS;
+            const windowDuration=windowEnd-windowStart;
+            const killsInWindow=killTimes.filter(t=>t>=windowStart&&t<=windowEnd);
+            const deathInWindow=(deathMs!=null&&deathMs>=windowStart&&deathMs<=windowEnd)?deathMs:null;
+            const actionTimes=[...killsInWindow,...(deathInWindow!=null?[deathInWindow]:[])];
+            const firstActionMs=actionTimes.length?Math.min(...actionTimes):windowEnd;
+            const idleMs=Math.max(0,firstActionMs-windowStart);
+            const idleRatio=windowDuration>0?idleMs/windowDuration:0;
+            if(idleRatio>=IDLE_RATIO_THRESHOLD){
+              // Sat out most of their window — a late kill doesn't
+              // retroactively make that a real attempt.
+              outcome='exit';
+            }else if(deathMs==null){
+              // Actively engaged, survived without dying. A full wipe (no
+              // enemies left after their last kill) is never an exit — it's
+              // the most complete attempt possible, whatever ended the round
+              // afterward (e.g. a spike they couldn't reach in time).
+              // Otherwise, they got some value but the round ended with them
+              // never having died — read as exit.
+              outcome=enemyAliveAfterLastKill>0?'exit':'loss';
+            }else{
+              // Actively engaged (passed the idle check above), got a kill,
+              // then died. This is what a genuine attempt usually looks
+              // like — real examples exposed the previous "enough time +
+              // enemies still left" check flagging clearly genuine attempts
+              // as exit just because the raw clock/headcount happened to
+              // look comfortable (e.g. two kills 407ms apart, then dying to
+              // the last two enemies 6 seconds later — about as real an
+              // attempt as it gets, yet that check called it exit). Blatant
+              // exits are rare in practice; being actively engaged and then
+              // losing the fight is what a genuine attempt looks like most
+              // of the time, regardless of the surrounding clock/headcount.
+              outcome='loss';
+            }
+          }
+          // Exit is dropped specifically on attack for now — real-data checks
+          // across 277 attack-side clutch situations (4 different players,
+          // multiple ranks) found it firing on just 7 of them, and manually
+          // tracing every single one showed genuine, continuous engagement
+          // (fighting to stop a plant/defuse) in every case, not a deliberate
+          // "didn't try" pattern. With zero validated examples of a real
+          // attack-side Exit to calibrate against, defaulting those to Loss
+          // is the safer call than keeping an unvalidated classification.
+          // Defense keeps Exit as-is — that side has confirmed real examples.
+          if(outcome==='exit'&&side==='attack')outcome='loss';
+          byType[clutchType][outcome]++;
+          clutchRounds.push({round:r,type:clutchType,outcome});
+        }
+      }
+      if(Object.values(byType).some(t=>t.win||t.loss||t.exit||t.save))clutchAllByPuuid.set(p.puuid,byType);
+      if(clutchRounds.length)clutchRoundsByPuuid.set(p.puuid,clutchRounds);
+    }
+  }
 
   let won=undefined, myR=undefined, opR=undefined;
 
@@ -1510,6 +1654,8 @@ function processMatch(m){
       _deaths,
       _kd,
       _acs,
+      _clutchAll:clutchAllByPuuid.get(p.puuid)||null,
+      _clutchRounds:clutchRoundsByPuuid.get(p.puuid)||null,
     };
   });
 
@@ -1530,6 +1676,9 @@ function processMatch(m){
   const mePlayerOut=playersOut.find(p=>PUUID?p.puuid===PUUID:
     `${p.name}#${p.tag}`.toLowerCase()===`${PLAYER}#${TAG}`.toLowerCase());
   const myAcsPlace=mePlayerOut?._acsPlace??null;
+  const myClutchAll=mePlayerOut?._clutchAll??null; // {1:{win,loss,exit,save},...,5:{...}} or null
+  const myClutchRounds=mePlayerOut?._clutchRounds??[]; // [{round,type,outcome},...] for the debug panel
+  const matchId=meta.match_id??m.match_id??null;
 
   // Party size — count teammates sharing the same party_id as me
   const myPartyId=me?.party_id??null;
@@ -1543,7 +1692,7 @@ function processMatch(m){
   const myTierName=me?.tier?.patched??me?.currenttier_patched??rName(myTierId);
   // v4 match player object uses `rr`; v3 used `ranking_in_tier` — check both
   const myRR=null; // v4 match endpoint doesn't include per-match RR — fetched separately via mmr-history
-  return{mapName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,partySize,myPartyId,myAcsPlace,matchMvpPuuid,teamMvpPuuids,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
+  return{mapName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,partySize,myPartyId,myAcsPlace,matchMvpPuuid,teamMvpPuuids,myClutchAll,myClutchRounds,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
 }
 
 function extractStats(p,fallbackRounds=null){
@@ -1698,7 +1847,6 @@ async function loadAll(prefetchSnapshot=null){
   const myGen=++_analysisGen; // supersede any in-flight analysis
   loadSeasonDates(); // fire off act-start dates now; awaited before we filter matches
   __debugResetRate(); // TEMP DEBUG — clear the quota readout for a fresh run
-  rateLimit.recentCosts=[]; // fresh cost estimate for this run's cache regime
   setProgress(3);
   try{
     // Step 0: resolve PUUID so we can find the player in historical matches
@@ -1709,8 +1857,8 @@ async function loadAll(prefetchSnapshot=null){
       if(prefetchSnapshot?.acctJ){
         acctJ=prefetchSnapshot.acctJ;
       }else{
-        const acctUrl=`${API_BASE}/valorant/v1/account/${encodeURIComponent(PLAYER)}/${TAG}`;
-        ({j:acctJ}=await apiGet(acctUrl,{interactive:true}));
+        const acctUrl=`${API_BASE}/account/${encodeURIComponent(PLAYER)}/${TAG}`;
+        ({j:acctJ}=await apiGet(acctUrl));
       }
       const acctData=acctJ.data||acctJ;
       PUUID=acctData.puuid||'';
@@ -1742,8 +1890,8 @@ async function loadAll(prefetchSnapshot=null){
       if(prefetchSnapshot?.mmrJ){
         mmrJ=prefetchSnapshot.mmrJ;
       }else{
-        const mmrUrl=`${API_BASE}/valorant/v3/mmr/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}`;
-        ({j:mmrJ}=await apiGet(mmrUrl,{interactive:true}));
+        const mmrUrl=`${API_BASE}/rank/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}`;
+        ({j:mmrJ}=await apiGet(mmrUrl));
       }
       const seasonal=(mmrJ.data||mmrJ).seasonal||[];
       const seasonOrder=getSeasonOrder(seasonal);
@@ -1825,7 +1973,7 @@ async function loadAll(prefetchSnapshot=null){
         ?Math.min(5+collected.length/targetCount*90,95)
         :Math.min(10+start/4,85));
 
-      const url=`${API_BASE}/valorant/v4/matches/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}?mode=competitive&size=${BATCH}&start=${start}`;
+      const url=`${API_BASE}/history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}?mode=competitive&size=${BATCH}&start=${start}`;
       const{j}=await fetchWithRetry(url);
       if(myGen!==_analysisGen)return; // superseded by a newer act selection
       const data=j.data||[];
@@ -2043,7 +2191,26 @@ function renderStats(skipPlaytime){
   const wr=n?Math.round(wins/n*100):0;
   const wrColor=wr>=50?'#22c55e':'#ef4444';
   document.getElementById('sg-games').textContent=n;
-  document.getElementById('sg-wr').innerHTML=`<span style="color:${wrColor}">${wr}%</span>`;
+  document.getElementById('sg-wr').textContent=wr+'%';
+  // Solid-colored pill backgrounds, matching the Clutches card's treatment —
+  // white text throughout, colored by value where a good/bad read makes
+  // sense (K/D, Win Rate), and a fixed distinctive color otherwise (ACS,
+  // Games) purely for visual variety rather than implying a judgment.
+  function colorPill(pillId,lblId,bg){
+    const pill=document.getElementById(pillId);
+    if(!pill)return;
+    pill.style.background=bg;
+    pill.style.borderColor='transparent';
+    const val=pill.querySelector('.tm-pill-val');
+    if(val)val.style.color='#fff';
+    const lbl=document.getElementById(lblId);
+    if(lbl){lbl.style.color='#fff';lbl.style.opacity='.85';}
+  }
+  colorPill('sg-games-pill','sg-games-lbl','#3b82f6');
+  colorPill('sg-wr-pill','sg-wr-lbl',wrColor);
+
+  renderClutchCard(statsPanelMatches);
+
   const overallRR=overall!=null?tierRR(overall):null;
   const avgRankTier=overallRR?overallRR.tier:null;
   document.getElementById('sg-avg-rank').innerHTML=(avgRankTier!=null?rankIcon(avgRankTier,40)+' ':'')+(overall!=null?`<span>${avgLabel(avgRankTier)}<span class="s-value-suffix"> (${overallRR.rr} RR)</span></span>`:avgLabel(overall));
@@ -2062,6 +2229,7 @@ function renderStats(skipPlaytime){
   }
 
   document.getElementById('sg-kd').textContent=avgKD!=null?avgKD.toFixed(2):'—';
+  colorPill('sg-kd-pill','sg-kd-lbl',(avgKD!=null&&avgKD>=1)?'#22c55e':'#ef4444');
 
   // Avg ACS — total combat score ÷ total rounds (weighted, matches tracker.gg)
   const acsGames=statsPanelMatches.filter(m=>m.myStats?.acs!=null&&m.myStats?.rounds_played>0);
@@ -2069,6 +2237,7 @@ function renderStats(skipPlaytime){
   const totalAcsRounds=acsGames.reduce((a,m)=>a+m.myStats.rounds_played,0);
   const avgAcs=totalAcsRounds>0?Math.round(totalAcsScore/totalAcsRounds):null;
   document.getElementById('sg-acs').textContent=avgAcs!=null?avgAcs:'—';
+  colorPill('sg-acs-pill','sg-acs-lbl','#14b8a6');
 
   renderRankByRankCard();
 
@@ -2841,6 +3010,74 @@ function buildKdRankRows(bucketFn){
 
 const RANK_MODE_ORDER=['lobby','player','party'];
 
+/* ── CLUTCHES (1v1–1v5) ─────────────────────────────────── */
+// Aggregates myClutchAll (computed per match in processMatch — see the 1vX
+// detection block there) across every match in scope. Uses the same match
+// scope as the rest of the Stats panel (always counts placement games, all
+// party sizes).
+function renderClutchCard(matches){
+  const totals={1:{win:0,loss:0,exit:0,save:0},2:{win:0,loss:0,exit:0,save:0},3:{win:0,loss:0,exit:0,save:0},4:{win:0,loss:0,exit:0,save:0},5:{win:0,loss:0,exit:0,save:0}};
+  matches.forEach(m=>{
+    if(!m.myClutchAll)return;
+    for(let t=1;t<=5;t++){
+      const s=m.myClutchAll[t];
+      if(!s)continue;
+      totals[t].win+=s.win||0;totals[t].loss+=s.loss||0;
+      totals[t].exit+=s.exit||0;totals[t].save+=s.save||0;
+    }
+  });
+  const grandTotal=Object.values(totals).reduce((a,t)=>a+t.win+t.loss+t.exit+t.save,0);
+  const row=document.getElementById('clutch-section-row');
+  if(!grandTotal){row.style.display='none';return;}
+  row.style.display='block';
+
+  // Per-type pills — win rate across every clutch situation of that type
+  // (win / total), same as before the 4-outcome redefinition.
+  const grid=document.getElementById('clutch-grid');
+  // Colors follow the same progression vlr.gg uses on its multi-kill columns
+  // (2K green → 3K teal → 4K blue → 5K purple) — applied here to clutch
+  // difficulty instead of kill count, so 1v1 (easiest) is green and 1v5
+  // (hardest) is purple, with the intermediate tiers stepping through the
+  // same teal/blue/indigo progression.
+  const CLUTCH_COLORS={1:'#22c55e',2:'#14b8a6',3:'#3b82f6',4:'#6366f1',5:'#a855f7'};
+  grid.innerHTML=[1,2,3,4,5].map(t=>{
+    const{win,loss,exit,save}=totals[t];
+    const situations=win+loss+exit+save;
+    const pct=situations?Math.round(win/situations*100):null;
+    const val=pct!=null?`${pct}%`:'—';
+    const lbl=situations?`1v${t} (${win}/${situations})`:`1v${t}`;
+    const bg=situations?CLUTCH_COLORS[t]:'rgba(255,255,255,0.05)';
+    return `<div class="tm-pill" style="flex:1;padding:14px 10px;background:${bg};border-color:transparent;"><div class="tm-pill-val" style="font-size:1.4rem;color:#fff;">${val}</div><div class="tm-pill-lbl" style="color:#fff;opacity:${situations?.85:.4};">${lbl}</div></div>`;
+  }).join('');
+
+  // Outcome breakdown — every clutch situation, across all types, split into
+  // the 4 possible outcomes. This is the headline view for "do they even try":
+  // Win/Loss are genuine attempts; Exit/Save are not (see processMatch for
+  // the exact classification, which weighs time-remaining-on-clock and
+  // enemies-still-alive rather than a flat timer).
+  let win=0,loss=0,exit=0,save=0;
+  Object.values(totals).forEach(t=>{win+=t.win;loss+=t.loss;exit+=t.exit;save+=t.save;});
+  const behaviorEl=document.getElementById('clutch-behavior');
+  behaviorEl.style.display='block';
+  const attemptPct=Math.round((win+loss)/grandTotal*100);
+  document.getElementById('clutch-avg-time').textContent=`${attemptPct}% genuinely attempted`;
+  const bar=document.getElementById('clutch-behavior-bar');
+  bar.innerHTML=[
+    ['seg-win',win],['seg-loss',loss],['seg-exit',exit],['seg-save',save]
+  ].filter(([,c])=>c>0).map(([cls,c])=>
+    `<div class="${cls}" style="width:${(c/grandTotal*100).toFixed(2)}%"></div>`
+  ).join('');
+  const legend=document.getElementById('clutch-behavior-legend');
+  const pct=c=>Math.round(c/grandTotal*100);
+  legend.innerHTML=`
+    <span class="clutch-legend-item" title="Won the round — killed everyone, defused, or both"><span class="clutch-legend-dot seg-win"></span>Win: <strong>${win}</strong> (${pct(win)}%)</span>
+    <span class="clutch-legend-item" title="Genuinely tried to win the round and lost — died holding, or the bomb went off while contesting it"><span class="clutch-legend-dot seg-loss"></span>Loss: <strong>${loss}</strong> (${pct(loss)}%)</span>
+    <span class="clutch-legend-item" title="Didn't attempt to win — took a trade/pick for stat value instead of playing for the round"><span class="clutch-legend-dot seg-exit"></span>Exit: <strong>${exit}</strong> (${pct(exit)}%)</span>
+    <span class="clutch-legend-item" title="Didn't attempt to win and got no value either — let the timer run out or never went for the defuse"><span class="clutch-legend-dot seg-save"></span>Save: <strong>${save}</strong> (${pct(save)}%)</span>
+  `;
+}
+
+
 function renderRankByRankCard(){
   rankModeRows.player=buildKdRankRows(m=>{
     if(m.myTierId==null||m.myTierId<3)return null;
@@ -3074,6 +3311,111 @@ function filtered(){
 }
 
 /* ── SHARED MATCH CARD BUILDER ───────────────────────────── */
+/* ── CLUTCH DEBUG PANEL ──────────────────────────────────────────────────
+   TEMP DEBUG — a manual-labeling tool for calibrating the clutch-outcome
+   logic (see processMatch) against real matches. For every round where the
+   searched player had a genuine clutch situation, shows what the algorithm
+   computed and lets you override it with the correct outcome. "Download"
+   exports the full raw match JSON (pulled from window.__rawMatches, the same
+   stash used for finding matches to send back) with both the computed and
+   your assigned outcome attached per round, ready to hand back for fixing
+   the logic. Remove this whole block once no longer needed. */
+function buildClutchDebugPanel(m){
+  const rounds=m.myClutchRounds||[];
+  if(!rounds.length||!m.matchId)return null;
+
+  window.__clutchOverrides=window.__clutchOverrides||{};
+  const matchOverrides=(window.__clutchOverrides[m.matchId]=window.__clutchOverrides[m.matchId]||{});
+
+  const OUTCOMES=['win','loss','exit','save'];
+  const OUTCOME_LABELS={win:'Win',loss:'Loss',exit:'Exit',save:'Save'};
+
+  const wrap=document.createElement('div');
+  wrap.className='clutch-debug';
+
+  const toggle=document.createElement('button');
+  toggle.type='button';
+  toggle.className='clutch-debug-toggle';
+  toggle.textContent=`🐛 Clutch debug (${rounds.length})`;
+
+  const panel=document.createElement('div');
+  panel.className='clutch-debug-panel';
+  panel.style.display='none';
+
+  function renderRows(){
+    panel.innerHTML='';
+    rounds.forEach(rd=>{
+      const assigned=matchOverrides[rd.round]??rd.outcome;
+      const row=document.createElement('div');
+      row.className='clutch-debug-row';
+      const lbl=document.createElement('span');
+      lbl.className='clutch-debug-round-lbl';
+      lbl.textContent=`Round ${rd.round+1} · 1v${rd.type}`;
+      const btnGroup=document.createElement('div');
+      btnGroup.className='clutch-debug-btns';
+      OUTCOMES.forEach(o=>{
+        const b=document.createElement('button');
+        b.type='button';
+        b.className=`clutch-debug-btn seg-${o}`+(assigned===o?' active':'');
+        b.textContent=OUTCOME_LABELS[o];
+        b.addEventListener('click',(e)=>{
+          e.stopPropagation();
+          matchOverrides[rd.round]=o;
+          renderRows();
+        });
+        btnGroup.appendChild(b);
+      });
+      row.appendChild(lbl);
+      row.appendChild(btnGroup);
+      panel.appendChild(row);
+    });
+    const hint=document.createElement('div');
+    hint.className='clutch-debug-hint';
+    hint.textContent='Highlighted = currently assigned (computed by default; click a button to correct it).';
+    panel.appendChild(hint);
+    const dl=document.createElement('button');
+    dl.type='button';
+    dl.className='clutch-debug-download';
+    dl.textContent='⬇ Download match JSON with assigned outcomes';
+    dl.addEventListener('click',(e)=>{e.stopPropagation();downloadClutchLabels(m,rounds,matchOverrides);});
+    panel.appendChild(dl);
+  }
+  renderRows();
+
+  toggle.addEventListener('click',(e)=>{
+    e.stopPropagation();
+    panel.style.display=panel.style.display==='none'?'flex':'none';
+  });
+
+  wrap.appendChild(toggle);
+  wrap.appendChild(panel);
+  return wrap;
+}
+
+function downloadClutchLabels(m,rounds,overrides){
+  const raw=(window.__rawMatches||[]).find(rm=>(rm.metadata?.match_id||rm.match_id)===m.matchId);
+  if(!raw){
+    alert('Raw match data not found in this session — the match may have loaded before this debug tool was added, or the page was reloaded since. Search again and try this match fresh.');
+    return;
+  }
+  const labels=rounds.map(rd=>({
+    round:rd.round,
+    type:rd.type,
+    computedOutcome:rd.outcome,
+    assignedOutcome:overrides[rd.round]??rd.outcome,
+  }));
+  const payload={
+    ...raw,
+    __clutchLabels:{puuid:PUUID,player:`${PLAYER}#${TAG}`,labels}
+  };
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`match_${m.matchId}_clutch_labels.json`;
+  a.click();
+}
+
 function buildPlayersGrid(m){
   const me=m.players.find(p=>PUUID?p.puuid===PUUID:p.name?.toLowerCase()===PLAYER.toLowerCase()&&p.tag?.toLowerCase()===TAG.toLowerCase());
   const myTeamId=me?.team_id;
@@ -3104,7 +3446,13 @@ function buildPlayersGrid(m){
     const acsCls=p._acs!=null?'player-acs':'player-acs acs-null';
     const kdVal=p._kd!=null?p._kd.toFixed(2):'—';
     const kdCls=p._kd!=null?'player-kd':'player-kd kd-null';
-    return `<div class="${cls}"><span class="player-name-wrap"><span class="${nameClass}" title="${p.name}#${p.tag}">${p.name}</span><span class="player-tag">#${p.tag}</span>${mvpBadge}</span><span class="${acsCls}">${acsVal}</span><span class="${kdCls}">${kdVal}</span><span class="player-rank-txt ${rClass(p._tier)}">${p._label}</span></div>`;
+    // Total exit-classified clutches (across all 1v1-1v5 types) this match —
+    // see processMatch's clutch-detection block for what counts as an exit.
+    const exitCount=p._clutchAll?Object.values(p._clutchAll).reduce((a,t)=>a+t.exit,0):0;
+    const hasClutches=p._clutchAll!=null;
+    const exitVal=hasClutches?String(exitCount):'—';
+    const exitCls='player-1v2'+(!hasClutches?' p1v2-null':exitCount>0?' p1v2-exit':'');
+    return `<div class="${cls}"><span class="player-name-wrap"><span class="${nameClass}" title="${p.name}#${p.tag}">${p.name}</span><span class="player-tag">#${p.tag}</span>${mvpBadge}</span><span class="${acsCls}">${acsVal}</span><span class="${kdCls}">${kdVal}</span><span class="${exitCls}" title="Clutch situations this match classified as an exit — got a kill but wasn't genuinely attempting to win the round">${exitVal}</span><span class="player-rank-txt ${rClass(p._tier)}">${p._label}</span></div>`;
   }
 
   const grid=document.createElement('div');
@@ -3115,6 +3463,7 @@ function buildPlayersGrid(m){
         <span class="team-label">Your team</span>
         <span class="col-hdr col-hdr-acs">ACS</span>
         <span class="col-hdr col-hdr-kd">KD</span>
+        <span class="col-hdr col-hdr-1v2">EXIT</span>
         <span class="col-hdr col-hdr-rank">Rank</span>
       </div>
       ${myTeam.map(makeRow).join('')}
@@ -3124,6 +3473,7 @@ function buildPlayersGrid(m){
         <span class="team-label">Enemy team</span>
         <span class="col-hdr col-hdr-acs">ACS</span>
         <span class="col-hdr col-hdr-kd">KD</span>
+        <span class="col-hdr col-hdr-1v2">EXIT</span>
         <span class="col-hdr col-hdr-rank">Rank</span>
       </div>
       ${enemyTeam.map(makeRow).join('')}
@@ -3211,6 +3561,8 @@ function buildMatchRows(slice,startDayKey){
     }
     const card=buildMatchCard(m);
     card.appendChild(buildPlayersGrid(m));
+    const debugPanel=buildClutchDebugPanel(m);
+    if(debugPanel)card.appendChild(debugPanel);
     frag.appendChild(card);
   });
   return{frag,lastDayKey};
