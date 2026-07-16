@@ -263,24 +263,6 @@ h1 span{color:var(--accent);}
 .my-stat-val{color:var(--text);font-weight:600;}
 .players-grid{display:none;margin-top:8px;gap:6px;}
 .match-card.expanded .players-grid{display:grid;grid-template-columns:1fr 1fr;}
-.clutch-debug{display:none;margin-top:8px;}
-.match-card.expanded .clutch-debug{display:block;}
-.clutch-debug-toggle{font-size:10px;font-weight:700;color:var(--muted);background:rgba(255,255,255,.04);border:.5px solid var(--glass-border);border-radius:var(--radius-xs);padding:4px 9px;cursor:pointer;font-family:var(--font-display);letter-spacing:.04em;text-transform:uppercase;transition:color .15s,border-color .15s;}
-.clutch-debug-toggle:hover{color:var(--text);border-color:rgba(255,255,255,.25);}
-.clutch-debug-panel{margin-top:8px;padding:10px;background:rgba(0,0,0,.25);border:.5px solid var(--glass-border);border-radius:var(--radius-sm);display:flex;flex-direction:column;gap:6px;}
-.clutch-debug-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:4px 0;border-bottom:.5px solid rgba(255,255,255,.05);}
-.clutch-debug-row:last-of-type{border-bottom:none;}
-.clutch-debug-round-lbl{font-size:11px;color:var(--muted);font-family:var(--font-body);white-space:nowrap;}
-.clutch-debug-btns{display:flex;gap:4px;}
-.clutch-debug-btn{font-size:10px;font-weight:700;padding:4px 8px;border-radius:var(--radius-xs);border:.5px solid transparent;background:rgba(255,255,255,.05);color:var(--muted);cursor:pointer;font-family:var(--font-display);transition:background .15s,color .15s,border-color .15s;}
-.clutch-debug-btn:hover{color:var(--text);}
-.clutch-debug-btn.seg-win.active{background:rgba(34,197,94,.18);color:#22c55e;border-color:rgba(34,197,94,.4);}
-.clutch-debug-btn.seg-loss.active{background:rgba(239,68,68,.18);color:#ef4444;border-color:rgba(239,68,68,.4);}
-.clutch-debug-btn.seg-exit.active{background:rgba(245,158,11,.18);color:#f59e0b;border-color:rgba(245,158,11,.4);}
-.clutch-debug-btn.seg-save.active{background:rgba(100,116,139,.25);color:#94a3b8;border-color:rgba(100,116,139,.5);}
-.clutch-debug-download{margin-top:4px;font-size:11px;font-weight:700;color:var(--text);background:rgba(var(--accent-rgb),.12);border:.5px solid rgba(var(--accent-rgb),.35);border-radius:var(--radius-xs);padding:7px 10px;cursor:pointer;font-family:var(--font-display);align-self:flex-start;transition:background .15s;}
-.clutch-debug-download:hover{background:rgba(var(--accent-rgb),.2);}
-.clutch-debug-hint{font-size:10px;color:var(--muted);font-family:var(--font-body);margin-top:2px;}
 .team-col{}
 .team-col-header{display:flex;align-items:center;padding:2px 12px;margin-bottom:3px;gap:6px;}
 .team-label{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);flex:1;}
@@ -410,8 +392,6 @@ h1 span{color:var(--accent);}
     </div>
     <div id="status-bar" style="display:none;"><div class="spinner" id="spinner"></div><span id="status-text"></span></div>
     <div class="progress-wrap" style="display:none;"><div class="progress-fill" id="progress-fill"></div></div>
-    <!-- TEMP DEBUG — rate-limit inspector, remove this whole div once we're done digging into req/min behavior -->
-    <div id="debug-rate" style="display:none;font-family:monospace;font-size:10px;color:var(--muted);opacity:.75;margin-top:4px;letter-spacing:.02em;"></div>
   </div>
 
   <div id="results-section" style="display:none">
@@ -1196,40 +1176,6 @@ function runAnalysis(){
   loadAll(prefetchSnapshot);
 }
 
-// ── TEMP DEBUG — quota inspector ──────────────────────────────────────────
-// Surfaces the live quota picture read from the ratelimit headers so we can
-// watch the client's request timing in real time. Also times the whole fetch
-// run and derives an overall req/min from it. Ripped out later — this block and
-// its call sites are tagged "TEMP DEBUG".
-let __debugRunStart=0;   // ms timestamp when the current run began
-let __debugRunEnd=0;     // ms timestamp when it finished (0 while in progress)
-let __debugReqCount=0;   // API requests made this run (kept for context)
-function __debugResetRate(){
-  __debugRunStart=Date.now();__debugRunEnd=0;__debugReqCount=0;
-  const el=document.getElementById('debug-rate');if(el)el.style.display='none';
-}
-function __debugTrackReq(){__debugReqCount++;}            // call per API request
-function __debugFinishRun(){__debugRunEnd=Date.now();__debugShowQuota({});} // freeze timer + repaint
-// Elapsed seconds for the run (live while running, frozen once finished).
-function __debugElapsedS(){
-  if(!__debugRunStart)return 0;
-  return ((__debugRunEnd||Date.now())-__debugRunStart)/1000;
-}
-function __debugShowQuota(q){
-  const el=document.getElementById('debug-rate');if(!el)return;
-  const bits=[];
-  if(q.waited)bits.push(`waited ${(q.waited/1000).toFixed(1)}s`);
-  const elapsed=__debugElapsedS();
-  if(elapsed>0){
-    const rpm=__debugReqCount/(elapsed/60);
-    const done=__debugRunEnd?' done':'';
-    bits.push(`${elapsed.toFixed(1)}s${done} · ${__debugReqCount} reqs · ${rpm.toFixed(1)} req/min`);
-  }
-  el.textContent=`[debug] ${bits.join(' · ')||'…'}`;
-  el.style.display=bits.length?'block':'none';
-}
-// ── END TEMP DEBUG ─────────────────────────────────────────────────────────
-
 // ─────────────────────────────────────────────────────────────────────────
 //  Rate-limit ledger — a tiny model of the server's per-1-min quota window,
 //  kept in sync from response headers so callers can look BEFORE they leap.
@@ -1269,7 +1215,6 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
   const MAX_RETRIES=5;   // hard failures (network / 5xx)
   const MAX_RL_WAITS=40; // 429 waits within one call (each waits the real reset)
 
-  __debugTrackReq(); // TEMP DEBUG — count every network attempt (incl. retries/429s)
 
   let r;
   try{
@@ -1296,7 +1241,6 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
       if(typeof body.retryAfterMs==='number')retryMs=Math.max(body.retryAfterMs,RL_WAIT_FLOOR_MS);
     }catch(_){/* fall back to the floor if the body isn't as expected */}
     const wait=Math.min(retryMs,MAX_WAIT_MS);
-    __debugShowQuota({waited:wait}); // TEMP DEBUG
     setStatus(`Rate limit reached — waiting ${Math.ceil(wait/1000)}s for reset…`,true);
     await sleep(wait);
     return apiGet(url,opts,_attempt,_rl+1);
@@ -1314,7 +1258,6 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
   // 3) Other non-OK (400/401/403/404…) — not retryable, surface the real reason.
   if(!r.ok)throw new Error(await parseApiError(r));
 
-  __debugShowQuota({}); // TEMP DEBUG
   const j=await r.json();
   return{j};
 }
@@ -1330,11 +1273,6 @@ function isSeason(m){
 }
 /* ── PROCESS MATCH ──────────────────────────────────────── */
 function processMatch(m){
-  // TEMP DEBUG — keep every raw match object around on window so a specific
-  // one can be found and copied out of the console (for calibrating the
-  // clutch-outcome logic against real examples). Remove once no longer needed.
-  (window.__rawMatches??=[]).push(m);
-
   const meta=m.metadata||{};
   const players=m.players||[];
 
@@ -1846,7 +1784,6 @@ function tagPostResetPlacements(matches,days=RESET_GRACE_DAYS){
 async function loadAll(prefetchSnapshot=null){
   const myGen=++_analysisGen; // supersede any in-flight analysis
   loadSeasonDates(); // fire off act-start dates now; awaited before we filter matches
-  __debugResetRate(); // TEMP DEBUG — clear the quota readout for a fresh run
   setProgress(3);
   try{
     // Step 0: resolve PUUID so we can find the player in historical matches
@@ -2010,7 +1947,6 @@ async function loadAll(prefetchSnapshot=null){
     setProgress(100);
     setTimeout(()=>setProgress(0),600);
     renderAll();
-    __debugFinishRun(); // TEMP DEBUG — freeze the run timer + final req/min
   }catch(e){
     if(myGen!==_analysisGen)return; // superseded run — swallow its error
     setStatus('');
@@ -3311,111 +3247,6 @@ function filtered(){
 }
 
 /* ── SHARED MATCH CARD BUILDER ───────────────────────────── */
-/* ── CLUTCH DEBUG PANEL ──────────────────────────────────────────────────
-   TEMP DEBUG — a manual-labeling tool for calibrating the clutch-outcome
-   logic (see processMatch) against real matches. For every round where the
-   searched player had a genuine clutch situation, shows what the algorithm
-   computed and lets you override it with the correct outcome. "Download"
-   exports the full raw match JSON (pulled from window.__rawMatches, the same
-   stash used for finding matches to send back) with both the computed and
-   your assigned outcome attached per round, ready to hand back for fixing
-   the logic. Remove this whole block once no longer needed. */
-function buildClutchDebugPanel(m){
-  const rounds=m.myClutchRounds||[];
-  if(!rounds.length||!m.matchId)return null;
-
-  window.__clutchOverrides=window.__clutchOverrides||{};
-  const matchOverrides=(window.__clutchOverrides[m.matchId]=window.__clutchOverrides[m.matchId]||{});
-
-  const OUTCOMES=['win','loss','exit','save'];
-  const OUTCOME_LABELS={win:'Win',loss:'Loss',exit:'Exit',save:'Save'};
-
-  const wrap=document.createElement('div');
-  wrap.className='clutch-debug';
-
-  const toggle=document.createElement('button');
-  toggle.type='button';
-  toggle.className='clutch-debug-toggle';
-  toggle.textContent=`🐛 Clutch debug (${rounds.length})`;
-
-  const panel=document.createElement('div');
-  panel.className='clutch-debug-panel';
-  panel.style.display='none';
-
-  function renderRows(){
-    panel.innerHTML='';
-    rounds.forEach(rd=>{
-      const assigned=matchOverrides[rd.round]??rd.outcome;
-      const row=document.createElement('div');
-      row.className='clutch-debug-row';
-      const lbl=document.createElement('span');
-      lbl.className='clutch-debug-round-lbl';
-      lbl.textContent=`Round ${rd.round+1} · 1v${rd.type}`;
-      const btnGroup=document.createElement('div');
-      btnGroup.className='clutch-debug-btns';
-      OUTCOMES.forEach(o=>{
-        const b=document.createElement('button');
-        b.type='button';
-        b.className=`clutch-debug-btn seg-${o}`+(assigned===o?' active':'');
-        b.textContent=OUTCOME_LABELS[o];
-        b.addEventListener('click',(e)=>{
-          e.stopPropagation();
-          matchOverrides[rd.round]=o;
-          renderRows();
-        });
-        btnGroup.appendChild(b);
-      });
-      row.appendChild(lbl);
-      row.appendChild(btnGroup);
-      panel.appendChild(row);
-    });
-    const hint=document.createElement('div');
-    hint.className='clutch-debug-hint';
-    hint.textContent='Highlighted = currently assigned (computed by default; click a button to correct it).';
-    panel.appendChild(hint);
-    const dl=document.createElement('button');
-    dl.type='button';
-    dl.className='clutch-debug-download';
-    dl.textContent='⬇ Download match JSON with assigned outcomes';
-    dl.addEventListener('click',(e)=>{e.stopPropagation();downloadClutchLabels(m,rounds,matchOverrides);});
-    panel.appendChild(dl);
-  }
-  renderRows();
-
-  toggle.addEventListener('click',(e)=>{
-    e.stopPropagation();
-    panel.style.display=panel.style.display==='none'?'flex':'none';
-  });
-
-  wrap.appendChild(toggle);
-  wrap.appendChild(panel);
-  return wrap;
-}
-
-function downloadClutchLabels(m,rounds,overrides){
-  const raw=(window.__rawMatches||[]).find(rm=>(rm.metadata?.match_id||rm.match_id)===m.matchId);
-  if(!raw){
-    alert('Raw match data not found in this session — the match may have loaded before this debug tool was added, or the page was reloaded since. Search again and try this match fresh.');
-    return;
-  }
-  const labels=rounds.map(rd=>({
-    round:rd.round,
-    type:rd.type,
-    computedOutcome:rd.outcome,
-    assignedOutcome:overrides[rd.round]??rd.outcome,
-  }));
-  const payload={
-    ...raw,
-    __clutchLabels:{puuid:PUUID,player:`${PLAYER}#${TAG}`,labels}
-  };
-  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download=`match_${m.matchId}_clutch_labels.json`;
-  a.click();
-}
-
 function buildPlayersGrid(m){
   const me=m.players.find(p=>PUUID?p.puuid===PUUID:p.name?.toLowerCase()===PLAYER.toLowerCase()&&p.tag?.toLowerCase()===TAG.toLowerCase());
   const myTeamId=me?.team_id;
@@ -3561,8 +3392,6 @@ function buildMatchRows(slice,startDayKey){
     }
     const card=buildMatchCard(m);
     card.appendChild(buildPlayersGrid(m));
-    const debugPanel=buildClutchDebugPanel(m);
-    if(debugPanel)card.appendChild(debugPanel);
     frag.appendChild(card);
   });
   return{frag,lastDayKey};
