@@ -263,24 +263,6 @@ h1 span{color:var(--accent);}
 .my-stat-val{color:var(--text);font-weight:600;}
 .players-grid{display:none;margin-top:8px;gap:6px;}
 .match-card.expanded .players-grid{display:grid;grid-template-columns:1fr 1fr;}
-.clutch-debug{display:none;margin-top:8px;}
-.match-card.expanded .clutch-debug{display:block;}
-.clutch-debug-toggle{font-size:10px;font-weight:700;color:var(--muted);background:rgba(255,255,255,.04);border:.5px solid var(--glass-border);border-radius:var(--radius-xs);padding:4px 9px;cursor:pointer;font-family:var(--font-display);letter-spacing:.04em;text-transform:uppercase;transition:color .15s,border-color .15s;}
-.clutch-debug-toggle:hover{color:var(--text);border-color:rgba(255,255,255,.25);}
-.clutch-debug-panel{margin-top:8px;padding:10px;background:rgba(0,0,0,.25);border:.5px solid var(--glass-border);border-radius:var(--radius-sm);display:flex;flex-direction:column;gap:6px;max-height:420px;overflow-y:auto;}
-.clutch-debug-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:4px 0;border-bottom:.5px solid rgba(255,255,255,.05);}
-.clutch-debug-row:last-of-type{border-bottom:none;}
-.clutch-debug-round-lbl{font-size:11px;color:var(--muted);font-family:var(--font-body);white-space:nowrap;}
-.clutch-debug-btns{display:flex;gap:4px;}
-.clutch-debug-btn{font-size:10px;font-weight:700;padding:4px 8px;border-radius:var(--radius-xs);border:.5px solid transparent;background:rgba(255,255,255,.05);color:var(--muted);cursor:pointer;font-family:var(--font-display);transition:background .15s,color .15s,border-color .15s;}
-.clutch-debug-btn:hover{color:var(--text);}
-.clutch-debug-btn.seg-win.active{background:rgba(34,197,94,.18);color:#22c55e;border-color:rgba(34,197,94,.4);}
-.clutch-debug-btn.seg-loss.active{background:rgba(239,68,68,.18);color:#ef4444;border-color:rgba(239,68,68,.4);}
-.clutch-debug-btn.seg-exit.active{background:rgba(245,158,11,.18);color:#f59e0b;border-color:rgba(245,158,11,.4);}
-.clutch-debug-btn.seg-save.active{background:rgba(100,116,139,.25);color:#94a3b8;border-color:rgba(100,116,139,.5);}
-.clutch-debug-download{margin-top:4px;font-size:11px;font-weight:700;color:var(--text);background:rgba(var(--accent-rgb),.12);border:.5px solid rgba(var(--accent-rgb),.35);border-radius:var(--radius-xs);padding:7px 10px;cursor:pointer;font-family:var(--font-display);align-self:flex-start;transition:background .15s;}
-.clutch-debug-download:hover{background:rgba(var(--accent-rgb),.2);}
-.clutch-debug-hint{font-size:10px;color:var(--muted);font-family:var(--font-body);margin-top:2px;}
 .team-col{}
 .team-col-header{display:flex;align-items:center;padding:2px 12px;margin-bottom:3px;gap:6px;}
 .team-label{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);flex:1;}
@@ -410,8 +392,6 @@ h1 span{color:var(--accent);}
     </div>
     <div id="status-bar" style="display:none;"><div class="spinner" id="spinner"></div><span id="status-text"></span></div>
     <div class="progress-wrap" style="display:none;"><div class="progress-fill" id="progress-fill"></div></div>
-    <!-- TEMP DEBUG — rate-limit inspector, remove this whole div once we're done digging into req/min behavior -->
-    <div id="debug-rate" style="display:none;font-family:monospace;font-size:10px;color:var(--muted);opacity:.75;margin-top:4px;letter-spacing:.02em;"></div>
   </div>
 
   <div id="results-section" style="display:none">
@@ -511,7 +491,6 @@ h1 span{color:var(--accent);}
     <div id="match-list-section" style="display:none">
       <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
         <span>Match History</span>
-        <button type="button" class="clutch-debug-download" id="clutch-debug-download-all" onclick="downloadAllClutchLabels()" title="Exports every loaded match (with any round reviews/corrections you've made) as one JSON file">⬇ Download all reviewed matches</button>
       </div>
       <div class="filter-bar" id="filter-bar">
         <div class="filter-dd" id="filter-dd">
@@ -1199,40 +1178,6 @@ function runAnalysis(){
   loadAll(prefetchSnapshot);
 }
 
-// ── TEMP DEBUG — quota inspector ──────────────────────────────────────────
-// Surfaces the live quota picture read from the ratelimit headers so we can
-// watch the client's request timing in real time. Also times the whole fetch
-// run and derives an overall req/min from it. Ripped out later — this block and
-// its call sites are tagged "TEMP DEBUG".
-let __debugRunStart=0;   // ms timestamp when the current run began
-let __debugRunEnd=0;     // ms timestamp when it finished (0 while in progress)
-let __debugReqCount=0;   // API requests made this run (kept for context)
-function __debugResetRate(){
-  __debugRunStart=Date.now();__debugRunEnd=0;__debugReqCount=0;
-  const el=document.getElementById('debug-rate');if(el)el.style.display='none';
-}
-function __debugTrackReq(){__debugReqCount++;}            // call per API request
-function __debugFinishRun(){__debugRunEnd=Date.now();__debugShowQuota({});} // freeze timer + repaint
-// Elapsed seconds for the run (live while running, frozen once finished).
-function __debugElapsedS(){
-  if(!__debugRunStart)return 0;
-  return ((__debugRunEnd||Date.now())-__debugRunStart)/1000;
-}
-function __debugShowQuota(q){
-  const el=document.getElementById('debug-rate');if(!el)return;
-  const bits=[];
-  if(q.waited)bits.push(`waited ${(q.waited/1000).toFixed(1)}s`);
-  const elapsed=__debugElapsedS();
-  if(elapsed>0){
-    const rpm=__debugReqCount/(elapsed/60);
-    const done=__debugRunEnd?' done':'';
-    bits.push(`${elapsed.toFixed(1)}s${done} · ${__debugReqCount} reqs · ${rpm.toFixed(1)} req/min`);
-  }
-  el.textContent=`[debug] ${bits.join(' · ')||'…'}`;
-  el.style.display=bits.length?'block':'none';
-}
-// ── END TEMP DEBUG ─────────────────────────────────────────────────────────
-
 // ─────────────────────────────────────────────────────────────────────────
 //  Rate-limit ledger — a tiny model of the server's per-1-min quota window,
 //  kept in sync from response headers so callers can look BEFORE they leap.
@@ -1272,8 +1217,6 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
   const MAX_RETRIES=5;   // hard failures (network / 5xx)
   const MAX_RL_WAITS=40; // 429 waits within one call (each waits the real reset)
 
-  __debugTrackReq(); // TEMP DEBUG — count every network attempt (incl. retries/429s)
-
   let r;
   try{
     r=await fetch(url);
@@ -1299,7 +1242,6 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
       if(typeof body.retryAfterMs==='number')retryMs=Math.max(body.retryAfterMs,RL_WAIT_FLOOR_MS);
     }catch(_){/* fall back to the floor if the body isn't as expected */}
     const wait=Math.min(retryMs,MAX_WAIT_MS);
-    __debugShowQuota({waited:wait}); // TEMP DEBUG
     setStatus(`Rate limit reached — waiting ${Math.ceil(wait/1000)}s for reset…`,true);
     await sleep(wait);
     return apiGet(url,opts,_attempt,_rl+1);
@@ -1317,7 +1259,6 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
   // 3) Other non-OK (400/401/403/404…) — not retryable, surface the real reason.
   if(!r.ok)throw new Error(await parseApiError(r));
 
-  __debugShowQuota({}); // TEMP DEBUG
   const j=await r.json();
   return{j};
 }
@@ -1883,11 +1824,6 @@ function classifyClutchOutcome({won,killsAfterClutch,deathMs,killTimes,enemyAliv
 
 /* ── PROCESS MATCH ──────────────────────────────────────── */
 function processMatch(m){
-  // TEMP DEBUG — keep every raw match object around on window so a specific
-  // one can be found and copied out of the console (for calibrating the
-  // clutch-outcome logic against real examples). Remove once no longer needed.
-  (window.__rawMatches??=[]).push(m);
-
   const meta=m.metadata||{};
   const players=m.players||[];
 
@@ -1924,7 +1860,6 @@ function processMatch(m){
   // their available window, not just the state at their final kill/death —
   // see IDLE_RATIO_THRESHOLD below for why that mattered.
   const clutchAllByPuuid=new Map();
-  const clutchRoundsByPuuid=new Map(); // puuid -> [{round, type, outcome}, ...] — per-round detail, used by the clutch debug panel
   if(Array.isArray(m.kills)&&Array.isArray(m.rounds)){
     const killsByRound=[];
     m.kills.forEach(k=>{(killsByRound[k.round]??=[]).push(k);});
@@ -1937,7 +1872,6 @@ function processMatch(m){
       const myRoster=pTeam==='red'?redRoster:blueRoster;
       const enemyRoster=pTeam==='red'?blueRoster:redRoster;
       const byType={1:{win:0,loss:0,exit:0,save:0},2:{win:0,loss:0,exit:0,save:0},3:{win:0,loss:0,exit:0,save:0},4:{win:0,loss:0,exit:0,save:0},5:{win:0,loss:0,exit:0,save:0}};
-      const clutchRounds=[]; // [{round, type, outcome}, ...] for the debug panel
       for(let r=0;r<m.rounds.length;r++){
         const roundData=m.rounds[r];
         const roundKills=killsByRound[r]||[];
@@ -1997,10 +1931,8 @@ function processMatch(m){
           countThis=detectedAlt!=null&&detectedAlt.clutchType===clutchType&&outcomeAlt===outcome;
         }
         if(countThis)byType[clutchType][outcome]++;
-        clutchRounds.push({round:r,type:clutchType,outcome,unresolved:isUnresolved,unresolvedButCounted:isUnresolved&&countThis});
       }
       if(Object.values(byType).some(t=>t.win||t.loss||t.exit||t.save))clutchAllByPuuid.set(p.puuid,byType);
-      if(clutchRounds.length)clutchRoundsByPuuid.set(p.puuid,clutchRounds);
     }
   }
 
@@ -2084,7 +2016,6 @@ function processMatch(m){
       _kd,
       _acs,
       _clutchAll:clutchAllByPuuid.get(p.puuid)||null,
-      _clutchRounds:clutchRoundsByPuuid.get(p.puuid)||null,
     };
   });
 
@@ -2106,7 +2037,6 @@ function processMatch(m){
     `${p.name}#${p.tag}`.toLowerCase()===`${PLAYER}#${TAG}`.toLowerCase());
   const myAcsPlace=mePlayerOut?._acsPlace??null;
   const myClutchAll=mePlayerOut?._clutchAll??null; // {1:{win,loss,exit,save},...,5:{...}} or null
-  const myClutchRounds=mePlayerOut?._clutchRounds??[]; // [{round,type,outcome},...] for the debug panel
   const matchId=meta.match_id??m.match_id??null;
 
   // Party size — count teammates sharing the same party_id as me
@@ -2121,7 +2051,7 @@ function processMatch(m){
   const myTierName=me?.tier?.patched??me?.currenttier_patched??rName(myTierId);
   // v4 match player object uses `rr`; v3 used `ranking_in_tier` — check both
   const myRR=null; // v4 match endpoint doesn't include per-match RR — fetched separately via mmr-history
-  return{mapName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,partySize,myPartyId,myAcsPlace,matchMvpPuuid,teamMvpPuuids,myClutchAll,myClutchRounds,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
+  return{mapName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,partySize,myPartyId,myAcsPlace,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
 }
 
 function extractStats(p,fallbackRounds=null){
@@ -2275,7 +2205,6 @@ function tagPostResetPlacements(matches,days=RESET_GRACE_DAYS){
 async function loadAll(prefetchSnapshot=null){
   const myGen=++_analysisGen; // supersede any in-flight analysis
   loadSeasonDates(); // fire off act-start dates now; awaited before we filter matches
-  __debugResetRate(); // TEMP DEBUG — clear the quota readout for a fresh run
   setProgress(3);
   try{
     // Step 0: resolve PUUID so we can find the player in historical matches
@@ -2369,7 +2298,6 @@ async function loadAll(prefetchSnapshot=null){
             .filter(s=>seasonOrder.indexOf(s.season?.id)>targetIdx)
             .reduce((sum,s)=>sum+(s.games||0),0);
           start=Math.max(0,skipGames-20);
-          console.log(`[mmr] targetCount=${targetCount} skipGames=${skipGames} startOffset=${start}`);
           setStatus(`Act has ${targetCount} games — jumping to offset ${start}…`,true);
         }
       }
@@ -2439,7 +2367,6 @@ async function loadAll(prefetchSnapshot=null){
     setProgress(100);
     setTimeout(()=>setProgress(0),600);
     renderAll();
-    __debugFinishRun(); // TEMP DEBUG — freeze the run timer + final req/min
   }catch(e){
     if(myGen!==_analysisGen)return; // superseded run — swallow its error
     setStatus('');
@@ -3744,367 +3671,6 @@ function filtered(){
 }
 
 /* ── SHARED MATCH CARD BUILDER ───────────────────────────── */
-/* ── FULL ROUND REVIEW ────────────────────────────────────────────────────
-   TEMP DEBUG — a manual-labeling tool for calibrating the clutch DETECTION
-   logic itself (not just its outcome calls). The earlier version of this
-   tool only ever showed rounds the algorithm had already flagged as a
-   clutch, which meant it could never surface a false negative — a round
-   that SHOULD have been detected but wasn't. This version lists every
-   single round in the match instead, with a compact death-order summary for
-   both teams so you can judge "was I ever the last one alive here" without
-   needing to rewatch it, and lets you correct the type (including turning a
-   "not detected" round into a real one, or vice versa) as well as the
-   outcome. Pulls the raw match from window.__rawMatches (same stash used
-   elsewhere) and re-runs the exact same detectClutch/computeRealDeaths/
-   classifyClutchOutcome functions the real app uses — never a separate,
-   possibly-drifted re-implementation. Remove this whole block once no
-   longer needed. */
-function buildRoundReviewData(raw,puuid){
-  const me=(raw.players||[]).find(p=>p.puuid===puuid);
-  if(!me)return null;
-  const pTeam=me.team_id?.toLowerCase();
-  const nameOf={};
-  (raw.players||[]).forEach(p=>{nameOf[p.puuid]=`${p.name}#${p.tag}`;});
-
-  const killsByRound=[];
-  (raw.kills||[]).forEach(k=>{(killsByRound[k.round]??=[]).push(k);});
-  killsByRound.forEach(arr=>arr.sort((a,b)=>(a.time_in_round_in_ms??0)-(b.time_in_round_in_ms??0)));
-
-  const myRoster=(raw.players||[]).filter(p=>p.team_id?.toLowerCase()===pTeam);
-  const enemyRoster=(raw.players||[]).filter(p=>p.team_id?.toLowerCase()!==pTeam&&(p.team_id?.toLowerCase()==='red'||p.team_id?.toLowerCase()==='blue'));
-
-  return(raw.rounds||[]).map((roundData,r)=>{
-    const roundKills=killsByRound[r]||[];
-    const{realDeath,unresolved}=computeRealDeaths(roundKills,roundData,raw.players);
-    const plantMs=roundData.plant?.round_time_in_ms??null;
-    const defuseMs=roundData.defuse?.round_time_in_ms??null;
-    const planterTeam=roundData.plant?.player?.team?.toLowerCase()??null;
-    const side=planterTeam?(planterTeam===pTeam?'attack':'defense'):null;
-
-    // Chronological, named death list for both teams — real deaths only
-    // (resurrection-corrected), so a Clove/Sage revival doesn't show up
-    // twice or attribute a death to the wrong moment.
-    const myDeaths=[],enemyDeaths=[];
-    const seen=new Set();
-    for(const k of roundKills){
-      const vp=k.victim?.puuid,t=k.time_in_round_in_ms??0;
-      if(!vp||realDeath[vp]!==t||seen.has(vp))continue;
-      seen.add(vp);
-      const vt=k.victim?.team?.toLowerCase();
-      const entry={name:nameOf[vp]||k.victim?.name||'?',ms:t};
-      if(vt===pTeam)myDeaths.push(entry);else enemyDeaths.push(entry);
-    }
-
-    const startMyAlive=presentCount(myRoster,roundData,roundKills);
-    const startEnemyAlive=presentCount(enemyRoster,roundData,roundKills);
-    const detected=detectClutch(roundKills,realDeath,pTeam,puuid,startMyAlive,startEnemyAlive);
-    let computed=null;
-    if(detected){
-      const won=roundData.winning_team?.toLowerCase()===pTeam;
-      const outcome=classifyClutchOutcome({won,killsAfterClutch:detected.killsAfterClutch,deathMs:detected.deathMs,killTimes:detected.killTimes,enemyAliveAfterLastKill:detected.enemyAliveAfterLastKill,clutchStartMs:detected.clutchStartMs,plantMs,defuseMs,side});
-      computed={type:detected.clutchType,outcome};
-    }
-    // Riot's own ground truth, straight off the round object — not inferred,
-    // not scraped from anywhere. ceremony is one of: CeremonyClutch,
-    // CeremonyAce, CeremonyTeamAce, CeremonyThrifty, CeremonyFlawless,
-    // CeremonyCloser (match-point round), CeremonyDefault, or ''. Riot only
-    // shows ONE badge per round even when several would technically apply
-    // (a clutch that's also an ace shows as Ace, a clutch on the match's
-    // final round shows as Closer) — confirmed against this dataset: every
-    // one of the 144 CeremonyClutch rounds here was independently caught by
-    // detectClutch, with zero misses. So CeremonyClutch is a strong "yes,
-    // definitely" signal, but ceremony !== 'CeremonyClutch' does NOT mean
-    // "not a clutch" — plenty of genuine clutches (particularly 1v1s, which
-    // Riot rarely badges as Clutch even though they fit the plain
-    // definition) show up as CeremonyDefault/Closer/Ace instead.
-    const ceremony=roundData.ceremony||null;
-
-    // IMPORTANT: the ceremony belongs to the ROUND, not to whoever's puuid
-    // was passed in — the clutch it refers to could just as easily belong
-    // to a teammate (or, if the tracked player's team lost, to an enemy).
-    // Checking `computed` (the tracked player's own result) against it
-    // would wrongly flag a "miss" any time the clutch was genuinely someone
-    // else's. So when ceremony says Clutch, re-run detectClutch across the
-    // ENTIRE winning roster for this round to see if ANYONE matches —
-    // that's the real test of the algorithm, independent of who's tracked.
-    let riotClutchMatchedBy=null;
-    if(ceremony==='CeremonyClutch'){
-      const winTeam=roundData.winning_team?.toLowerCase();
-      const winRoster=(raw.players||[]).filter(p=>p.team_id?.toLowerCase()===winTeam);
-      const loseRoster=(raw.players||[]).filter(p=>p.team_id?.toLowerCase()!==winTeam&&(p.team_id?.toLowerCase()==='red'||p.team_id?.toLowerCase()==='blue'));
-      const winStart=presentCount(winRoster,roundData,roundKills);
-      const loseStart=presentCount(loseRoster,roundData,roundKills);
-      for(const wp of winRoster){
-        const d=detectClutch(roundKills,realDeath,winTeam,wp.puuid,winStart,loseStart);
-        if(d){riotClutchMatchedBy=nameOf[wp.puuid]||`${wp.name}#${wp.tag}`;break;}
-      }
-    }
-    return{round:r,side,myDeaths,enemyDeaths,computed,ceremony,riotClutchMatchedBy,unresolved:unresolved.size>0};
-  });
-}
-
-function buildClutchDebugPanel(m){
-  if(!m.matchId)return null;
-
-  const wrap=document.createElement('div');
-  wrap.className='clutch-debug';
-
-  const toggle=document.createElement('button');
-  toggle.type='button';
-  toggle.className='clutch-debug-toggle';
-  toggle.textContent='🔍 Full round review';
-
-  const panel=document.createElement('div');
-  panel.className='clutch-debug-panel';
-  panel.style.display='none';
-
-  const TYPES=[null,1,2,3,4,5];
-  const TYPE_LABELS={null:'None',1:'1v1',2:'1v2',3:'1v3',4:'1v4',5:'1v5'};
-  const OUTCOMES=['win','loss','exit','save'];
-  const OUTCOME_LABELS={win:'Win',loss:'Loss',exit:'Exit',save:'Save'};
-
-  let rounds=null; // lazily built the first time the panel is opened
-  window.__fullRoundOverrides=window.__fullRoundOverrides||{};
-  const matchOverrides=(window.__fullRoundOverrides[m.matchId]=window.__fullRoundOverrides[m.matchId]||{});
-
-  function fmtDeaths(list){
-    if(!list.length)return '—';
-    return list.map(d=>`${d.name} (${(d.ms/1000).toFixed(0)}s)`).join(', ');
-  }
-
-  function renderRows(){
-    panel.innerHTML='';
-    if(!rounds){
-      const raw=(window.__rawMatches||[]).find(rm=>(rm.metadata?.match_id||rm.match_id)===m.matchId);
-      if(!raw){
-        panel.innerHTML='<div class="clutch-debug-hint">Raw match data not found in this session — the match may have loaded before this debug tool was added, or the page was reloaded since. Search again and try this match fresh.</div>';
-        return;
-      }
-      rounds=buildRoundReviewData(raw,PUUID)||[];
-    }
-
-    // Summary against Riot's own ceremony field — the one ground-truth
-    // source that isn't a guess. Checked against the WHOLE winning roster
-    // (see riotClutchMatchedBy above), not just the tracked player — the
-    // round's clutch could genuinely belong to a teammate, and comparing
-    // against only the tracked player's own result would falsely flag
-    // those as misses. CeremonyClutch rounds we truly missed (nobody on
-    // the winning roster registers a clutch win) are real bugs worth
-    // looking at. Rounds where WE found a clutch win but Riot didn't badge
-    // it Clutch are expected, not misses — Riot only shows one ceremony
-    // per round (Ace/Closer/Thrifty take priority) and rarely badges plain
-    // 1v1s as Clutch at all, confirmed against this dataset (see
-    // detectClutch's own comment).
-    const riotClutchRounds=rounds.filter(rd=>rd.ceremony==='CeremonyClutch');
-    const riotClutchMatched=riotClutchRounds.filter(rd=>rd.riotClutchMatchedBy);
-    const riotClutchMissed=riotClutchRounds.filter(rd=>!rd.riotClutchMatchedBy);
-    if(riotClutchRounds.length){
-      const summary=document.createElement('div');
-      summary.className='clutch-debug-hint';
-      summary.style.margin='0 0 4px';
-      const matchTxt=`${riotClutchMatched.length}/${riotClutchRounds.length} Riot-confirmed clutch round(s) matched (across both teams)`;
-      summary.innerHTML=riotClutchMissed.length
-        ?`⚠ <strong style="color:#ef4444">${matchTxt} — ${riotClutchMissed.length} missed, see below</strong>`
-        :`✓ ${matchTxt}`;
-      panel.appendChild(summary);
-    }
-
-    rounds.forEach(rd=>{
-      const ov=matchOverrides[rd.round]||{};
-      const assignedType=ov.type!==undefined?ov.type:(rd.computed?.type??null);
-      const assignedOutcome=ov.outcome!==undefined?ov.outcome:(rd.computed?.outcome??null);
-
-      const row=document.createElement('div');
-      row.className='clutch-debug-row';
-      row.style.flexDirection='column';
-      row.style.alignItems='stretch';
-      row.style.gap='6px';
-
-      const head=document.createElement('div');
-      head.style.display='flex';
-      head.style.justifyContent='space-between';
-      head.style.alignItems='center';
-      head.style.gap='8px';
-      const lbl=document.createElement('span');
-      lbl.className='clutch-debug-round-lbl';
-      const isRiotClutch=rd.ceremony==='CeremonyClutch';
-      // A "miss" is only real if NOBODY on the winning roster matched —
-      // if a teammate clutched it, that's a correct detection, just not
-      // for the player this panel happens to be tracking.
-      const riotMismatch=isRiotClutch&&!rd.riotClutchMatchedBy;
-      const clutchedByTrackedPlayer=isRiotClutch&&rd.riotClutchMatchedBy&&assignedOutcome==='win';
-      let lblHtml=`Round ${rd.round+1}${rd.side?' · '+rd.side:''}`;
-      if(isRiotClutch){
-        if(riotMismatch){
-          lblHtml+=' <span style="color:#ef4444;font-weight:700;">⚠ Riot: Clutch (not matched by anyone)</span>';
-        }else if(clutchedByTrackedPlayer){
-          lblHtml+=' <span style="color:#f59e0b;font-weight:700;">⚡ Riot: Clutch (you)</span>';
-        }else{
-          lblHtml+=` <span style="color:#f59e0b;font-weight:700;">⚡ Riot: Clutch</span> <span style="color:var(--muted);font-weight:400;">(${rd.riotClutchMatchedBy})</span>`;
-        }
-      }
-      if(rd.unresolved){
-        // A death in this round couldn't be verified either way — no
-        // positional snapshot after it, a revive was mechanically
-        // possible, and the round result doesn't settle it. Excluded
-        // from the headline stats rather than guessed at.
-        lblHtml+=' <span style="color:#a78bfa;font-weight:700;" title="A death in this round could not be verified as permanent (revive possible, no positional evidence). Excluded from the aggregate stats.">? unverified</span>';
-      }
-      if(!isRiotClutch&&rd.ceremony&&rd.ceremony!=='CeremonyDefault'){
-        // Ace/TeamAce/Thrifty/Closer/Flawless — not a clutch-specific tag,
-        // but shown for context since it can explain why Riot picked a
-        // different badge over Clutch for a round that was genuinely both.
-        lblHtml+=` <span style="color:var(--muted);font-weight:400;">(Riot: ${rd.ceremony.replace('Ceremony','')})</span>`;
-      }
-      lbl.innerHTML=lblHtml;
-      head.appendChild(lbl);
-      const typeBtns=document.createElement('div');
-      typeBtns.className='clutch-debug-btns';
-      TYPES.forEach(t=>{
-        const b=document.createElement('button');
-        b.type='button';
-        b.className='clutch-debug-btn'+(assignedType===t?' active':'');
-        b.textContent=TYPE_LABELS[t];
-        b.addEventListener('click',(e)=>{
-          e.stopPropagation();
-          matchOverrides[rd.round]=matchOverrides[rd.round]||{};
-          matchOverrides[rd.round].type=t;
-          if(t==null)matchOverrides[rd.round].outcome=null;
-          renderRows();
-        });
-        typeBtns.appendChild(b);
-      });
-      head.appendChild(typeBtns);
-      row.appendChild(head);
-
-      const detail=document.createElement('div');
-      detail.className='clutch-debug-hint';
-      detail.style.margin='0';
-      detail.innerHTML=`Your team: ${fmtDeaths(rd.myDeaths)}<br>Enemy: ${fmtDeaths(rd.enemyDeaths)}`;
-      row.appendChild(detail);
-
-      if(assignedType!=null){
-        const outBtns=document.createElement('div');
-        outBtns.className='clutch-debug-btns';
-        OUTCOMES.forEach(o=>{
-          const b=document.createElement('button');
-          b.type='button';
-          b.className=`clutch-debug-btn seg-${o}`+(assignedOutcome===o?' active':'');
-          b.textContent=OUTCOME_LABELS[o];
-          b.addEventListener('click',(e)=>{
-            e.stopPropagation();
-            matchOverrides[rd.round]=matchOverrides[rd.round]||{};
-            matchOverrides[rd.round].outcome=o;
-            renderRows();
-          });
-          outBtns.appendChild(b);
-        });
-        row.appendChild(outBtns);
-      }
-      panel.appendChild(row);
-    });
-    const hint=document.createElement('div');
-    hint.className='clutch-debug-hint';
-    hint.textContent='Highlighted = currently assigned (computed by default; click Type/Outcome buttons to correct). "None" marks a round the algorithm should NOT have detected as a clutch at all. ⚡ Riot: Clutch = Riot itself tagged this round\'s ceremony as a clutch — treat this as ground truth, checked against the whole winning team (it may have been a teammate\'s clutch, not yours — shown by name when so). A round without that tag can still be a genuine clutch (Riot rarely badges plain 1v1s, and only shows one ceremony per round, so Ace/Closer/Thrifty can override it) — the ⚠ warning only fires when Riot said Clutch and NOBODY on the winning team matches it.';
-    panel.appendChild(hint);
-    const dl=document.createElement('button');
-    dl.type='button';
-    dl.className='clutch-debug-download';
-    dl.textContent='⬇ Download match JSON with reviewed rounds';
-    dl.addEventListener('click',(e)=>{e.stopPropagation();downloadClutchLabels(m,rounds,matchOverrides);});
-    panel.appendChild(dl);
-  }
-
-  toggle.addEventListener('click',(e)=>{
-    e.stopPropagation();
-    const opening=panel.style.display==='none';
-    panel.style.display=opening?'flex':'none';
-    if(opening)renderRows();
-  });
-
-  wrap.appendChild(toggle);
-  wrap.appendChild(panel);
-  return wrap;
-}
-
-function downloadClutchLabels(m,rounds,overrides){
-  const raw=(window.__rawMatches||[]).find(rm=>(rm.metadata?.match_id||rm.match_id)===m.matchId);
-  if(!raw){
-    alert('Raw match data not found in this session — the match may have loaded before this debug tool was added, or the page was reloaded since. Search again and try this match fresh.');
-    return;
-  }
-  const labels=(rounds||[]).map(rd=>{
-    const ov=overrides[rd.round]||{};
-    return{
-      round:rd.round,
-      side:rd.side,
-      computedType:rd.computed?.type??null,
-      computedOutcome:rd.computed?.outcome??null,
-      assignedType:ov.type!==undefined?ov.type:(rd.computed?.type??null),
-      assignedOutcome:ov.outcome!==undefined?ov.outcome:(rd.computed?.outcome??null),
-    };
-  }).filter(l=>l.computedType!=null||l.assignedType!=null); // skip rounds nobody ever touched or detected
-  const payload={
-    ...raw,
-    __clutchLabels:{puuid:PUUID,player:`${PLAYER}#${TAG}`,labels}
-  };
-  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download=`match_${m.matchId}_clutch_labels.json`;
-  a.click();
-}
-
-// Exports EVERY match currently in window.__rawMatches (not just the one
-// whose panel you happened to open) as a single combined JSON array — each
-// entry shaped exactly like the per-match download (full raw match +
-// __clutchLabels), so it can be processed the same way. Recomputes
-// buildRoundReviewData fresh for every match rather than relying on
-// whatever a specific panel instance cached, so this works even for matches
-// whose "Full round review" panel was never opened this session — you get
-// the algorithm's current computed call for every round of every match,
-// plus whatever manual corrections you've made anywhere via
-// window.__fullRoundOverrides.
-function downloadAllClutchLabels(){
-  const raws=window.__rawMatches||[];
-  if(!raws.length){
-    alert('No matches loaded in this session yet — run a search first.');
-    return;
-  }
-  window.__fullRoundOverrides=window.__fullRoundOverrides||{};
-  const payloadArray=[];
-  for(const raw of raws){
-    const matchId=raw.metadata?.match_id||raw.match_id;
-    const rounds=buildRoundReviewData(raw,PUUID);
-    if(!rounds)continue; // tracked player not found in this match for some reason
-    const overrides=window.__fullRoundOverrides[matchId]||{};
-    const labels=rounds.map(rd=>{
-      const ov=overrides[rd.round]||{};
-      return{
-        round:rd.round,
-        side:rd.side,
-        computedType:rd.computed?.type??null,
-        computedOutcome:rd.computed?.outcome??null,
-        assignedType:ov.type!==undefined?ov.type:(rd.computed?.type??null),
-        assignedOutcome:ov.outcome!==undefined?ov.outcome:(rd.computed?.outcome??null),
-      };
-    }).filter(l=>l.computedType!=null||l.assignedType!=null); // skip rounds nobody ever touched or detected
-    if(!labels.length)continue; // no clutch situations and no manual corrections in this match at all
-    payloadArray.push({...raw,__clutchLabels:{puuid:PUUID,player:`${PLAYER}#${TAG}`,labels}});
-  }
-  if(!payloadArray.length){
-    alert('No clutch situations (detected or manually marked) found across any loaded match.');
-    return;
-  }
-  const blob=new Blob([JSON.stringify(payloadArray,null,2)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download=`all_matches_clutch_labels_${payloadArray.length}.json`;
-  a.click();
-}
-
 function buildPlayersGrid(m){
   const me=m.players.find(p=>PUUID?p.puuid===PUUID:p.name?.toLowerCase()===PLAYER.toLowerCase()&&p.tag?.toLowerCase()===TAG.toLowerCase());
   const myTeamId=me?.team_id;
@@ -4255,8 +3821,6 @@ function buildMatchRows(slice,startDayKey){
     }
     const card=buildMatchCard(m);
     card.appendChild(buildPlayersGrid(m));
-    const debugPanel=buildClutchDebugPanel(m);
-    if(debugPanel)card.appendChild(debugPanel);
     frag.appendChild(card);
   });
   return{frag,lastDayKey};
