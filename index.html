@@ -322,6 +322,23 @@ h1 span{color:var(--accent);}
 .clutch-behavior-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
 .clutch-behavior-title{font-size:11px;color:var(--muted);font-family:var(--font-body);}
 .clutch-behavior-avg{font-size:12px;font-weight:700;color:var(--text);font-family:var(--font-display);white-space:nowrap;}
+/* Hidden MMR card */
+.mmr-est-tag{font-size:9px;font-weight:600;letter-spacing:.06em;color:var(--muted);background:rgba(255,255,255,.06);border-radius:var(--radius-xs);padding:2px 5px;margin-left:6px;text-transform:uppercase;}
+.mmr-sample{font-size:11px;color:var(--muted);font-family:var(--font-body);white-space:nowrap;}
+.mmr-body{display:flex;gap:1.75rem;align-items:center;flex-wrap:wrap;}
+.mmr-figure{flex-shrink:0;}
+.mmr-big{font-size:2.4rem;font-weight:800;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
+.mmr-big span{font-size:.95rem;font-weight:600;color:var(--muted);letter-spacing:0;}
+.mmr-ci{font-size:11px;color:var(--muted);margin-top:5px;font-variant-numeric:tabular-nums;}
+.mmr-readout{flex:1;min-width:200px;}
+.mmr-compare{font-size:13px;color:var(--text);}
+.mmr-compare b{font-variant-numeric:tabular-nums;}
+.mmr-verdict{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45;}
+.mmr-bar{position:relative;height:6px;border-radius:999px;background:rgba(255,255,255,.06);margin-top:12px;overflow:hidden;}
+.mmr-bar-fill{position:absolute;top:0;bottom:0;background:rgba(var(--accent-rgb),.45);border-radius:999px;}
+.mmr-bar-mark{position:absolute;top:-3px;width:2px;height:12px;background:var(--text);border-radius:1px;}
+.mmr-bar-lbls{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums;}
+.mmr-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:14px;padding-top:12px;border-top:.5px solid var(--glass-border);}
 .clutch-behavior-bar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.05);}
 .clutch-behavior-bar>div{height:100%;}
 .clutch-behavior-bar .seg-win{background:#22c55e;}
@@ -443,6 +460,28 @@ h1 span{color:var(--accent);}
               <div class="stat-pill-body"><span class="stat-pill-label" id="sg-playtime-lbl">Playtime</span><span class="stat-pill-value" id="sg-playtime">—</span></div>
             </div>
           </div>
+        </div>
+      </div>
+      <!-- Hidden MMR estimate -->
+      <div class="summary-row full-row" id="mmr-section-row" style="display:none">
+        <div class="s-card" id="mmr-card">
+          <div class="card-title-row">
+            <div class="card-title">Hidden MMR <span class="mmr-est-tag">estimated</span></div>
+            <span class="mmr-sample" id="mmr-sample"></span>
+          </div>
+          <div class="mmr-body">
+            <div class="mmr-figure">
+              <div class="mmr-big" id="mmr-big">—</div>
+              <div class="mmr-ci" id="mmr-ci"></div>
+            </div>
+            <div class="mmr-readout">
+              <div class="mmr-compare" id="mmr-compare"></div>
+              <div class="mmr-verdict" id="mmr-verdict"></div>
+              <div class="mmr-bar"><div class="mmr-bar-fill" id="mmr-bar-fill"></div><div class="mmr-bar-mark" id="mmr-bar-mark"></div></div>
+              <div class="mmr-bar-lbls"><span id="mmr-bar-lo"></span><span id="mmr-bar-hi"></span></div>
+            </div>
+          </div>
+          <div class="mmr-note" id="mmr-note"></div>
         </div>
       </div>
       <!-- Clutches -->
@@ -823,6 +862,10 @@ let allMatches=[],statMatches=[],mhIncludeReset=false,resultFilters=new Set(),ra
 // to be covered (never fetched before, or persisted after this ran). Read via
 // _rrChangeByMatchId[matchId] ?? null, never assume it's present.
 let _rrChangeByMatchId={};
+// match_id -> RR total the player was sitting on BEFORE that match, derived as
+// (rr after) - (last_change). This is the stand-in for "current rank" that the
+// hidden-MMR estimate regresses against — see estimateHiddenMMR().
+let _preRRByMatchId={};
 // Single reused canvas 2D context for text-width measurement, created lazily on
 // first use — avoids allocating a fresh <canvas> every renderStats call.
 let _measureCtx=null;
@@ -1204,7 +1247,7 @@ function runAnalysis(){
   document.body.classList.remove('rank-colored');
   document.getElementById('results-section').style.display='block';
   // Reset UI
-  ['summary-grid','rank-trend-section','clutch-section-row','teammates-section','match-list-section','show-history-btn'].forEach(id=>{
+  ['summary-grid','rank-trend-section','clutch-section-row','mmr-section-row','teammates-section','match-list-section','show-history-btn'].forEach(id=>{
     document.getElementById(id).style.display='none';
   });
   document.getElementById('matches-container').innerHTML='';
@@ -1214,7 +1257,7 @@ function runAnalysis(){
   document.getElementById('result-panel').classList.remove('shown');
   settleSearchBarWidth();
   allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;mhDayStats={};resultFilters.clear();rankFilters.clear();partyFilters.clear();mapFilters.clear();
-  _rrChangeByMatchId={};
+  _rrChangeByMatchId={};_preRRByMatchId={};
   allTeammates=[];tmPage=0;
   // If the season dropdown's prefetch already fetched this exact player (the
   // common case — it runs while the player is still typing), reuse those
@@ -2027,7 +2070,9 @@ function processMatch(m){
   // all. Only populated for whichever recent matches that fetch covered;
   // null for everything else, not just genuinely unrated games.
   const myRR=_rrChangeByMatchId[matchId]??null;
-  return{mapName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,partySize,myPartyId,myAcsPlace,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
+  // RR total going into this match — the "current rank" term in the hidden-MMR fit.
+  const myPreRR=_preRRByMatchId[matchId]??null;
+  return{mapName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,myPreRR,partySize,myPartyId,myAcsPlace,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
 }
 
 function extractStats(p,fallbackRounds=null){
@@ -2306,7 +2351,13 @@ async function loadAll(prefetchSnapshot=null){
       const rrUrl=`${API_BASE}/mmr-history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}`;
       const{j:rrJ}=await apiGet(rrUrl);
       const history=(rrJ.data||rrJ).history||[];
-      history.forEach(h=>{if(h.match_id)_rrChangeByMatchId[h.match_id]=h.last_change??null;});
+      history.forEach(h=>{
+        if(!h.match_id)return;
+        _rrChangeByMatchId[h.match_id]=h.last_change??null;
+        // rr is the total AFTER the match, so subtract the change to recover
+        // what the player was on going in.
+        if(h.rr!=null&&h.last_change!=null)_preRRByMatchId[h.match_id]=h.rr-h.last_change;
+      });
     }catch(_){
       // No RR-change data this run — matches just fall back to myRR===null.
     }
@@ -2550,6 +2601,7 @@ function renderStats(skipPlaytime){
   document.getElementById('sg-wr').textContent=wr+'%';
 
   renderClutchCard(statsPanelMatches);
+  renderHiddenMMRCard(statsPanelMatches);
 
   const overallRR=overall!=null?tierRR(overall):null;
   const avgRankTier=overallRR?overallRR.tier:null;
@@ -3178,6 +3230,136 @@ function buildKdRankRows(bucketFn){
 }
 
 const RANK_MODE_ORDER=['lobby','player','party'];
+
+/* ── HIDDEN MMR ESTIMATE ─────────────────────────────────── */
+// Riot documents that the final RR payout is scaled by a "rank convergence"
+// factor comparing your hidden MMR to your visible rank:
+//   MMR > rank -> bigger gains, smaller losses
+//   MMR = rank -> gains and losses about equal
+//   MMR < rank -> smaller gains, bigger losses
+// (https://support.riotgames.com/hc/en-us/articles/how-rank-rating-rr-is-calculated)
+//
+// So the win/loss ASYMMETRY is an observable of the gap, and the pre-match RR
+// at which it goes neutral IS the MMR. We fit
+//     RR change = b0 + b1*(round margin) + b2*(pre-match RR)
+// and solve for the pre-match RR where a mean-margin match pays out zero.
+//
+// Round margin MUST be in the model: it's the dominant driver of RR and it
+// correlates with pre-match RR (-0.45 in the sample this was built against),
+// so omitting it leaks margin into the convergence term and inflates the
+// estimate badly (~468 vs ~421 RR on that data).
+//
+// This is an INFERENCE from payout behaviour, not a real MMR readout — Riot
+// never exposes the number.
+const MMR_MIN_MATCHES=20;   // below this the fit swings wildly
+const MMR_MIN_RR_SPREAD=40; // need leverage on the preRR axis to identify b2
+const MMR_BOOTSTRAP_ITERS=1500;
+
+// Solves (X'X)b = X'y by Gauss-Jordan. Returns null if singular.
+function _olsSolve(y,X){
+  const k=X[0].length;
+  const M=Array.from({length:k},(_,a)=>{
+    const row=Array.from({length:k},(_,b)=>X.reduce((s,r)=>s+r[a]*r[b],0));
+    row.push(X.reduce((s,r,i)=>s+r[a]*y[i],0));
+    return row;
+  });
+  for(let c=0;c<k;c++){
+    let p=c;
+    for(let r=c+1;r<k;r++)if(Math.abs(M[r][c])>Math.abs(M[p][c]))p=r;
+    [M[c],M[p]]=[M[p],M[c]];
+    if(Math.abs(M[c][c])<1e-12)return null;
+    for(let r=0;r<k;r++){
+      if(r===c)continue;
+      const f=M[r][c]/M[c][c];
+      for(let j=c;j<=k;j++)M[r][j]-=f*M[c][j];
+    }
+  }
+  return Array.from({length:k},(_,i)=>M[i][k]/M[i][i]);
+}
+function _mean(a){return a.reduce((x,y)=>x+y,0)/a.length;}
+
+// Returns {estimate, lo, hi, n, spread, currentRR} or null when the sample
+// can't support a fit.
+function estimateHiddenMMR(matches){
+  const usable=matches.filter(m=>m.myRR!=null&&m.myPreRR!=null&&m.myR!=null&&m.opR!=null);
+  if(usable.length<MMR_MIN_MATCHES)return{insufficient:true,n:usable.length,need:MMR_MIN_MATCHES};
+  const pres=usable.map(m=>m.myPreRR);
+  const spread=Math.max(...pres)-Math.min(...pres);
+  if(spread<MMR_MIN_RR_SPREAD)return{insufficient:true,n:usable.length,need:MMR_MIN_MATCHES,flatSpread:true,spread};
+
+  const rows=usable.map(m=>[1,m.myR-m.opR,m.myPreRR]);
+  const ys=usable.map(m=>m.myRR);
+  const b=_olsSolve(ys,rows);
+  if(!b||!Number.isFinite(b[2])||Math.abs(b[2])<1e-4)return{insufficient:true,n:usable.length,need:MMR_MIN_MATCHES};
+  const meanMargin=_mean(usable.map(m=>m.myR-m.opR));
+  const estimate=-(b[0]+b[1]*meanMargin)/b[2];
+  if(!Number.isFinite(estimate))return{insufficient:true,n:usable.length,need:MMR_MIN_MATCHES};
+
+  // Bootstrap so the card can state its own uncertainty rather than implying
+  // false precision — the interval is wide at these sample sizes.
+  const boot=[];
+  for(let i=0;i<MMR_BOOTSTRAP_ITERS;i++){
+    const idx=Array.from({length:usable.length},()=>Math.floor(Math.random()*usable.length));
+    const bb=_olsSolve(idx.map(j=>ys[j]),idx.map(j=>rows[j]));
+    if(!bb||Math.abs(bb[2])<1e-4)continue;
+    const mb=_mean(idx.map(j=>usable[j].myR-usable[j].opR));
+    const v=-(bb[0]+bb[1]*mb)/bb[2];
+    if(Number.isFinite(v)&&v>0&&v<2000)boot.push(v);
+  }
+  boot.sort((x,y)=>x-y);
+  const q=p=>boot.length?boot[Math.floor(p*boot.length)]:estimate;
+
+  // Most recent match's post-match RR = where the visible rank sits now.
+  const newest=usable.slice().sort((a,b)=>(b.startedAtMs??0)-(a.startedAtMs??0))[0];
+  const currentRR=newest.myPreRR+newest.myRR;
+
+  return{estimate,lo:q(0.25),hi:q(0.75),n:usable.length,spread,currentRR};
+}
+
+function renderHiddenMMRCard(matches){
+  const row=document.getElementById('mmr-section-row');
+  if(!row)return;
+  const res=estimateHiddenMMR(matches);
+
+  if(res.insufficient){
+    // Hidden rather than shown-as-empty: an unstable number here would be
+    // actively misleading, and the persistence layer fills this in over time.
+    row.style.display='none';
+    return;
+  }
+  row.style.display='block';
+
+  const est=Math.round(res.estimate),cur=Math.round(res.currentRR),gap=est-cur;
+  document.getElementById('mmr-big').innerHTML=`${est} <span>RR</span>`;
+  document.getElementById('mmr-ci').textContent=`50% confidence ${Math.round(res.lo)}–${Math.round(res.hi)} RR`;
+  document.getElementById('mmr-sample').textContent=`from ${res.n} rated matches`;
+  document.getElementById('mmr-compare').innerHTML=
+    `Visible rank <b>${cur} RR</b> · gap <b>${gap>=0?'+':''}${gap} RR</b>`;
+  document.getElementById('mmr-verdict').textContent=
+    Math.abs(gap)<15
+      ? 'Essentially converged — your rank matches your skill, so gains and losses should stay roughly symmetric.'
+      : gap>0
+        ? 'Under-ranked — expect gains to keep outpacing losses until your rank catches up.'
+        : 'Over-ranked — expect losses to outpace gains until your rank settles back down.';
+
+  // Bar spans the estimate's own confidence interval, with the visible rank
+  // marked on it, so "is my rank inside the band" reads at a glance.
+  const lo=Math.min(res.lo,cur),hi=Math.max(res.hi,cur),pad=(hi-lo)*0.15||10;
+  const axLo=lo-pad,axHi=hi+pad,span=axHi-axLo;
+  const pct=v=>((v-axLo)/span*100);
+  const fill=document.getElementById('mmr-bar-fill');
+  fill.style.left=pct(res.lo)+'%';
+  fill.style.width=Math.max(1,pct(res.hi)-pct(res.lo))+'%';
+  document.getElementById('mmr-bar-mark').style.left=`calc(${pct(cur)}% - 1px)`;
+  document.getElementById('mmr-bar-lo').textContent=Math.round(axLo)+' RR';
+  document.getElementById('mmr-bar-hi').textContent=Math.round(axHi)+' RR';
+
+  document.getElementById('mmr-note').innerHTML=
+    `Inferred from how your RR payouts scale, not read from Riot — MMR is never exposed directly. `
+    +`Riot scales each payout by a <em>rank convergence</em> factor comparing hidden MMR to visible rank; `
+    +`this solves for the RR where wins and losses would pay out symmetrically, controlling for round margin. `
+    +`Accuracy improves as more of your RR history is collected (currently ${res.n} matches, spanning ${Math.round(res.spread)} RR).`;
+}
 
 /* ── CLUTCHES (1v1–1v5) ─────────────────────────────────── */
 // Aggregates myClutchAll (computed per match in processMatch — see the 1vX

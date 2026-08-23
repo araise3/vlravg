@@ -161,7 +161,7 @@ async function putQuota(env, state) {
 // both the client and the edge cache. Fails open — any parsing surprise
 // just returns the original upstream body untouched, since this is a nice-
 // to-have on top of an already-correct response, not load-bearing.
-async function mergeRRHistory(env, bodyText, waitUntil) {
+async function mergeRRHistory(env, bodyText, waitUntil, route) {
   let parsed;
   try {
     parsed = JSON.parse(bodyText);
@@ -190,6 +190,19 @@ async function mergeRRHistory(env, bodyText, waitUntil) {
     stored[h.match_id] = h; // fresh data wins on overlap — it's the more current read
   }
 
+  // Identity written as KV *metadata* rather than into the value, so the
+  // scheduled refresher (.github/workflows/refresh-rr-history.yml) can learn
+  // every cached player's region/name/tag from a single KV list call instead
+  // of reading each record. Refreshed on every merge so a Riot ID rename
+  // self-heals the next time that player is looked up.
+  const meta = {
+    region: route?.region || null,
+    platform: route?.platform || null,
+    name: parsed?.data?.account?.name || route?.name || null,
+    tag: parsed?.data?.account?.tag || route?.tag || null,
+    updatedAt: new Date().toISOString(),
+  };
+
   // Only write back when there's actually something new — most requests for
   // an already-seen player won't add anything, and skipping the write here
   // avoids hammering this KV key with redundant puts every cache expiry.
@@ -200,7 +213,7 @@ async function mergeRRHistory(env, bodyText, waitUntil) {
     const capped = {};
     merged.forEach((h) => { capped[h.match_id] = h; });
     waitUntil(
-      env.RATE_LIMIT_KV.put(kvKey, JSON.stringify(capped)).catch(() => {
+      env.RATE_LIMIT_KV.put(kvKey, JSON.stringify(capped), { metadata: meta }).catch(() => {
         // Non-fatal — worst case this player's history doesn't grow this round.
       })
     );
@@ -324,7 +337,10 @@ export async function onRequestGet(context) {
   const contentType = upstream.headers.get("Content-Type") || "application/json";
 
   if (upstream.status === 200 && route.persistRRHistory) {
-    bodyText = await mergeRRHistory(env, bodyText, context.waitUntil.bind(context));
+    // match[] is /mmr-history/{region}/{platform}/{name}/{tag}
+    bodyText = await mergeRRHistory(env, bodyText, context.waitUntil.bind(context), {
+      region: match[1], platform: match[2], name: decodeURIComponent(match[3]), tag: match[4],
+    });
   }
 
   const res = new Response(bodyText, {
