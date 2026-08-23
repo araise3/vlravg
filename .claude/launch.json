@@ -1,0 +1,18 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "wrangler-dev",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "wrangler",
+        "pages",
+        "dev",
+        ".",
+        "--compatibility-date=2026-07-13",
+        "--kv=RATE_LIMIT_KV"
+      ],
+      "port": 8788
+    }
+  ]
+}
