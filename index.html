@@ -11,8 +11,10 @@
 <meta property="og:description" content="See the true skill level of your Valorant lobbies — average lobby rank, K/D breakdowns, duos, and playtime.">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#3b82f6">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
 <style>
 :root{
   color-scheme:dark;
@@ -139,13 +141,14 @@ h1 span{color:var(--accent);}
 .s-label{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;font-family:var(--font-display);font-weight:700;}
 .s-value{font-size:1.6rem;font-weight:700;line-height:1;word-break:break-word;letter-spacing:-.02em;font-variant-numeric:tabular-nums;} .s-value.small{font-size:1.1rem;}
 .hero-card .s-value{font-size:clamp(1.7rem,2.1vw + 1.3rem,2.6rem);}
+.hero-header{font-size:16px;font-weight:700;color:var(--text);font-family:var(--font-body);letter-spacing:-.01em;margin-top:-6px;margin-bottom:6px;}
 .s-value-suffix{font-size:.45em;font-weight:600;color:var(--muted);letter-spacing:0;white-space:nowrap;}
 .s-sub{font-size:12px;color:var(--muted);margin-top:10px;font-family:var(--font-body);}
-.hero-recent{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:13px;}
-.hero-recent-label{font-size:13px;font-weight:700;color:var(--text);opacity:.85;font-family:var(--font-body);flex-shrink:0;}
-.hero-recent-body{display:flex;align-items:center;gap:6px;font-size:13px;}
-.hero-recent-rank{font-size:13px;font-weight:400;font-family:var(--font-body);color:var(--text);}
-.hero-recent-rr{font-size:13px;font-weight:400;color:var(--text);}
+.stat-pill-row{display:flex;gap:10px;flex:1;align-items:stretch;}
+.stat-pill{display:flex;background:rgba(255,255,255,0.05);border:.5px solid var(--glass-border);border-radius:var(--radius-sm);padding:14px;flex:1;min-width:0;box-shadow:inset 0 1px 0 rgba(255,255,255,0.07);}
+.stat-pill-body{display:flex;flex-direction:column;justify-content:center;min-width:0;}
+.stat-pill-label{font-size:11px;color:var(--text);font-weight:700;letter-spacing:.05em;text-transform:uppercase;line-height:1.3;opacity:.9;}
+.stat-pill-value{font-size:1.5rem;font-weight:800;font-family:var(--font-body);line-height:1.15;white-space:nowrap;font-variant-numeric:tabular-nums;margin-top:3px;}
 .card-title{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text);line-height:21px;height:21px;margin-bottom:14px;border-left:2px solid var(--accent);padding-left:7px;opacity:.85;transition:border-color .5s ease;box-sizing:border-box;}
 .rank-overview{display:flex;flex-direction:column;gap:6px;}
 .ro-tier-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0;}
@@ -311,14 +314,12 @@ h1 span{color:var(--accent);}
 .clutch-behavior-bar>div{height:100%;}
 .clutch-behavior-bar .seg-win{background:#22c55e;}
 .clutch-behavior-bar .seg-loss{background:#ef4444;}
-.clutch-behavior-bar .seg-exit{background:#f59e0b;}
 .clutch-behavior-bar .seg-save{background:#64748b;}
 .clutch-behavior-legend{display:flex;gap:16px;margin-top:9px;flex-wrap:wrap;}
 .clutch-legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);font-family:var(--font-body);}
 .clutch-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .clutch-legend-dot.seg-win{background:#22c55e;}
 .clutch-legend-dot.seg-loss{background:#ef4444;}
-.clutch-legend-dot.seg-exit{background:#f59e0b;}
 .clutch-legend-dot.seg-save{background:#64748b;}
 .clutch-legend-item strong{color:var(--text);font-weight:700;}
 .player-row{display:flex;align-items:center;justify-content:space-between;background:var(--bg);border:.5px solid var(--border2);border-radius:var(--radius-sm);padding:6px 12px;font-size:12px;gap:6px;min-height:32px;}
@@ -400,24 +401,28 @@ h1 span{color:var(--accent);}
       <div class="summary-row full-row">
         <div class="s-card hero-card">
           <div style="display:flex;align-items:flex-start;gap:1.5rem;">
-            <div style="flex:1.7;min-width:0;">
-              <div class="card-title">Avg Lobby Rank</div>
-              <div class="s-value" id="sg-avg-rank" style="display:flex;align-items:center;gap:10px;">—</div>
-              <div class="hero-recent" id="hero-recent" style="display:none">
-                <div class="hero-recent-label">Last 20:</div>
-                <div class="hero-recent-body" id="hero-recent-body"></div>
-              </div>
+            <div style="flex:1.5;min-width:0;">
+              <div class="hero-header">Average Lobby Rank</div>
+              <div class="s-value" id="sg-avg-rank" style="display:flex;align-items:center;gap:10px;white-space:nowrap;">—</div>
             </div>
-            <div style="padding-left:1.5rem;flex:1.8;min-width:0;display:flex;flex-direction:column;align-self:stretch;">
+            <div style="padding-left:1.5rem;flex:2;min-width:0;display:flex;flex-direction:column;align-self:stretch;justify-content:center;">
               <label class="hero-scope-toggle" id="reset-toggle" hidden title="Placement-week games after a total rank reset are greyed out and left out of your stats by default. Turn this on to count them.">
                 <input type="checkbox" id="reset-toggle-cb" onchange="toggleIncludeReset(this.checked)">
                 <span>Count placements (<span id="reset-toggle-count">0</span>)</span>
               </label>
-              <div style="display:flex;gap:8px;flex:1;align-items:stretch;">
-                <div class="tm-pill" id="sg-kd-pill" style="flex:1;padding:14px 10px;"><div class="tm-pill-val" id="sg-kd" style="font-size:1.4rem;">—</div><div class="tm-pill-lbl" id="sg-kd-lbl">Avg K/D</div></div>
-                <div class="tm-pill" id="sg-acs-pill" style="flex:1;padding:14px 10px;"><div class="tm-pill-val" id="sg-acs" style="font-size:1.4rem;">—</div><div class="tm-pill-lbl" id="sg-acs-lbl">Avg ACS</div></div>
-                <div class="tm-pill" id="sg-games-pill" style="flex:1;padding:14px 10px;"><div class="tm-pill-val" id="sg-games" style="font-size:1.4rem;">—</div><div class="tm-pill-lbl" id="sg-games-lbl">Games</div></div>
-                <div class="tm-pill" id="sg-wr-pill" style="flex:1;padding:14px 10px;"><div class="tm-pill-val" id="sg-wr" style="font-size:1.4rem;">—</div><div class="tm-pill-lbl" id="sg-wr-lbl">Win Rate</div></div>
+              <div class="stat-pill-row">
+                <div class="stat-pill" id="sg-kd-pill">
+                  <div class="stat-pill-body"><span class="stat-pill-label" id="sg-kd-lbl">Avg K/D</span><span class="stat-pill-value" id="sg-kd">—</span></div>
+                </div>
+                <div class="stat-pill" id="sg-acs-pill">
+                  <div class="stat-pill-body"><span class="stat-pill-label" id="sg-acs-lbl">Avg ACS</span><span class="stat-pill-value" id="sg-acs">—</span></div>
+                </div>
+                <div class="stat-pill" id="sg-games-pill">
+                  <div class="stat-pill-body"><span class="stat-pill-label" id="sg-games-lbl">Games</span><span class="stat-pill-value" id="sg-games">—</span></div>
+                </div>
+                <div class="stat-pill" id="sg-wr-pill">
+                  <div class="stat-pill-body"><span class="stat-pill-label" id="sg-wr-lbl">Win Rate</span><span class="stat-pill-value" id="sg-wr">—</span></div>
+                </div>
               </div>
             </div>
           </div>
@@ -430,7 +435,7 @@ h1 span{color:var(--accent);}
           <div style="display:flex;gap:8px;" id="clutch-grid"></div>
           <div class="clutch-behavior" id="clutch-behavior" style="display:none">
             <div class="clutch-behavior-head">
-              <span class="clutch-behavior-title">Clutch outcomes — win, loss, or didn't really try</span>
+              <span class="clutch-behavior-title">Clutch outcomes — won it, lost it, or saved the gun</span>
               <span class="clutch-behavior-avg" id="clutch-avg-time"></span>
             </div>
             <div class="clutch-behavior-bar" id="clutch-behavior-bar"></div>
@@ -1330,40 +1335,29 @@ function isSeason(m){
 // independently by that round's CeremonyClutch tag) showed 1.3s.
 const REVIVE_MIN_GAP_MS=3000;
 
-// Round-timer and post-plant spike-timer durations. Riot's data doesn't
-// expose "time remaining," only round-relative event timestamps and the
-// plant time, so these are needed to derive how much clock was left at
-// any moment. Nominal Round Phase durations are 100s/45s (Buy Phase is
-// separate and NOT included in time_in_round_in_ms — confirmed empirically:
-// if it were, unplanted-round kills would top out near 130s (100+30s Buy
-// Phase), but the observed max across 113 matches was 106.7s, matching
-// nominal Round Phase, not Round+Buy). That leftover ~6-7s overshoot
-// (106.7s unplanted, 51.1s post-plant) is the confirmed 7s Post-Round
-// Phase — a real, separate phase where "any surviving agents will still
-// be able to do anything... but will no longer be able to affect the
-// outcome of the round," so actions taken there can still land in the
-// kill feed with real timestamps past the nominal mark. Both constants
-// below are padded 8s (just past the confirmed 7s cap) to keep the
-// idle-ratio window open through it — a window that ends too early
-// pushes idleRatio above 1.0 for genuine late-round action and silently
-// mis-flags it as idle. NOTE: this padding is deliberately NOT used by
-// the Clove revive-window check further down — see
-// CLOVE_REVIVE_SPIKE_BOUNDARY_MS for why that check needs the opposite bias.
-const ROUND_TIMER_MS=108000;
-const SPIKE_TIMER_MS=53000;
-
-// Nominal (un-padded) versions of the above, used ONLY by the Clove
-// revive-window check below — deliberately NOT the padded constants,
-// and NOT nominal-only either. ROUND_TIMER_MS/SPIKE_TIMER_MS add 8s to
-// stay open through Post-Round Phase for the idle-ratio window, which
-// is correct there. Not Dead Yet's own safety net ("survives if the
-// round ends while the timer is still ongoing") is NOT the same
-// boundary as the round's outcome being decided — her timer keeps
-// running through Post-Round Phase and can still expire and kill her
-// during it; she's only safe once the NEXT Buy Phase actually begins.
-// So the correct boundary for THIS check is nominal Round Phase PLUS
-// the confirmed 7s Post-Round Phase — not nominal alone (an earlier
-// version of this comment argued the opposite and was wrong).
+// Round Phase durations plus the confirmed Post-Round Phase, used by the
+// Clove revive-window check below. Riot's data doesn't expose "time
+// remaining," only round-relative event timestamps and the plant time, so
+// these are needed to derive how much clock was left at any moment.
+//
+// Nominal Round Phase durations are 100s (unplanted) / 45s (post-plant).
+// Buy Phase is separate and NOT included in time_in_round_in_ms —
+// confirmed empirically: if it were, unplanted-round kills would top out
+// near 130s (100+30s Buy Phase), but the observed max across 113 matches
+// was 106.7s, matching nominal Round Phase, not Round+Buy. That leftover
+// ~6-7s overshoot (106.7s unplanted, 51.1s post-plant) is the confirmed
+// 7s Post-Round Phase — a real, separate phase where "any surviving agents
+// will still be able to do anything... but will no longer be able to
+// affect the outcome of the round," so actions taken there can still land
+// in the kill feed with real timestamps past the nominal mark.
+//
+// Not Dead Yet's own safety net ("survives if the round ends while the
+// timer is still ongoing") is NOT the same boundary as the round's outcome
+// being decided — her timer keeps running through Post-Round Phase and can
+// still expire and kill her during it; she's only safe once the NEXT Buy
+// Phase actually begins. So the correct boundary for this check is nominal
+// Round Phase PLUS the confirmed 7s Post-Round Phase — not nominal alone
+// (an earlier version of this comment argued the opposite and was wrong).
 const POST_ROUND_PHASE_MS=7000;
 const CLOVE_REVIVE_SPIKE_BOUNDARY_MS=45000+POST_ROUND_PHASE_MS;
 const CLOVE_REVIVE_ROUND_BOUNDARY_MS=100000+POST_ROUND_PHASE_MS;
@@ -1380,16 +1374,6 @@ const CLOVE_REVIVE_ROUND_BOUNDARY_MS=100000+POST_ROUND_PHASE_MS;
 // under this ceiling — so it's a validated bound, not just a paper one.
 // See computeRealDeaths case 2b for how this gets used.
 const MAX_CLOVE_SELF_REVIVE_WINDOW_MS=17300;
-
-// How much of the available window (from becoming last-alive, or the
-// plant if later, through to detonation or round-timer expiry) can pass
-// with zero engagement before a late kill stops counting as a real
-// attempt. Real examples: a player sitting completely still for 30-50s
-// of a 35-45s window, then fighting back only in the final seconds
-// because an enemy happened to walk into them, was never making a play
-// for the win. The earlier silence is the signal, not how the last few
-// seconds looked. 0.5 = idle for at least half the available window.
-const IDLE_RATIO_THRESHOLD=0.5;
 
 /* ── Step 1 · Who was actually in this round? ─────────────────────── */
 
@@ -1734,92 +1718,47 @@ function detectClutch(roundKills,realDeath,pTeam,puuid,startMyAlive=5,startEnemy
 
 /* ── Step 4 · How did it end? ─────────────────────────────────────── */
 
-// Turns the raw facts from Step 3, plus round context (plant/defuse
-// timing and attack/defense side), into Win / Loss / Exit / Save.
-// This is the "was it a real attempt" bar, separate from detection.
-function classifyClutchOutcome({won,killsAfterClutch,deathMs,killTimes,enemyAliveAfterLastKill,clutchStartMs,plantMs,defuseMs,side}){
-  let outcome;
-
-  if(won){
-    outcome='win';
-
-  }else if(killsAfterClutch===0){
-    // No kill at all — unambiguous regardless of timing. Died with
-    // nothing to show for it is a loss however fast or slow; survived
-    // the whole round without firing a shot is a save.
-    //
-    // Save applies the same way regardless of side or plant status.
-    // Weapon carryover depends only on whether you personally survived,
-    // not the team-level credit tier. An attacker who survives after a
-    // teammate's plant gets defused actually nets more credits than the
-    // no-plant case while keeping their gun just the same, so gating
-    // this on plant status would call the worse outcome a save and the
-    // better one not.
-    //
-    // The idle-window check below is deliberately skipped here: there's
-    // no kill whose genuineness needs second-guessing, and running it
-    // was an actual bug — a player who died fighting BEFORE the plant
-    // had their real death fall outside a window that only starts
-    // counting from the plant, making a genuine death look like silence
-    // and default to "save."
-    outcome=deathMs==null?'save':'loss';
-
-  }else{
-    // Got at least one kill. Were they engaged through their available
-    // window, or silent until it was basically over?
-    //
-    // Window runs from becoming last-alive (or the plant, if that comes
-    // later) through to detonation — or the round timer if never
-    // planted. When the round ended by defuse, that real timestamp is
-    // the window's true end rather than assuming the full spike timer
-    // elapsed: a defuse can finish well before the spike would have gone
-    // off (confirmed case overshot by 30+ seconds), and an inflated
-    // denominator makes genuinely idle behaviour look mostly engaged.
-    const windowStart=(plantMs!=null)?Math.max(clutchStartMs,plantMs):clutchStartMs;
-    const windowEnd=(plantMs!=null)?(defuseMs??(plantMs+SPIKE_TIMER_MS)):ROUND_TIMER_MS;
-    const windowDuration=windowEnd-windowStart;
-
-    const killsInWindow=killTimes.filter(t=>t>=windowStart&&t<=windowEnd);
-    const deathInWindow=(deathMs!=null&&deathMs>=windowStart&&deathMs<=windowEnd)?deathMs:null;
-    const actionTimes=[...killsInWindow,...(deathInWindow!=null?[deathInWindow]:[])];
-    const firstActionMs=actionTimes.length?Math.min(...actionTimes):windowEnd;
-    const idleMs=Math.max(0,firstActionMs-windowStart);
-    const idleRatio=windowDuration>0?idleMs/windowDuration:0;
-
-    if(idleRatio>=IDLE_RATIO_THRESHOLD){
-      // Sat out most of the window — a late kill doesn't retroactively
-      // make that a real attempt.
-      outcome='exit';
-    }else if(deathMs==null){
-      // Engaged, and survived without dying. A full wipe (no enemies
-      // left after the last kill) is never an exit — it's the most
-      // complete attempt possible, whatever ended the round afterward
-      // (e.g. a spike they couldn't reach in time). Otherwise they got
-      // some value but never died, which reads as exit.
-      outcome=enemyAliveAfterLastKill>0?'exit':'loss';
-    }else{
-      // Engaged, got a kill, then died — what a genuine attempt usually
-      // looks like. An earlier "enough time + enemies still left" check
-      // flagged clearly genuine attempts as exit just because the raw
-      // clock and headcount happened to look comfortable (two kills
-      // 407ms apart, then dying to the last two enemies 6 seconds later
-      // — about as real as it gets, yet called an exit). Blatant exits
-      // are rare; losing the fight after engaging is the norm.
-      outcome='loss';
-    }
-  }
-
-  // Exit is dropped on attack specifically. Real-data checks across 277
-  // attack-side situations (4 players, multiple ranks) fired it on just
-  // 7, and tracing every one showed genuine continuous engagement
-  // (fighting to stop a plant or defuse), not a deliberate "didn't try"
-  // pattern. With zero validated examples of a real attack-side exit to
-  // calibrate against, defaulting them to loss is safer than keeping an
-  // unvalidated classification. Defense keeps exit — that side has
-  // confirmed real examples.
-  if(outcome==='exit'&&side==='attack')outcome='loss';
-
-  return outcome;
+// Turns the raw facts from Step 3 into Win / Loss / Save, following the
+// game's own definitions of those terms rather than an inferred-intent
+// model. Separate from detection.
+//
+//   WIN  — Riot: "a type of round outcome where the round was won by the
+//          last player alive on the team."
+//   SAVE — Riot: "when the opponent team's victory is guaranteed for a
+//          round, and remaining teammates choose to run and hide in order
+//          to avoid losing their weapons by dying to opponents." The
+//          defining fact is surviving with the gun, NOT going killless:
+//          an exit frag is by definition a kill taken while saving, so
+//          picking one up on the way out is still a save.
+//   LOSS — the round was lost and the weapon went with it, i.e. they died.
+//
+// So once the round is lost, the ONLY question is whether the player walked
+// away with their gun. Nothing else is consulted:
+//   - Kill count doesn't matter. An exit frag is by definition a kill taken
+//     while saving, so picking one up on the way out is still a save.
+//   - Wiping the remaining enemies and still losing (killed everyone, but
+//     couldn't reach a planted spike in time) is still a save — they kept
+//     the gun. Dying to that spike mid-defuse is what makes it a loss, and
+//     that's already covered by the death check.
+//   - Side and plant status are deliberately not consulted: weapon carryover
+//     depends only on whether you personally survived, not the team-level
+//     credit tier. An attacker who survives after a teammate's plant gets
+//     defused actually nets more credits than the no-plant case while
+//     keeping their gun just the same, so gating on plant status would call
+//     the worse outcome a save and the better one not.
+//
+// There used to be a fourth outcome, EXIT ("got a kill but never really
+// played for the round"), split out by an idle-ratio test over the
+// player's available window. It's gone: it inferred intent from kill
+// timing and never validated — the attack side was already being coerced
+// back to loss because real-data checks across 277 attack-side situations
+// fired exit on just 7, and tracing every one showed genuine continuous
+// engagement rather than a deliberate "didn't try" pattern. Carving it
+// out had also forced SAVE into an artificial "zero kills" shape, which
+// is what's corrected here.
+function classifyClutchOutcome({won,deathMs}){
+  if(won)return 'win';
+  return deathMs==null?'save':'loss';
 }
 
 /* ── PROCESS MATCH ──────────────────────────────────────── */
@@ -1841,24 +1780,19 @@ function processMatch(m){
   // once — whatever enemyAlive happens to be at that exact moment is the
   // clutch type (1v1 through 1v5).
   //
-  // Every clutch situation resolves into exactly ONE of four outcomes:
+  // Every clutch situation resolves into exactly ONE of three outcomes:
   //   WIN  — team won the round (killed everyone / defused / both — the API
   //          doesn't let us cheaply distinguish which, so this stays one
   //          bucket for now).
-  //   LOSS — a genuine attempt that failed: died while actually trying
-  //          (held for a while before dying), or got caught immediately
-  //          with nothing to show for it. Either way: they died, or the
-  //          round was lost while they were actively contesting it.
-  //   EXIT — never really tried to WIN the round, just took a trade/pick for
-  //          stat value (got a kill) — whether or not they died afterward.
-  //   SAVE — never tried and never got value either: survived to the round's
-  //          end (spike went off / timer ran out) without a single kill —
-  //          i.e. held their gun and let it happen rather than contesting.
+  //   LOSS — the round was lost and the weapon went with it: they died.
+  //   SAVE — the round was lost but they survived, keeping their gun for the
+  //          next one. Kills taken on the way out are exit frags and don't
+  //          stop it being a save.
   //
-  // The dividing line between "genuine attempt" (LOSS) and "didn't really
-  // try" (EXIT) is primarily about whether they were actually ENGAGED through
-  // their available window, not just the state at their final kill/death —
-  // see IDLE_RATIO_THRESHOLD below for why that mattered.
+  // So once the round is lost the dividing line is simply "did you survive
+  // with the gun" (SAVE) or not (LOSS). See classifyClutchOutcome for the
+  // sourced game definitions, and for why the old fourth outcome, EXIT,
+  // was dropped.
   const clutchAllByPuuid=new Map();
   if(Array.isArray(m.kills)&&Array.isArray(m.rounds)){
     const killsByRound=[];
@@ -1871,17 +1805,10 @@ function processMatch(m){
       const pTeam=p.team_id?.toLowerCase();
       const myRoster=pTeam==='red'?redRoster:blueRoster;
       const enemyRoster=pTeam==='red'?blueRoster:redRoster;
-      const byType={1:{win:0,loss:0,exit:0,save:0},2:{win:0,loss:0,exit:0,save:0},3:{win:0,loss:0,exit:0,save:0},4:{win:0,loss:0,exit:0,save:0},5:{win:0,loss:0,exit:0,save:0}};
+      const byType={1:{win:0,loss:0,save:0},2:{win:0,loss:0,save:0},3:{win:0,loss:0,save:0},4:{win:0,loss:0,save:0},5:{win:0,loss:0,save:0}};
       for(let r=0;r<m.rounds.length;r++){
         const roundData=m.rounds[r];
         const roundKills=killsByRound[r]||[];
-        const plantMs=roundData.plant?.round_time_in_ms??null;
-        const defuseMs=roundData.defuse?.round_time_in_ms??null;
-        // Attack/defense for this round, from who planted — only known when a
-        // plant actually happened; stays null otherwise (round timed out or
-        // was decided by elimination with no plant, which could be either side).
-        const planterTeam=roundData.plant?.player?.team?.toLowerCase()??null;
-        const side=planterTeam?(planterTeam===pTeam?'attack':'defense'):null;
         const{realDeath,unresolved}=realDeathByRound[r]||{realDeath:{},unresolved:new Set()};
         // Corrected starting alive-counts — NOT always 5/5. A teammate who
         // was AFK/disconnected this round doesn't count toward "how many
@@ -1892,9 +1819,9 @@ function processMatch(m){
         const startEnemyAlive=presentCount(enemyRoster,roundData,roundKills);
         const detected=detectClutch(roundKills,realDeath,pTeam,p.puuid,startMyAlive,startEnemyAlive);
         if(!detected)continue;
-        const{clutchType,clutchStartMs,killsAfterClutch,killTimes,enemyAliveAfterLastKill,deathMs}=detected;
+        const{clutchType,deathMs}=detected;
         const won=roundData.winning_team?.toLowerCase()===pTeam;
-        const outcome=classifyClutchOutcome({won,killsAfterClutch,deathMs,killTimes,enemyAliveAfterLastKill,clutchStartMs,plantMs,defuseMs,side});
+        const outcome=classifyClutchOutcome({won,deathMs});
         // A round carrying an unverifiable death is excluded from the
         // aggregate rather than guessed at — but only when the ambiguity
         // actually reaches this player's computed outcome. "Unresolved"
@@ -1912,7 +1839,7 @@ function processMatch(m){
         // depends on kill timing) and catches more: e.g. a kill on the
         // ambiguous player landing after the round was already decided
         // falls outside the idle-ratio window either way, so it's inert
-        // even for a loss/exit outcome. It only stays sensitive — and
+        // even for a loss outcome. It only stays sensitive — and
         // correctly excluded — when the ambiguous death is what triggered
         // the clutch itself (a teammate's death dropping the team to
         // last-alive): if they didn't really die, there was no clutch at
@@ -1927,12 +1854,12 @@ function processMatch(m){
           const altRealDeath={...realDeath};
           for(const u of unresolved)delete altRealDeath[u];
           const detectedAlt=detectClutch(roundKills,altRealDeath,pTeam,p.puuid,startMyAlive,startEnemyAlive);
-          const outcomeAlt=detectedAlt?classifyClutchOutcome({won,killsAfterClutch:detectedAlt.killsAfterClutch,deathMs:detectedAlt.deathMs,killTimes:detectedAlt.killTimes,enemyAliveAfterLastKill:detectedAlt.enemyAliveAfterLastKill,clutchStartMs:detectedAlt.clutchStartMs,plantMs,defuseMs,side}):null;
+          const outcomeAlt=detectedAlt?classifyClutchOutcome({won,deathMs:detectedAlt.deathMs}):null;
           countThis=detectedAlt!=null&&detectedAlt.clutchType===clutchType&&outcomeAlt===outcome;
         }
         if(countThis)byType[clutchType][outcome]++;
       }
-      if(Object.values(byType).some(t=>t.win||t.loss||t.exit||t.save))clutchAllByPuuid.set(p.puuid,byType);
+      if(Object.values(byType).some(t=>t.win||t.loss||t.save))clutchAllByPuuid.set(p.puuid,byType);
     }
   }
 
@@ -2036,7 +1963,7 @@ function processMatch(m){
   const mePlayerOut=playersOut.find(p=>PUUID?p.puuid===PUUID:
     `${p.name}#${p.tag}`.toLowerCase()===`${PLAYER}#${TAG}`.toLowerCase());
   const myAcsPlace=mePlayerOut?._acsPlace??null;
-  const myClutchAll=mePlayerOut?._clutchAll??null; // {1:{win,loss,exit,save},...,5:{...}} or null
+  const myClutchAll=mePlayerOut?._clutchAll??null; // {1:{win,loss,save},...,5:{...}} or null
   const matchId=meta.match_id??m.match_id??null;
 
   // Party size — count teammates sharing the same party_id as me
@@ -2545,47 +2472,16 @@ function renderStats(skipPlaytime){
 
   const wins=statsPanelMatches.filter(m=>m.won===true).length;
   const wr=n?Math.round(wins/n*100):0;
-  const wrColor=wr>=50?'#22c55e':'#ef4444';
   document.getElementById('sg-games').textContent=n;
   document.getElementById('sg-wr').textContent=wr+'%';
-  // Solid-colored pill backgrounds, matching the Clutches card's treatment —
-  // white text throughout, colored by value where a good/bad read makes
-  // sense (K/D, Win Rate), and a fixed distinctive color otherwise (ACS,
-  // Games) purely for visual variety rather than implying a judgment.
-  function colorPill(pillId,lblId,bg){
-    const pill=document.getElementById(pillId);
-    if(!pill)return;
-    pill.style.background=bg;
-    pill.style.borderColor='transparent';
-    const val=pill.querySelector('.tm-pill-val');
-    if(val)val.style.color='#fff';
-    const lbl=document.getElementById(lblId);
-    if(lbl){lbl.style.color='#fff';lbl.style.opacity='.85';}
-  }
-  colorPill('sg-games-pill','sg-games-lbl','#3b82f6');
-  colorPill('sg-wr-pill','sg-wr-lbl',wrColor);
 
   renderClutchCard(statsPanelMatches);
 
   const overallRR=overall!=null?tierRR(overall):null;
   const avgRankTier=overallRR?overallRR.tier:null;
   document.getElementById('sg-avg-rank').innerHTML=(avgRankTier!=null?rankIcon(avgRankTier,40)+' ':'')+(overall!=null?`<span>${avgLabel(avgRankTier)}<span class="s-value-suffix"> (${overallRR.rr} RR)</span></span>`:avgLabel(overall));
-  // Last 20 games avg rank — its own standout section under the rank value
-  // (using the space freed up by removing the rank-breakdown chips).
-  const last20=avgs.slice(-20);
-  const recent20=last20.length?last20.reduce((a,b)=>a+b,0)/last20.length:null;
-  const recent20RR=recent20!=null?tierRR(recent20):null;
-  const heroRecent=document.getElementById('hero-recent');
-  if(recent20!=null){
-    heroRecent.style.display='flex';
-    document.getElementById('hero-recent-body').innerHTML=
-      `<span class="hero-recent-rank">${avgLabel(recent20RR.tier)}<span class="hero-recent-rr"> (${recent20RR.rr} RR)</span></span>`;
-  }else{
-    heroRecent.style.display='none';
-  }
 
   document.getElementById('sg-kd').textContent=avgKD!=null?avgKD.toFixed(2):'—';
-  colorPill('sg-kd-pill','sg-kd-lbl',(avgKD!=null&&avgKD>=1)?'#22c55e':'#ef4444');
 
   // Avg ACS — total combat score ÷ total rounds (weighted, matches tracker.gg)
   const acsGames=statsPanelMatches.filter(m=>m.myStats?.acs!=null&&m.myStats?.rounds_played>0);
@@ -2593,7 +2489,6 @@ function renderStats(skipPlaytime){
   const totalAcsRounds=acsGames.reduce((a,m)=>a+m.myStats.rounds_played,0);
   const avgAcs=totalAcsRounds>0?Math.round(totalAcsScore/totalAcsRounds):null;
   document.getElementById('sg-acs').textContent=avgAcs!=null?avgAcs:'—';
-  colorPill('sg-acs-pill','sg-acs-lbl','#14b8a6');
 
   renderRankByRankCard();
 
@@ -3372,26 +3267,26 @@ const RANK_MODE_ORDER=['lobby','player','party'];
 // scope as the rest of the Stats panel (always counts placement games, all
 // party sizes).
 function renderClutchCard(matches){
-  const totals={1:{win:0,loss:0,exit:0,save:0},2:{win:0,loss:0,exit:0,save:0},3:{win:0,loss:0,exit:0,save:0},4:{win:0,loss:0,exit:0,save:0},5:{win:0,loss:0,exit:0,save:0}};
+  const totals={1:{win:0,loss:0,save:0},2:{win:0,loss:0,save:0},3:{win:0,loss:0,save:0},4:{win:0,loss:0,save:0},5:{win:0,loss:0,save:0}};
   matches.forEach(m=>{
     if(!m.myClutchAll)return;
     for(let t=1;t<=5;t++){
       const s=m.myClutchAll[t];
       if(!s)continue;
       totals[t].win+=s.win||0;totals[t].loss+=s.loss||0;
-      totals[t].exit+=s.exit||0;totals[t].save+=s.save||0;
+      totals[t].save+=s.save||0;
     }
   });
-  const grandTotal=Object.values(totals).reduce((a,t)=>a+t.win+t.loss+t.exit+t.save,0);
+  const grandTotal=Object.values(totals).reduce((a,t)=>a+t.win+t.loss+t.save,0);
   const row=document.getElementById('clutch-section-row');
   if(!grandTotal){row.style.display='none';return;}
   row.style.display='block';
 
   // Per-type pills — the simplest possible clutch definition: every
   // situation where you became the last one alive either ended in your team
-  // winning the round or it didn't. That's it — no attempt/exit/save
+  // winning the round or it didn't. That's it — no attempt/save
   // distinction factors in here at all, every situation counts toward the
-  // total, "not won" is just "not won" regardless of why. The full 4-outcome
+  // total, "not won" is just "not won" regardless of why. The full 3-outcome
   // breakdown (where that distinction DOES matter) is the bar below instead.
   const grid=document.getElementById('clutch-grid');
   // Colors follow the same progression vlr.gg uses on its multi-kill columns
@@ -3401,8 +3296,8 @@ function renderClutchCard(matches){
   // same teal/blue/indigo progression.
   const CLUTCH_COLORS={1:'#22c55e',2:'#14b8a6',3:'#3b82f6',4:'#6366f1',5:'#a855f7'};
   grid.innerHTML=[1,2,3,4,5].map(t=>{
-    const{win,loss,exit,save}=totals[t];
-    const situations=win+loss+exit+save;
+    const{win,loss,save}=totals[t];
+    const situations=win+loss+save;
     const pct=situations?Math.round(win/situations*100):null;
     const val=pct!=null?`${pct}%`:'—';
     const lbl=situations?`1v${t} (${win}/${situations})`:`1v${t}`;
@@ -3411,19 +3306,18 @@ function renderClutchCard(matches){
   }).join('');
 
   // Outcome breakdown — every clutch situation, across all types, split into
-  // the 4 possible outcomes. This is the headline view for "do they even try":
-  // Win/Loss are genuine attempts; Exit/Save are not (see processMatch for
-  // the exact classification, which weighs time-remaining-on-clock and
-  // enemies-still-alive rather than a flat timer).
-  let win=0,loss=0,exit=0,save=0;
-  Object.values(totals).forEach(t=>{win+=t.win;loss+=t.loss;exit+=t.exit;save+=t.save;});
+  // the 3 possible outcomes. This is the headline view for "do they even try":
+  // Win/Loss are genuine attempts, a Save is not (see classifyClutchOutcome
+  // for the exact rule — surviving the round without a single kill).
+  let win=0,loss=0,save=0;
+  Object.values(totals).forEach(t=>{win+=t.win;loss+=t.loss;save+=t.save;});
   const behaviorEl=document.getElementById('clutch-behavior');
   behaviorEl.style.display='block';
   const attemptPct=Math.round((win+loss)/grandTotal*100);
   document.getElementById('clutch-avg-time').textContent=`${attemptPct}% genuinely attempted`;
   const bar=document.getElementById('clutch-behavior-bar');
   bar.innerHTML=[
-    ['seg-win',win],['seg-loss',loss],['seg-exit',exit],['seg-save',save]
+    ['seg-win',win],['seg-loss',loss],['seg-save',save]
   ].filter(([,c])=>c>0).map(([cls,c])=>
     `<div class="${cls}" style="width:${(c/grandTotal*100).toFixed(2)}%"></div>`
   ).join('');
@@ -3431,9 +3325,8 @@ function renderClutchCard(matches){
   const pct=c=>Math.round(c/grandTotal*100);
   legend.innerHTML=`
     <span class="clutch-legend-item" title="Won the round — killed everyone, defused, or both"><span class="clutch-legend-dot seg-win"></span>Win: <strong>${win}</strong> (${pct(win)}%)</span>
-    <span class="clutch-legend-item" title="Genuinely tried to win the round and lost — died holding, or the bomb went off while contesting it"><span class="clutch-legend-dot seg-loss"></span>Loss: <strong>${loss}</strong> (${pct(loss)}%)</span>
-    <span class="clutch-legend-item" title="Didn't attempt to win — took a trade/pick for stat value instead of playing for the round"><span class="clutch-legend-dot seg-exit"></span>Exit: <strong>${exit}</strong> (${pct(exit)}%)</span>
-    <span class="clutch-legend-item" title="Didn't attempt to win and got no value either — let the timer run out or never went for the defuse"><span class="clutch-legend-dot seg-save"></span>Save: <strong>${save}</strong> (${pct(save)}%)</span>
+    <span class="clutch-legend-item" title="Lost the round and the gun with it — died contesting it, or died to the spike"><span class="clutch-legend-dot seg-loss"></span>Loss: <strong>${loss}</strong> (${pct(loss)}%)</span>
+    <span class="clutch-legend-item" title="Lost the round but survived, keeping the weapon for the next one — exit frags along the way still count as a save"><span class="clutch-legend-dot seg-save"></span>Save: <strong>${save}</strong> (${pct(save)}%)</span>
   `;
 }
 
@@ -3707,7 +3600,7 @@ function buildPlayersGrid(m){
     if(hasClutches){
       for(const t of Object.values(p._clutchAll)){
         clWins+=t.win;
-        clTotal+=t.win+t.loss+t.exit+t.save;
+        clTotal+=t.win+t.loss+t.save;
       }
     }
     const clVal=hasClutches?`${clWins}/${clTotal}`:'—';
