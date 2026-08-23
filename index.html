@@ -135,17 +135,26 @@ h1 span{color:var(--accent);}
 .summary-row.full-row{grid-template-columns:1fr;}
 @media(max-width:640px){.summary-row.top-row{grid-template-columns:1fr;}}
 .s-card{background:var(--glass);border:.5px solid var(--glass-border);border-top:2px solid var(--accent);border-radius:var(--radius-lg);padding:1.5rem 1.75rem 1.4rem;position:relative;overflow:hidden;isolation:isolate;transform:translateZ(0);display:flex;flex-direction:column;box-shadow:inset 0 1px 0 var(--glass-shine),0 8px 32px rgba(0,0,0,0.4),0 4px 28px rgba(var(--accent-rgb),.06);transition:box-shadow .5s ease,border-top-color .5s ease;}
-.s-card:not(.hero-card){border-top:1px solid var(--glass-border);box-shadow:inset 0 1px 0 var(--glass-shine),0 8px 24px rgba(0,0,0,.35);}
-.hero-card{padding:1.5rem 2rem 1.6rem;}
-.hero-card::before{content:'';position:absolute;top:-40%;left:-10%;width:70%;height:140%;background:radial-gradient(circle,rgba(var(--accent-rgb),.16),transparent 65%);pointer-events:none;z-index:-1;transition:background .5s ease;}
+/* The rank card is the headline and keeps the accent top border plus the
+   rank-coloured glow; every other card (the stats pills included) is quieter. */
+.s-card:not(.rank-card){border-top:1px solid var(--glass-border);box-shadow:inset 0 1px 0 var(--glass-shine),0 8px 24px rgba(0,0,0,.35);}
+/* Both keep the standard .s-card padding; the 14px gap between them comes
+   from .summary-grid, same as every other card pairing. */
+.hero-card{padding:1.25rem 1.5rem;}
+.rank-card::before{content:'';position:absolute;top:-40%;left:-10%;width:70%;height:140%;background:radial-gradient(circle,rgba(var(--accent-rgb),.16),transparent 65%);pointer-events:none;z-index:-1;transition:background .5s ease;}
+/* Extra breathing room below the title, on top of .card-title's own 14px —
+   this card's value is the biggest text on the page and reads cramped
+   against the title at the standard spacing every other card uses. */
+.rank-card .card-title{margin-bottom:22px;}
 .s-label{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;font-family:var(--font-display);font-weight:700;}
 .s-value{font-size:1.6rem;font-weight:700;line-height:1;word-break:break-word;letter-spacing:-.02em;font-variant-numeric:tabular-nums;} .s-value.small{font-size:1.1rem;}
-.hero-card .s-value{font-size:clamp(1.7rem,2.1vw + 1.3rem,2.6rem);}
-.hero-header{font-size:16px;font-weight:700;color:var(--text);font-family:var(--font-body);letter-spacing:-.01em;margin-top:-6px;margin-bottom:6px;}
+.rank-card .s-value{font-size:clamp(1.7rem,2.1vw + 1.3rem,2.6rem);}
 .s-value-suffix{font-size:.45em;font-weight:600;color:var(--muted);letter-spacing:0;white-space:nowrap;}
 .s-sub{font-size:12px;color:var(--muted);margin-top:10px;font-family:var(--font-body);}
-.stat-pill-row{display:flex;gap:10px;flex:1;align-items:stretch;}
-.stat-pill{display:flex;background:rgba(255,255,255,0.05);border:.5px solid var(--glass-border);border-radius:var(--radius-sm);padding:14px;flex:1;min-width:0;box-shadow:inset 0 1px 0 rgba(255,255,255,0.07);}
+/* Wraps rather than crushing: five pills at full width, but on a narrow
+   viewport they reflow instead of squeezing the labels down to nothing. */
+.stat-pill-row{display:flex;gap:10px;flex:1;align-items:stretch;flex-wrap:wrap;}
+.stat-pill{display:flex;background:rgba(255,255,255,0.05);border:.5px solid var(--glass-border);border-radius:var(--radius-sm);padding:14px;flex:1 1 120px;min-width:0;box-shadow:inset 0 1px 0 rgba(255,255,255,0.07);}
 .stat-pill-body{display:flex;flex-direction:column;justify-content:center;min-width:0;}
 .stat-pill-label{font-size:11px;color:var(--text);font-weight:700;letter-spacing:.05em;text-transform:uppercase;line-height:1.3;opacity:.9;}
 .stat-pill-value{font-size:1.5rem;font-weight:800;font-family:var(--font-body);line-height:1.15;white-space:nowrap;font-variant-numeric:tabular-nums;margin-top:3px;}
@@ -255,6 +264,9 @@ h1 span{color:var(--accent);}
 .m-result-tag.win{background:#22c55e;color:#fff;}
 .m-result-tag.loss{background:#ef4444;color:#fff;}
 .m-result-tag.draw{background:#f59e0b;color:#fff;}
+.match-rr-change{font-family:var(--font-body);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;padding:1px 6px;border-radius:var(--radius-xs);flex-shrink:0;white-space:nowrap;}
+.match-rr-change.gain{color:#22c55e;background:rgba(34,197,94,.12);}
+.match-rr-change.loss{color:#ef4444;background:rgba(239,68,68,.12);}
 .m-badge{text-align:right;flex-shrink:0;width:var(--match-badge-w,140px);}
 .m-badge-lbl{font-size:10px;color:var(--muted);font-family:var(--font-body);line-height:1;}
 .m-badge-val{font-size:13px;font-weight:700;line-height:1.3;font-variant-numeric:tabular-nums;}
@@ -397,33 +409,38 @@ h1 span{color:var(--accent);}
 
   <div id="results-section" style="display:none">
     <div class="summary-grid" id="summary-grid" style="display:none">
-      <!-- Merged top stats card -->
+      <!-- Avg lobby rank -->
+      <div class="summary-row full-row">
+        <div class="s-card rank-card">
+          <div class="card-title">Avg Lobby Rank</div>
+          <div class="s-value" id="sg-avg-rank" style="display:flex;align-items:center;gap:10px;white-space:nowrap;">—</div>
+        </div>
+      </div>
+      <!-- Stats -->
       <div class="summary-row full-row">
         <div class="s-card hero-card">
-          <div style="display:flex;align-items:flex-start;gap:1.5rem;">
-            <div style="flex:1.5;min-width:0;">
-              <div class="hero-header">Average Lobby Rank</div>
-              <div class="s-value" id="sg-avg-rank" style="display:flex;align-items:center;gap:10px;white-space:nowrap;">—</div>
+          <label class="hero-scope-toggle" id="reset-toggle" hidden title="Placement-week games after a total rank reset are greyed out and left out of your stats by default. Turn this on to count them.">
+            <input type="checkbox" id="reset-toggle-cb" onchange="toggleIncludeReset(this.checked)">
+            <span>Count placements (<span id="reset-toggle-count">0</span>)</span>
+          </label>
+          <div class="stat-pill-row">
+            <div class="stat-pill" id="sg-kd-pill">
+              <div class="stat-pill-body"><span class="stat-pill-label" id="sg-kd-lbl">Avg K/D</span><span class="stat-pill-value" id="sg-kd">—</span></div>
             </div>
-            <div style="padding-left:1.5rem;flex:2;min-width:0;display:flex;flex-direction:column;align-self:stretch;justify-content:center;">
-              <label class="hero-scope-toggle" id="reset-toggle" hidden title="Placement-week games after a total rank reset are greyed out and left out of your stats by default. Turn this on to count them.">
-                <input type="checkbox" id="reset-toggle-cb" onchange="toggleIncludeReset(this.checked)">
-                <span>Count placements (<span id="reset-toggle-count">0</span>)</span>
-              </label>
-              <div class="stat-pill-row">
-                <div class="stat-pill" id="sg-kd-pill">
-                  <div class="stat-pill-body"><span class="stat-pill-label" id="sg-kd-lbl">Avg K/D</span><span class="stat-pill-value" id="sg-kd">—</span></div>
-                </div>
-                <div class="stat-pill" id="sg-acs-pill">
-                  <div class="stat-pill-body"><span class="stat-pill-label" id="sg-acs-lbl">Avg ACS</span><span class="stat-pill-value" id="sg-acs">—</span></div>
-                </div>
-                <div class="stat-pill" id="sg-games-pill">
-                  <div class="stat-pill-body"><span class="stat-pill-label" id="sg-games-lbl">Games</span><span class="stat-pill-value" id="sg-games">—</span></div>
-                </div>
-                <div class="stat-pill" id="sg-wr-pill">
-                  <div class="stat-pill-body"><span class="stat-pill-label" id="sg-wr-lbl">Win Rate</span><span class="stat-pill-value" id="sg-wr">—</span></div>
-                </div>
-              </div>
+            <div class="stat-pill" id="sg-acs-pill">
+              <div class="stat-pill-body"><span class="stat-pill-label" id="sg-acs-lbl">Avg ACS</span><span class="stat-pill-value" id="sg-acs">—</span></div>
+            </div>
+            <div class="stat-pill" id="sg-adr-pill">
+              <div class="stat-pill-body"><span class="stat-pill-label" id="sg-adr-lbl">Avg ADR</span><span class="stat-pill-value" id="sg-adr">—</span></div>
+            </div>
+            <div class="stat-pill" id="sg-games-pill">
+              <div class="stat-pill-body"><span class="stat-pill-label" id="sg-games-lbl">Games</span><span class="stat-pill-value" id="sg-games">—</span></div>
+            </div>
+            <div class="stat-pill" id="sg-wr-pill">
+              <div class="stat-pill-body"><span class="stat-pill-label" id="sg-wr-lbl">Win Rate</span><span class="stat-pill-value" id="sg-wr">—</span></div>
+            </div>
+            <div class="stat-pill" id="sg-playtime-pill">
+              <div class="stat-pill-body"><span class="stat-pill-label" id="sg-playtime-lbl">Playtime</span><span class="stat-pill-value" id="sg-playtime">—</span></div>
             </div>
           </div>
         </div>
@@ -482,11 +499,6 @@ h1 span{color:var(--accent);}
     <!-- avg lobby rank trend -->
     <div class="playtime-section" id="rank-trend-section" style="display:none">
       <div id="rank-trend-container"></div>
-    </div>
-
-    <!-- playtime -->
-    <div class="playtime-section" id="playtime-section" style="display:none">
-      <div id="playtime-container"></div>
     </div>
 
     <!-- match list -->
@@ -804,6 +816,13 @@ function rClass(n){
 /* ── STATE ──────────────────────────────────────────────── */
 let PLAYER='',TAG='',REGION='eu',PLATFORM='pc',TARGET_SEASON='',PUUID='';
 let allMatches=[],statMatches=[],mhIncludeReset=false,resultFilters=new Set(),rankFilters=new Set(),partyFilters=new Set(),mapFilters=new Set(),mhVisible=PER_PAGE,mhData=[],mhLastDayKey=null,mhDayStats={};
+// match_id -> RR gained/lost that match, from /api/mmr-history. The server
+// persists every match it's ever seen for this player (see mergeRRHistory in
+// functions/api/[[path]].js), so this grows past the live upstream's ~20-game
+// window across repeated searches — but a given match still isn't guaranteed
+// to be covered (never fetched before, or persisted after this ran). Read via
+// _rrChangeByMatchId[matchId] ?? null, never assume it's present.
+let _rrChangeByMatchId={};
 // Single reused canvas 2D context for text-width measurement, created lazily on
 // first use — avoids allocating a fresh <canvas> every renderStats call.
 let _measureCtx=null;
@@ -1026,11 +1045,33 @@ function showSeasonSelect(){
   updateSeasonTriggerLabel();
 }
 
+// The search box takes "name#tag", and also accepts a raw PUUID pasted in
+// its place — same box, no separate mode. Returns null when the input is
+// neither. `key` is the identity used for prefetch caching.
+const PUUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function parseSearchInput(raw){
+  const s=(raw||'').trim();
+  if(PUUID_RE.test(s)){
+    const id=s.toLowerCase();
+    return{puuid:id,name:'',tag:'',key:id};
+  }
+  const hi=s.lastIndexOf('#');
+  if(hi<1||hi===s.length-1)return null;
+  const name=s.slice(0,hi),tag=s.slice(hi+1);
+  return{puuid:'',name,tag,key:`${name}#${tag}`};
+}
+// Account lookup for either input form.
+function accountUrlFor(p){
+  return p.puuid
+    ? `${API_BASE}/account-by-puuid/${encodeURIComponent(p.puuid)}`
+    : `${API_BASE}/account/${encodeURIComponent(p.name)}/${p.tag}`;
+}
+
 function onManualInput(){
   const raw=document.getElementById('m-nametag').value.trim();
-  const hi=raw.lastIndexOf('#');
-  const valid=hi>=1&&hi!==raw.length-1;
-  const key=valid?`${raw.slice(0,hi)}#${raw.slice(hi+1)}`:null;
+  const parsed=parseSearchInput(raw);
+  const valid=parsed!=null;
+  const key=parsed?parsed.key:null;
   // Return to the "Load acts" state if the name is invalid, or if it's changed
   // from the acts we already loaded — so the user can load acts for the new name.
   if(!valid || (_lastPrefetchKey && key!==_lastPrefetchKey)){
@@ -1045,22 +1086,24 @@ function onManualInput(){
 
 async function prefetchPlayerActs(){
   const raw=document.getElementById('m-nametag').value.trim();
-  const hi=raw.lastIndexOf('#');
-  if(hi<1||hi===raw.length-1){
+  const parsed=parseSearchInput(raw);
+  if(!parsed){
     shakeElement('season-placeholder-btn');
     return;
   }
-  const name=raw.slice(0,hi);
-  const tag=raw.slice(hi+1);
-  const key=`${name}#${tag}`;
+  const key=parsed.key;
   if(_lastPrefetchKey===key)return;
   const myId=++_prefetchId;
   showSeasonLoading();
   try{
-    const acctUrl=`${API_BASE}/account/${encodeURIComponent(name)}/${tag}`;
-    const{j:acctJ}=await apiGet(acctUrl);
+    const{j:acctJ}=await apiGet(accountUrlFor(parsed));
     if(myId!==_prefetchId)return;
-    const region=(acctJ.data||acctJ).region||'eu';
+    const acctData=acctJ.data||acctJ;
+    const region=acctData.region||'eu';
+    // A PUUID search only knows the name/tag after this lookup resolves.
+    const name=parsed.name||acctData.name||'';
+    const tag=parsed.tag||acctData.tag||'';
+    if(!name||!tag){showSeasonIdle('Load acts');return;}
 
     const mmrUrl=`${API_BASE}/rank/${region}/pc/${encodeURIComponent(name)}/${tag}`;
     const{j:mmrJ}=await apiGet(mmrUrl);
@@ -1144,22 +1187,24 @@ settleSearchBarWidthInstant();
 function runAnalysis(){
   let playerName,playerTag,playerRegion,playerPlatform,playerSeason;
   const rawNT=document.getElementById('m-nametag').value.trim();
-  const hiNT=rawNT.lastIndexOf('#');
-  if(hiNT<1||hiNT===rawNT.length-1){
+  const parsed=parseSearchInput(rawNT);
+  if(!parsed){
     shakeSearchBar();
     return;
   }
-  playerName=rawNT.slice(0,hiNT);
-  playerTag=rawNT.slice(hiNT+1);
+  playerName=parsed.name;
+  playerTag=parsed.tag;
   playerRegion='eu'; // overridden by account lookup
   playerPlatform='pc';
   playerSeason=document.getElementById('m-season').value;
-  PLAYER=playerName;TAG=playerTag;REGION=playerRegion;PLATFORM=playerPlatform;TARGET_SEASON=playerSeason;PUUID='';
+  // A PUUID search starts with the id already known and the name/tag blank;
+  // loadAll's account step fills those in from the by-puuid lookup.
+  PLAYER=playerName;TAG=playerTag;REGION=playerRegion;PLATFORM=playerPlatform;TARGET_SEASON=playerSeason;PUUID=parsed.puuid;
   setAccent('#3b82f6');
   document.body.classList.remove('rank-colored');
   document.getElementById('results-section').style.display='block';
   // Reset UI
-  ['summary-grid','rank-trend-section','clutch-section-row','playtime-section','teammates-section','match-list-section','show-history-btn'].forEach(id=>{
+  ['summary-grid','rank-trend-section','clutch-section-row','teammates-section','match-list-section','show-history-btn'].forEach(id=>{
     document.getElementById(id).style.display='none';
   });
   document.getElementById('matches-container').innerHTML='';
@@ -1169,11 +1214,12 @@ function runAnalysis(){
   document.getElementById('result-panel').classList.remove('shown');
   settleSearchBarWidth();
   allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;mhDayStats={};resultFilters.clear();rankFilters.clear();partyFilters.clear();mapFilters.clear();
+  _rrChangeByMatchId={};
   allTeammates=[];tmPage=0;
   // If the season dropdown's prefetch already fetched this exact player (the
   // common case — it runs while the player is still typing), reuse those
   // responses instead of re-fetching account+mmr from scratch.
-  const submittedKey=`${playerName}#${playerTag}`;
+  const submittedKey=parsed.key;
   const prefetchSnapshot=(_lastPrefetchKey===submittedKey&&_prefetchCache?.key===submittedKey)?_prefetchCache:null;
   _lastPrefetchKey='';
   _prefetchCache=null;
@@ -1976,8 +2022,11 @@ function processMatch(m){
   // My tier and RR for this match — used to derive peak rank
   const myTierId=me?.tier?.id??me?.currenttier??0;
   const myTierName=me?.tier?.patched??me?.currenttier_patched??rName(myTierId);
-  // v4 match player object uses `rr`; v3 used `ranking_in_tier` — check both
-  const myRR=null; // v4 match endpoint doesn't include per-match RR — fetched separately via mmr-history
+  // RR gained/lost this match, from /api/mmr-history (see loadAll's Step
+  // 1.5) — the v4 match endpoint itself doesn't include per-match RR at
+  // all. Only populated for whichever recent matches that fetch covered;
+  // null for everything else, not just genuinely unrated games.
+  const myRR=_rrChangeByMatchId[matchId]??null;
   return{mapName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,partySize,myPartyId,myAcsPlace,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
 }
 
@@ -1994,7 +2043,11 @@ function extractStats(p,fallbackRounds=null){
   const assists=s.assists??0;
   const score=s.score??s.combat_score??0;
   const rounds_played=s.rounds_played??s.roundsPlayed??fallbackRounds;
-  const dmg=p.damage_made??s.damage?.made??s.damage_made??null;
+  // Current v4 responses nest this as stats.damage.dealt (confirmed via a
+  // live match payload — .made/.damage_made don't exist in that shape and
+  // silently left dmg/adr null). Kept as fallbacks in case older cached
+  // responses or a future API version use one of those instead.
+  const dmg=s.damage?.dealt??p.damage_made??s.damage?.made??s.damage_made??null;
   const hs=p.headshots??s.headshots??s.shots?.head??null;
   const bs=p.bodyshots??s.bodyshots??s.shots?.body??null;
   const ls=p.legshots??s.legshots??s.shots?.leg??null;
@@ -2137,25 +2190,31 @@ async function loadAll(prefetchSnapshot=null){
     // Step 0: resolve PUUID so we can find the player in historical matches
     // regardless of name changes over time
     setStatus('Resolving player…',true);
+    // A PUUID search has no name/tag yet, so this lookup is the only way to
+    // get them — unlike a name#tag search, it can't be skipped past on error.
+    const byPuuid=!PLAYER&&!!PUUID;
     try{
       let acctJ;
       if(prefetchSnapshot?.acctJ){
         acctJ=prefetchSnapshot.acctJ;
       }else{
-        const acctUrl=`${API_BASE}/account/${encodeURIComponent(PLAYER)}/${TAG}`;
+        const acctUrl=accountUrlFor({puuid:byPuuid?PUUID:'',name:PLAYER,tag:TAG});
         ({j:acctJ}=await apiGet(acctUrl));
       }
       const acctData=acctJ.data||acctJ;
-      PUUID=acctData.puuid||'';
+      PUUID=acctData.puuid||PUUID;
       // Use API-returned name/tag for correct capitalisation
       if(acctData.name) PLAYER=acctData.name;
       if(acctData.tag)  TAG=acctData.tag;
       if(acctData.region){
         REGION=acctData.region.toLowerCase();
       }
-    }catch(_){
-      // If account lookup fails, fall back to name+tag matching
+    }catch(e){
+      // If account lookup fails, fall back to name+tag matching — except for
+      // a PUUID search, which has nothing to fall back to.
+      if(byPuuid)throw e;
     }
+    if(byPuuid&&(!PLAYER||!TAG))throw new Error('No account found for that PUUID');
     if(myGen!==_analysisGen)return;
     // Autocorrect the input's casing now that it's resolved (corrected casing
     // on success, the originally-typed value stays as a fallback on failure).
@@ -2237,6 +2296,21 @@ async function loadAll(prefetchSnapshot=null){
     // Reveal rank, season, and region together — nothing pops in separately.
     if(myGen!==_analysisGen)return;
     finalizeHeader(finalCurrent,finalSeasonLabel||getSeasonPreviewLabel());
+
+    // Step 1.5: per-match RR gained/lost, keyed by match_id so processMatch
+    // can attach it below. The proxy persists this server-side (see
+    // mergeRRHistory), so it can cover more than upstream's live ~20-game
+    // window — but still isn't guaranteed to cover every match. Best-effort
+    // and non-blocking of the rest of the flow either way.
+    try{
+      const rrUrl=`${API_BASE}/mmr-history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}`;
+      const{j:rrJ}=await apiGet(rrUrl);
+      const history=(rrJ.data||rrJ).history||[];
+      history.forEach(h=>{if(h.match_id)_rrChangeByMatchId[h.match_id]=h.last_change??null;});
+    }catch(_){
+      // No RR-change data this run — matches just fall back to myRR===null.
+    }
+    if(myGen!==_analysisGen)return;
 
     // Step 2: paginate match history, stopping when we hit targetCount
     let collected=[];
@@ -2489,6 +2563,14 @@ function renderStats(skipPlaytime){
   const totalAcsRounds=acsGames.reduce((a,m)=>a+m.myStats.rounds_played,0);
   const avgAcs=totalAcsRounds>0?Math.round(totalAcsScore/totalAcsRounds):null;
   document.getElementById('sg-acs').textContent=avgAcs!=null?avgAcs:'—';
+
+  // Avg ADR — total damage ÷ total rounds, same weighted approach as ACS
+  // (per-match average of averages would over-weight short matches).
+  const adrGames=statsPanelMatches.filter(m=>m.myStats?.adr!=null&&m.myStats?.rounds_played>0);
+  const totalDmg=adrGames.reduce((a,m)=>a+m.myStats.dmg,0);
+  const totalAdrRounds=adrGames.reduce((a,m)=>a+m.myStats.rounds_played,0);
+  const avgAdr=totalAdrRounds>0?Math.round(totalDmg/totalAdrRounds):null;
+  document.getElementById('sg-adr').textContent=avgAdr!=null?avgAdr:'—';
 
   renderRankByRankCard();
 
@@ -2994,100 +3076,20 @@ function renderRankTrend(matches){
 }
 
 /* ── PLAYTIME ────────────────────────────────────────────── */
+// Total playtime, rendered as a stat pill alongside K/D, ACS, Games and Win
+// Rate. This used to be its own card with a per-bucket bar chart; the chart
+// and its date-bucketing are gone, leaving just the headline total.
 function renderPlaytime(){
-  const container=document.getElementById('playtime-container');
-  container.innerHTML='';
-  if(chartInstances.playtime){chartInstances.playtime.destroy();delete chartInstances.playtime;}
+  const valEl=document.getElementById('sg-playtime');
+  const pill=document.getElementById('sg-playtime-pill');
+  if(!valEl||!pill)return;
 
   // Playtime always counts every match, including post-reset placement games —
   // unlike the rank/K-D stats above, it isn't gated by mhIncludeReset, since
   // time spent playing placements is real playtime either way.
   const withDur=allMatches.filter(m=>m.startedAtMs!=null&&m.durationMs!=null&&m.durationMs>0);
-  if(!withDur.length){document.getElementById('playtime-section').style.display='none';return;}
-
-  // Pick a bucket size that keeps the number of bars in a sensible range
-  // regardless of how far apart matches are — rather than jumping straight
-  // from 1-day to 7-day to 30-day buckets, which left awkward cases like 3
-  // weeks of data rendering as only 3 (very wide) bars. Instead we scale
-  // through a "nice" set of bucket sizes (in days) and pick the smallest one
-  // that keeps the bar count at or under TARGET_BARS.
-  const minMs=Math.min(...withDur.map(m=>m.startedAtMs));
-  const maxMs=Math.max(...withDur.map(m=>m.startedAtMs));
-  const spanDays=(maxMs-minMs)/86400000+1; // inclusive of both end days
-  const TARGET_BARS=12;
-  const NICE_BUCKET_DAYS=[1,2,3,5,7,14,21,30,45,60,90,120,182,365];
-  const bucketDays=NICE_BUCKET_DAYS.find(n=>Math.ceil(spanDays/n)<=TARGET_BARS)
-    ??NICE_BUCKET_DAYS[NICE_BUCKET_DAYS.length-1];
-  // 28+ day buckets read far more naturally aligned to real calendar months
-  // (variable length) than as a rolling N-day window, so switch to that once
-  // we're in "roughly monthly" territory.
-  const useMonths=bucketDays>=28;
-  // Multiples of 7 (7, 14, 21) look better aligned to real Monday-start weeks
-  // than to an arbitrary rolling window starting on whatever day the first
-  // match happened to fall on.
-  const weeksPerBucket=(!useMonths&&bucketDays%7===0)?bucketDays/7:null;
-
-  const dayStart=ms=>{const d=new Date(ms);return new Date(d.getFullYear(),d.getMonth(),d.getDate()).getTime();};
-  const rangeStartMs=dayStart(minMs);
-  // Monday of the week containing the first match, used as the anchor for
-  // week-aligned buckets so grouping matches how a calendar actually reads.
-  const firstMonday=(()=>{
-    const d=new Date(rangeStartMs);
-    const dow=d.getDay();
-    return new Date(d.getFullYear(),d.getMonth(),d.getDate()+((dow===0?-6:1)-dow)).getTime();
-  })();
-
-  // Formats a start/end pair as "22–28 Jun" (same month) or "29 Jun–5 Jul"
-  // (spanning months), so a multi-day bucket never reads as a single date.
-  function rangeLabel(startDate,endDate){
-    const sm=startDate.toLocaleDateString('en-GB',{month:'short'});
-    const em=endDate.toLocaleDateString('en-GB',{month:'short'});
-    return sm===em?`${startDate.getDate()}–${endDate.getDate()} ${sm}`:`${startDate.getDate()} ${sm}–${endDate.getDate()} ${em}`;
-  }
-
-  const buckets={};
-  withDur.forEach(m=>{
-    const day=dayStart(m.startedAtMs);
-    let sortVal;
-    if(useMonths){
-      const d=new Date(day);
-      sortVal=new Date(d.getFullYear(),d.getMonth(),1).getTime();
-    }else if(weeksPerBucket){
-      const daysSinceMonday=Math.floor((day-firstMonday)/86400000);
-      const idx=Math.floor(daysSinceMonday/(7*weeksPerBucket));
-      sortVal=firstMonday+idx*7*weeksPerBucket*86400000;
-    }else if(bucketDays===1){
-      sortVal=day;
-    }else{
-      // Arbitrary N-day rolling window anchored to the first match's day.
-      const daysSinceStart=Math.floor((day-rangeStartMs)/86400000);
-      const idx=Math.floor(daysSinceStart/bucketDays);
-      sortVal=rangeStartMs+idx*bucketDays*86400000;
-    }
-    if(!buckets[sortVal])buckets[sortVal]={ms:0,count:0,minDay:day,maxDay:day};
-    const b=buckets[sortVal];
-    b.ms+=m.durationMs;
-    b.count++;
-    if(day<b.minDay)b.minDay=day;
-    if(day>b.maxDay)b.maxDay=day;
-  });
-
-  // Label each bucket off the actual earliest/latest day it contains matches
-  // for — not the theoretical full bucket window. A 2-day bucket where only
-  // the second day has games should read "3 Jul", not "2–3 Jul" (which
-  // implied a match happened on the 2nd too).
-  Object.values(buckets).forEach(b=>{
-    b.label=useMonths
-      ?new Date(b.minDay).toLocaleDateString('en-GB',{month:'short',year:'2-digit'})
-      :(b.minDay===b.maxDay
-        ?new Date(b.minDay).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})
-        :rangeLabel(new Date(b.minDay),new Date(b.maxDay)));
-  });
-
-  const sortedKeys=Object.keys(buckets).map(Number).sort((a,b)=>a-b);
-  const labels=sortedKeys.map(k=>buckets[k].label);
-  const hours=sortedKeys.map(k=>+(buckets[k].ms/3600000).toFixed(2));
-  const counts=sortedKeys.map(k=>buckets[k].count);
+  if(!withDur.length){pill.style.display='none';valEl.textContent='—';return;}
+  pill.style.display='';
 
   const totalMs=withDur.reduce((s,m)=>s+m.durationMs,0);
   const totalH=Math.floor(totalMs/3600000);
@@ -3106,98 +3108,14 @@ function renderPlaytime(){
     ?(totalMs/3600000/Math.max(1,Math.ceil((Date.now()-seasonStartMs)/86400000))).toFixed(1)
     :null;
 
-  const card=document.createElement('div');
-  card.className='chart-container';
-  card.innerHTML=`
-    <div class="card-title playtime-title">Playtime</div>
-    <div class="playtime-head">
-      <div class="playtime-total"><span class="playtime-total-val">${totalH}h ${totalM}m</span><span class="playtime-total-lbl">across ${withDur.length} match${withDur.length===1?'':'es'}</span></div>
-      ${avgHoursPerDay!=null?`<div class="playtime-avgday"><span class="playtime-avgday-val">${avgHoursPerDay}h</span><span class="playtime-avgday-lbl">per day since season start</span></div>`:''}
-    </div>
-    <div class="playtime-canvas-wrap"><canvas></canvas></div>
-  `;
-  container.appendChild(card);
-  document.getElementById('playtime-section').style.display='block';
-
-  const canvas=card.querySelector('canvas');
-  const accentRgb=getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb').trim()||'59,130,246';
-  // Darkened (but still fully opaque) version of the accent color for the
-  // bottom of the bar gradient — using alpha-fade here instead would let
-  // the y-axis grid lines show through wherever they cross a bar.
-  const accentDarkRgb=accentRgb.split(',').map(n=>Math.round(parseFloat(n)*0.28)).join(',');
-  function barFill(ctx,hover){
-    const area=ctx.chart.chartArea;
-    if(!area)return `rgba(${accentRgb},1)`;
-    const g=ctx.chart.ctx.createLinearGradient(0,area.top,0,area.bottom);
-    g.addColorStop(0,hover?`rgba(${accentRgb},1)`:`rgba(${accentRgb},.9)`);
-    g.addColorStop(1,`rgba(${accentDarkRgb},1)`);
-    return g;
-  }
-
-  chartInstances.playtime=new Chart(canvas,{
-    type:'bar',
-    data:{
-      labels,
-      datasets:[{
-        label:'Hours Played',
-        data:hours,
-        backgroundColor:(ctx)=>barFill(ctx,false),
-        hoverBackgroundColor:(ctx)=>barFill(ctx,true),
-        borderColor:`rgba(${accentRgb},.9)`,
-        borderWidth:1,
-        borderRadius:5,
-        borderSkipped:false,
-        // Previously capped at a flat 46px, which left huge gaps whenever there
-        // were only a few bars (e.g. 3 weeks of data in a wide chart). Now bars
-        // fill most of their category slot (barPercentage/categoryPercentage)
-        // and only hit the hard ceiling (maxBarThickness) once there are many
-        // categories crammed in (e.g. daily granularity over two weeks).
-        barPercentage:0.7,
-        categoryPercentage:0.85,
-        maxBarThickness:90,
-      }]
-    },
-    options:{
-      responsive:true,
-      maintainAspectRatio:false,
-      layout:{padding:{top:22,bottom:4}},
-      plugins:{
-        legend:{display:false},
-        tooltip:{
-          backgroundColor:'rgba(10,10,12,.95)',
-          borderColor:`rgba(${accentRgb},.4)`,
-          borderWidth:1,
-          padding:10,
-          displayColors:false,
-          titleFont:{family:'Geist',size:11,weight:'700'},
-          bodyFont:{family:'Geist',size:11},
-          callbacks:{
-            title:()=>[], // no date heading — empty array fully collapses the title row
-            label:(item)=>{
-              const h=item.raw;
-              const hh=Math.floor(h);
-              const mm=Math.round((h-hh)*60);
-              const c=counts[item.dataIndex];
-              return[`${hh}h ${mm}m played`,`${c} match${c===1?'':'es'}`];
-            }
-          }
-        }
-      },
-      scales:{
-        x:{
-          grid:{display:false},
-          ticks:{color:'#6b7280',font:{family:'Geist',size:10},maxRotation:0,autoSkip:true,maxTicksLimit:labels.length},
-          border:{display:true,color:'rgba(255,255,255,.12)'}
-        },
-        y:{
-          beginAtZero:true,
-          grid:{color:'rgba(255,255,255,.05)',z:-1},
-          ticks:{color:'#6b7280',font:{family:'Geist',size:10},callback:(v)=>v+'h'},
-          border:{display:false}
-        }
-      }
-    }
-  });
+  // Hours only past a day's worth, otherwise Xh Ym — a four-digit minute
+  // count adds noise without adding information at that scale.
+  valEl.textContent=totalH>=24?`${totalH}h`:`${totalH}h ${totalM}m`;
+  const lbl=document.getElementById('sg-playtime-lbl');
+  if(lbl)lbl.textContent='Playtime';
+  pill.title=avgHoursPerDay!=null
+    ? `${totalH}h ${totalM}m across ${withDur.length} match${withDur.length===1?'':'es'} — ${avgHoursPerDay}h per day since season start`
+    : `${totalH}h ${totalM}m across ${withDur.length} match${withDur.length===1?'':'es'}`;
 }
 
 // Prevent double-click text selection on the Most Played With section
@@ -3635,10 +3553,15 @@ function buildPlayersGrid(m){
 }
 
 function buildMatchCard(m){
-  const {mapName,startedAt,won,myR,opR,avgRank,myStats,matchMvpPuuid,teamMvpPuuids}=m;
+  const {mapName,startedAt,won,myR,opR,avgRank,myStats,matchMvpPuuid,teamMvpPuuids,myRR}=m;
   const rc=won===true?'win':won===false?'loss':'draw';
   const rt=won===true?'Win':won===false?'Loss':'Draw';
   const score=(myR!=null&&opR!=null)?`${myR}–${opR}`:'—';
+  // Only shown for matches the RR-history fetch actually covered (see
+  // _rrChangeByMatchId) — most matches simply won't have this.
+  const rrChangeTag=myRR!=null
+    ?`<span class="match-rr-change ${myRR>=0?'gain':'loss'}" title="RR ${myRR>=0?'gained':'lost'} this match">${myRR>=0?'+':''}${myRR} RR</span>`
+    :'';
   // Show the avg-lobby tier as a rank division + RR (see tierRR).
   let rankTier=null,rankRR=null;
   if(avgRank!=null){const _t=tierRR(avgRank);rankTier=_t.tier;rankRR=_t.rr;}
@@ -3666,6 +3589,7 @@ function buildMatchCard(m){
         <span class="m-result-tag ${rc}">${rt}</span>
         <span class="match-map">${mapName}</span>
         <span class="match-score">${score}</span>
+        ${rrChangeTag}
         ${mvpTag}
         ${resetTag}
       </div>

@@ -24,6 +24,14 @@
  * varies by endpoint (see ROUTES). This runs independently of rate limiting
  * below — a cache hit never touches HenrikDev or the quota state at all.
  *
+ * RR-HISTORY PERSISTENCE: mmr-history's upstream only ever returns a
+ * player's most recent ~20 games. Routes flagged persistRRHistory merge
+ * every live fetch into a durable per-puuid record in RATE_LIMIT_KV (see
+ * mergeRRHistory), so the response — and what gets edge-cached — grows to
+ * cover everything ever seen for that player, not just today's rolling
+ * window. This is on the same KV namespace as the rate-limit quota state
+ * (different key prefix), not a separate binding.
+ *
  * RATE LIMITING — fully server-side now, nothing exposed to the browser:
  * HenrikDev's real rate-limit headers (remaining/reset/retry-after) used to
  * be forwarded straight to the client so it could pace itself. Two problems
@@ -64,6 +72,15 @@ const UPSTREAM = "https://api.henrikdev.xyz";
 const PREFIX = "/api";
 const QUOTA_KEY = "quota"; // single shared record — HenrikDev's limit is one pool across all endpoints
 
+// mmr-history's upstream only ever returns the most recent ~20 games. Every
+// live (cache-miss) fetch is merged into a per-player KV record — keyed by
+// puuid, not name/tag, since a Riot ID rename shouldn't orphan history —
+// so the client's view accumulates past that window across repeated
+// searches instead of being capped at whatever upstream feels like handing
+// back today. Capped defensively so one very-active or long-tracked player
+// can't grow a single KV value without bound.
+const RR_HISTORY_MAX_ENTRIES = 3000;
+
 // Pacing tuning — mirrors the client's old planDelay() logic, just now
 // operating on state shared across every concurrent user instead of one
 // browser's private view.
@@ -80,10 +97,27 @@ const ROUTES = [
     cacheTtl: 86400, // name/tag -> puuid: only changes on a Riot ID rename
   },
   {
+    // /api/account-by-puuid/{puuid}
+    match: /^\/account-by-puuid\/([^/]+)$/,
+    upstream: (m) => `/valorant/v1/by-puuid/account/${m[1]}`,
+    cacheTtl: 86400, // puuid -> name/tag: only changes on a Riot ID rename
+  },
+  {
     // /api/rank/{region}/{platform}/{name}/{tag}
     match: /^\/rank\/([^/]+)\/([^/]+)\/([^/]+)\/([^/]+)$/,
     upstream: (m) => `/valorant/v3/mmr/${m[1]}/${m[2]}/${m[3]}/${m[4]}`,
     cacheTtl: 90, // current rank/RR: changes the moment a match finishes
+  },
+  {
+    // /api/mmr-history/{region}/{platform}/{name}/{tag} — per-match RR gained/
+    // lost (the `last_change` field), correlated to a match via `match_id`.
+    // Upstream only ever returns the most recent ~20 games regardless of any
+    // size/start param (confirmed empirically). persistRRHistory below is
+    // what lets the client see further back than that.
+    match: /^\/mmr-history\/([^/]+)\/([^/]+)\/([^/]+)\/([^/]+)$/,
+    upstream: (m) => `/valorant/v2/mmr-history/${m[1]}/${m[2]}/${m[3]}/${m[4]}`,
+    cacheTtl: 150, // matches /history's TTL: the "latest 20" window shifts as new games finish
+    persistRRHistory: true,
   },
   {
     // /api/history/{region}/{platform}/{name}/{tag} (query string passed through as-is)
@@ -120,6 +154,66 @@ async function putQuota(env, state) {
   } catch (e) {
     // Non-fatal — worst case, pacing is a little less accurate next request.
   }
+}
+
+// Merges a fresh mmr-history response with whatever's already persisted in
+// KV for this player, returns the (possibly rewritten) body text to send to
+// both the client and the edge cache. Fails open — any parsing surprise
+// just returns the original upstream body untouched, since this is a nice-
+// to-have on top of an already-correct response, not load-bearing.
+async function mergeRRHistory(env, bodyText, waitUntil) {
+  let parsed;
+  try {
+    parsed = JSON.parse(bodyText);
+  } catch (e) {
+    return bodyText;
+  }
+  const puuid = parsed?.data?.account?.puuid;
+  const freshHistory = parsed?.data?.history;
+  if (!puuid || !Array.isArray(freshHistory)) return bodyText;
+
+  const kvKey = `rrhist:${puuid}`;
+  let stored = {};
+  try {
+    const raw = await env.RATE_LIMIT_KV.get(kvKey);
+    if (raw) stored = JSON.parse(raw);
+  } catch (e) {
+    // Corrupt or unreadable — proceed as if nothing was stored yet rather
+    // than failing the whole request over a persistence nice-to-have.
+    stored = {};
+  }
+
+  let hasNew = false;
+  for (const h of freshHistory) {
+    if (!h?.match_id) continue;
+    if (!(h.match_id in stored)) hasNew = true;
+    stored[h.match_id] = h; // fresh data wins on overlap — it's the more current read
+  }
+
+  // Only write back when there's actually something new — most requests for
+  // an already-seen player won't add anything, and skipping the write here
+  // avoids hammering this KV key with redundant puts every cache expiry.
+  if (hasNew) {
+    const merged = Object.values(stored)
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+      .slice(0, RR_HISTORY_MAX_ENTRIES);
+    const capped = {};
+    merged.forEach((h) => { capped[h.match_id] = h; });
+    waitUntil(
+      env.RATE_LIMIT_KV.put(kvKey, JSON.stringify(capped)).catch(() => {
+        // Non-fatal — worst case this player's history doesn't grow this round.
+      })
+    );
+    parsed.data.history = merged;
+  } else {
+    // Nothing new, but still hand back the full accumulated set (could
+    // already be more than these 20 from a prior visit).
+    parsed.data.history = Object.values(stored).sort(
+      (a, b) => new Date(b.date || 0) - new Date(a.date || 0)
+    );
+  }
+
+  return JSON.stringify(parsed);
 }
 
 // Parses HenrikDev's real rate-limit headers into {remaining, resetAt}.
@@ -226,8 +320,12 @@ export async function onRequestGet(context) {
     return json({ error: "Rate limited", retryAfterMs: Math.max(retryMs, resetMs, 1000) }, 429);
   }
 
-  const bodyText = await upstream.text();
+  let bodyText = await upstream.text();
   const contentType = upstream.headers.get("Content-Type") || "application/json";
+
+  if (upstream.status === 200 && route.persistRRHistory) {
+    bodyText = await mergeRRHistory(env, bodyText, context.waitUntil.bind(context));
+  }
 
   const res = new Response(bodyText, {
     status: upstream.status,
