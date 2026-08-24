@@ -146,10 +146,35 @@ h1 span{color:var(--accent);}
    this card's value is the biggest text on the page and reads cramped
    against the title at the standard spacing every other card uses. */
 .rank-card .card-title{margin-bottom:22px;}
+/* Two-up layout so Current and Avg Lobby rank sit side by side at equal
+   weight — the whole point being a direct, at-a-glance comparison. */
+.rank-compare{display:flex;align-items:stretch;gap:28px;}
+.rank-compare-col{flex:1;min-width:0;display:flex;flex-direction:column;}
+.rank-compare-divider{width:1px;flex-shrink:0;align-self:stretch;background:linear-gradient(180deg,transparent,var(--glass-border) 20%,var(--glass-border) 80%,transparent);}
+.rank-compare-lbl{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);margin-bottom:10px;}
+@media(max-width:640px){
+  .rank-compare{flex-direction:column;gap:20px;}
+  .rank-compare-divider{width:100%;height:1px;background:linear-gradient(90deg,transparent,var(--glass-border) 20%,var(--glass-border) 80%,transparent);}
+}
+.rank-icon-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+.rank-icon-halo{position:absolute;inset:-35%;border-radius:50%;background:radial-gradient(circle,rgba(var(--rank-color-rgb,var(--accent-rgb)),.4),transparent 70%);filter:blur(7px);animation:rankHaloPulse 3s ease-in-out infinite;pointer-events:none;z-index:-1;}
+@keyframes rankHaloPulse{0%,100%{opacity:.5;transform:scale(.92);}50%{opacity:1;transform:scale(1.1);}}
 .s-label{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;font-family:var(--font-display);font-weight:700;}
 .s-value{font-size:1.6rem;font-weight:700;line-height:1;word-break:break-word;letter-spacing:-.02em;font-variant-numeric:tabular-nums;} .s-value.small{font-size:1.1rem;}
-.rank-card .s-value{font-size:clamp(1.7rem,2.1vw + 1.3rem,2.6rem);}
-.s-value-suffix{font-size:.45em;font-weight:600;color:var(--muted);letter-spacing:0;white-space:nowrap;}
+.rank-card .s-value{font-size:clamp(1.35rem,1.7vw + 1rem,2rem);}
+.s-value-suffix{white-space:nowrap;}
+.rank-progress{margin-top:20px;}
+.rank-progress-track{height:7px;border-radius:99px;background:rgba(255,255,255,0.07);overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.4);}
+.rank-progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--rank-color,var(--accent)),rgba(255,255,255,.85));width:0%;transition:width 1s cubic-bezier(.22,1,.36,1),background .5s ease;position:relative;overflow:hidden;}
+/* The shine sweep's transform:translateX moves the WHOLE pseudo-element, not
+   just its gradient content, so without this the sweep would slide past the
+   fill's own right edge and stay visible in the still-empty track (the
+   track's overflow:hidden only clips the fill itself, not this pseudo). */
+.rank-progress-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:translateX(-100%);animation:rankShine 2.6s ease-in-out infinite;}
+@keyframes rankShine{0%{transform:translateX(-100%);}60%,100%{transform:translateX(100%);}}
+.rank-progress-fill.maxed{background:linear-gradient(90deg,#f0e0b0,#fff8dc,#f0e0b0);background-size:200% 100%;animation:rankMaxShimmer 2.5s linear infinite;}
+@keyframes rankMaxShimmer{0%{background-position:0% 0;}100%{background-position:200% 0;}}
+.rank-progress-lbl{margin-top:7px;font-size:11px;color:var(--muted);font-family:var(--font-body);display:flex;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums;}
 .s-sub{font-size:12px;color:var(--muted);margin-top:10px;font-family:var(--font-body);}
 /* Wraps rather than crushing: five pills at full width, but on a narrow
    viewport they reflow instead of squeezing the labels down to nothing. */
@@ -167,8 +192,6 @@ h1 span{color:var(--accent);}
 
 /* match list */
 .section-title{font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#fff;margin-bottom:12px;border-left:2px solid var(--accent);padding-left:8px;transition:border-color .5s ease;}
-.show-history-btn{display:block;width:100%;background:var(--glass);border:.5px solid var(--glass-border);border-radius:var(--radius-lg);padding:14px;font-family:var(--font-display);font-size:14px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);cursor:pointer;transition:background .15s,border-color .15s,color .15s,box-shadow .15s,transform .15s;margin-bottom:2rem;text-align:center;box-shadow:inset 0 1px 0 var(--glass-shine),0 8px 32px rgba(0,0,0,0.4);}
-.show-history-btn:hover{border-color:var(--accent);color:var(--fg);background:var(--glass-hover);}
 .teammates-section{min-width:0;}
 .card-title-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px;}
 .card-title-row .card-title{margin-bottom:0;}
@@ -207,7 +230,6 @@ h1 span{color:var(--accent);}
 .tm-pill-val{font-size:13px;font-weight:700;font-family:var(--font-body);line-height:1.1;white-space:nowrap;font-variant-numeric:tabular-nums;}
 .tm-pill-lbl{font-size:9px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:2px;white-space:nowrap;}
 .tm-kd-good{color:#22c55e;}.tm-kd-bad{color:#ef4444;}.tm-kd-mid{color:#9ca3af;}
-.filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;}
 .reset-toggle{display:inline-flex;align-items:center;gap:7px;margin-left:auto;font-size:12px;color:var(--muted);cursor:pointer;user-select:none;white-space:nowrap;}
 .reset-toggle[hidden]{display:none;}
 .reset-toggle:hover{color:var(--fg);}
@@ -216,29 +238,6 @@ h1 span{color:var(--accent);}
 .hero-scope-toggle[hidden]{display:none;}
 .hero-scope-toggle:hover{color:var(--text);}
 .hero-scope-toggle input{width:13px;height:13px;accent-color:var(--accent);cursor:pointer;margin:0;flex-shrink:0;}
-.filter-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);white-space:nowrap;}
-
-/* Filter dropdown (tick-box multi-select) */
-.filter-dd{position:relative;}
-.filter-trigger{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:.5px solid var(--glass-border);border-radius:var(--radius-sm);padding:7px 12px;font-family:var(--font-display);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;letter-spacing:.04em;text-transform:uppercase;transition:color .15s,border-color .15s,background .15s;box-shadow:inset 0 1px 0 rgba(255,255,255,0.05);}
-.filter-trigger:hover{background:var(--glass-hover);border-color:rgba(255,255,255,0.18);color:var(--text);}
-.filter-dd.open .filter-trigger{color:var(--text);border-color:var(--accent);background:rgba(var(--accent-rgb),.08);}
-.filter-trigger svg{width:14px;height:14px;flex-shrink:0;}
-.filter-caret{transition:transform .2s ease;}
-.filter-dd.open .filter-caret{transform:rotate(90deg);}
-.filter-panel{position:fixed;z-index:9999;min-width:210px;max-height:70vh;overflow-y:auto;background:#0d0d10;border:.5px solid var(--glass-border);border-radius:var(--radius-md);box-shadow:0 16px 40px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.04);padding:8px;display:none;isolation:isolate;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent;}
-.filter-panel.open{display:block;}
-.filter-panel-sec{padding:4px 2px;}
-.filter-panel-sec + .filter-panel-sec{border-top:.5px solid var(--border2);margin-top:4px;padding-top:8px;}
-.filter-panel-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);margin:0 6px 6px;}
-.filter-check{display:flex;align-items:center;gap:9px;padding:6px 6px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;color:var(--text);font-family:var(--font-body);transition:background .12s;user-select:none;}
-.filter-check:hover{background:rgba(255,255,255,.05);}
-.filter-check input{appearance:none;-webkit-appearance:none;width:16px;height:16px;margin:0;border:.5px solid var(--glass-border);border-radius:4px;background:rgba(255,255,255,.04);position:relative;cursor:pointer;flex-shrink:0;transition:background .12s,border-color .12s;}
-.filter-check input:checked{background:var(--accent);border-color:var(--accent);}
-.filter-check input:checked::after{content:'';position:absolute;left:5px;top:1.5px;width:4px;height:8px;border:solid #0b0b0d;border-width:0 2px 2px 0;transform:rotate(45deg);}
-.filter-clear{display:block;width:100%;margin-top:6px;padding:7px;background:none;border:none;border-top:.5px solid var(--border2);border-radius:0 0 var(--radius-sm) var(--radius-sm);color:var(--muted);font-family:var(--font-display);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:color .15s;}
-.filter-clear:hover{color:var(--text);}
-.filter-clear:disabled{opacity:.4;cursor:default;}
 .matches{display:flex;flex-direction:column;gap:8px;}
 .match-day-header{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;font-family:var(--font-body);padding-top:10px;}
 .match-day-header:first-child{padding-top:0;}
@@ -323,22 +322,31 @@ h1 span{color:var(--accent);}
 .clutch-behavior-title{font-size:11px;color:var(--muted);font-family:var(--font-body);}
 .clutch-behavior-avg{font-size:12px;font-weight:700;color:var(--text);font-family:var(--font-display);white-space:nowrap;}
 /* Hidden MMR card */
-.mmr-est-tag{font-size:9px;font-weight:600;letter-spacing:.06em;color:var(--muted);background:rgba(255,255,255,.06);border-radius:var(--radius-xs);padding:2px 5px;margin-left:6px;text-transform:uppercase;}
 .mmr-sample{font-size:11px;color:var(--muted);font-family:var(--font-body);white-space:nowrap;}
-.mmr-body{display:flex;gap:1.75rem;align-items:center;flex-wrap:wrap;}
-.mmr-figure{flex-shrink:0;}
-.mmr-big{font-size:2.4rem;font-weight:800;line-height:1;color:var(--accent);font-variant-numeric:tabular-nums;letter-spacing:-.02em;}
-.mmr-big span{font-size:.95rem;font-weight:600;color:var(--muted);letter-spacing:0;}
-.mmr-ci{font-size:11px;color:var(--muted);margin-top:5px;font-variant-numeric:tabular-nums;}
-.mmr-readout{flex:1;min-width:200px;}
-.mmr-compare{font-size:13px;color:var(--text);}
-.mmr-compare b{font-variant-numeric:tabular-nums;}
-.mmr-verdict{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.45;}
-.mmr-bar{position:relative;height:6px;border-radius:999px;background:rgba(255,255,255,.06);margin-top:12px;overflow:hidden;}
-.mmr-bar-fill{position:absolute;top:0;bottom:0;background:rgba(var(--accent-rgb),.45);border-radius:999px;}
-.mmr-bar-mark{position:absolute;top:-3px;width:2px;height:12px;background:var(--text);border-radius:1px;}
-.mmr-bar-lbls{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums;}
-.mmr-note{font-size:11px;color:var(--muted);line-height:1.5;margin-top:14px;padding-top:12px;border-top:.5px solid var(--glass-border);}
+/* Hero — same icon+name+RR treatment as the Current/Avg Lobby rank card,
+   just not confined to a .rank-compare-col (so it falls back to the shared
+   site accent for its icon halo instead of a per-column color). */
+.mmr-hero{display:flex;align-items:center;gap:10px;font-size:clamp(1.35rem,1.7vw + 1rem,2rem);font-weight:700;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--text);flex-wrap:wrap;margin-bottom:2px;}
+/* Chart */
+.mmr-chart-wrap{position:relative;height:230px;margin-top:14px;}
+.mmr-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;}
+.mmr-legend-item{display:inline-flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);font-family:var(--font-body);}
+.mmr-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.mmr-swatch-line{width:13px;height:2px;background:var(--accent);flex-shrink:0;}
+.mmr-swatch-v{width:2px;height:10px;background:var(--accent);flex-shrink:0;}
+/* Derivation — plain language, anchored to the two numbers a player already
+   understands (what a win pays, what a loss costs), not raw regression
+   coefficients (a "+92.6 baseline" is mathematically real but means nothing
+   to someone reading it — it only makes sense combined with the other terms). */
+.mmr-derivation{margin-top:16px;padding-top:14px;border-top:.5px solid var(--glass-border);}
+.mmr-derivation-title{font-size:11px;font-weight:700;color:var(--text);font-family:var(--font-display);margin-bottom:12px;}
+.mmr-payout-row{display:flex;gap:28px;margin-bottom:14px;}
+.mmr-payout-lbl{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);margin-bottom:3px;}
+.mmr-payout-val{font-size:21px;font-weight:800;font-family:var(--font-display);font-variant-numeric:tabular-nums;line-height:1.1;}
+.mmr-payout-val.win{color:#22c55e;}
+.mmr-payout-val.loss{color:#ef4444;}
+.mmr-explain{font-size:12px;color:var(--muted);line-height:1.6;}
+.mmr-explain b{color:var(--text);}
 .clutch-behavior-bar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.05);}
 .clutch-behavior-bar>div{height:100%;}
 .clutch-behavior-bar .seg-win{background:#22c55e;}
@@ -429,8 +437,31 @@ h1 span{color:var(--accent);}
       <!-- Avg lobby rank -->
       <div class="summary-row full-row">
         <div class="s-card rank-card">
-          <div class="card-title">Avg Lobby Rank</div>
-          <div class="s-value" id="sg-avg-rank" style="display:flex;align-items:center;gap:10px;white-space:nowrap;">—</div>
+          <div class="rank-compare">
+            <div class="rank-compare-col">
+              <div class="rank-compare-lbl">Current</div>
+              <div class="s-value" id="sg-current-rank" style="display:flex;align-items:center;gap:10px;white-space:nowrap;">—</div>
+              <div class="rank-progress" id="sg-current-rank-progress" hidden>
+                <div class="rank-progress-track"><div class="rank-progress-fill" id="sg-current-rank-progress-fill"></div></div>
+                <div class="rank-progress-lbl">
+                  <span id="sg-current-rank-progress-cur"></span>
+                  <span id="sg-current-rank-progress-next"></span>
+                </div>
+              </div>
+            </div>
+            <div class="rank-compare-divider"></div>
+            <div class="rank-compare-col">
+              <div class="rank-compare-lbl">Avg Lobby</div>
+              <div class="s-value" id="sg-avg-rank" style="display:flex;align-items:center;gap:10px;white-space:nowrap;">—</div>
+              <div class="rank-progress" id="sg-avg-rank-progress" hidden>
+                <div class="rank-progress-track"><div class="rank-progress-fill" id="sg-avg-rank-progress-fill"></div></div>
+                <div class="rank-progress-lbl">
+                  <span id="sg-avg-rank-progress-cur"></span>
+                  <span id="sg-avg-rank-progress-next"></span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <!-- Stats -->
@@ -466,22 +497,33 @@ h1 span{color:var(--accent);}
       <div class="summary-row full-row" id="mmr-section-row" style="display:none">
         <div class="s-card" id="mmr-card">
           <div class="card-title-row">
-            <div class="card-title">Hidden MMR <span class="mmr-est-tag">estimated</span></div>
+            <div class="card-title">Hidden MMR</div>
             <span class="mmr-sample" id="mmr-sample"></span>
           </div>
-          <div class="mmr-body">
-            <div class="mmr-figure">
-              <div class="mmr-big" id="mmr-big">—</div>
-              <div class="mmr-ci" id="mmr-ci"></div>
-            </div>
-            <div class="mmr-readout">
-              <div class="mmr-compare" id="mmr-compare"></div>
-              <div class="mmr-verdict" id="mmr-verdict"></div>
-              <div class="mmr-bar"><div class="mmr-bar-fill" id="mmr-bar-fill"></div><div class="mmr-bar-mark" id="mmr-bar-mark"></div></div>
-              <div class="mmr-bar-lbls"><span id="mmr-bar-lo"></span><span id="mmr-bar-hi"></span></div>
-            </div>
+          <div class="mmr-hero" id="mmr-big">—</div>
+
+          <div class="mmr-chart-wrap"><canvas id="mmr-chart-canvas"></canvas></div>
+          <div class="mmr-legend">
+            <span class="mmr-legend-item"><span class="mmr-dot" style="background:#22c55e"></span>Win</span>
+            <span class="mmr-legend-item"><span class="mmr-dot" style="background:#ef4444"></span>Loss</span>
+            <span class="mmr-legend-item"><span class="mmr-swatch-line"></span>Fitted trend</span>
+            <span class="mmr-legend-item"><span class="mmr-swatch-v"></span>Hidden MMR</span>
           </div>
-          <div class="mmr-note" id="mmr-note"></div>
+
+          <div class="mmr-derivation">
+            <div class="mmr-derivation-title">Why this number</div>
+            <div class="mmr-payout-row">
+              <div>
+                <div class="mmr-payout-lbl">Avg win</div>
+                <div class="mmr-payout-val win" id="mmr-payout-win"></div>
+              </div>
+              <div>
+                <div class="mmr-payout-lbl">Avg loss</div>
+                <div class="mmr-payout-val loss" id="mmr-payout-loss"></div>
+              </div>
+            </div>
+            <div class="mmr-explain" id="mmr-explain"></div>
+          </div>
         </div>
       </div>
       <!-- Clutches -->
@@ -541,38 +583,9 @@ h1 span{color:var(--accent);}
     </div>
 
     <!-- match list -->
-    <button class="show-history-btn" id="show-history-btn" style="display:none" onclick="toggleHistory()">
-      Show Match History
-    </button>
-    <div id="match-list-section" style="display:none">
+    <div id="match-list-section">
       <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
         <span>Match History</span>
-      </div>
-      <div class="filter-bar" id="filter-bar">
-        <div class="filter-dd" id="filter-dd">
-          <button class="filter-trigger" id="filter-trigger" onclick="toggleFilterPanel(event)" aria-haspopup="true" aria-expanded="false">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-            <span>Filter</span>
-            <svg class="filter-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-          </button>
-          <div class="filter-panel" id="filter-panel">
-            <div class="filter-panel-sec">
-              <div class="filter-panel-label">Result</div>
-              <label class="filter-check"><input type="checkbox" onchange="toggleResultFilter('win',this.checked)"><span style="color:var(--win)">Wins</span></label>
-              <label class="filter-check"><input type="checkbox" onchange="toggleResultFilter('loss',this.checked)"><span style="color:var(--loss)">Losses</span></label>
-            </div>
-            <div class="filter-panel-sec" id="rank-check-group" hidden>
-              <div class="filter-panel-label">Rank</div>
-            </div>
-            <div class="filter-panel-sec" id="party-check-group" hidden>
-              <div class="filter-panel-label">Party</div>
-            </div>
-            <div class="filter-panel-sec" id="map-check-group" hidden>
-              <div class="filter-panel-label">Map</div>
-            </div>
-            <button class="filter-clear" id="filter-clear" onclick="clearAllFilters()" disabled>Clear all</button>
-          </div>
-        </div>
       </div>
       <div id="matches-container"></div>
       <button class="load-more-btn" id="load-more-btn" style="display:none" onclick="loadMoreMatches()">Load More</button>
@@ -749,6 +762,16 @@ function finalizeHeader(current,seasonLabelText){
   if(REGION)boxes.push(`<span class="stat-box">${REGION.toUpperCase()}</span>`);
   el.innerHTML=boxes.join('');
   document.getElementById('result-panel').classList.add('shown');
+
+  // Current rank sits next to Avg Lobby Rank in the rank-compare card, so the
+  // player can see at a glance whether their lobbies skew above or below them.
+  CURRENT_TIER_ID=current?.tier?.id??null;
+  CURRENT_RR=current?.rr??null;
+  if(current?.tier?.name){
+    renderRankBlock('sg-current',current.tier.id,current.rr??0,current.tier.name,'—');
+  }else{
+    renderRankBlock('sg-current',null,null,null,'—');
+  }
   settleSearchBarWidth();
 }
 
@@ -852,9 +875,66 @@ function rClass(n){
   return 'r-rad';
 }
 
+// The current all-time world-record RR (held by dfm meiy at time of writing)
+// — the goal the Radiant progress bar scales against. HenrikDev's MMR
+// endpoint's `peak` node never actually carries a usable RR (verified across
+// several accounts — it's 0 regardless of tier), so a personal-peak goal
+// isn't available; the record is the only real reference point there is.
+const RADIANT_RR_RECORD=1452;
+
+// The one shared "headline rank" renderer: a big icon + name + RR, tinted
+// with that tier's OWN color (not the shared site accent — otherwise every
+// headline rank on the page would render in whatever single color the site
+// happens to be themed with, defeating the point of comparing different
+// ranks side by side). The custom properties are set directly on `el`
+// itself rather than some ancestor, so this works the same whether `el`
+// sits inside a .rank-compare-col (Current/Avg Lobby) or standalone
+// (Hidden MMR's headline) — CSS variables cascade to descendants like
+// .rank-icon-halo regardless of which element in the chain set them.
+function setRankValue(el,tierId,rr,nameText){
+  const c=rColor(tierId);
+  el.style.setProperty('--rank-color',c);
+  el.style.setProperty('--rank-color-rgb',hexToRgb(c));
+  el.innerHTML=`<span class="rank-icon-wrap"><span class="rank-icon-halo"></span>${rankIcon(tierId,44)}</span> <span>${nameText}<span class="s-value-suffix"> (${rr} RR)</span></span>`;
+}
+
+// Renders one side of the Current/Avg Lobby rank-compare block: the shared
+// headline rank display, plus a bar showing progress toward the next
+// division (Radiant has no next division, so it targets the world record
+// instead — see RADIANT_RR_RECORD). Shared by the current-rank column
+// (finalizeHeader) and the avg-lobby column (renderStats) so the two stay
+// visually identical for a fair comparison.
+function renderRankBlock(idPrefix,tierId,rr,nameText,emptyText){
+  const valueEl=document.getElementById(idPrefix+'-rank');
+  const progWrap=document.getElementById(idPrefix+'-rank-progress');
+  if(tierId!=null&&rr!=null){
+    setRankValue(valueEl,tierId,rr,nameText);
+    progWrap.hidden=false;
+    const maxed=tierId>=27;
+    const pct=maxed?Math.min(99,(rr/RADIANT_RR_RECORD)*100):Math.min(99,Math.max(0,rr));
+    const fill=document.getElementById(idPrefix+'-rank-progress-fill');
+    fill.classList.toggle('maxed',maxed);
+    requestAnimationFrame(()=>{fill.style.width=pct+'%';});
+    document.getElementById(idPrefix+'-rank-progress-cur').textContent=`${rr} RR`;
+    document.getElementById(idPrefix+'-rank-progress-next').textContent=maxed?`${RADIANT_RR_RECORD} RR record`:`${RANK_MAP[tierId+1]} at 100 RR`;
+  }else{
+    valueEl.textContent=emptyText;
+    progWrap.hidden=true;
+  }
+}
+
 /* ── STATE ──────────────────────────────────────────────── */
 let PLAYER='',TAG='',REGION='eu',PLATFORM='pc',TARGET_SEASON='',PUUID='';
-let allMatches=[],statMatches=[],mhIncludeReset=false,resultFilters=new Set(),rankFilters=new Set(),partyFilters=new Set(),mapFilters=new Set(),mhVisible=PER_PAGE,mhData=[],mhLastDayKey=null,mhDayStats={};
+let allMatches=[],statMatches=[],mhIncludeReset=false,mhVisible=PER_PAGE,mhData=[],mhLastDayKey=null,mhDayStats={};
+// The player's actual current-rank tier, set by finalizeHeader once the MMR
+// fetch resolves. Drives the site accent color (see renderStats) — falls
+// back to the avg lobby rank tier when unknown (e.g. MMR fetch failed).
+let CURRENT_TIER_ID=null;
+// The player's raw current.rr alongside CURRENT_TIER_ID — together they're
+// the one known ground-truth anchor into the Hidden MMR estimate's raw RR
+// scale (see renderHiddenMMRCard), which resets 0-99 per division below
+// Immortal but climbs continuously past 99 through Immortal/Radiant.
+let CURRENT_RR=null;
 // match_id -> RR gained/lost that match, from /api/mmr-history. The server
 // persists every match it's ever seen for this player (see mergeRRHistory in
 // functions/api/[[path]].js), so this grows past the live upstream's ~20-game
@@ -884,17 +964,16 @@ function updateSeasonDropdown(seasonStats,seasonOrder){
   const current=sel.value;
   // Clear all except "All seasons"
   while(sel.options.length>1)sel.remove(1);
-  // Re-add only seasons the player has played, newest first, with peak rank badge.
-  // seasonOrder (oldest→newest) comes from getSeasonOrder(), built straight from
+  // Re-add only seasons the player has played, newest first. seasonOrder
+  // (oldest→newest) comes from getSeasonOrder(), built straight from
   // whatever the API returns — so brand-new acts show up with no code changes.
   const order=(seasonOrder||[]).slice().reverse();
   order.forEach(uuid=>{
     const stats=seasonStats[uuid.toLowerCase()]||seasonStats[uuid];
     if(!stats||stats.games===0)return;
-    const label=getActLabel(uuid,stats.short);
     const opt=document.createElement('option');
     opt.value=uuid;
-    opt.textContent=stats.peakRank?`${label} · ${stats.peakRank}`:label;
+    opt.textContent=getActLabel(uuid,stats.short);
     sel.appendChild(opt);
   });
   // Restore previous selection if it's still in the list
@@ -1157,7 +1236,7 @@ async function prefetchPlayerActs(){
     seasonal.forEach(s=>{
       const id=(s.season?.id||'').toLowerCase();
       if(!id)return;
-      seasonStats[id]={peakRank:s.peak_rank?.patched||null,games:s.games||0,short:s.season?.short||null};
+      seasonStats[id]={games:s.games||0,short:s.season?.short||null};
     });
 
     if(!Object.keys(seasonStats).length){showSeasonIdle('No act data');return;}
@@ -1247,7 +1326,7 @@ function runAnalysis(){
   document.body.classList.remove('rank-colored');
   document.getElementById('results-section').style.display='block';
   // Reset UI
-  ['summary-grid','rank-trend-section','clutch-section-row','mmr-section-row','teammates-section','match-list-section','show-history-btn'].forEach(id=>{
+  ['summary-grid','rank-trend-section','clutch-section-row','mmr-section-row','teammates-section','match-list-section'].forEach(id=>{
     document.getElementById(id).style.display='none';
   });
   document.getElementById('matches-container').innerHTML='';
@@ -1255,8 +1334,13 @@ function runAnalysis(){
   document.getElementById('load-more-btn').style.display='none';
   document.getElementById('header-rank-badge').innerHTML='';
   document.getElementById('result-panel').classList.remove('shown');
+  document.getElementById('sg-current-rank').textContent='—';
+  document.getElementById('sg-current-rank-progress').hidden=true;
+  CURRENT_TIER_ID=null;
+  CURRENT_RR=null;
+  document.getElementById('sg-avg-rank-progress').hidden=true;
   settleSearchBarWidth();
-  allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;mhDayStats={};resultFilters.clear();rankFilters.clear();partyFilters.clear();mapFilters.clear();
+  allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;mhDayStats={};
   _rrChangeByMatchId={};_preRRByMatchId={};
   allTeammates=[];tmPage=0;
   // If the season dropdown's prefetch already fetched this exact player (the
@@ -1266,8 +1350,6 @@ function runAnalysis(){
   const prefetchSnapshot=(_lastPrefetchKey===submittedKey&&_prefetchCache?.key===submittedKey)?_prefetchCache:null;
   _lastPrefetchKey='';
   _prefetchCache=null;
-  document.querySelectorAll('#filter-panel input[type=checkbox]').forEach(cb=>cb.checked=false);
-  updateFilterCount();
   document.getElementById('results-section').scrollIntoView({behavior:'smooth',block:'start'});
   loadAll(prefetchSnapshot);
 }
@@ -2291,10 +2373,10 @@ async function loadAll(prefetchSnapshot=null){
       seasonal.forEach(s=>{
         const id=(s.season?.id||'').toLowerCase();
         if(!id)return;
-        seasonStats[id]={peakRank:s.peak_rank?.patched||null,games:s.games||0,short:s.season?.short||null};
+        seasonStats[id]={games:s.games||0,short:s.season?.short||null};
       });
 
-      // Repopulate dropdown: only acts the player has played, with peak rank badge
+      // Repopulate dropdown: only acts the player has played
       if(Object.keys(seasonStats).length)updateSeasonDropdown(seasonStats,seasonOrder);
 
       // Auto-select most recent played act if no season was explicitly chosen
@@ -2581,13 +2663,15 @@ function renderStats(skipPlaytime){
   const avgs=soloMatches.map(m=>m.avgRank).filter(Boolean);
   const overall=avgs.length?avgs.reduce((a,b)=>a+b,0)/avgs.length:null;
 
-  // Theme the whole UI from the average lobby rank (not the player's own rank).
-  // Fall back to all matches if the player has no solo-queue games.
+  // Theme the whole UI from the player's own current rank — falls back to the
+  // avg lobby rank (then all matches) if current rank never resolved, e.g.
+  // the MMR fetch failed.
   const accentAvg=overall!=null?overall:(()=>{
     const a=statMatches.map(m=>m.avgRank).filter(Boolean);
     return a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
   })();
-  if(accentAvg!=null)setAccent(rColor(Math.round(accentAvg)));
+  const accentTier=CURRENT_TIER_ID!=null?CURRENT_TIER_ID:(accentAvg!=null?Math.round(accentAvg):null);
+  if(accentTier!=null)setAccent(rColor(accentTier));
 
   // Sum raw kills and deaths across all games for an accurate overall K/D
   const statGames=statsPanelMatches.filter(m=>m.myStats&&m.myStats.kills!=null&&m.myStats.deaths!=null);
@@ -2596,7 +2680,7 @@ function renderStats(skipPlaytime){
   const avgKD=statGames.length?(totalDeaths>0?+(totalKills/totalDeaths).toFixed(2):totalKills):null;
 
   const wins=statsPanelMatches.filter(m=>m.won===true).length;
-  const wr=n?Math.round(wins/n*100):0;
+  const wr=n?(wins/n*100).toFixed(1):'0.0';
   document.getElementById('sg-games').textContent=n;
   document.getElementById('sg-wr').textContent=wr+'%';
 
@@ -2605,7 +2689,11 @@ function renderStats(skipPlaytime){
 
   const overallRR=overall!=null?tierRR(overall):null;
   const avgRankTier=overallRR?overallRR.tier:null;
-  document.getElementById('sg-avg-rank').innerHTML=(avgRankTier!=null?rankIcon(avgRankTier,40)+' ':'')+(overall!=null?`<span>${avgLabel(avgRankTier)}<span class="s-value-suffix"> (${overallRR.rr} RR)</span></span>`:avgLabel(overall));
+  if(overall!=null&&avgRankTier!=null){
+    renderRankBlock('sg-avg',avgRankTier,overallRR.rr,avgLabel(avgRankTier),avgLabel(overall));
+  }else{
+    renderRankBlock('sg-avg',null,null,null,avgLabel(overall));
+  }
 
   document.getElementById('sg-kd').textContent=avgKD!=null?avgKD.toFixed(2):'—';
 
@@ -2613,7 +2701,7 @@ function renderStats(skipPlaytime){
   const acsGames=statsPanelMatches.filter(m=>m.myStats?.acs!=null&&m.myStats?.rounds_played>0);
   const totalAcsScore=acsGames.reduce((a,m)=>a+m.myStats.score,0);
   const totalAcsRounds=acsGames.reduce((a,m)=>a+m.myStats.rounds_played,0);
-  const avgAcs=totalAcsRounds>0?Math.round(totalAcsScore/totalAcsRounds):null;
+  const avgAcs=totalAcsRounds>0?(totalAcsScore/totalAcsRounds).toFixed(1):null;
   document.getElementById('sg-acs').textContent=avgAcs!=null?avgAcs:'—';
 
   // Avg ADR — total damage ÷ total rounds, same weighted approach as ACS
@@ -2621,7 +2709,7 @@ function renderStats(skipPlaytime){
   const adrGames=statsPanelMatches.filter(m=>m.myStats?.adr!=null&&m.myStats?.rounds_played>0);
   const totalDmg=adrGames.reduce((a,m)=>a+m.myStats.dmg,0);
   const totalAdrRounds=adrGames.reduce((a,m)=>a+m.myStats.rounds_played,0);
-  const avgAdr=totalAdrRounds>0?Math.round(totalDmg/totalAdrRounds):null;
+  const avgAdr=totalAdrRounds>0?(totalDmg/totalAdrRounds).toFixed(1):null;
   document.getElementById('sg-adr').textContent=avgAdr!=null?avgAdr:'—';
 
   renderRankByRankCard();
@@ -2657,71 +2745,13 @@ function renderStats(skipPlaytime){
   // completely unaffected by mhIncludeReset — rebuilding/destroying the Chart.js
   // instance here would just be a pointless flash every time this toggle flips.
   if(!skipPlaytime)renderPlaytime();
-  document.getElementById('show-history-btn').style.display='block';
+  document.getElementById('match-list-section').style.display='block';
   buildTeammates();
 }
 
 function renderAll(){
   if(!allMatches.length){setStatus('No matches found for this season.');return;}
   renderStats();
-
-  // Populate rank filter buttons based on what ranks actually appear in the data
-  const RANK_GROUP_DEFS=[
-    {label:'Iron',  tiers:[3,4,5], color:rColor(3)},
-    {label:'Bronze',tiers:[6,7,8], color:rColor(6)},
-    {label:'Silver',tiers:[9,10,11],color:rColor(9)},
-    {label:'Gold',  tiers:[12,13,14],color:rColor(12)},
-    {label:'Platinum',tiers:[15,16,17],color:rColor(15)},
-    {label:'Diamond',tiers:[18,19,20],color:rColor(18)},
-    {label:'Ascendant',tiers:[21,22,23],color:rColor(21)},
-    {label:'Immortal',tiers:[24,25,26],color:rColor(24)},
-    {label:'Radiant',tiers:[27],    color:rColor(27)},
-  ];
-  const rankGroup=document.getElementById('rank-check-group');
-  // keep the label, remove old checkbox rows
-  rankGroup.querySelectorAll('.filter-check').forEach(b=>b.remove());
-  let anyRank=false;
-  RANK_GROUP_DEFS.forEach(g=>{
-    const hasMatches=allMatches.some(m=>m.avgRank!=null&&g.tiers.includes(Math.round(m.avgRank)));
-    if(!hasMatches)return;
-    anyRank=true;
-    const lbl=document.createElement('label');
-    lbl.className='filter-check';
-    // Representative icon for the group — the 1 sub-tier (e.g. Ascendant 1).
-    const repTier=g.tiers[0];
-    lbl.innerHTML=`<input type="checkbox">${rankIcon(repTier,16)}<span>${g.label}</span>`;
-    lbl.querySelector('input').addEventListener('change',e=>toggleRankFilter(g.label,e.target.checked));
-    rankGroup.appendChild(lbl);
-  });
-  rankGroup.hidden=!anyRank;
-
-  // Populate party size filter checkboxes
-  const partyGroup=document.getElementById('party-check-group');
-  partyGroup.querySelectorAll('.filter-check').forEach(b=>b.remove());
-  const PARTY_LABELS={1:'Solo',2:'Duo',3:'Trio',4:'Quad',5:'5-Stack'};
-  const partySizes=[...new Set(allMatches.map(m=>m.partySize||1))].sort((a,b)=>a-b);
-  partySizes.forEach(sz=>{
-    const lbl=document.createElement('label');
-    lbl.className='filter-check';
-    lbl.innerHTML=`<input type="checkbox"><span style="display:inline-flex">${partyIcon(sz)}</span><span>${PARTY_LABELS[sz]||sz+'-stack'}</span>`;
-    lbl.querySelector('input').addEventListener('change',e=>togglePartyFilter(sz,e.target.checked));
-    partyGroup.appendChild(lbl);
-  });
-  partyGroup.hidden=partySizes.length<=1; // nothing to filter if everyone's the same
-
-  // Populate map filter checkboxes
-  const mapGroup=document.getElementById('map-check-group');
-  mapGroup.querySelectorAll('.filter-check').forEach(b=>b.remove());
-  const maps=[...new Set(allMatches.map(m=>m.mapName).filter(n=>n&&n!=='Unknown'))].sort();
-  maps.forEach(name=>{
-    const lbl=document.createElement('label');
-    lbl.className='filter-check';
-    lbl.innerHTML=`<input type="checkbox"><span>${name}</span>`;
-    lbl.querySelector('input').addEventListener('change',e=>toggleMapFilter(name,e.target.checked));
-    mapGroup.appendChild(lbl);
-  });
-  mapGroup.hidden=maps.length<=1; // nothing to filter if only one map
-  updateFilterCount();
   setStatus('',false);
   renderMatches();
 }
@@ -3278,8 +3308,13 @@ function _olsSolve(y,X){
 }
 function _mean(a){return a.reduce((x,y)=>x+y,0)/a.length;}
 
-// Returns {estimate, lo, hi, n, spread, currentRR} or null when the sample
-// can't support a fit.
+// Returns {estimate, lo, hi, n, spread, currentRR, b0, b1, b2, meanMargin,
+// usable} or null when the sample can't support a fit. b0/b1/b2 are the raw
+// fitted coefficients (RR change = b0 + b1*margin + b2*preRR) — exposed so
+// the card can break down what's actually driving the estimate instead of
+// just stating the final number. usable is the exact match set the fit was
+// run on, exposed so the card can plot the real data instead of describing
+// the method in prose.
 function estimateHiddenMMR(matches){
   const usable=matches.filter(m=>m.myRR!=null&&m.myPreRR!=null&&m.myR!=null&&m.opR!=null);
   if(usable.length<MMR_MIN_MATCHES)return{insufficient:true,n:usable.length,need:MMR_MIN_MATCHES};
@@ -3313,7 +3348,47 @@ function estimateHiddenMMR(matches){
   const newest=usable.slice().sort((a,b)=>(b.startedAtMs??0)-(a.startedAtMs??0))[0];
   const currentRR=newest.myPreRR+newest.myRR;
 
-  return{estimate,lo:q(0.25),hi:q(0.75),n:usable.length,spread,currentRR};
+  return{estimate,lo:q(0.25),hi:q(0.75),n:usable.length,spread,currentRR,b0:b[0],b1:b[1],b2:b[2],meanMargin,usable};
+}
+
+// A raw MMR-scale RR number alone doesn't say which rank it's in — 120 RR
+// could be Ascendant 3 or Immortal 1 depending on where you started — so a
+// bare "120 RR" is meaningless on its own. This maps it onto an internal
+// abs scale (tierId*100 + within-tier RR) anchored to the player's own known
+// current tier+RR, the only fixed reference point available, then reads the
+// tier + RR back off it.
+//
+// Below Immortal (tier 3-23) each division genuinely resets 0-99, so
+// CURRENT_RR there is already a local value and abs = tierId*100+CURRENT_RR.
+// Immortal 1/2/3 and Radiant (tier 24+) instead share ONE continuous band
+// where RR climbs straight through 100/200/300 without resetting (confirmed
+// against real accounts — Immortal 3 shows up to 297 RR) — current.rr there
+// already measures distance from Immortal 1's start, so the anchor is
+// IMMORTAL_START_ABS+CURRENT_RR, not tierId*100+CURRENT_RR (that would
+// double-count the tier offset already baked into CURRENT_RR).
+const MMR_IMMORTAL_TIER=24,MMR_RADIANT_TIER=27,MMR_IMMORTAL_START_ABS=MMR_IMMORTAL_TIER*100;
+function formatMMRRR(raw,cur){
+  const rounded=Math.round(raw);
+  if(CURRENT_TIER_ID==null||CURRENT_RR==null){
+    return{tierId:null,rr:rounded,name:null,plain:`${rounded} RR`};
+  }
+  const anchorAbs=CURRENT_TIER_ID<MMR_IMMORTAL_TIER
+    ?CURRENT_TIER_ID*100+CURRENT_RR
+    :MMR_IMMORTAL_START_ABS+CURRENT_RR;
+  const abs=anchorAbs+(raw-cur);
+  let tierId,rr;
+  if(abs>=MMR_IMMORTAL_START_ABS){
+    // Immortal+/Radiant: rr is the full continuous distance from Immortal
+    // 1's start (matches how HenrikDev/the rest of this app already shows
+    // it, e.g. "Radiant (412 RR)") — never reduced to a per-division 0-99.
+    tierId=Math.min(MMR_RADIANT_TIER,Math.floor(abs/100));
+    rr=Math.round(abs-MMR_IMMORTAL_START_ABS);
+  }else{
+    tierId=Math.max(3,Math.floor(abs/100));
+    rr=Math.round(Math.min(99,Math.max(0,abs-tierId*100)));
+  }
+  const name=RANK_MAP[tierId];
+  return{tierId,rr,name,plain:`${name} (${rr} RR)`};
 }
 
 function renderHiddenMMRCard(matches){
@@ -3329,36 +3404,171 @@ function renderHiddenMMRCard(matches){
   }
   row.style.display='block';
 
-  const est=Math.round(res.estimate),cur=Math.round(res.currentRR),gap=est-cur;
-  document.getElementById('mmr-big').innerHTML=`${est} <span>RR</span>`;
-  document.getElementById('mmr-ci').textContent=`50% confidence ${Math.round(res.lo)}–${Math.round(res.hi)} RR`;
+  const est=Math.round(res.estimate),cur=Math.round(res.currentRR);
+
+  // Same headline renderer as the Current/Avg Lobby rank cards, so the
+  // hidden-MMR figure is tinted by ITS OWN tier instead of inheriting
+  // whatever color the site happens to be accented with right now.
+  const estFmt=formatMMRRR(est,cur);
+  const bigEl=document.getElementById('mmr-big');
+  if(estFmt.tierId!=null){
+    setRankValue(bigEl,estFmt.tierId,estFmt.rr,estFmt.name);
+  }else{
+    bigEl.textContent=estFmt.plain;
+  }
   document.getElementById('mmr-sample').textContent=`from ${res.n} rated matches`;
-  document.getElementById('mmr-compare').innerHTML=
-    `Visible rank <b>${cur} RR</b> · gap <b>${gap>=0?'+':''}${gap} RR</b>`;
-  document.getElementById('mmr-verdict').textContent=
-    Math.abs(gap)<15
-      ? 'Essentially converged — your rank matches your skill, so gains and losses should stay roughly symmetric.'
-      : gap>0
-        ? 'Under-ranked — expect gains to keep outpacing losses until your rank catches up.'
-        : 'Over-ranked — expect losses to outpace gains until your rank settles back down.';
 
-  // Bar spans the estimate's own confidence interval, with the visible rank
-  // marked on it, so "is my rank inside the band" reads at a glance.
-  const lo=Math.min(res.lo,cur),hi=Math.max(res.hi,cur),pad=(hi-lo)*0.15||10;
-  const axLo=lo-pad,axHi=hi+pad,span=axHi-axLo;
-  const pct=v=>((v-axLo)/span*100);
-  const fill=document.getElementById('mmr-bar-fill');
-  fill.style.left=pct(res.lo)+'%';
-  fill.style.width=Math.max(1,pct(res.hi)-pct(res.lo))+'%';
-  document.getElementById('mmr-bar-mark').style.left=`calc(${pct(cur)}% - 1px)`;
-  document.getElementById('mmr-bar-lo').textContent=Math.round(axLo)+' RR';
-  document.getElementById('mmr-bar-hi').textContent=Math.round(axHi)+' RR';
+  renderMMRChart(res);
 
-  document.getElementById('mmr-note').innerHTML=
-    `Inferred from how your RR payouts scale, not read from Riot — MMR is never exposed directly. `
-    +`Riot scales each payout by a <em>rank convergence</em> factor comparing hidden MMR to visible rank; `
-    +`this solves for the RR where wins and losses would pay out symmetrically, controlling for round margin. `
-    +`Accuracy improves as more of your RR history is collected (currently ${res.n} matches, spanning ${Math.round(res.spread)} RR).`;
+  // Plain-language explanation anchored to the two numbers a player already
+  // understands — what a win pays, what a loss costs — instead of raw
+  // regression coefficients. "+92.6 RR baseline" is mathematically real but
+  // means nothing on its own; "wins pay more than losses cost" does.
+  const wins=res.usable.filter(m=>m.won===true),losses=res.usable.filter(m=>m.won!==true);
+  const avgWin=wins.length?_mean(wins.map(m=>m.myRR)):0;
+  const avgLoss=losses.length?_mean(losses.map(m=>m.myRR)):0;
+  document.getElementById('mmr-payout-win').textContent=`${avgWin>=0?'+':''}${avgWin.toFixed(1)} RR`;
+  document.getElementById('mmr-payout-loss').textContent=`${avgLoss.toFixed(1)} RR`;
+
+  const imbalance=avgWin+avgLoss; // avgLoss is already negative
+  const direction=Math.abs(imbalance)<1
+    ?'Wins and losses are already roughly balanced'
+    :imbalance>0
+      ?'Wins are paying out more than losses cost'
+      :'Losses are costing more than wins pay';
+  document.getElementById('mmr-explain').innerHTML=
+    `${direction} — that gap should disappear right at your true skill level. Tracking how quickly it closes as RR rises points to <b>${formatMMRRR(est,cur).plain}</b>, your hidden MMR.`;
+}
+
+// Scatter of every rated match (pre-match RR vs RR change), colored by
+// win/loss, with the fitted trend line overlaid — the line crosses zero
+// exactly at the estimate, since that crossing point IS the definition of
+// "hidden MMR" here. Replaces a prose explanation with the actual fit,
+// built from the exact same match set estimateHiddenMMR() ran on.
+function renderMMRChart(res){
+  const canvas=document.getElementById('mmr-chart-canvas');
+  if(!canvas)return;
+  if(chartInstances.mmrFit){chartInstances.mmrFit.destroy();delete chartInstances.mmrFit;}
+
+  const cur=res.currentRR;
+  const wins=res.usable.filter(m=>m.won===true).map(m=>({x:m.myPreRR,y:m.myRR,m}));
+  const losses=res.usable.filter(m=>m.won!==true).map(m=>({x:m.myPreRR,y:m.myRR,m}));
+  const avgWin=wins.length?_mean(wins.map(p=>p.y)):null;
+  const avgLoss=losses.length?_mean(losses.map(p=>p.y)):null;
+
+  const preRRs=res.usable.map(m=>m.myPreRR);
+  const xPad=(Math.max(...preRRs)-Math.min(...preRRs))*0.12||10;
+  const lineX0=Math.min(...preRRs,res.estimate)-xPad;
+  const lineX1=Math.max(...preRRs,res.estimate)+xPad;
+  const lineY=x=>res.b0+res.b1*res.meanMargin+res.b2*x;
+
+  const accentRgb=getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb').trim()||'59,130,246';
+
+  // Draws the reference lines directly on the canvas (matching the
+  // rankBandsPlugin pattern already used by the rank-trend chart, rather
+  // than pulling in an annotation plugin): avg win/loss so the two numbers
+  // in the derivation below have a visible home in the data, and the
+  // vertical MMR line marking exactly where the fitted trend crosses zero.
+  const mmrRefLinesPlugin={
+    id:'mmrRefLines',
+    beforeDatasetsDraw(chart){
+      const{ctx,chartArea,scales:{x,y}}=chart;
+      if(!chartArea)return;
+      ctx.save();
+      ctx.font="10px Geist,system-ui,sans-serif";
+      ctx.setLineDash([3,3]);
+      ctx.lineWidth=1;
+
+      if(avgWin!=null){
+        const py=y.getPixelForValue(avgWin);
+        ctx.strokeStyle='rgba(34,197,94,.4)';
+        ctx.beginPath();ctx.moveTo(chartArea.left,py);ctx.lineTo(chartArea.right,py);ctx.stroke();
+        ctx.fillStyle='rgba(34,197,94,.9)';ctx.textAlign='right';ctx.textBaseline='bottom';
+        ctx.fillText(`avg win ${avgWin>=0?'+':''}${avgWin.toFixed(1)}`,chartArea.right,py-3);
+      }
+      if(avgLoss!=null){
+        const py=y.getPixelForValue(avgLoss);
+        ctx.strokeStyle='rgba(239,68,68,.4)';
+        ctx.beginPath();ctx.moveTo(chartArea.left,py);ctx.lineTo(chartArea.right,py);ctx.stroke();
+        ctx.fillStyle='rgba(239,68,68,.9)';ctx.textAlign='right';ctx.textBaseline='top';
+        ctx.fillText(`avg loss ${avgLoss.toFixed(1)}`,chartArea.right,py+3);
+      }
+
+      const y0=y.getPixelForValue(0);
+      ctx.strokeStyle='rgba(255,255,255,.15)';
+      ctx.beginPath();ctx.moveTo(chartArea.left,y0);ctx.lineTo(chartArea.right,y0);ctx.stroke();
+
+      const estPx=x.getPixelForValue(res.estimate);
+      ctx.setLineDash([]);
+      ctx.strokeStyle=`rgba(${accentRgb},.85)`;
+      ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(estPx,chartArea.top);ctx.lineTo(estPx,chartArea.bottom);ctx.stroke();
+      ctx.restore();
+    }
+  };
+
+  chartInstances.mmrFit=new Chart(canvas,{
+    type:'scatter',
+    plugins:[mmrRefLinesPlugin],
+    data:{
+      datasets:[
+        {label:'Win',data:wins,backgroundColor:'rgba(34,197,94,.9)',borderColor:'#0d0d10',borderWidth:1.5,pointRadius:5,pointHoverRadius:7},
+        {label:'Loss',data:losses,backgroundColor:'rgba(239,68,68,.9)',borderColor:'#0d0d10',borderWidth:1.5,pointRadius:5,pointHoverRadius:7},
+        {
+          type:'line',label:'Fitted trend',
+          data:[{x:lineX0,y:lineY(lineX0)},{x:lineX1,y:lineY(lineX1)}],
+          borderColor:`rgba(${accentRgb},1)`,borderWidth:2.5,pointRadius:0,
+          fill:false,tension:0,order:1,
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      layout:{padding:{top:16,right:8,bottom:0,left:0}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(10,10,12,.95)',
+          borderColor:`rgba(${accentRgb},.4)`,
+          borderWidth:1,
+          padding:10,
+          displayColors:false,
+          titleFont:{family:'Geist',size:11,weight:'700'},
+          bodyFont:{family:'Geist',size:11},
+          filter:(item)=>item.dataset.label!=='Fitted trend',
+          callbacks:{
+            title:(items)=>{
+              const m=items[0]?.raw?.m;
+              if(!m)return'';
+              return[m.mapName||'Match',m.startedAtMs?new Date(m.startedAtMs).toLocaleDateString():null].filter(Boolean).join(' · ');
+            },
+            label:(item)=>{
+              const m=item.raw.m;
+              const margin=m.myR-m.opR;
+              return[
+                `${m.won?'Win':'Loss'} · ${margin>=0?'+':''}${margin} round margin`,
+                `Pre-match: ${formatMMRRR(m.myPreRR,cur).plain}`,
+                `${m.myRR>=0?'+':''}${m.myRR} RR this match`
+              ];
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          grid:{display:false},
+          ticks:{color:'#6b7280',font:{family:'Geist',size:10}},
+          border:{display:true,color:'rgba(255,255,255,.1)'}
+        },
+        y:{
+          grid:{color:'rgba(255,255,255,.04)',z:-1},
+          ticks:{color:'#6b7280',font:{family:'Geist',size:10}},
+          border:{display:false}
+        }
+      }
+    }
+  });
 }
 
 /* ── CLUTCHES (1v1–1v5) ─────────────────────────────────── */
@@ -3548,119 +3758,11 @@ function setProgress(pct){
   if(pct===0)setTimeout(()=>document.querySelector('.progress-wrap').style.display='none',400);
 }
 
-function toggleResultFilter(v,checked){
-  checked?resultFilters.add(v):resultFilters.delete(v);
-  afterFilterChange();
-}
-function toggleRankFilter(label,checked){
-  checked?rankFilters.add(label):rankFilters.delete(label);
-  afterFilterChange();
-}
-function togglePartyFilter(sz,checked){
-  checked?partyFilters.add(sz):partyFilters.delete(sz);
-  afterFilterChange();
-}
-function toggleMapFilter(name,checked){
-  checked?mapFilters.add(name):mapFilters.delete(name);
-  afterFilterChange();
-}
-function afterFilterChange(){updateFilterCount();renderMatches();}
-
-// Total number of active tick-boxes across all groups.
-function activeFilterCount(){return resultFilters.size+rankFilters.size+partyFilters.size+mapFilters.size;}
-function updateFilterCount(){
-  const n=activeFilterCount();
-  const clear=document.getElementById('filter-clear');
-  if(clear)clear.disabled=n===0;
-}
-function clearAllFilters(){
-  resultFilters.clear();rankFilters.clear();partyFilters.clear();mapFilters.clear();
-  document.querySelectorAll('#filter-panel input[type=checkbox]').forEach(cb=>cb.checked=false);
-  afterFilterChange();
-}
-
 // Count the greyed-out placement-week games in the stats (or not). Only the stat
 // panels change — the match history and its greying stay exactly as they are.
 function toggleIncludeReset(checked){
   mhIncludeReset=!!checked;
   renderStats(true);
-}
-
-// Open/close the filter dropdown; positions the panel to the LEFT of the trigger
-// (beside the matches) and closes on outside click.
-function toggleFilterPanel(e){
-  e?.stopPropagation();
-  const dd=document.getElementById('filter-dd');
-  const panel=document.getElementById('filter-panel');
-  const open=!dd.classList.contains('open');
-  dd.classList.toggle('open',open);
-  panel.classList.toggle('open',open);
-  document.getElementById('filter-trigger').setAttribute('aria-expanded',open?'true':'false');
-  if(open){
-    positionFilterPanel();
-    document.addEventListener('click',_filterOutsideClick,true);
-    window.addEventListener('scroll',positionFilterPanel,true);
-    window.addEventListener('resize',positionFilterPanel);
-  }else{
-    document.removeEventListener('click',_filterOutsideClick,true);
-    window.removeEventListener('scroll',positionFilterPanel,true);
-    window.removeEventListener('resize',positionFilterPanel);
-  }
-}
-// Place the panel to the LEFT of the trigger, in the gutter beside the match
-// list. Falls back to dropping below the trigger when there isn't room on the
-// left (e.g. narrow viewports), and clamps vertically to stay on screen.
-function positionFilterPanel(){
-  const dd=document.getElementById('filter-dd');
-  const panel=document.getElementById('filter-panel');
-  if(!dd.classList.contains('open'))return;
-  const trigger=document.getElementById('filter-trigger');
-  const r=trigger.getBoundingClientRect();
-  const pw=panel.offsetWidth||220, ph=panel.offsetHeight||260, gap=8;
-  let left=r.left-pw-gap;      // to the left of the trigger
-  let top=r.top;               // aligned with the trigger's top
-  if(left<6){                  // not enough room on the left → drop below instead
-    left=Math.min(r.left,window.innerWidth-pw-6);
-    top=r.bottom+6;
-  }
-  top=Math.max(6,Math.min(top,window.innerHeight-ph-6)); // keep on screen
-  panel.style.left=left+'px';
-  panel.style.top=top+'px';
-}
-function _filterOutsideClick(ev){
-  const dd=document.getElementById('filter-dd');
-  const panel=document.getElementById('filter-panel');
-  if(dd&&!dd.contains(ev.target)&&!panel.contains(ev.target)){
-    dd.classList.remove('open');
-    panel.classList.remove('open');
-    document.getElementById('filter-trigger').setAttribute('aria-expanded','false');
-    document.removeEventListener('click',_filterOutsideClick,true);
-    window.removeEventListener('scroll',positionFilterPanel,true);
-    window.removeEventListener('resize',positionFilterPanel);
-  }
-}
-
-// Rank group → tier ids, used to translate ticked rank-filter labels into the
-// set of avg-lobby tiers to keep. Module-level constant (was previously rebuilt
-// inside filtered() on every filter change).
-const RANK_GROUPS_FILTER={
-  'Iron':[3,4,5],'Bronze':[6,7,8],'Silver':[9,10,11],'Gold':[12,13,14],
-  'Platinum':[15,16,17],'Diamond':[18,19,20],'Ascendant':[21,22,23],'Immortal':[24,25,26],'Radiant':[27]
-};
-function filtered(){
-  let out=allMatches;
-  // Result: empty set = show all; otherwise keep matches whose outcome is ticked.
-  if(resultFilters.size)out=out.filter(m=>resultFilters.has(m.won===true?'win':m.won===false?'loss':'draw'));
-  // Rank: empty = all; otherwise match is kept if its rank group is ticked (OR).
-  if(rankFilters.size){
-    const tiers=new Set([...rankFilters].flatMap(l=>RANK_GROUPS_FILTER[l]||[]));
-    out=out.filter(m=>m.avgRank!=null&&tiers.has(Math.round(m.avgRank)));
-  }
-  // Party: empty = all; otherwise keep matches whose party size is ticked (OR).
-  if(partyFilters.size)out=out.filter(m=>partyFilters.has(m.partySize||1));
-  // Map: empty = all; otherwise keep matches on any ticked map (OR).
-  if(mapFilters.size)out=out.filter(m=>mapFilters.has(m.mapName));
-  return out;
 }
 
 /* ── SHARED MATCH CARD BUILDER ───────────────────────────── */
@@ -3836,14 +3938,12 @@ function updateLoadMoreBtn(total){
   }
 }
 
-// Full rebuild — used for the initial render and whenever filters change, since
-// the underlying filtered/sorted set is different and everything needs redoing.
+// Full rebuild — used for the initial render, since everything needs redoing.
 function renderMatches(){
-  mhData=filtered().slice().sort((a,b)=>(b.startedAtMs??0)-(a.startedAtMs??0));
-  // Per-day avg lobby rank, aggregated across the FULL filtered set (mhData) —
-  // not just whatever page is currently visible — so a day's figure in the
-  // header stays correct and stable regardless of Load More/pagination, and
-  // respects active filters the same way the match cards themselves do.
+  mhData=allMatches.slice().sort((a,b)=>(b.startedAtMs??0)-(a.startedAtMs??0));
+  // Per-day avg lobby rank, aggregated across the FULL set (mhData) — not just
+  // whatever page is currently visible — so a day's figure in the header stays
+  // correct and stable regardless of Load More/pagination.
   mhDayStats={};
   mhData.forEach(m=>{
     if(m.startedAtMs==null||m.avgRank==null)return;
@@ -3869,15 +3969,6 @@ function renderMatches(){
   mhLastDayKey=lastDayKey;
 
   updateLoadMoreBtn(mhData.length);
-}
-
-function toggleHistory(){
-  const section=document.getElementById('match-list-section');
-  const btn=document.getElementById('show-history-btn');
-  const visible=section.style.display!=='none';
-  section.style.display=visible?'none':'block';
-  btn.textContent=visible?'Show Match History':'Hide Match History';
-  if(!visible)renderMatches();
 }
 
 // Incremental append — only builds the newly revealed batch and appends it,
