@@ -151,7 +151,6 @@ h1 span{color:var(--accent);}
 .rank-compare{display:flex;align-items:stretch;gap:28px;}
 .rank-compare-col{flex:1;min-width:0;display:flex;flex-direction:column;}
 .rank-compare-divider{width:1px;flex-shrink:0;align-self:stretch;background:linear-gradient(180deg,transparent,var(--glass-border) 20%,var(--glass-border) 80%,transparent);}
-.rank-compare-lbl{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);margin-bottom:10px;}
 @media(max-width:640px){
   .rank-compare{flex-direction:column;gap:20px;}
   .rank-compare-divider{width:100%;height:1px;background:linear-gradient(90deg,transparent,var(--glass-border) 20%,var(--glass-border) 80%,transparent);}
@@ -243,9 +242,19 @@ h1 span{color:var(--accent);}
 .match-day-header:first-child{padding-top:0;}
 .match-day-avg{font-size:11px;font-weight:600;letter-spacing:normal;text-transform:none;color:var(--muted);font-family:var(--font-body);white-space:nowrap;}
 .match-day-avg span{font-weight:700;font-variant-numeric:tabular-nums;}
-.match-card{background:rgba(255,255,255,0.04);border:.5px solid var(--glass-border);border-radius:var(--radius-md);padding:8px 14px;cursor:pointer;transition:border-color .15s,background .15s;overflow:hidden;box-shadow:inset 0 1px 0 var(--glass-shine);}
+.match-card{background:rgba(255,255,255,0.04);border:.5px solid var(--glass-border);border-radius:var(--radius-md);padding:8px 14px;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s;overflow:hidden;box-shadow:inset 0 1px 0 var(--glass-shine);}
 .match-card:hover{border-color:rgba(255,255,255,0.18);background:rgba(255,255,255,0.065);}
 .match-card.expanded{border-color:rgba(var(--accent-rgb),.35);}
+/* Own-match MVP / team-MVP: frame the whole card instead of a small inline
+   badge (see buildMatchCard) so it reads even collapsed. Colors match the
+   .mvp-badge palette (gold match-mvp, grey team-mvp) for continuity with the
+   per-player badges still used in the expanded roster breakdown. */
+.match-card.mvp-match{border:1px solid rgba(234,179,8,.5);box-shadow:inset 0 1px 0 var(--glass-shine),0 0 0 1px rgba(234,179,8,.15),0 0 20px -4px rgba(234,179,8,.35);}
+.match-card.mvp-match:hover{border-color:rgba(234,179,8,.75);}
+.match-card.mvp-match.expanded{border-color:rgba(234,179,8,.75);}
+.match-card.mvp-team{border:1px solid rgba(203,213,225,.65);box-shadow:inset 0 1px 0 var(--glass-shine),0 0 0 1px rgba(203,213,225,.2),0 0 20px -4px rgba(203,213,225,.45);}
+.match-card.mvp-team:hover{border-color:rgba(226,232,240,.85);}
+.match-card.mvp-team.expanded{border-color:rgba(226,232,240,.85);}
 .match-row{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;padding-left:2px;}
 .mc-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
 .mc-right{display:flex;align-items:center;gap:16px;flex-shrink:0;margin-left:auto;}
@@ -439,7 +448,7 @@ h1 span{color:var(--accent);}
         <div class="s-card rank-card">
           <div class="rank-compare">
             <div class="rank-compare-col">
-              <div class="rank-compare-lbl">Current</div>
+              <div class="card-title">Current</div>
               <div class="s-value" id="sg-current-rank" style="display:flex;align-items:center;gap:10px;white-space:nowrap;">—</div>
               <div class="rank-progress" id="sg-current-rank-progress" hidden>
                 <div class="rank-progress-track"><div class="rank-progress-fill" id="sg-current-rank-progress-fill"></div></div>
@@ -451,7 +460,7 @@ h1 span{color:var(--accent);}
             </div>
             <div class="rank-compare-divider"></div>
             <div class="rank-compare-col">
-              <div class="rank-compare-lbl">Avg Lobby</div>
+              <div class="card-title">Avg Lobby</div>
               <div class="s-value" id="sg-avg-rank" style="display:flex;align-items:center;gap:10px;white-space:nowrap;">—</div>
               <div class="rank-progress" id="sg-avg-rank-progress" hidden>
                 <div class="rank-progress-track"><div class="rank-progress-fill" id="sg-avg-rank-progress-fill"></div></div>
@@ -893,8 +902,16 @@ const RADIANT_RR_RECORD=1452;
 // .rank-icon-halo regardless of which element in the chain set them.
 function setRankValue(el,tierId,rr,nameText){
   const c=rColor(tierId);
-  el.style.setProperty('--rank-color',c);
-  el.style.setProperty('--rank-color-rgb',hexToRgb(c));
+  // Set on the parent, not `el` itself — the progress bar's fill sits in a
+  // sibling element (.rank-progress is a sibling of the .s-value this
+  // renders into, not a descendant), so scoping the var to `el` alone left
+  // it invisible to the bar and falling back to the shared site accent
+  // instead (which happens to match for the Current column, since that's
+  // what the accent is derived from, but was silently wrong for Avg Lobby
+  // whenever its tier differed).
+  const scope=el.parentElement||el;
+  scope.style.setProperty('--rank-color',c);
+  scope.style.setProperty('--rank-color-rgb',hexToRgb(c));
   el.innerHTML=`<span class="rank-icon-wrap"><span class="rank-icon-halo"></span>${rankIcon(tierId,44)}</span> <span>${nameText}<span class="s-value-suffix"> (${rr} RR)</span></span>`;
 }
 
@@ -910,13 +927,20 @@ function renderRankBlock(idPrefix,tierId,rr,nameText,emptyText){
   if(tierId!=null&&rr!=null){
     setRankValue(valueEl,tierId,rr,nameText);
     progWrap.hidden=false;
-    const maxed=tierId>=27;
-    const pct=maxed?Math.min(99,(rr/RADIANT_RR_RECORD)*100):Math.min(99,Math.max(0,rr));
+    const maxed=tierId>=27; // Radiant — the golden "capped" shimmer treatment
+    // Immortal 3 (26) has no fixed 100-RR checkpoint into Radiant the way
+    // every division below it does — Immortal/Radiant RR climbs continuously
+    // and the Immortal3->Radiant threshold moves with the ladder. So from
+    // Immortal 3 up, target the RR record instead of a "next division at 100
+    // RR" that doesn't actually exist yet (but keep the bar tinted in the
+    // rank's own color rather than switching to Radiant's gold shimmer).
+    const useRecordGoal=tierId>=26;
+    const pct=useRecordGoal?Math.min(99,(rr/RADIANT_RR_RECORD)*100):Math.min(99,Math.max(0,rr));
     const fill=document.getElementById(idPrefix+'-rank-progress-fill');
     fill.classList.toggle('maxed',maxed);
     requestAnimationFrame(()=>{fill.style.width=pct+'%';});
     document.getElementById(idPrefix+'-rank-progress-cur').textContent=`${rr} RR`;
-    document.getElementById(idPrefix+'-rank-progress-next').textContent=maxed?`${RADIANT_RR_RECORD} RR record`:`${RANK_MAP[tierId+1]} at 100 RR`;
+    document.getElementById(idPrefix+'-rank-progress-next').textContent=useRecordGoal?`${RADIANT_RR_RECORD} RR record`:`${RANK_MAP[tierId+1]} at 100 RR`;
   }else{
     valueEl.textContent=emptyText;
     progWrap.hidden=true;
@@ -3394,6 +3418,10 @@ function formatMMRRR(raw,cur){
 function renderHiddenMMRCard(matches){
   const row=document.getElementById('mmr-section-row');
   if(!row)return;
+  // Temporarily disabled — card stays hidden regardless of estimate quality
+  // until it's ready to ship again.
+  row.style.display='none';
+  return;
   const res=estimateHiddenMMR(matches);
 
   if(res.insufficient){
@@ -3858,14 +3886,14 @@ function buildMatchCard(m){
   const myPuuid=PUUID||null;
   const isMatchMvp=myPuuid&&matchMvpPuuid&&myPuuid===matchMvpPuuid;
   const isTeamMvp=!isMatchMvp&&myPuuid&&teamMvpPuuids&&teamMvpPuuids.has(myPuuid);
-  const mvpTag=isMatchMvp
-    ?`<span class="mvp-badge match-mvp">MVP</span>`
-    :isTeamMvp?`<span class="mvp-badge team-mvp">TEAM</span>`:'';
 
   const resetTag=m.postReset?`<span class="mc-reset-tag" title="Placement-week game after a total rank reset — excluded from stats unless you toggle it on">PLACEMENTS</span>`:'';
 
   const card=document.createElement('div');
-  card.className='match-card'+(m.postReset?' post-reset':'');
+  // Own-match MVP/team-MVP is called out by framing the whole card (gold /
+  // silver) instead of a small inline badge, so it reads at a glance even
+  // collapsed — see .match-card.mvp-match / .mvp-team.
+  card.className='match-card'+(m.postReset?' post-reset':'')+(isMatchMvp?' mvp-match':isTeamMvp?' mvp-team':'');
   card.innerHTML=`
     <div class="match-row">
       <div class="result-bar ${rc}"></div>
@@ -3874,7 +3902,6 @@ function buildMatchCard(m){
         <span class="match-map">${mapName}</span>
         <span class="match-score">${score}</span>
         ${rrChangeTag}
-        ${mvpTag}
         ${resetTag}
       </div>
       <div class="mc-right">
