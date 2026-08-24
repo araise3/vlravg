@@ -953,7 +953,7 @@ function renderRankBlock(idPrefix,tierId,rr,nameText,emptyText){
     fill.classList.toggle('maxed',maxed);
     requestAnimationFrame(()=>{fill.style.width=pct+'%';});
     document.getElementById(idPrefix+'-rank-progress-cur').textContent=`${rr} RR`;
-    document.getElementById(idPrefix+'-rank-progress-next').textContent=useRecordGoal?`${RADIANT_RR_RECORD} RR`:`${RANK_MAP[tierId+1]} at 100 RR`;
+    document.getElementById(idPrefix+'-rank-progress-next').textContent=useRecordGoal?`${RADIANT_RR_RECORD} RR`:`100 RR`;
   }else{
     valueEl.textContent=emptyText;
     progWrap.hidden=true;
