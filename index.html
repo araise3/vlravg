@@ -246,15 +246,28 @@ h1 span{color:var(--accent);}
 .match-card:hover{border-color:rgba(255,255,255,0.18);background:rgba(255,255,255,0.065);}
 .match-card.expanded{border-color:rgba(var(--accent-rgb),.35);}
 /* Own-match MVP / team-MVP: frame the whole card instead of a small inline
-   badge (see buildMatchCard) so it reads even collapsed. Colors match the
-   .mvp-badge palette (gold match-mvp, grey team-mvp) for continuity with the
-   per-player badges still used in the expanded roster breakdown. */
-.match-card.mvp-match{border:1px solid rgba(234,179,8,.5);box-shadow:inset 0 1px 0 var(--glass-shine),0 0 0 1px rgba(234,179,8,.15),0 0 20px -4px rgba(234,179,8,.35);}
-.match-card.mvp-match:hover{border-color:rgba(234,179,8,.75);}
-.match-card.mvp-match.expanded{border-color:rgba(234,179,8,.75);}
-.match-card.mvp-team{border:1px solid rgba(203,213,225,.65);box-shadow:inset 0 1px 0 var(--glass-shine),0 0 0 1px rgba(203,213,225,.2),0 0 20px -4px rgba(203,213,225,.45);}
-.match-card.mvp-team:hover{border-color:rgba(226,232,240,.85);}
-.match-card.mvp-team.expanded{border-color:rgba(226,232,240,.85);}
+   badge (see buildMatchCard) so it reads even collapsed. A plain thin border
+   alone got lost against every other card's own border, so this leans on
+   three reinforcing cues instead of one: a background wash (the fastest
+   thing the eye catches while scanning a list), a solid 2px border (thicker
+   than every other card's .5-1px, so it never reads as "just another
+   card"), and an outer glow. Colors match the .mvp-badge palette (gold
+   match-mvp, grey team-mvp) for continuity with the per-player badges still
+   used in the expanded roster breakdown. */
+.match-card.mvp-match{
+  border:2px solid rgba(234,179,8,.75);
+  background:linear-gradient(135deg,rgba(234,179,8,.14),rgba(234,179,8,.02) 55%),rgba(255,255,255,0.04);
+  box-shadow:inset 0 1px 0 var(--glass-shine),0 0 0 1px rgba(234,179,8,.2),0 0 28px -6px rgba(234,179,8,.55);
+}
+.match-card.mvp-match:hover{border-color:#eab308;background:linear-gradient(135deg,rgba(234,179,8,.2),rgba(234,179,8,.03) 55%),rgba(255,255,255,0.05);}
+.match-card.mvp-match.expanded{border-color:#eab308;}
+.match-card.mvp-team{
+  border:2px solid rgba(203,213,225,.8);
+  background:linear-gradient(135deg,rgba(203,213,225,.12),rgba(203,213,225,.02) 55%),rgba(255,255,255,0.04);
+  box-shadow:inset 0 1px 0 var(--glass-shine),0 0 0 1px rgba(203,213,225,.22),0 0 28px -6px rgba(203,213,225,.5);
+}
+.match-card.mvp-team:hover{border-color:#e2e8f0;background:linear-gradient(135deg,rgba(203,213,225,.18),rgba(203,213,225,.03) 55%),rgba(255,255,255,0.05);}
+.match-card.mvp-team.expanded{border-color:#e2e8f0;}
 .match-row{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;padding-left:2px;}
 .mc-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
 .mc-right{display:flex;align-items:center;gap:16px;flex-shrink:0;margin-left:auto;}
