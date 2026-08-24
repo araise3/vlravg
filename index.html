@@ -953,7 +953,7 @@ function renderRankBlock(idPrefix,tierId,rr,nameText,emptyText){
     fill.classList.toggle('maxed',maxed);
     requestAnimationFrame(()=>{fill.style.width=pct+'%';});
     document.getElementById(idPrefix+'-rank-progress-cur').textContent=`${rr} RR`;
-    document.getElementById(idPrefix+'-rank-progress-next').textContent=useRecordGoal?`${RADIANT_RR_RECORD} RR record`:`${RANK_MAP[tierId+1]} at 100 RR`;
+    document.getElementById(idPrefix+'-rank-progress-next').textContent=useRecordGoal?`${RADIANT_RR_RECORD} RR`:`${RANK_MAP[tierId+1]} at 100 RR`;
   }else{
     valueEl.textContent=emptyText;
     progWrap.hidden=true;
@@ -2693,11 +2693,18 @@ function renderStats(skipPlaytime){
   const mc=document.getElementById('matches-container');
   if(mc)mc.classList.toggle('counting-reset',mhIncludeReset);
 
-  // Avg lobby rank (overall + last 20) only counts solo queue games — party
-  // rank inflates lobby strength since a stack often queues into weaker
-  // lobbies for its rank.
+  // Avg lobby rank only counts solo queue games — party rank inflates lobby
+  // strength since a stack often queues into weaker lobbies for its rank.
+  // Falls back to every party size except a full 5-stack (the worst
+  // offender for that inflation) when no solo game exists at all, so the
+  // card still shows something instead of going empty for a player who
+  // never queues alone.
   const soloMatches=statMatches.filter(m=>(m.partySize||1)===1);
-  const avgs=soloMatches.map(m=>m.avgRank).filter(Boolean);
+  let avgs=soloMatches.map(m=>m.avgRank).filter(Boolean);
+  if(!avgs.length){
+    const nonFiveStackMatches=statMatches.filter(m=>(m.partySize||1)<5);
+    avgs=nonFiveStackMatches.map(m=>m.avgRank).filter(Boolean);
+  }
   const overall=avgs.length?avgs.reduce((a,b)=>a+b,0)/avgs.length:null;
 
   // Theme the whole UI from the player's own current rank — falls back to the
