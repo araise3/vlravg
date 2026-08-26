@@ -134,7 +134,7 @@ const FROZEN_BANDS = [
 ];
 const CALIB_MIN_N = 400;          // per-band n before the live fit fully replaces the frozen one
 const CALIB_PER_PLAYER_CAP = 500; // lifetime matches one puuid can contribute per band-set
-const CALIB_DECAY = 0.999;        // per-fold decay on existing sums — lets the model move with
+const CALIB_DECAY = 0.9999;       // per-fold decay on existing sums — lets the model move with
                                    // a future RR-economy patch instead of accumulating forever
 
 function calibBandFor(tierId) {
@@ -233,20 +233,68 @@ async function handleCalibModel(env) {
   });
 }
 
+// A single HenrikDev v4 match object (full kill-feed + round-by-round economy)
+// runs ~350-400KB; a real /history page (size=10) is 3.5MB+. JSON.parse-ing
+// the whole body here once blew this project's 10ms Workers CPU budget and
+// 503'd the ENTIRE request — confirmed empirically against production:
+// 2 matches (~780KB) parses fine, 3+ (~1.3MB+) reliably exceeds the limit,
+// and context.waitUntil's CPU counts against the same request budget, so it
+// takes the client-facing response down with it, not just this fold. So we
+// never JSON.parse the full body — only cheaply scan (plain char comparisons,
+// no object allocation) for the first MAX_FOLD_MATCHES top-level array
+// elements and parse just that tiny slice. bodyText itself is never touched,
+// so the client still gets every match in the real response regardless —
+// this only limits how many matches calibration gets to learn from per call,
+// same "nice to have, not load-bearing" tradeoff already made elsewhere here.
+const MAX_FOLD_MATCHES = 1;
+function extractLeadingMatchesRaw(bodyText, maxN) {
+  const keyIdx = bodyText.search(/"data"\s*:\s*\[/);
+  if (keyIdx === -1) return null;
+  const start = bodyText.indexOf("[", keyIdx);
+  if (start === -1) return null;
+  const slices = [];
+  let depth = 0, inStr = false, esc = false, elemStart = -1;
+  for (let i = start + 1; i < bodyText.length; i++) {
+    const c = bodyText[i];
+    if (inStr) {
+      if (esc) esc = false;
+      else if (c === "\\") esc = true;
+      else if (c === '"') inStr = false;
+      continue;
+    }
+    if (c === '"') { inStr = true; continue; }
+    if (c === "{" || c === "[") {
+      if (depth === 0) elemStart = i;
+      depth++;
+    } else if (c === "}" || c === "]") {
+      depth--;
+      if (depth === 0 && elemStart !== -1) {
+        slices.push(bodyText.slice(elemStart, i + 1));
+        elemStart = -1;
+        if (slices.length >= maxN) return slices;
+      } else if (depth < 0) {
+        return slices; // hit the data array's own closing bracket
+      }
+    }
+  }
+  return slices;
+}
+
 // Folds one /history response's matches into the live calibration model.
 // Mirrors index.html's hmmMatchRow() row-by-row — KEEP IN SYNC WITH IT.
 // Derives everything server-side from HenrikDev's own trusted response
 // (never from client-submitted numbers), so a real account can only ever
 // contribute its own real matches.
 async function foldCalibration(env, bodyText, routeInfo) {
-  let parsed;
+  let matches;
   try {
-    parsed = JSON.parse(bodyText);
+    const raw = extractLeadingMatchesRaw(bodyText, MAX_FOLD_MATCHES);
+    if (!raw || !raw.length) return;
+    matches = raw.map((s) => JSON.parse(s));
   } catch (e) {
     return;
   }
-  const matches = parsed?.data;
-  if (!Array.isArray(matches) || !matches.length) return;
+  if (!matches.length) return;
 
   // Identify "me" the same way processMatch() does: puuid isn't known to
   // this route (only name/tag/region/platform are), so match on name+tag —
