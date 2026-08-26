@@ -5,9 +5,13 @@
  * same domain as your page.
  *
  * REQUIRED BINDINGS (Pages project → Settings → Variables and Secrets):
- *   HENRIK_KEY   (Secret)         your HDEV-... key
- *   RATE_LIMIT_KV (KV namespace)  create a namespace (any name) and bind it
- *                                 to the variable name RATE_LIMIT_KV
+ *   HENRIK_KEY (Secret)       your HDEV-... key
+ *   APP_DB     (D1 database)  create a D1 database, run schema.sql against
+ *                             it, bind it to APP_DB. Holds every piece of
+ *                             persistent state this Function keeps: rate-
+ *                             limit quota, RR-history persistence, and
+ *                             Hidden-MMR live calibration — see schema.sql.
+ *                             Nothing here uses KV; there is no KV binding.
  *
  * Because the page and this function share one origin, no CORS or Origin
  * allowlist is needed — the browser just calls /api/... normally.
@@ -26,11 +30,30 @@
  *
  * RR-HISTORY PERSISTENCE: mmr-history's upstream only ever returns a
  * player's most recent ~20 games. Routes flagged persistRRHistory merge
- * every live fetch into a durable per-puuid record in RATE_LIMIT_KV (see
- * mergeRRHistory), so the response — and what gets edge-cached — grows to
- * cover everything ever seen for that player, not just today's rolling
- * window. This is on the same KV namespace as the rate-limit quota state
- * (different key prefix), not a separate binding.
+ * every live fetch into durable rows in APP_DB (table rr_history, one row
+ * per match — see mergeRRHistory), so the response — and what gets edge-
+ * cached — grows to cover everything ever seen for that player, not just
+ * today's rolling window. rr_players tracks identity (region/platform/
+ * name/tag) per puuid so the 12h refresh job (refresh-rr-history.mjs) can
+ * list who to re-ping without scanning rr_history itself.
+ *
+ * HIDDEN-MMR LIVE CALIBRATION: the /history route (flagged foldCalibration)
+ * derives per-match payout-model rows from HenrikDev's own trusted response
+ * and folds them into a running per-rank-band accumulator in APP_DB (table
+ * calib_bands — see schema.sql) — see foldCalibration/handleCalibModel and
+ * the big comment above FROZEN_BANDS. GET /api/calib-model serves the
+ * current fit, blended with the frozen research constants until each band
+ * has enough live data. No Cron Trigger (Pages Functions don't support
+ * them) — recalibration happens inline on every real lookup via
+ * context.waitUntil, same zero-added-latency pattern as RR-history above.
+ *
+ * WHY D1 AND NOT KV: this Function used to keep all of the above in a KV
+ * namespace. KV's Free-plan write cap (1,000/day) got hit fast once live
+ * calibration started folding on every /history page, and separately once
+ * the 12h refresh job's rrhist writes grew past a few hundred tracked
+ * players. D1's Free-plan cap is 100,000 rows written/day, and its UPDATEs
+ * are atomic (no KV-style get-then-put race) — see CONSISTENCY CAVEAT below
+ * for the one caveat that carries over.
  *
  * RATE LIMITING — fully server-side now, nothing exposed to the browser:
  * HenrikDev's real rate-limit headers (remaining/reset/retry-after) used to
@@ -39,47 +62,341 @@
  * devtools open, and — worse — it's a usable DoS vector, since watching
  * `remaining` approach zero tells you exactly when to push it over the edge
  * for every other user of the app. Fixed by moving all quota awareness here:
- *   - Quota state {remaining, resetAt} is tracked in RATE_LIMIT_KV, a single
- *     shared record read/written on every live (cache-miss) request — so
- *     pacing is coordinated across every concurrent user of the app hitting
- *     this one HenrikDev key, not just per browser tab like before.
- *   - Before making an upstream call, if KV says quota is already exhausted
- *     this window, the request is declined immediately (no upstream call at
- *     all) with a plain JSON body: {error, retryAfterMs}. No headers, no raw
- *     numbers — just how long to wait.
+ *   - Quota state {remaining, resetAt} is tracked in APP_DB (table
+ *     rate_quota, a single row), read/written on every live (cache-miss)
+ *     request — so pacing is coordinated across every concurrent user of
+ *     the app hitting this one HenrikDev key, not just per browser tab.
+ *   - Before making an upstream call, if that row says quota is already
+ *     exhausted this window, the request is declined immediately (no
+ *     upstream call at all) with a plain JSON body: {error, retryAfterMs}.
+ *     No headers, no raw numbers — just how long to wait.
  *   - Otherwise, a small pacing delay may be applied server-side (same
  *     "glide only if it actually helps" logic the client used to do, just
  *     using shared state instead of one browser's private view) before the
  *     real upstream call, so concurrent users don't all burst at once.
- *   - After a live call, HenrikDev's real headers are parsed and written back
- *     to KV, but never forwarded to the response — the client only ever sees
- *     success, or a 429 with a retryAfterMs it should wait out.
+ *   - After a live call, HenrikDev's real headers are parsed and written
+ *     back to that row, but never forwarded to the response — the client
+ *     only ever sees success, or a 429 with a retryAfterMs it should wait out.
  *
- * CONSISTENCY CAVEAT: Workers KV is eventually consistent (writes can take
- * up to ~60s to propagate globally), so this pacing is best-effort, not a
- * hard guarantee — under heavy concurrent load from multiple edge locations,
- * a real 429 from HenrikDev can still occasionally slip through despite the
- * KV check. That's handled gracefully (relayed to the client as a computed
- * retryAfterMs, same as any other 429), so it degrades safely rather than
- * breaking. For airtight, race-free coordination a Durable Object would be
- * the correct upgrade — more setup (its own class + migration + binding)
- * than felt justified for a first pass, since "occasionally still gets a
- * real 429, but never leaks real quota to the browser" already satisfies the
- * actual goal here.
+ * CONSISTENCY CAVEAT: D1 has a primary instance plus read replicas (see D1's
+ * read-replication docs), so a read immediately after another edge location's
+ * write can still occasionally see slightly stale state — tighter than KV's
+ * up-to-~60s propagation, but not an absolute guarantee. Under heavy
+ * concurrent load from multiple edge locations, a real 429 from HenrikDev
+ * can still occasionally slip through despite the quota-row check. That's
+ * handled gracefully (relayed to the client as a computed retryAfterMs, same
+ * as any other 429), so it degrades safely rather than breaking. For
+ * airtight, race-free coordination a Durable Object would be the correct
+ * upgrade — more setup (its own class + migration + binding) than felt
+ * justified for a first pass, since "occasionally still gets a real 429, but
+ * never leaks real quota to the browser" already satisfies the actual goal.
  */
 
 const UPSTREAM = "https://api.henrikdev.xyz";
 const PREFIX = "/api";
-const QUOTA_KEY = "quota"; // single shared record — HenrikDev's limit is one pool across all endpoints
 
 // mmr-history's upstream only ever returns the most recent ~20 games. Every
-// live (cache-miss) fetch is merged into a per-player KV record — keyed by
-// puuid, not name/tag, since a Riot ID rename shouldn't orphan history —
-// so the client's view accumulates past that window across repeated
+// live (cache-miss) fetch is merged into per-match rows in APP_DB (table
+// rr_history) — keyed by puuid, not name/tag, since a Riot ID rename
+// shouldn't orphan history — so the client's view accumulates past that
+// window across repeated
 // searches instead of being capped at whatever upstream feels like handing
-// back today. Capped defensively so one very-active or long-tracked player
-// can't grow a single KV value without bound.
-const RR_HISTORY_MAX_ENTRIES = 3000;
+// back today. One row per match, so there's no single-value size cap to
+// manage the way the old KV blob needed — storage is cheap (D1's 5 GB free
+// tier) and unbounded per-player growth here is a non-issue at this scale.
+
+// ── HIDDEN-MMR LIVE CALIBRATION ──────────────────────────────────────────
+// The Hidden MMR card (index.html) predicts each match's RR payout from
+// per-rank-band constants {Bw,Bl,S,K,P} — see index.html's HMM_BANDS comment
+// for the model. Those were fit OFFLINE from a one-time 355-player research
+// corpus (hidden-mmr-research/). This block lets Bw/Bl/P (NOT the round-margin
+// shape S/K — see below) keep improving from real traffic: every real
+// /history cache-miss folds that match into a running per-band accumulator
+// (foldCalibration, below), and /api/calib-model serves the current fit
+// blended with the frozen constants. No Cron Trigger involved (Pages
+// Functions don't support them) — this recalibrates inline, on every lookup,
+// via context.waitUntil so it never adds latency to the response.
+//
+// KEEP FROZEN_BANDS' lo/hi/S/K IN SYNC WITH index.html's HMM_BANDS — Bw/Bl/P
+// here are just the same starting point; S/K (the round-margin blowout
+// shape) are NEVER refit online (identifying a hinge location isn't a simple
+// linear update, and doesn't need to be — only the level constants should
+// drift as the game's RR economy potentially changes over time).
+const FROZEN_BANDS = [
+  { lo: 3, hi: 5, Bw: 20.55, Bl: 14.14, S: 0.65, K: 3, P: 5.21 }, // Iron
+  { lo: 6, hi: 8, Bw: 19.30, Bl: 16.84, S: 0.45, K: 3, P: 5.16 }, // Bronze
+  { lo: 9, hi: 11, Bw: 18.48, Bl: 17.18, S: 0.66, K: 5, P: 3.71 }, // Silver
+  { lo: 12, hi: 14, Bw: 18.87, Bl: 16.87, S: 0.59, K: 5, P: 2.52 }, // Gold
+  { lo: 15, hi: 17, Bw: 18.00, Bl: 17.74, S: 0.43, K: 4, P: 1.89 }, // Platinum
+  { lo: 18, hi: 20, Bw: 17.90, Bl: 16.98, S: 0.61, K: 5, P: 1.10 }, // Diamond
+  { lo: 21, hi: 23, Bw: 17.70, Bl: 17.84, S: 0.42, K: 4, P: 0.33 }, // Ascendant
+  { lo: 24, hi: 27, Bw: 17.22, Bl: 18.67, S: 0.65, K: 6, P: 0.16 }, // Immortal+/Radiant
+];
+const CALIB_MIN_N = 400;          // per-band n before the live fit fully replaces the frozen one
+const CALIB_PER_PLAYER_CAP = 500; // lifetime matches one puuid can contribute per band-set
+const CALIB_DECAY = 0.999;        // per-fold decay on existing sums — lets the model move with
+                                   // a future RR-economy patch instead of accumulating forever
+
+function calibBandFor(tierId) {
+  return FROZEN_BANDS.find((b) => tierId >= b.lo && tierId <= b.hi) || FROZEN_BANDS[FROZEN_BANDS.length - 1];
+}
+
+function emptyBandAccum(b) {
+  return { lo: b.lo, hi: b.hi, n_win: 0, n_loss: 0, Sww: 0, Sll: 0, Swz: 0, Slz: 0, Szz: 0, Swy: 0, Sly: 0, Szy: 0 };
+}
+
+// Solves the 3x3 normal-equations system for one band's {Bw,Bl,P} via
+// Cramer's rule (fine at this scale — 3 unknowns). The Bw/Bl cross-term is
+// always exactly 0 (a row is never both a win and a loss), so this is exact,
+// not approximate, whenever both n_win>0 and n_loss>0.
+function solveBand(a) {
+  const out = {};
+  const haveW = a.n_win > 0 && a.Sww > 1e-9;
+  const haveL = a.n_loss > 0 && a.Sll > 1e-9;
+  if (haveW && haveL) {
+    // [[Sww,0,Swz],[0,Sll,Slz],[Swz,Slz,Szz]] . [Bw,Bl,P] = [Swy,Sly,Szy]
+    const { Sww, Sll, Swz, Slz, Szz, Swy, Sly, Szy } = a;
+    const M = [
+      [Sww, 0, Swz],
+      [0, Sll, Slz],
+      [Swz, Slz, Szz],
+    ];
+    const sol = solve3x3(M, [Swy, Sly, Szy]);
+    if (sol) { out.Bw = sol[0]; out.Bl = sol[1]; out.P = sol[2]; }
+  } else if (haveW) {
+    // No loss rows yet for this band — solve the reduced 2x2 (Bw,P) system.
+    const sol = solve2x2(a.Sww, a.Swz, a.Swz, a.Szz, a.Swy, a.Szy);
+    if (sol) { out.Bw = sol[0]; out.P = sol[1]; }
+  } else if (haveL) {
+    const sol = solve2x2(a.Sll, a.Slz, a.Slz, a.Szz, a.Sly, a.Szy);
+    if (sol) { out.Bl = sol[0]; out.P = sol[1]; }
+  }
+  return out;
+}
+
+function solve2x2(a11, a12, a21, a22, y1, y2) {
+  const det = a11 * a22 - a12 * a21;
+  if (Math.abs(det) < 1e-9) return null;
+  return [(y1 * a22 - a12 * y2) / det, (a11 * y2 - y1 * a21) / det];
+}
+
+function solve3x3(M, y) {
+  const det3 = (m) =>
+    m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1]) -
+    m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0]) +
+    m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0]);
+  const D = det3(M);
+  if (Math.abs(D) < 1e-9) return null;
+  const withCol = (col) => M.map((row, i) => row.map((v, j) => (j === col ? y[i] : v)));
+  return [det3(withCol(0)) / D, det3(withCol(1)) / D, det3(withCol(2)) / D];
+}
+
+// Calibration storage lives in APP_DB's calib_bands table — see schema.sql.
+async function getCalibModel(env) {
+  try {
+    const { results } = await env.APP_DB.prepare("SELECT * FROM calib_bands").all();
+    if (results?.length) {
+      const updatedAt = results.reduce((a, r) => (r.updated_at && (!a || r.updated_at > a) ? r.updated_at : a), null);
+      return { bands: results, updatedAt };
+    }
+  } catch (e) {
+    // D1 unbound/unreachable — fall back to frozen-only rather than failing.
+  }
+  return { bands: FROZEN_BANDS.map(emptyBandAccum), updatedAt: null };
+}
+
+// GET /api/calib-model — blends each band's live fit with the frozen research
+// constants, weighted by how much live data that band has (see CALIB_MIN_N).
+// S/K are always the frozen values; only Bw/Bl/P ever move.
+async function handleCalibModel(env) {
+  const model = await getCalibModel(env);
+  const bands = FROZEN_BANDS.map((frozen) => {
+    const acc = model.bands.find((x) => x.lo === frozen.lo && x.hi === frozen.hi) || emptyBandAccum(frozen);
+    const live = solveBand(acc);
+    const wBw = Math.min(1, acc.n_win / CALIB_MIN_N);
+    const wBl = Math.min(1, acc.n_loss / CALIB_MIN_N);
+    const wP = Math.min(1, (acc.n_win + acc.n_loss) / CALIB_MIN_N);
+    const blend = (frozenVal, liveVal, w) => (liveVal == null ? frozenVal : frozenVal * (1 - w) + liveVal * w);
+    return {
+      lo: frozen.lo, hi: frozen.hi,
+      Bw: blend(frozen.Bw, live.Bw, wBw),
+      Bl: blend(frozen.Bl, live.Bl, wBl),
+      S: frozen.S, K: frozen.K,
+      P: blend(frozen.P, live.P, wP),
+      live: wP >= 1,
+      n: acc.n_win + acc.n_loss,
+    };
+  });
+  return new Response(JSON.stringify({ bands, updatedAt: model.updatedAt }), {
+    status: 200,
+    headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=300" },
+  });
+}
+
+// Folds one /history response's matches into the live calibration model.
+// Mirrors index.html's hmmMatchRow() row-by-row — KEEP IN SYNC WITH IT.
+// Derives everything server-side from HenrikDev's own trusted response
+// (never from client-submitted numbers), so a real account can only ever
+// contribute its own real matches.
+async function foldCalibration(env, bodyText, routeInfo) {
+  let parsed;
+  try {
+    parsed = JSON.parse(bodyText);
+  } catch (e) {
+    return;
+  }
+  const matches = parsed?.data;
+  if (!Array.isArray(matches) || !matches.length) return;
+
+  // Identify "me" the same way processMatch() does: puuid isn't known to
+  // this route (only name/tag/region/platform are), so match on name+tag —
+  // fine here since we only need approximate identity for finding rrhist,
+  // not exact cross-rename continuity like the client's PUUID-first lookup.
+  const wantName = (routeInfo.name || "").toLowerCase().trim();
+  const wantTag = (routeInfo.tag || "").toLowerCase().trim();
+
+  let puuid = null;
+  for (const m of matches) {
+    const me = (m.players || []).find(
+      (p) => p.name?.toLowerCase().trim() === wantName && p.tag?.toLowerCase().trim() === wantTag
+    );
+    if (me?.puuid) { puuid = me.puuid; break; }
+  }
+  if (!puuid) return; // can't find this player in their own match list — bail quietly
+
+  const candidateIds = [...new Set(
+    matches.map((m) => (m.metadata || {}).match_id ?? m.match_id ?? null).filter(Boolean)
+  )];
+  if (!candidateIds.length) return;
+
+  let seenSet = new Set(), seenCount = 0;
+  try {
+    const placeholders = candidateIds.map((_, i) => `?${i + 2}`).join(",");
+    const [seenRows, countRow] = await Promise.all([
+      env.APP_DB.prepare(`SELECT match_id FROM calib_seen WHERE puuid=?1 AND match_id IN (${placeholders})`)
+        .bind(puuid, ...candidateIds).all(),
+      env.APP_DB.prepare("SELECT COUNT(*) AS c FROM calib_seen WHERE puuid=?1").bind(puuid).first(),
+    ]);
+    seenSet = new Set((seenRows.results || []).map((r) => r.match_id));
+    seenCount = countRow?.c ?? 0;
+  } catch (e) {
+    // D1 unbound/unreachable — nothing to fold against, bail quietly.
+    return;
+  }
+  if (seenCount >= CALIB_PER_PLAYER_CAP) return; // lifetime cap reached — stop contributing, card still works fine
+
+  let rrHist = new Map();
+  try {
+    const placeholders = candidateIds.map((_, i) => `?${i + 2}`).join(",");
+    const { results } = await env.APP_DB
+      .prepare(`SELECT match_id, data FROM rr_history WHERE puuid=?1 AND match_id IN (${placeholders})`)
+      .bind(puuid, ...candidateIds).all();
+    for (const r of results || []) {
+      try { rrHist.set(r.match_id, JSON.parse(r.data)); } catch (e) {}
+    }
+  } catch (e) {
+    // D1 unbound/unreachable — proceed with no RR data (every row below skips).
+  }
+
+  const bandDeltas = new Map(); // key "lo:hi" -> partial accumulator delta
+  const newSeenIds = [];
+
+  for (const m of matches) {
+    const meta = m.metadata || {};
+    const matchId = meta.match_id ?? m.match_id ?? null;
+    if (!matchId || seenSet.has(matchId)) continue;
+    const players = m.players || [];
+    const me = players.find((p) => p.puuid === puuid);
+    if (!me) continue;
+
+    const myTierId = me.tier?.id ?? me.currenttier ?? 0;
+    if (!myTierId || myTierId < 3) continue; // placements excluded, same as hmmMatchRow
+
+    const histEntry = rrHist.get(matchId);
+    const actualRR = histEntry?.last_change;
+    if (actualRR == null || Math.abs(actualRR) > 200) continue; // no RR data yet, or implausible — sanity bound, not abuse guard
+
+    const myTeamId = me.team_id?.toLowerCase();
+    let myR, opR;
+    const teamsRaw = m.teams;
+    if (Array.isArray(teamsRaw)) {
+      const myT = teamsRaw.find((t) => t.team_id?.toLowerCase() === myTeamId);
+      const opT = teamsRaw.find((t) => t.team_id?.toLowerCase() !== myTeamId);
+      myR = myT?.rounds?.won ?? myT?.rounds_won;
+      opR = opT?.rounds?.won ?? opT?.rounds_won;
+    } else if (teamsRaw && typeof teamsRaw === "object") {
+      const myT = myTeamId ? teamsRaw[myTeamId] : null;
+      const opTeamId = myTeamId === "red" ? "blue" : "red";
+      const opT = teamsRaw[opTeamId] || null;
+      if (typeof myT === "number") { myR = myT; opR = typeof opT === "number" ? opT : null; }
+      else if (myT && typeof myT === "object") { myR = myT.rounds_won ?? myT.rounds?.won; opR = opT?.rounds_won ?? opT?.rounds?.won; }
+    }
+    if (myR == null || opR == null || myR === opR) continue; // no round data, or a genuine draw — excluded same as hmmMatchRow
+    const won = myR > opR;
+    const rd = Math.abs(myR - opR);
+    if (rd > 13) continue; // sanity bound
+
+    const myPartyId = me.party_id ?? null;
+    const pen = (meta.party_rr_penaltys || []).find((p) => p.party_id === myPartyId)?.penalty ?? 0;
+
+    const acss = players
+      .map((p) => { const s = p.stats || p; const score = s.score ?? s.combat_score ?? 0; const rp = s.rounds_played ?? s.roundsPlayed ?? (myR + opR); return rp > 0 ? score / rp : null; })
+      .filter((a) => a != null && a > 0);
+    if (acss.length < 5) continue;
+    const mean = acss.reduce((x, y) => x + y, 0) / acss.length;
+    const sd = Math.sqrt(acss.reduce((s, a) => s + (a - mean) ** 2, 0) / acss.length);
+    if (sd <= 0) continue;
+    const meStats = me.stats || me;
+    const myScore = meStats.score ?? meStats.combat_score ?? 0;
+    const myRp = meStats.rounds_played ?? meStats.roundsPlayed ?? (myR + opR);
+    const myAcs = myRp > 0 ? myScore / myRp : null;
+    if (myAcs == null) continue;
+    const z = (myAcs - mean) / sd;
+    if (Math.abs(z) > 6) continue; // sanity bound
+
+    const b = calibBandFor(myTierId);
+    const bandKey = `${b.lo}:${b.hi}`;
+    const base0 = b.S * Math.max(0, rd - b.K);
+    const y = actualRR - (won ? 1 : -1) * (1 - pen) * base0;
+
+    let d = bandDeltas.get(bandKey);
+    if (!d) { d = { lo: b.lo, hi: b.hi, n_win: 0, n_loss: 0, Sww: 0, Sll: 0, Swz: 0, Slz: 0, Szz: 0, Swy: 0, Sly: 0, Szy: 0 }; bandDeltas.set(bandKey, d); }
+    d.Szz += z * z;
+    d.Szy += z * y;
+    if (won) { d.n_win++; d.Sww += (1 - pen) ** 2; d.Swz += (1 - pen) * z; d.Swy += (1 - pen) * y; }
+    else { d.n_loss++; d.Sll += (1 - pen) ** 2; d.Slz += -(1 - pen) * z; d.Sly += -(1 - pen) * y; }
+
+    newSeenIds.push(matchId);
+  }
+
+  if (!newSeenIds.length) return; // nothing new — don't touch D1
+
+  const nowIso = new Date().toISOString();
+  // One atomic UPDATE per touched band: decay + add in a single statement
+  // (D1/SQLite numbered params let ?1 — the decay factor — repeat across all
+  // ten sums), so there's no get-then-put race the way KV had.
+  const bandStmts = [...bandDeltas.values()].map((d) =>
+    env.APP_DB.prepare(
+      `UPDATE calib_bands SET
+         n_win=n_win*?1+?2, n_loss=n_loss*?1+?3,
+         Sww=Sww*?1+?4, Sll=Sll*?1+?5, Swz=Swz*?1+?6, Slz=Slz*?1+?7,
+         Szz=Szz*?1+?8, Swy=Swy*?1+?9, Sly=Sly*?1+?10, Szy=Szy*?1+?11,
+         updated_at=?12
+       WHERE lo=?13`
+    ).bind(CALIB_DECAY, d.n_win, d.n_loss, d.Sww, d.Sll, d.Swz, d.Slz, d.Szz, d.Swy, d.Sly, d.Szy, nowIso, d.lo)
+  );
+  const seenStmts = newSeenIds.map((matchId) =>
+    env.APP_DB.prepare("INSERT OR IGNORE INTO calib_seen (puuid, match_id, seen_at) VALUES (?1,?2,?3)")
+      .bind(puuid, matchId, nowIso)
+  );
+
+  try {
+    await env.APP_DB.batch([...bandStmts, ...seenStmts]);
+  } catch (e) {
+    // Non-fatal — worst case this fold's contribution is lost, same
+    // best-effort tradeoff already accepted for the rate limiter's own KV use.
+  }
+}
 
 // Pacing tuning — mirrors the client's old planDelay() logic, just now
 // operating on state shared across every concurrent user instead of one
@@ -124,6 +441,7 @@ const ROUTES = [
     match: /^\/history\/([^/]+)\/([^/]+)\/([^/]+)\/([^/]+)$/,
     upstream: (m) => `/valorant/v4/matches/${m[1]}/${m[2]}/${m[3]}/${m[4]}`,
     cacheTtl: 150, // individual matches are immutable, but the list grows as new ones finish
+    foldCalibration: true,
   },
 ];
 
@@ -133,34 +451,39 @@ function sleep(ms) {
 
 async function getQuota(env) {
   try {
-    const raw = await env.RATE_LIMIT_KV.get(QUOTA_KEY);
-    if (!raw) return { remaining: null, resetAt: 0, lastRequestAt: 0 };
-    const parsed = JSON.parse(raw);
-    return {
-      remaining: parsed.remaining ?? null,
-      resetAt: parsed.resetAt ?? 0,
-      lastRequestAt: parsed.lastRequestAt ?? 0,
-    };
+    const row = await env.APP_DB.prepare(
+      "SELECT remaining, reset_at, last_request_at FROM rate_quota WHERE id=1"
+    ).first();
+    if (row) {
+      return {
+        remaining: row.remaining ?? null,
+        resetAt: row.reset_at ?? 0,
+        lastRequestAt: row.last_request_at ?? 0,
+      };
+    }
   } catch (e) {
-    // KV unavailable/misconfigured — fail open (treat as unknown quota)
+    // D1 unavailable/misconfigured — fail open (treat as unknown quota)
     // rather than blocking every request.
-    return { remaining: null, resetAt: 0, lastRequestAt: 0 };
   }
+  return { remaining: null, resetAt: 0, lastRequestAt: 0 };
 }
 
 async function putQuota(env, state) {
   try {
-    await env.RATE_LIMIT_KV.put(QUOTA_KEY, JSON.stringify(state));
+    await env.APP_DB.prepare(
+      "UPDATE rate_quota SET remaining=?1, reset_at=?2, last_request_at=?3 WHERE id=1"
+    ).bind(state.remaining, state.resetAt, state.lastRequestAt).run();
   } catch (e) {
     // Non-fatal — worst case, pacing is a little less accurate next request.
   }
 }
 
 // Merges a fresh mmr-history response with whatever's already persisted in
-// KV for this player, returns the (possibly rewritten) body text to send to
-// both the client and the edge cache. Fails open — any parsing surprise
-// just returns the original upstream body untouched, since this is a nice-
-// to-have on top of an already-correct response, not load-bearing.
+// APP_DB (table rr_history) for this player, returns the (possibly
+// rewritten) body text to send to both the client and the edge cache. Fails
+// open — any parsing surprise just returns the original upstream body
+// untouched, since this is a nice-to-have on top of an already-correct
+// response, not load-bearing.
 async function mergeRRHistory(env, bodyText, waitUntil, route) {
   let parsed;
   try {
@@ -172,59 +495,67 @@ async function mergeRRHistory(env, bodyText, waitUntil, route) {
   const freshHistory = parsed?.data?.history;
   if (!puuid || !Array.isArray(freshHistory)) return bodyText;
 
-  const kvKey = `rrhist:${puuid}`;
-  let stored = {};
+  let stored = new Map();
   try {
-    const raw = await env.RATE_LIMIT_KV.get(kvKey);
-    if (raw) stored = JSON.parse(raw);
+    const { results } = await env.APP_DB
+      .prepare("SELECT match_id, data FROM rr_history WHERE puuid=?1")
+      .bind(puuid).all();
+    for (const r of results || []) {
+      try { stored.set(r.match_id, JSON.parse(r.data)); } catch (e) {}
+    }
   } catch (e) {
-    // Corrupt or unreadable — proceed as if nothing was stored yet rather
-    // than failing the whole request over a persistence nice-to-have.
-    stored = {};
+    // D1 unavailable/misconfigured — proceed as if nothing was stored yet
+    // rather than failing the whole request over a persistence nice-to-have.
   }
 
   let hasNew = false;
   for (const h of freshHistory) {
     if (!h?.match_id) continue;
-    if (!(h.match_id in stored)) hasNew = true;
-    stored[h.match_id] = h; // fresh data wins on overlap — it's the more current read
+    if (!stored.has(h.match_id)) hasNew = true;
+    stored.set(h.match_id, h); // fresh data wins on overlap — it's the more current read
   }
-
-  // Identity written as KV *metadata* rather than into the value, so the
-  // scheduled refresher (.github/workflows/refresh-rr-history.yml) can learn
-  // every cached player's region/name/tag from a single KV list call instead
-  // of reading each record. Refreshed on every merge so a Riot ID rename
-  // self-heals the next time that player is looked up.
-  const meta = {
-    region: route?.region || null,
-    platform: route?.platform || null,
-    name: parsed?.data?.account?.name || route?.name || null,
-    tag: parsed?.data?.account?.tag || route?.tag || null,
-    updatedAt: new Date().toISOString(),
-  };
 
   // Only write back when there's actually something new — most requests for
   // an already-seen player won't add anything, and skipping the write here
-  // avoids hammering this KV key with redundant puts every cache expiry.
+  // avoids hammering D1 with redundant writes every cache expiry.
   if (hasNew) {
-    const merged = Object.values(stored)
-      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
-      .slice(0, RR_HISTORY_MAX_ENTRIES);
-    const capped = {};
-    merged.forEach((h) => { capped[h.match_id] = h; });
+    const nowIso = new Date().toISOString();
+    const rowStmts = freshHistory
+      .filter((h) => h?.match_id)
+      .map((h) =>
+        env.APP_DB.prepare(
+          "INSERT INTO rr_history (puuid, match_id, data, date) VALUES (?1,?2,?3,?4) " +
+          "ON CONFLICT(puuid, match_id) DO UPDATE SET data=excluded.data, date=excluded.date"
+        ).bind(puuid, h.match_id, JSON.stringify(h), h.date || null)
+      );
+    // Player identity, refreshed on every merge so a Riot ID rename self-heals
+    // the next time that player is looked up — used by the 12h refresher
+    // (refresh-rr-history.mjs) to list who to re-ping without scanning
+    // rr_history itself.
+    rowStmts.push(
+      env.APP_DB.prepare(
+        "INSERT INTO rr_players (puuid, region, platform, name, tag, updated_at) VALUES (?1,?2,?3,?4,?5,?6) " +
+        "ON CONFLICT(puuid) DO UPDATE SET region=excluded.region, platform=excluded.platform, " +
+        "name=excluded.name, tag=excluded.tag, updated_at=excluded.updated_at"
+      ).bind(
+        puuid, route?.region || null, route?.platform || null,
+        parsed?.data?.account?.name || route?.name || null,
+        parsed?.data?.account?.tag || route?.tag || null, nowIso
+      )
+    );
     waitUntil(
-      env.RATE_LIMIT_KV.put(kvKey, JSON.stringify(capped), { metadata: meta }).catch(() => {
+      env.APP_DB.batch(rowStmts).catch(() => {
         // Non-fatal — worst case this player's history doesn't grow this round.
       })
     );
-    parsed.data.history = merged;
-  } else {
-    // Nothing new, but still hand back the full accumulated set (could
-    // already be more than these 20 from a prior visit).
-    parsed.data.history = Object.values(stored).sort(
-      (a, b) => new Date(b.date || 0) - new Date(a.date || 0)
-    );
   }
+
+  // Always hand back the full accumulated set (could already be more than
+  // these ~20 from a prior visit), regardless of whether the write above has
+  // landed yet — it's built from the in-memory merge, not re-read from D1.
+  parsed.data.history = [...stored.values()].sort(
+    (a, b) => new Date(b.date || 0) - new Date(a.date || 0)
+  );
 
   return JSON.stringify(parsed);
 }
@@ -276,6 +607,12 @@ export async function onRequestGet(context) {
   const url = new URL(request.url);
   const requestPath = url.pathname.slice(PREFIX.length);
 
+  // No HenrikDev counterpart — a pure local D1 read, so it's handled before
+  // the upstream ROUTES matching below rather than shoehorned into it. No
+  // hard-fail on a missing CALIB_DB binding: getCalibModel() already falls
+  // back to the frozen constants, which is a perfectly good response.
+  if (requestPath === "/calib-model") return handleCalibModel(env);
+
   let route = null, match = null;
   for (const r of ROUTES) {
     const m = requestPath.match(r.match);
@@ -283,7 +620,11 @@ export async function onRequestGet(context) {
   }
   if (!route) return json({ error: "Unknown route" }, 404);
   if (!env.HENRIK_KEY) return json({ error: "Proxy misconfigured: HENRIK_KEY secret not set" }, 500);
-  if (!env.RATE_LIMIT_KV) return json({ error: "Proxy misconfigured: RATE_LIMIT_KV binding not set" }, 500);
+  // No hard-fail on a missing APP_DB binding — every function that touches it
+  // (getQuota/putQuota/mergeRRHistory/foldCalibration/handleCalibModel) already
+  // fails open on its own, so the proxy still works correctly without it, just
+  // without cross-request rate-limit coordination, RR-history persistence, or
+  // live calibration.
 
   const cache = caches.default;
   const cacheKey = new Request(url.toString(), request);
@@ -335,6 +676,16 @@ export async function onRequestGet(context) {
 
   let bodyText = await upstream.text();
   const contentType = upstream.headers.get("Content-Type") || "application/json";
+
+  if (upstream.status === 200 && route.foldCalibration) {
+    // Fire-and-forget: never touches bodyText/the response, so this adds
+    // zero latency to the user-facing request either way.
+    context.waitUntil(
+      foldCalibration(env, bodyText, {
+        region: match[1], platform: match[2], name: decodeURIComponent(match[3]), tag: match[4],
+      }).catch(() => {})
+    );
+  }
 
   if (upstream.status === 200 && route.persistRRHistory) {
     // match[] is /mmr-history/{region}/{platform}/{name}/{tag}

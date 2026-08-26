@@ -10,7 +10,7 @@
         "dev",
         ".",
         "--compatibility-date=2026-07-13",
-        "--kv=RATE_LIMIT_KV"
+        "--d1=APP_DB=local-dev"
       ],
       "port": 8788
     }
