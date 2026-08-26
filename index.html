@@ -349,13 +349,14 @@ h1 span{color:var(--accent);}
    just not confined to a .rank-compare-col (so it falls back to the shared
    site accent for its icon halo instead of a per-column color). */
 .mmr-hero{display:flex;align-items:center;gap:10px;font-size:clamp(1.35rem,1.7vw + 1rem,2rem);font-weight:700;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--text);flex-wrap:wrap;margin-bottom:2px;}
+.mmr-hero-sub{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;flex-wrap:wrap;}
 /* Chart */
 .mmr-chart-wrap{position:relative;height:230px;margin-top:14px;}
 .mmr-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;}
 .mmr-legend-item{display:inline-flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);font-family:var(--font-body);}
 .mmr-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 .mmr-swatch-line{width:13px;height:2px;background:var(--accent);flex-shrink:0;}
-.mmr-swatch-v{width:2px;height:10px;background:var(--accent);flex-shrink:0;}
+.mmr-swatch-v{width:2px;height:10px;background:rgba(255,255,255,.35);flex-shrink:0;}
 /* Derivation — plain language, anchored to the two numbers a player already
    understands (what a win pays, what a loss costs), not raw regression
    coefficients (a "+92.6 baseline" is mathematically real but means nothing
@@ -523,25 +524,26 @@ h1 span{color:var(--accent);}
             <span class="mmr-sample" id="mmr-sample"></span>
           </div>
           <div class="mmr-hero" id="mmr-big">—</div>
+          <div class="mmr-hero-sub" id="mmr-hero-range"></div>
 
           <div class="mmr-chart-wrap"><canvas id="mmr-chart-canvas"></canvas></div>
           <div class="mmr-legend">
             <span class="mmr-legend-item"><span class="mmr-dot" style="background:#22c55e"></span>Win</span>
             <span class="mmr-legend-item"><span class="mmr-dot" style="background:#ef4444"></span>Loss</span>
-            <span class="mmr-legend-item"><span class="mmr-swatch-line"></span>Fitted trend</span>
-            <span class="mmr-legend-item"><span class="mmr-swatch-v"></span>Hidden MMR</span>
+            <span class="mmr-legend-item"><span class="mmr-swatch-line"></span>Your median gap</span>
+            <span class="mmr-legend-item"><span class="mmr-swatch-v"></span>Even (0)</span>
           </div>
 
           <div class="mmr-derivation">
-            <div class="mmr-derivation-title">Why this number</div>
+            <div class="mmr-derivation-title">The two signals</div>
             <div class="mmr-payout-row">
               <div>
-                <div class="mmr-payout-lbl">Avg win</div>
+                <div class="mmr-payout-lbl">Payout gap</div>
                 <div class="mmr-payout-val win" id="mmr-payout-win"></div>
               </div>
               <div>
-                <div class="mmr-payout-lbl">Avg loss</div>
-                <div class="mmr-payout-val loss" id="mmr-payout-loss"></div>
+                <div class="mmr-payout-lbl">Lobby gap</div>
+                <div class="mmr-payout-val win" id="mmr-payout-loss"></div>
               </div>
             </div>
             <div class="mmr-explain" id="mmr-explain"></div>
@@ -967,10 +969,8 @@ let allMatches=[],statMatches=[],mhIncludeReset=false,mhVisible=PER_PAGE,mhData=
 // fetch resolves. Drives the site accent color (see renderStats) — falls
 // back to the avg lobby rank tier when unknown (e.g. MMR fetch failed).
 let CURRENT_TIER_ID=null;
-// The player's raw current.rr alongside CURRENT_TIER_ID — together they're
-// the one known ground-truth anchor into the Hidden MMR estimate's raw RR
-// scale (see renderHiddenMMRCard), which resets 0-99 per division below
-// Immortal but climbs continuously past 99 through Immortal/Radiant.
+// The player's raw current.rr alongside CURRENT_TIER_ID — the visible-rank
+// anchor used by the next-division progress bar and rank cards.
 let CURRENT_RR=null;
 // match_id -> RR gained/lost that match, from /api/mmr-history. The server
 // persists every match it's ever seen for this player (see mergeRRHistory in
@@ -979,9 +979,9 @@ let CURRENT_RR=null;
 // to be covered (never fetched before, or persisted after this ran). Read via
 // _rrChangeByMatchId[matchId] ?? null, never assume it's present.
 let _rrChangeByMatchId={};
-// match_id -> RR total the player was sitting on BEFORE that match, derived as
-// (rr after) - (last_change). This is the stand-in for "current rank" that the
-// hidden-MMR estimate regresses against — see estimateHiddenMMR().
+// match_id -> RR total the player was sitting on BEFORE that match — previous
+// entry's elo within a season, else rr - last_change - refunded_rr. Used by the
+// hidden-MMR card's per-match tooltips and the rank-trend chart.
 let _preRRByMatchId={};
 // Single reused canvas 2D context for text-width measurement, created lazily on
 // first use — avoids allocating a fresh <canvas> every renderStats call.
@@ -2117,6 +2117,12 @@ function processMatch(m){
   const ratedCount=rankNums.length;
   const rawAvg=ratedCount?rankNums.reduce((a,b)=>a+b,0)/ratedCount:null;
   const avgRank=ratedCount>=MIN_RATED?rawAvg:null;
+  // Raw lobby average INCLUDING low-rated lobbies — the hidden-MMR lobby-gap
+  // signal wants every bit of rank info available, so it doesn't apply the
+  // strict MIN_RATED gate the avg-lobby-rank card uses (a 5-rated lobby still
+  // tells us something; the per-match gap just gets down-weighted by
+  // confidence instead of dropped).
+  const lobbyAvgTier=rawAvg;
   // A lobby with ZERO rated players (everyone Unranked — common right after a
   // reset) has rawAvg===null, which previously made this whole condition
   // false via the `rawAvg!=null&&` guard — incorrectly treating a fully
@@ -2181,6 +2187,11 @@ function processMatch(m){
     ? myTeamPlayers.filter(p=>p.party_id===myPartyId).length
     : 1;
 
+  // Party RR penalty for THIS match, from metadata.party_rr_penaltys — a list
+  // of {party_id, penalty} where penalty is the fraction (0.25 = 25% cut).
+  // 0 when solo or unpenalized. Feeds the payout model's (1 − pen) term.
+  const myPartyPenalty=(meta.party_rr_penaltys||[]).find(p=>p.party_id===myPartyId)?.penalty??0;
+
   // My tier and RR for this match — used to derive peak rank
   const myTierId=me?.tier?.id??me?.currenttier??0;
   const myTierName=me?.tier?.patched??me?.currenttier_patched??rName(myTierId);
@@ -2191,7 +2202,7 @@ function processMatch(m){
   const myRR=_rrChangeByMatchId[matchId]??null;
   // RR total going into this match — the "current rank" term in the hidden-MMR fit.
   const myPreRR=_preRRByMatchId[matchId]??null;
-  return{mapName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,myPreRR,partySize,myPartyId,myAcsPlace,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
+  return{mapName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lobbyAvgTier,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,myPreRR,myPartyPenalty,partySize,myPartyId,myAcsPlace,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
 }
 
 function extractStats(p,fallbackRounds=null){
@@ -2349,6 +2360,10 @@ function tagPostResetPlacements(matches,days=RESET_GRACE_DAYS){
 async function loadAll(prefetchSnapshot=null){
   const myGen=++_analysisGen; // supersede any in-flight analysis
   loadSeasonDates(); // fire off act-start dates now; awaited before we filter matches
+  loadCalibModel(); // fire off the live hidden-MMR band fetch now; not awaited — by the
+                     // time renderHiddenMMRCard runs (after the much slower match-history
+                     // pagination below), it's essentially always resolved; hmmBand()
+                     // falls back to the frozen HMM_BANDS if it isn't yet or it failed.
   setProgress(3);
   try{
     // Step 0: resolve PUUID so we can find the player in historical matches
@@ -2470,12 +2485,27 @@ async function loadAll(prefetchSnapshot=null){
       const rrUrl=`${API_BASE}/mmr-history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}`;
       const{j:rrJ}=await apiGet(rrUrl);
       const history=(rrJ.data||rrJ).history||[];
-      history.forEach(h=>{
-        if(!h.match_id)return;
+      // Entries arrive oldest→newest per the API, but sort defensively so the
+      // previous-entry carry-forward below always walks forward in time.
+      const sorted=[...history].filter(h=>h.match_id).sort((a,b)=>new Date(a.date)-new Date(b.date));
+      let prev=null;
+      sorted.forEach(h=>{
         _rrChangeByMatchId[h.match_id]=h.last_change??null;
-        // rr is the total AFTER the match, so subtract the change to recover
-        // what the player was on going in.
-        if(h.rr!=null&&h.last_change!=null)_preRRByMatchId[h.match_id]=h.rr-h.last_change;
+        // Pre-match RR: the previous entry's elo is the exact value when the
+        // season hasn't changed (elo = tier*100 + rr is continuous within an
+        // act). Across a season boundary (or for the very first entry) derive
+        // it from this entry's totals — and subtract refunded_rr too, since
+        // elo = prev + last_change + refunded_rr (verified across 20/22 refund
+        // entries; last_change is the pure match payout, the refund rides on
+        // top), so rr - last_change alone would overstate the pre-match RR by
+        // the refunded amount.
+        const sameSeason=prev&&prev.season?.short===h.season?.short;
+        if(sameSeason&&prev.elo!=null){
+          _preRRByMatchId[h.match_id]=prev.elo;
+        }else if(h.rr!=null&&h.last_change!=null){
+          _preRRByMatchId[h.match_id]=h.rr-h.last_change-(h.refunded_rr||0);
+        }
+        prev=h;
       });
     }catch(_){
       // No RR-change data this run — matches just fall back to myRR===null.
@@ -3316,115 +3346,110 @@ const RANK_MODE_ORDER=['lobby','player','party'];
 // So the win/loss ASYMMETRY is an observable of the gap, and the pre-match RR
 // at which it goes neutral IS the MMR. We fit
 //     RR change = b0 + b1*(round margin) + b2*(pre-match RR)
-// and solve for the pre-match RR where a mean-margin match pays out zero.
+// ══ HIDDEN MMR (payout-signal + lobby-gap card) ══════════════════════════
+// Riot pays RR based on outcome + round margin + performance, and scales it
+// by how far your hidden MMR sits from your displayed rank (their docs: rank
+// lags MMR -> bigger wins/smaller losses; rank ahead of MMR -> the reverse).
+// That payout asymmetry is an observable of the gap. We measure it two ways:
 //
-// Round margin MUST be in the model: it's the dominant driver of RR and it
-// correlates with pre-match RR (-0.45 in the sample this was built against),
-// so omitting it leaks margin into the convergence term and inflates the
-// estimate badly (~468 vs ~421 RR on that data).
+//   1. PAYOUT GAP (c): for each match, compare the actual RR change against
+//      the expected payout for someone whose rank matches their skill:
+//        expected = s·(Bw/Bl + S·max(0,|rd|−K))·(1−pen) + P·z
+//      (Bw/Bl = win/loss base per band; S/K = blowout bonus; P = RR per ACS
+//      standard deviation vs the lobby; z = my ACS z-score in the lobby).
+//      c = (actual − P·z)/base − 1 on a win, 1 − ... on a loss. Median c
+//      across matches is the payout gap: c=+0.1 ≈ paid like someone 10%
+//      stronger than their rank shows.
 //
-// This is an INFERENCE from payout behaviour, not a real MMR readout — Riot
-// never exposes the number.
-const MMR_MIN_MATCHES=20;   // below this the fit swings wildly
-const MMR_MIN_RR_SPREAD=40; // need leverage on the preRR axis to identify b2
-const MMR_BOOTSTRAP_ITERS=1500;
+//   2. LOBBY GAP: mean(lobby avg tier − my tier). Positive = matchmaking
+//      keeps placing me above my displayed rank. Split-half r=0.82, predicts
+//      the payout signal out-of-sample (r=0.54).
+//
+// Constants calibrated on 355 players / 6,653 matches
+// (hidden-mmr-research/final_params4_wl.json) — the starting point/fallback.
+// Bw/Bl/P keep improving live from real traffic (see loadCalibModel /
+// LIVE_HMM_BANDS below); S/K never do — see the server-side comment above
+// FROZEN_BANDS in functions/api/[[path]].js for why.
+const HMM_BANDS=[
+  {lo:3, hi:5, Bw:20.55,Bl:14.14,S:0.65,K:3,P:5.21},  // Iron
+  {lo:6, hi:8, Bw:19.30,Bl:16.84,S:0.45,K:3,P:5.16},  // Bronze
+  {lo:9, hi:11,Bw:18.48,Bl:17.18,S:0.66,K:5,P:3.71},  // Silver
+  {lo:12,hi:14,Bw:18.87,Bl:16.87,S:0.59,K:5,P:2.52},  // Gold
+  {lo:15,hi:17,Bw:18.00,Bl:17.74,S:0.43,K:4,P:1.89},  // Platinum
+  {lo:18,hi:20,Bw:17.90,Bl:16.98,S:0.61,K:5,P:1.10},  // Diamond
+  {lo:21,hi:23,Bw:17.70,Bl:17.84,S:0.42,K:4,P:0.33},  // Ascendant
+  {lo:24,hi:27,Bw:17.22,Bl:18.67,S:0.65,K:6,P:0.16},  // Immortal+/Radiant
+];
+// Verdict thresholds on the combined signal (calibrated so ~top/bottom 10%
+// of the 355-player calibration corpus get the strong labels).
+const HMM_THRESHOLDS={pos:0.15,neg:0.15,strongPos:0.35,strongNeg:0.35};
+const HMM_MIN_MATCHES=8;     // below this: hide the card entirely
+const HMM_LOW_CONFIDENCE=15; // below this: show it but flag low confidence
 
-// Solves (X'X)b = X'y by Gauss-Jordan. Returns null if singular.
-function _olsSolve(y,X){
-  const k=X[0].length;
-  const M=Array.from({length:k},(_,a)=>{
-    const row=Array.from({length:k},(_,b)=>X.reduce((s,r)=>s+r[a]*r[b],0));
-    row.push(X.reduce((s,r,i)=>s+r[a]*y[i],0));
-    return row;
-  });
-  for(let c=0;c<k;c++){
-    let p=c;
-    for(let r=c+1;r<k;r++)if(Math.abs(M[r][c])>Math.abs(M[p][c]))p=r;
-    [M[c],M[p]]=[M[p],M[c]];
-    if(Math.abs(M[c][c])<1e-12)return null;
-    for(let r=0;r<k;r++){
-      if(r===c)continue;
-      const f=M[r][c]/M[c][c];
-      for(let j=c;j<=k;j++)M[r][j]-=f*M[c][j];
+// A common Valorant rank-dragging play: stack with lower-ranked friends (up
+// to a full 5-stack — the party isn't just "one friend," it's everyone
+// sharing my party_id, could be 2 through 5 players) so matchmaking builds
+// the whole lobby around the party's blended MMR, landing an easier match
+// than either the strong or weak player would face alone. Riot's own
+// party_rr_penaltys already discounts the PAYOUT signal for this (netBase
+// above) — but nothing protects the LOBBY-GAP signal, and worse: dragging
+// pulls lobbyAvgTier down relative to MY tier, so lobbyGap goes negative,
+// which this model reads as "over-ranked" — backwards from reality, since a
+// player doing this deliberately is under-ranked, not over-ranked. Cheapest
+// correct fix: exclude lobbyGap outright (not c — that stays penalty-
+// protected) whenever the party's own internal tier spread is large enough
+// to plausibly be this, rather than two close-rank friends queuing together.
+const HMM_PARTY_DRAG_MIN_SPREAD=6; // tiers (~2 full ranks) within my own party
+
+// Bw/Bl/P recalibrate live from real traffic (functions/api/[[path]].js
+// foldCalibration/handleCalibModel) — loaded once per page load, fire-and-
+// forget, from /api/calib-model. Null until that resolves (or if it fails),
+// in which case hmmBand() below falls back to the frozen HMM_BANDS — never
+// blocks rendering on this.
+let LIVE_HMM_BANDS=null;
+async function loadCalibModel(){
+  try{
+    const r=await fetch(`${API_BASE}/calib-model`);
+    if(r.ok){
+      const j=await r.json();
+      if(Array.isArray(j.bands))LIVE_HMM_BANDS=j.bands;
     }
+  }catch(_){
+    // Network hiccup or route unavailable — silently keep using HMM_BANDS.
   }
-  return Array.from({length:k},(_,i)=>M[i][k]/M[i][i]);
-}
-function _mean(a){return a.reduce((x,y)=>x+y,0)/a.length;}
-
-// Returns {estimate, lo, hi, n, spread, currentRR, b0, b1, b2, meanMargin,
-// usable} or null when the sample can't support a fit. b0/b1/b2 are the raw
-// fitted coefficients (RR change = b0 + b1*margin + b2*preRR) — exposed so
-// the card can break down what's actually driving the estimate instead of
-// just stating the final number. usable is the exact match set the fit was
-// run on, exposed so the card can plot the real data instead of describing
-// the method in prose.
-function estimateHiddenMMR(matches){
-  const usable=matches.filter(m=>m.myRR!=null&&m.myPreRR!=null&&m.myR!=null&&m.opR!=null);
-  if(usable.length<MMR_MIN_MATCHES)return{insufficient:true,n:usable.length,need:MMR_MIN_MATCHES};
-  const pres=usable.map(m=>m.myPreRR);
-  const spread=Math.max(...pres)-Math.min(...pres);
-  if(spread<MMR_MIN_RR_SPREAD)return{insufficient:true,n:usable.length,need:MMR_MIN_MATCHES,flatSpread:true,spread};
-
-  const rows=usable.map(m=>[1,m.myR-m.opR,m.myPreRR]);
-  const ys=usable.map(m=>m.myRR);
-  const b=_olsSolve(ys,rows);
-  if(!b||!Number.isFinite(b[2])||Math.abs(b[2])<1e-4)return{insufficient:true,n:usable.length,need:MMR_MIN_MATCHES};
-  const meanMargin=_mean(usable.map(m=>m.myR-m.opR));
-  const estimate=-(b[0]+b[1]*meanMargin)/b[2];
-  if(!Number.isFinite(estimate))return{insufficient:true,n:usable.length,need:MMR_MIN_MATCHES};
-
-  // Bootstrap so the card can state its own uncertainty rather than implying
-  // false precision — the interval is wide at these sample sizes.
-  const boot=[];
-  for(let i=0;i<MMR_BOOTSTRAP_ITERS;i++){
-    const idx=Array.from({length:usable.length},()=>Math.floor(Math.random()*usable.length));
-    const bb=_olsSolve(idx.map(j=>ys[j]),idx.map(j=>rows[j]));
-    if(!bb||Math.abs(bb[2])<1e-4)continue;
-    const mb=_mean(idx.map(j=>usable[j].myR-usable[j].opR));
-    const v=-(bb[0]+bb[1]*mb)/bb[2];
-    if(Number.isFinite(v)&&v>0&&v<2000)boot.push(v);
-  }
-  boot.sort((x,y)=>x-y);
-  const q=p=>boot.length?boot[Math.floor(p*boot.length)]:estimate;
-
-  // Most recent match's post-match RR = where the visible rank sits now.
-  const newest=usable.slice().sort((a,b)=>(b.startedAtMs??0)-(a.startedAtMs??0))[0];
-  const currentRR=newest.myPreRR+newest.myRR;
-
-  return{estimate,lo:q(0.25),hi:q(0.75),n:usable.length,spread,currentRR,b0:b[0],b1:b[1],b2:b[2],meanMargin,usable};
 }
 
-// A raw MMR-scale RR number alone doesn't say which rank it's in — 120 RR
-// could be Ascendant 3 or Immortal 1 depending on where you started — so a
-// bare "120 RR" is meaningless on its own. This maps it onto an internal
-// abs scale (tierId*100 + within-tier RR) anchored to the player's own known
-// current tier+RR, the only fixed reference point available, then reads the
-// tier + RR back off it.
+function hmmBand(tierId){
+  const bands=LIVE_HMM_BANDS||HMM_BANDS;
+  return bands.find(b=>tierId>=b.lo&&tierId<=b.hi)||bands[bands.length-1];
+}
+
+// ── Payout-gap → Rank+RR headline ───────────────────────────────────────
+// The research retracted converting c into elo via a DYNAMIC convergence
+// multiplier (fake precision — see hidden-mmr-research/overnight-progress.md,
+// "Climber wave"), but left a sanctioned, measured LEVEL conversion for
+// exactly this display purpose: "if we ever convert c→elo, use A ≈ 0.0004
+// (c=+0.1 ⇒ ~235 elo above displayed)" — i.e. "1 unit of c ≈ 2,350 elo".
+// eloOffset = c / A — a DIVISION. (c*A would be ~2,500x too small and the
+// headline would silently collapse to "your current rank" with no error —
+// this bit it once already, be careful editing it.)
+const HMM_C_TO_ELO_A=0.000425;
+
+// Converts a raw RR-scale offset into {tierId,rr,name} anchored on the
+// player's own current tier+RR — the only fixed reference point available.
+// Recovered from the deleted formatMMRRR (git show HEAD:index.html before
+// this session's rewrite) since it already solved the Immortal+/Radiant
+// continuous-RR-band special case correctly; not re-derived.
 //
-// Below Immortal (tier 3-23) each division genuinely resets 0-99, so
-// CURRENT_RR there is already a local value and abs = tierId*100+CURRENT_RR.
-// Immortal 1/2/3 and Radiant (tier 24+) instead share ONE continuous band
-// where RR climbs straight through 100/200/300 without resetting (confirmed
-// against real accounts — Immortal 3 shows up to 297 RR) — current.rr there
-// already measures distance from Immortal 1's start, so the anchor is
-// IMMORTAL_START_ABS+CURRENT_RR, not tierId*100+CURRENT_RR (that would
-// double-count the tier offset already baked into CURRENT_RR).
+// Below Immortal (tier 3-23) each division resets 0-99, so CURRENT_RR is
+// already a local value: abs = tierId*100+CURRENT_RR. Immortal 1/2/3 and
+// Radiant (tier 24+) share ONE continuous band where RR climbs straight
+// through 100/200/300 without resetting, so the anchor there is
+// IMMORTAL_START_ABS+CURRENT_RR instead.
 const MMR_IMMORTAL_TIER=24,MMR_RADIANT_TIER=27,MMR_IMMORTAL_START_ABS=MMR_IMMORTAL_TIER*100;
-function formatMMRRR(raw,cur){
-  const rounded=Math.round(raw);
-  if(CURRENT_TIER_ID==null||CURRENT_RR==null){
-    return{tierId:null,rr:rounded,name:null,plain:`${rounded} RR`};
-  }
-  const anchorAbs=CURRENT_TIER_ID<MMR_IMMORTAL_TIER
-    ?CURRENT_TIER_ID*100+CURRENT_RR
-    :MMR_IMMORTAL_START_ABS+CURRENT_RR;
-  const abs=anchorAbs+(raw-cur);
+function absToTierRR(abs){
   let tierId,rr;
   if(abs>=MMR_IMMORTAL_START_ABS){
-    // Immortal+/Radiant: rr is the full continuous distance from Immortal
-    // 1's start (matches how HenrikDev/the rest of this app already shows
-    // it, e.g. "Radiant (412 RR)") — never reduced to a per-division 0-99.
     tierId=Math.min(MMR_RADIANT_TIER,Math.floor(abs/100));
     rr=Math.round(abs-MMR_IMMORTAL_START_ABS);
   }else{
@@ -3435,190 +3460,242 @@ function formatMMRRR(raw,cur){
   return{tierId,rr,name,plain:`${name} (${rr} RR)`};
 }
 
+// {point,lo,hi} — all three run through absToTierRR, never a bare point
+// (the honesty rule that got the original card disabled). lo/hi can
+// legitimately land in different divisions from a wide cRange.
+function hmmHeadlineRankRR(medianC,cRange){
+  if(CURRENT_TIER_ID==null||CURRENT_RR==null)return null;
+  const anchorAbs=CURRENT_TIER_ID<MMR_IMMORTAL_TIER
+    ?CURRENT_TIER_ID*100+CURRENT_RR
+    :MMR_IMMORTAL_START_ABS+CURRENT_RR;
+  return{
+    point:absToTierRR(anchorAbs+medianC/HMM_C_TO_ELO_A),
+    lo:absToTierRR(anchorAbs+cRange[0]/HMM_C_TO_ELO_A),
+    hi:absToTierRR(anchorAbs+cRange[1]/HMM_C_TO_ELO_A),
+  };
+}
+
+// Tier spread within MY OWN party for this match (0 if solo, or fewer than
+// 2 party members carry a real tier). Any size party from a duo up to a
+// full 5-stack — whoever shares m.myPartyId, not just "one friend".
+function hmmPartyTierSpread(m){
+  if(!m.myPartyId)return 0;
+  const tiers=(m.players||[]).filter(p=>p.party_id===m.myPartyId).map(p=>p._tier).filter(t=>t!=null&&t>0);
+  if(tiers.length<2)return 0;
+  return Math.max(...tiers)-Math.min(...tiers);
+}
+
+// Per-match payout gap c + lobby gap. Returns null for matches we can't use:
+// no RR data, draws (pay ~nothing regardless of play), or placements
+// (tier 0-2 — they pay by placement rules, not the regular model).
+function hmmMatchRow(m){
+  if(m.myRR==null||m.won===undefined||m.won===null)return null;
+  if(!m.myTierId||m.myTierId<3)return null;
+  const b=hmmBand(m.myTierId);
+  const rd=Math.abs((m.myR??13)-(m.opR??13));
+  const base=(m.won?b.Bw:b.Bl)+b.S*Math.max(0,rd-b.K);
+  const netBase=base*(1-(m.myPartyPenalty||0));
+  if(netBase<=0)return null;
+  // ACS z-score: my ACS vs everyone in the lobby (both teams — same
+  // definition the calibration used).
+  const acss=(m.players||[]).map(p=>p._acs).filter(a=>a!=null&&a>0);
+  if(acss.length<5)return null;
+  const mean=acss.reduce((x,y)=>x+y,0)/acss.length;
+  const sd=Math.sqrt(acss.reduce((s,a)=>s+(a-mean)**2,0)/acss.length);
+  if(sd<=0)return null;
+  const z=(m.myStats?.acs-mean)/sd;
+  // Invert chg = s·netBase·(1+s·c) + P·z for c. On a win (s=+1) the P·z
+  // cushion ADDS to the payout; on a loss (s=−1) it SHRINKS the deduction —
+  // so the loss branch must flip myRR's sign but keep +P·z:
+  //   win:  c = (myRR − P·z)/netBase − 1
+  //   loss: c = 1 − (−myRR + P·z)/netBase
+  const c=m.won
+    ?(m.myRR-b.P*z)/netBase-1
+    :1-((-m.myRR)+b.P*z)/netBase;
+  const rawLobbyGap=(m.lobbyAvgTier!=null&&m.myTierId)?m.lobbyAvgTier-m.myTierId:null;
+  // Exclude (not adjust) the lobby-gap signal when my own party's internal
+  // tier spread suggests deliberate rank-dragging — see HMM_PARTY_DRAG_MIN_SPREAD.
+  const dragging=(m.partySize||1)>=2&&hmmPartyTierSpread(m)>=HMM_PARTY_DRAG_MIN_SPREAD;
+  const lobbyGap=dragging?null:rawLobbyGap;
+  return{c,lobbyGap,won:m.won,date:m.startedAtMs||0,pen:m.myPartyPenalty||0,base};
+}
+
+// Aggregates the two signals into what the card shows:
+// {insufficient:{n,need}} or {rows,n,medianC,cRange,meanLobbyGap,lobbyGapRange,
+// lobbyN,combined,verdict,lowConfidence}.
+function computeHiddenMMR(matches){
+  const rows=matches.map(hmmMatchRow).filter(Boolean);
+  const n=rows.length;
+  if(n<HMM_MIN_MATCHES)return{insufficient:{n,need:HMM_MIN_MATCHES}};
+  const cs=rows.map(r=>r.c).slice().sort((a,b)=>a-b);
+  const medianC=cs[Math.floor(n/2)];
+  // Sampling noise on a median over n matches is ~1.2533·sd/√n — show it as a
+  // range rather than a false-precision point estimate.
+  const sd=Math.sqrt(rows.reduce((s,r)=>s+(r.c-medianC)**2,0)/n)||0.1;
+  const cHalf=1.2533*sd/Math.sqrt(n);
+  const cRange=[medianC-cHalf,medianC+cHalf];
+  const lgs=rows.map(r=>r.lobbyGap).filter(g=>g!=null);
+  let meanLobbyGap=null,lobbyGapRange=null;
+  if(lgs.length){
+    meanLobbyGap=lgs.reduce((a,b)=>a+b,0)/lgs.length;
+    const lsd=Math.sqrt(lgs.reduce((s,g)=>s+(g-meanLobbyGap)**2,0)/lgs.length)||0.1;
+    lobbyGapRange=[meanLobbyGap-1.2533*lsd/Math.sqrt(lgs.length),meanLobbyGap+1.2533*lsd/Math.sqrt(lgs.length)];
+  }
+  const lobbyN=lgs.length;
+  // Blend the two signals on a common scale: c's observed player spread is
+  // roughly ±0.15 and the lobby gap's is roughly ±2 tiers, so each is divided
+  // by its spread before summing. Thresholds absorb the exact scaling.
+  const combined=medianC/0.15+(meanLobbyGap??0)/2;
+  const lowConfidence=n<HMM_LOW_CONFIDENCE;
+  let verdict='balanced';
+  if(combined>0.35)verdict='strong-under';
+  else if(combined>0.15)verdict='under';
+  else if(combined<-0.35)verdict='strong-over';
+  else if(combined<-0.15)verdict='over';
+  return{rows,n,medianC,cRange,meanLobbyGap,lobbyGapRange,lobbyN,combined,verdict,lowConfidence};
+}
+
+// Formats the payout gap as a RANGE in the most concrete unit players know:
+// RR per match. medianC × mean base ≈ RR/match vs expectation; the c-range
+// maps to an RR range so the card never shows false-precision point values.
+function hmmFormatPayoutGap(medianC,cRange,rows){
+  const meanBase=rows.reduce((s,r)=>s+r.base,0)/rows.length;
+  const rr=medianC*meanBase;
+  const lo=cRange[0]*meanBase,hi=cRange[1]*meanBase;
+  const abs=Math.abs(rr);
+  const word=abs<0.75?'typical for your rank'
+    :`${abs.toFixed(1)} RR per match ${rr>0?'above':'below'} expectation (±${(Math.abs(hi-lo)/2).toFixed(1)})`;
+  return{rr,lo,hi,word};
+}
+
+// ── Card renderer ────────────────────────────────────────────────────────
+// Replaces the old regression-based card (estimateHiddenMMR/formatMMRRR/
+// renderMMRChart). Same shell (mmr-section-row / mmr-card), new contents:
+// a verdict headline, the two signals as tiles, and a per-match scatter of
+// the payout gap so the number has visible data behind it.
 function renderHiddenMMRCard(matches){
   const row=document.getElementById('mmr-section-row');
   if(!row)return;
-  // Temporarily disabled — card stays hidden regardless of estimate quality
-  // until it's ready to ship again.
-  row.style.display='none';
-  return;
-  const res=estimateHiddenMMR(matches);
-
+  const res=computeHiddenMMR(matches);
   if(res.insufficient){
-    // Hidden rather than shown-as-empty: an unstable number here would be
+    // Hidden rather than shown-as-empty: an unstable number would be
     // actively misleading, and the persistence layer fills this in over time.
     row.style.display='none';
     return;
   }
   row.style.display='block';
+  document.getElementById('mmr-sample').textContent=`from ${res.n} rated matches${res.lobbyN&&res.lobbyN!==res.n?` · ${res.lobbyN} with lobby data`:''}`;
 
-  const est=Math.round(res.estimate),cur=Math.round(res.currentRR);
-
-  // Same headline renderer as the Current/Avg Lobby rank cards, so the
-  // hidden-MMR figure is tinted by ITS OWN tier instead of inheriting
-  // whatever color the site happens to be accented with right now.
-  const estFmt=formatMMRRR(est,cur);
-  const bigEl=document.getElementById('mmr-big');
-  if(estFmt.tierId!=null){
-    setRankValue(bigEl,estFmt.tierId,estFmt.rr,estFmt.name);
+  // ── Headline: Rank+RR (point estimate, via the sanctioned c→elo level
+  // conversion — see hmmHeadlineRankRR), with the range and qualitative
+  // verdict kept as secondary/tertiary context underneath. Never render the
+  // point alone — this is the exact honesty rule that got the original
+  // regression-based card disabled.
+  const VERDICTS={
+    'strong-under':{label:'Strongly under-ranked',color:'#22c55e',hint:'Expect fast climbing'},
+    'under':{label:'Under-ranked',color:'#4ade80',hint:'Climbing faster than typical'},
+    'balanced':{label:'Rank matches skill',color:'#9ca3af',hint:'Payouts look normal for your rank'},
+    'over':{label:'Over-ranked',color:'#f87171',hint:'Slower climbs than typical'},
+    'strong-over':{label:'Strongly over-ranked',color:'#ef4444',hint:'Expect slower climbing'},
+  };
+  const v=VERDICTS[res.verdict]||VERDICTS.balanced;
+  const hero=document.getElementById('mmr-big');
+  const rangeEl=document.getElementById('mmr-hero-range');
+  const headline=hmmHeadlineRankRR(res.medianC,res.cRange);
+  if(headline){
+    setRankValue(hero,headline.point.tierId,headline.point.rr,headline.point.name);
+    const sameTier=headline.lo.tierId===headline.hi.tierId;
+    if(rangeEl)rangeEl.innerHTML=
+      `likely ${sameTier?`${headline.lo.rr}–${headline.hi.rr} RR`:`${headline.lo.name} (${headline.lo.rr}) – ${headline.hi.name} (${headline.hi.rr})`}`+
+      ` <span style="display:inline-flex;align-items:center;gap:6px;margin-left:8px">`+
+      `<span style="width:8px;height:8px;border-radius:50%;background:${v.color};box-shadow:0 0 6px ${v.color}"></span>`+
+      `${v.label}${res.lowConfidence?' · low confidence':''}</span>`;
   }else{
-    bigEl.textContent=estFmt.plain;
+    // No known current rank to anchor against (shouldn't normally happen —
+    // res.insufficient already gated the card — but fail safely).
+    hero.textContent=v.label;
+    if(rangeEl)rangeEl.textContent=res.lowConfidence?'low confidence':'';
   }
-  document.getElementById('mmr-sample').textContent=`from ${res.n} rated matches`;
 
-  renderMMRChart(res);
+  // ── Two signal tiles (ranges, not points — plan honesty rule #1) ──
+  const pg=hmmFormatPayoutGap(res.medianC,res.cRange,res.rows);
+  const pgEl=document.getElementById('mmr-payout-win');
+  pgEl.textContent=`${pg.rr>=0?'+':''}${pg.rr.toFixed(1)} RR ±${Math.abs(pg.hi-pg.rr).toFixed(1)}`;
+  pgEl.className='mmr-payout-val '+(pg.rr>0.75?'win':pg.rr<-0.75?'loss':'');
+  const lgEl=document.getElementById('mmr-payout-loss');
+  lgEl.className='mmr-payout-val '+(res.meanLobbyGap!=null&&res.meanLobbyGap>0.25?'win':(res.meanLobbyGap!=null&&res.meanLobbyGap<-0.25?'loss':''));
+  lgEl.textContent=res.meanLobbyGap!=null?`${res.meanLobbyGap>=0?'+':''}${res.meanLobbyGap.toFixed(1)} tiers`:'—';
 
-  // Plain-language explanation anchored to the two numbers a player already
-  // understands — what a win pays, what a loss costs — instead of raw
-  // regression coefficients. "+92.6 RR baseline" is mathematically real but
-  // means nothing on its own; "wins pay more than losses cost" does.
-  const wins=res.usable.filter(m=>m.won===true),losses=res.usable.filter(m=>m.won!==true);
-  const avgWin=wins.length?_mean(wins.map(m=>m.myRR)):0;
-  const avgLoss=losses.length?_mean(losses.map(m=>m.myRR)):0;
-  document.getElementById('mmr-payout-win').textContent=`${avgWin>=0?'+':''}${avgWin.toFixed(1)} RR`;
-  document.getElementById('mmr-payout-loss').textContent=`${avgLoss.toFixed(1)} RR`;
-
-  const imbalance=avgWin+avgLoss; // avgLoss is already negative
-  const direction=Math.abs(imbalance)<1
-    ?'Wins and losses are already roughly balanced'
-    :imbalance>0
-      ?'Wins are paying out more than losses cost'
-      :'Losses are costing more than wins pay';
+  // ── Explanation (ranges in prose too) ──
+  const lgAbsSorted=res.lobbyGapRange?[Math.abs(res.lobbyGapRange[0]),Math.abs(res.lobbyGapRange[1])].sort((a,b)=>a-b):null;
+  const lgTxt=res.meanLobbyGap!=null
+    ?`Matchmaking has been placing your lobbies <b>${Math.abs(res.meanLobbyGap)<0.25?'at':(res.meanLobbyGap>0?'above':'below')} your rank</b>${Math.abs(res.meanLobbyGap)>=0.25?` (roughly ${lgAbsSorted[0].toFixed(1)}–${lgAbsSorted[1].toFixed(1)} tiers ${res.meanLobbyGap>0?'above':'below'})`:''}. `
+    :'';
   document.getElementById('mmr-explain').innerHTML=
-    `${direction} — that gap should disappear right at your true skill level. Tracking how quickly it closes as RR rises points to <b>${formatMMRRR(est,cur).plain}</b>, your hidden MMR.`;
+    `You're gaining ${pg.rr>=0?'more':'less'} RR than expected for your rank — about <b>${pg.word}</b>. ${lgTxt}Both signals read the same hidden number from different angles.`;
+
+  renderHiddenMMRScatter(res);
 }
 
-// Scatter of every rated match (pre-match RR vs RR change), colored by
-// win/loss, with the fitted trend line overlaid — the line crosses zero
-// exactly at the estimate, since that crossing point IS the definition of
-// "hidden MMR" here. Replaces a prose explanation with the actual fit,
-// built from the exact same match set estimateHiddenMMR() ran on.
-function renderMMRChart(res){
+// Scatter of the payout gap per match (c by date), colored by win/loss, with
+// the median line — the visible data behind the headline number. Replaces the
+// old preRR-vs-RR-change fit chart.
+function renderHiddenMMRScatter(res){
   const canvas=document.getElementById('mmr-chart-canvas');
   if(!canvas)return;
   if(chartInstances.mmrFit){chartInstances.mmrFit.destroy();delete chartInstances.mmrFit;}
-
-  const cur=res.currentRR;
-  const wins=res.usable.filter(m=>m.won===true).map(m=>({x:m.myPreRR,y:m.myRR,m}));
-  const losses=res.usable.filter(m=>m.won!==true).map(m=>({x:m.myPreRR,y:m.myRR,m}));
-  const avgWin=wins.length?_mean(wins.map(p=>p.y)):null;
-  const avgLoss=losses.length?_mean(losses.map(p=>p.y)):null;
-
-  const preRRs=res.usable.map(m=>m.myPreRR);
-  const xPad=(Math.max(...preRRs)-Math.min(...preRRs))*0.12||10;
-  const lineX0=Math.min(...preRRs,res.estimate)-xPad;
-  const lineX1=Math.max(...preRRs,res.estimate)+xPad;
-  const lineY=x=>res.b0+res.b1*res.meanMargin+res.b2*x;
-
+  const pts=res.rows.slice().sort((a,b)=>a.date-b.date).map((r,i)=>({x:r.date||i,y:r.c,won:r.won,m:r}));
   const accentRgb=getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb').trim()||'59,130,246';
-
-  // Draws the reference lines directly on the canvas (matching the
-  // rankBandsPlugin pattern already used by the rank-trend chart, rather
-  // than pulling in an annotation plugin): avg win/loss so the two numbers
-  // in the derivation below have a visible home in the data, and the
-  // vertical MMR line marking exactly where the fitted trend crosses zero.
-  const mmrRefLinesPlugin={
-    id:'mmrRefLines',
+  const hmmMedianPlugin={
+    id:'hmmMedian',
     beforeDatasetsDraw(chart){
-      const{ctx,chartArea,scales:{x,y}}=chart;
+      const{ctx,chartArea,scales:{y}}=chart;
       if(!chartArea)return;
-      ctx.save();
-      ctx.font="10px Geist,system-ui,sans-serif";
-      ctx.setLineDash([3,3]);
-      ctx.lineWidth=1;
-
-      if(avgWin!=null){
-        const py=y.getPixelForValue(avgWin);
-        ctx.strokeStyle='rgba(34,197,94,.4)';
-        ctx.beginPath();ctx.moveTo(chartArea.left,py);ctx.lineTo(chartArea.right,py);ctx.stroke();
-        ctx.fillStyle='rgba(34,197,94,.9)';ctx.textAlign='right';ctx.textBaseline='bottom';
-        ctx.fillText(`avg win ${avgWin>=0?'+':''}${avgWin.toFixed(1)}`,chartArea.right,py-3);
-      }
-      if(avgLoss!=null){
-        const py=y.getPixelForValue(avgLoss);
-        ctx.strokeStyle='rgba(239,68,68,.4)';
-        ctx.beginPath();ctx.moveTo(chartArea.left,py);ctx.lineTo(chartArea.right,py);ctx.stroke();
-        ctx.fillStyle='rgba(239,68,68,.9)';ctx.textAlign='right';ctx.textBaseline='top';
-        ctx.fillText(`avg loss ${avgLoss.toFixed(1)}`,chartArea.right,py+3);
-      }
-
       const y0=y.getPixelForValue(0);
+      ctx.save();
+      ctx.setLineDash([3,3]);ctx.lineWidth=1;
       ctx.strokeStyle='rgba(255,255,255,.15)';
       ctx.beginPath();ctx.moveTo(chartArea.left,y0);ctx.lineTo(chartArea.right,y0);ctx.stroke();
-
-      const estPx=x.getPixelForValue(res.estimate);
+      const ym=y.getPixelForValue(res.medianC);
       ctx.setLineDash([]);
-      ctx.strokeStyle=`rgba(${accentRgb},.85)`;
-      ctx.lineWidth=1.5;
-      ctx.beginPath();ctx.moveTo(estPx,chartArea.top);ctx.lineTo(estPx,chartArea.bottom);ctx.stroke();
+      ctx.strokeStyle=`rgba(${accentRgb},.85)`;ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(chartArea.left,ym);ctx.lineTo(chartArea.right,ym);ctx.stroke();
       ctx.restore();
     }
   };
-
   chartInstances.mmrFit=new Chart(canvas,{
     type:'scatter',
-    plugins:[mmrRefLinesPlugin],
-    data:{
-      datasets:[
-        {label:'Win',data:wins,backgroundColor:'rgba(34,197,94,.9)',borderColor:'#0d0d10',borderWidth:1.5,pointRadius:5,pointHoverRadius:7},
-        {label:'Loss',data:losses,backgroundColor:'rgba(239,68,68,.9)',borderColor:'#0d0d10',borderWidth:1.5,pointRadius:5,pointHoverRadius:7},
-        {
-          type:'line',label:'Fitted trend',
-          data:[{x:lineX0,y:lineY(lineX0)},{x:lineX1,y:lineY(lineX1)}],
-          borderColor:`rgba(${accentRgb},1)`,borderWidth:2.5,pointRadius:0,
-          fill:false,tension:0,order:1,
-        }
-      ]
-    },
+    plugins:[hmmMedianPlugin],
+    data:{datasets:[
+      {label:'Win',data:pts.filter(p=>p.won),backgroundColor:'rgba(34,197,94,.9)',borderColor:'#0d0d10',borderWidth:1.5,pointRadius:4,pointHoverRadius:6},
+      {label:'Loss',data:pts.filter(p=>!p.won),backgroundColor:'rgba(239,68,68,.9)',borderColor:'#0d0d10',borderWidth:1.5,pointHoverRadius:6,pointRadius:4},
+    ]},
     options:{
-      responsive:true,
-      maintainAspectRatio:false,
+      responsive:true,maintainAspectRatio:false,
       layout:{padding:{top:16,right:8,bottom:0,left:0}},
       plugins:{
         legend:{display:false},
         tooltip:{
-          backgroundColor:'rgba(10,10,12,.95)',
-          borderColor:`rgba(${accentRgb},.4)`,
-          borderWidth:1,
-          padding:10,
-          displayColors:false,
-          titleFont:{family:'Geist',size:11,weight:'700'},
-          bodyFont:{family:'Geist',size:11},
-          filter:(item)=>item.dataset.label!=='Fitted trend',
+          backgroundColor:'rgba(10,10,12,.95)',borderColor:`rgba(${accentRgb},.4)`,borderWidth:1,padding:10,displayColors:false,
+          titleFont:{family:'Geist',size:11,weight:'700'},bodyFont:{family:'Geist',size:11},
           callbacks:{
-            title:(items)=>{
-              const m=items[0]?.raw?.m;
-              if(!m)return'';
-              return[m.mapName||'Match',m.startedAtMs?new Date(m.startedAtMs).toLocaleDateString():null].filter(Boolean).join(' · ');
-            },
+            title:(items)=>{const r=items[0]?.raw?.m;return r?(r.mapName||'Match'):'';},
             label:(item)=>{
-              const m=item.raw.m;
-              const margin=m.myR-m.opR;
+              const p=item.raw;
               return[
-                `${m.won?'Win':'Loss'} · ${margin>=0?'+':''}${margin} round margin`,
-                `Pre-match: ${formatMMRRR(m.myPreRR,cur).plain}`,
-                `${m.myRR>=0?'+':''}${m.myRR} RR this match`
-              ];
+                `${p.won?'Win':'Loss'} · gap ${p.y>=0?'+':''}${p.y.toFixed(2)}`,
+              ].filter(Boolean);
             }
           }
         }
       },
       scales:{
-        x:{
-          grid:{display:false},
-          ticks:{color:'#6b7280',font:{family:'Geist',size:10}},
-          border:{display:true,color:'rgba(255,255,255,.1)'}
-        },
-        y:{
-          grid:{color:'rgba(255,255,255,.04)',z:-1},
-          ticks:{color:'#6b7280',font:{family:'Geist',size:10}},
-          border:{display:false}
-        }
+        x:{type:'linear',grid:{display:false},ticks:{color:'#6b7280',font:{family:'Geist',size:10},maxRotation:0,autoSkip:true,callback:function(v){const d=new Date(v);return isNaN(d)?'':d.toLocaleDateString(undefined,{month:'short',day:'numeric'});}},border:{display:true,color:'rgba(255,255,255,.1)'}},
+        y:{grid:{color:'rgba(255,255,255,.04)',z:-1},ticks:{color:'#6b7280',font:{family:'Geist',size:10}},border:{display:false}}
       }
     }
   });
 }
-
 /* ── CLUTCHES (1v1–1v5) ─────────────────────────────────── */
 // Aggregates myClutchAll (computed per match in processMatch — see the 1vX
 // detection block there) across every match in scope. Uses the same match

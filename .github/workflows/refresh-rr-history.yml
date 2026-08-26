@@ -3,18 +3,19 @@
 # The /api/mmr-history route only ever sees a player when someone searches
 # them, and HenrikDev only returns that player's most recent ~20 games. If a
 # player plays 30 games between visits, the ones in the middle are lost for
-# good. This job walks every player already in the KV cache every 12h and
-# re-pings the public endpoint, which does the fetch + merge + persist through
-# the existing worker logic (rate limiting and quota pacing included).
+# good. This job walks every player tracked in D1's rr_players table every
+# 12h and re-pings the public endpoint, which does the fetch + merge + persist
+# through the existing worker logic (rate limiting and quota pacing included).
 #
 # REQUIRED REPO SECRETS (Settings -> Secrets and variables -> Actions):
-#   CF_API_TOKEN        Cloudflare API token with "Workers KV Storage: Read"
-#                       on the account that owns the namespace
-#   CF_ACCOUNT_ID       Cloudflare account ID (Workers & Pages -> right sidebar)
-#   CF_KV_NAMESPACE_ID  the RATE_LIMIT_KV namespace ID (Workers & Pages ->
-#                       KV -> the namespace -> ID)
+#   CF_API_TOKEN       Cloudflare API token with "D1: Read" on the account
+#                      that owns the database (see functions/api/[[path]].js's
+#                      header comment for the APP_DB binding)
+#   CF_ACCOUNT_ID      Cloudflare account ID (Workers & Pages -> right sidebar)
+#   CF_D1_DATABASE_ID  the APP_DB database ID (Workers & Pages -> D1 ->
+#                      the database -> ID)
 # OPTIONAL REPO VARIABLE:
-#   SITE_ORIGIN         defaults to https://vlravg.pages.dev
+#   SITE_ORIGIN        defaults to https://vlravg.pages.dev
 
 name: Refresh RR history
 
@@ -38,10 +39,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Refresh every cached player
+      - name: Refresh every tracked player
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
-          CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
+          CF_D1_DATABASE_ID: ${{ secrets.CF_D1_DATABASE_ID }}
           SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg.pages.dev' }}
         run: node .github/scripts/refresh-rr-history.mjs
