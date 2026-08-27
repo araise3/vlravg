@@ -247,7 +247,21 @@ async function handleCalibModel(env) {
 // this only limits how many matches calibration gets to learn from per call,
 // same "nice to have, not load-bearing" tradeoff already made elsewhere here.
 const MAX_FOLD_MATCHES = 1;
+// Bounding by match COUNT alone turned out not to be enough: real match
+// payloads vary a lot in size (longer/overtime games carry much bigger
+// kill-feed and round-economy blocks), so "1 match" can still be large
+// enough, on top of an already-multi-MB total response, to tip a request
+// over the CPU budget for some accounts even though it never does for
+// others — confirmed empirically (same request, same code, fails for one
+// real player's matches and not another's). So this is a second, blunter
+// gate on the RAW body size before doing any scanning/parsing at all —
+// skip folding entirely once the response is already large, regardless of
+// what's inside it. This trades away calibration folding on most real
+// (multi-match) page loads in exchange for guaranteeing /history itself
+// never regresses again, which matters more than the fold running.
+const MAX_FOLD_BODY_BYTES = 900_000;
 function extractLeadingMatchesRaw(bodyText, maxN) {
+  if (bodyText.length > MAX_FOLD_BODY_BYTES) return null;
   const keyIdx = bodyText.search(/"data"\s*:\s*\[/);
   if (keyIdx === -1) return null;
   const start = bodyText.indexOf("[", keyIdx);
