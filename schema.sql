@@ -58,9 +58,11 @@ CREATE TABLE IF NOT EXISTS calib_bands (
 );
 
 -- One row per HMM_BANDS/FROZEN_BANDS entry — pre-seeded so runtime code only
--- ever UPDATEs (never needs an upsert/insert path).
+-- ever UPDATEs (never needs an upsert/insert path). Immortal+/Radiant is
+-- split three ways (24, 25, 26-27) rather than one merged 24-27 row — see
+-- the comment above FROZEN_BANDS in functions/api/[[path]].js for why.
 INSERT OR IGNORE INTO calib_bands (lo, hi) VALUES
-  (3, 5), (6, 8), (9, 11), (12, 14), (15, 17), (18, 20), (21, 23), (24, 27);
+  (3, 5), (6, 8), (9, 11), (12, 14), (15, 17), (18, 20), (21, 23), (24, 24), (25, 25), (26, 27);
 
 -- Per-player dedup so re-looking-up someone doesn't double-fold a match
 -- already counted. A relational table, not a KV JSON blob, so there's no
