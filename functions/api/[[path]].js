@@ -130,7 +130,15 @@ const FROZEN_BANDS = [
   { lo: 15, hi: 17, Bw: 18.00, Bl: 17.74, S: 0.43, K: 4, P: 1.89 }, // Platinum
   { lo: 18, hi: 20, Bw: 17.90, Bl: 16.98, S: 0.61, K: 5, P: 1.10 }, // Diamond
   { lo: 21, hi: 23, Bw: 17.70, Bl: 17.84, S: 0.42, K: 4, P: 0.33 }, // Ascendant
-  { lo: 24, hi: 27, Bw: 17.22, Bl: 18.67, S: 0.65, K: 6, P: 0.16 }, // Immortal+/Radiant
+  // Split from a single Immortal+/Radiant (24-27) band after a live-traffic
+  // top-up (wave6, hidden-mmr-research/refit_immortal_split.py) showed a
+  // real, well-powered step-change from Imm1->Imm2->Imm3 (several standard
+  // errors at n=620-1613/band) that the merged band was averaging away —
+  // but Imm3 and Radiant turned out statistically indistinguishable from
+  // each other even at this larger sample, hence 26-27 stays merged.
+  { lo: 24, hi: 24, Bw: 17.05, Bl: 18.24, S: 0.52, K: 5, P: 0.16 }, // Immortal 1
+  { lo: 25, hi: 25, Bw: 18.28, Bl: 17.35, S: 0.53, K: 5, P: 0.13 }, // Immortal 2
+  { lo: 26, hi: 27, Bw: 19.93, Bl: 16.06, S: 0.54, K: 5, P: 0.08 }, // Immortal 3+/Radiant
 ];
 const CALIB_MIN_N = 400;          // per-band n before the live fit fully replaces the frozen one
 const CALIB_PER_PLAYER_CAP = 500; // lifetime matches one puuid can contribute per band-set
