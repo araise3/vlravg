@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#3b82f6">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" defer></script>
 <style>
 :root{
@@ -24,6 +24,10 @@
   --win:#22c55e;--loss:#ef4444;--draw:#f59e0b;
   --font-body:'Geist',Geist,system-ui,sans-serif;
   --font-display:'Geist',system-ui,sans-serif;
+  /* Geist Mono is Geist's own monospace companion — same skeleton and
+     x-height, so formula strips sit next to body copy without looking
+     like a different document. */
+  --font-mono:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --glass:rgba(255,255,255,0.055);--glass-hover:rgba(255,255,255,0.08);
   --glass-border:rgba(255,255,255,0.1);--glass-shine:rgba(255,255,255,0.08);
   --radius-xs:4px;--radius-sm:7px;--radius-md:11px;--radius-lg:18px;
@@ -349,27 +353,60 @@ h1 span{color:var(--accent);}
    just not confined to a .rank-compare-col (so it falls back to the shared
    site accent for its icon halo instead of a per-column color). */
 .mmr-hero{display:flex;align-items:center;gap:10px;font-size:clamp(1.35rem,1.7vw + 1rem,2rem);font-weight:700;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--text);flex-wrap:wrap;margin-bottom:2px;}
-.mmr-hero-sub{font-size:12px;font-weight:500;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;flex-wrap:wrap;}
-/* Chart */
-.mmr-chart-wrap{position:relative;height:230px;margin-top:14px;}
-.mmr-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;}
-.mmr-legend-item{display:inline-flex;align-items:center;gap:6px;font-size:10px;color:var(--muted);font-family:var(--font-body);}
-.mmr-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-.mmr-swatch-line{width:13px;height:2px;background:var(--accent);flex-shrink:0;}
-.mmr-swatch-v{width:2px;height:10px;background:rgba(255,255,255,.35);flex-shrink:0;}
-/* Derivation — plain language, anchored to the two numbers a player already
-   understands (what a win pays, what a loss costs), not raw regression
-   coefficients (a "+92.6 baseline" is mathematically real but means nothing
-   to someone reading it — it only makes sense combined with the other terms). */
-.mmr-derivation{margin-top:16px;padding-top:14px;border-top:.5px solid var(--glass-border);}
-.mmr-derivation-title{font-size:11px;font-weight:700;color:var(--text);font-family:var(--font-display);margin-bottom:12px;}
-.mmr-payout-row{display:flex;gap:28px;margin-bottom:14px;}
-.mmr-payout-lbl{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);margin-bottom:3px;}
-.mmr-payout-val{font-size:21px;font-weight:800;font-family:var(--font-display);font-variant-numeric:tabular-nums;line-height:1.1;}
-.mmr-payout-val.win{color:#22c55e;}
-.mmr-payout-val.loss{color:#ef4444;}
-.mmr-explain{font-size:12px;color:var(--muted);line-height:1.6;}
-.mmr-explain b{color:var(--text);}
+/* Lede under the hero — plain language before any of the arithmetic. */
+/* Two box-score numbers everyone already knows how to read, sitting right
+   next to the model's own numbers rather than only inside it. */
+.mmr-quick{display:flex;gap:10px;margin-top:14px;}
+.mmr-quick-tile{flex:1;padding:10px 14px;border-radius:var(--radius-sm);background:rgba(255,255,255,.04);border:.5px solid var(--glass-border);}
+.mmr-quick-lbl{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-family:var(--font-display);}
+.mmr-quick-val{margin-top:3px;font-size:20px;font-weight:800;font-family:var(--font-display);font-variant-numeric:tabular-nums;line-height:1.1;}
+.mmr-quick-val.pos{color:#22c55e;}.mmr-quick-val.neg{color:#ef4444;}.mmr-quick-val.neu{color:var(--muted);}
+/* ── Breakdown ─────────────────────────────────────────────────────────
+   Two plain rows (payout gap, lobby gap) each in the unit a player already
+   knows — RR per match, tiers — plus a bar for how much each one is driving
+   the estimate. No normalized units are shown; the model divides both
+   signals by their spread internally to sum them, but that arithmetic never
+   needs to reach the page. Where they land together is a gauge, not a
+   second number to interpret.
+   Contrast: --muted (#6b7280) is right for one-line captions on the page
+   background, but a whole block of it inside a raised panel reads as grey
+   text on grey. Secondary copy in here uses --mmr-dim instead, which is the
+   text colour at reduced alpha — same hue as the surrounding UI, enough
+   separation from any panel fill to actually read. */
+#mmr-card{--mmr-dim:rgba(232,234,240,.58);--mmr-dimmer:rgba(232,234,240,.38);}
+.mmr-sec{margin-top:18px;padding-top:14px;border-top:.5px solid var(--glass-border);}
+.mmr-sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+.mmr-sec-title{font-size:10px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text);font-family:var(--font-display);}
+.mmr-sec-note{font-size:10.5px;color:var(--mmr-dimmer);font-family:var(--font-body);}
+.mmr-rows{display:flex;flex-direction:column;}
+.mmr-r{display:grid;grid-template-columns:minmax(120px,1.5fr) 76px 120px;grid-template-areas:"name value share";align-items:center;gap:14px;padding:10px 2px;font-size:12px;color:var(--mmr-dim);font-family:var(--font-body);border-bottom:.5px solid rgba(255,255,255,.05);}
+.mmr-r:last-child{border-bottom:none;}
+.mmr-r-name{grid-area:name;color:var(--text);font-weight:600;font-size:12.5px;}
+.mmr-r-sub{display:block;font-size:10.5px;color:var(--mmr-dimmer);font-weight:400;margin-top:2px;}
+.mmr-r-val{grid-area:value;text-align:right;font-variant-numeric:tabular-nums;font-family:var(--font-display);font-weight:800;font-size:15px;color:var(--text);white-space:nowrap;}
+.mmr-r-val small{display:block;font-size:9.5px;font-weight:500;color:var(--mmr-dimmer);margin-top:1px;white-space:nowrap;}
+.mmr-r-share{grid-area:share;display:flex;align-items:center;gap:8px;}
+.mmr-r-bar{flex:1;height:6px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden;}
+.mmr-r-bar i{display:block;height:100%;border-radius:999px;}
+.mmr-r-pct{font-size:10px;color:var(--mmr-dimmer);font-variant-numeric:tabular-nums;width:30px;text-align:right;}
+.mmr-pos{color:#22c55e;}.mmr-neg{color:#ef4444;}.mmr-neu{color:var(--mmr-dim);}
+/* Gauge — replaces a second abstract number with one visual read: which
+   side of even you land on, and how far. */
+.mmr-gauge{margin-top:16px;}
+.mmr-gauge-track{position:relative;height:7px;border-radius:999px;background:linear-gradient(90deg,#ef4444,#4b4b52 50%,#22c55e);}
+.mmr-gauge-marker{position:absolute;top:50%;width:13px;height:13px;border-radius:50%;background:#fff;border:2.5px solid var(--bg);transform:translate(-50%,-50%);box-shadow:0 1px 4px rgba(0,0,0,.5);}
+.mmr-gauge-labels{display:flex;justify-content:space-between;margin-top:7px;font-size:10px;color:var(--mmr-dimmer);}
+.mmr-gauge-verdict{margin-top:9px;font-size:12.5px;color:var(--mmr-dim);}
+.mmr-gauge-verdict b{font-weight:700;}
+.mmr-gauge-range{color:var(--mmr-dimmer);font-size:11px;}
+.mmr-note{margin-top:11px;font-size:10.5px;line-height:1.65;color:var(--mmr-dim);}
+.mmr-note b{color:var(--text);}
+@media(max-width:640px){
+  .mmr-quick{flex-direction:column;}
+  .mmr-r{grid-template-columns:1fr auto;grid-template-areas:"name name" "value share";row-gap:8px;padding:11px 2px;}
+  .mmr-r-val{text-align:left;}
+  .mmr-r-share{justify-content:flex-end;}
+}
 .clutch-behavior-bar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.05);}
 .clutch-behavior-bar>div{height:100%;}
 .clutch-behavior-bar .seg-win{background:#22c55e;}
@@ -524,29 +561,17 @@ h1 span{color:var(--accent);}
             <span class="mmr-sample" id="mmr-sample"></span>
           </div>
           <div class="mmr-hero" id="mmr-big">—</div>
-          <div class="mmr-hero-sub" id="mmr-hero-range"></div>
+          <div class="mmr-quick" id="mmr-quick"></div>
 
-          <div class="mmr-chart-wrap"><canvas id="mmr-chart-canvas"></canvas></div>
-          <div class="mmr-legend">
-            <span class="mmr-legend-item"><span class="mmr-dot" style="background:#22c55e"></span>Win</span>
-            <span class="mmr-legend-item"><span class="mmr-dot" style="background:#ef4444"></span>Loss</span>
-            <span class="mmr-legend-item"><span class="mmr-swatch-line"></span>Your median gap</span>
-            <span class="mmr-legend-item"><span class="mmr-swatch-v"></span>Even (0)</span>
-          </div>
-
-          <div class="mmr-derivation">
-            <div class="mmr-derivation-title">The two signals</div>
-            <div class="mmr-payout-row">
-              <div>
-                <div class="mmr-payout-lbl">Payout gap</div>
-                <div class="mmr-payout-val win" id="mmr-payout-win"></div>
-              </div>
-              <div>
-                <div class="mmr-payout-lbl">Lobby gap</div>
-                <div class="mmr-payout-val win" id="mmr-payout-loss"></div>
-              </div>
+          <!-- What the estimate is built from: the two signals as plain
+               numbers, and a gauge for where they land you overall. Body
+               rendered by renderHiddenMMRCard. -->
+          <div class="mmr-sec">
+            <div class="mmr-sec-head">
+              <div class="mmr-sec-title">Why</div>
+              <div class="mmr-sec-note" id="mmr-components-note"></div>
             </div>
-            <div class="mmr-explain" id="mmr-explain"></div>
+            <div id="mmr-components"></div>
           </div>
         </div>
       </div>
@@ -3389,6 +3414,12 @@ const HMM_BANDS=[
 // Verdict thresholds on the combined signal (calibrated so ~top/bottom 10%
 // of the 355-player calibration corpus get the strong labels).
 const HMM_THRESHOLDS={pos:0.15,neg:0.15,strongPos:0.35,strongNeg:0.35};
+// Population spreads used to put the two signals on one scale before they're
+// summed (see computeHiddenMMR). Not tuning knobs — they're the observed
+// player-to-player spread of each signal in the calibration corpus, and the
+// card prints them as the divisors in its "Score components" formula.
+const HMM_C_SPREAD=0.15;      // payout gap c
+const HMM_LOBBY_SPREAD=2;     // lobby gap, in tiers
 const HMM_MIN_MATCHES=8;     // below this: hide the card entirely
 const HMM_LOW_CONFIDENCE=15; // below this: show it but flag low confidence
 
@@ -3523,7 +3554,10 @@ function hmmMatchRow(m){
   // tier spread suggests deliberate rank-dragging — see HMM_PARTY_DRAG_MIN_SPREAD.
   const dragging=(m.partySize||1)>=2&&hmmPartyTierSpread(m)>=HMM_PARTY_DRAG_MIN_SPREAD;
   const lobbyGap=dragging?null:rawLobbyGap;
-  return{c,lobbyGap,won:m.won,date:m.startedAtMs||0,pen:m.myPartyPenalty||0,base};
+  // netBase rides along because actual − expected === netBase·c straight
+  // from the inversion above — that identity is what lets the card quote
+  // the gap in RR per match rather than in units of c.
+  return{c,lobbyGap,dragging,netBase,won:m.won,actual:m.myRR};
 }
 
 // Aggregates the two signals into what the card shows:
@@ -3548,28 +3582,44 @@ function computeHiddenMMR(matches){
     lobbyGapRange=[meanLobbyGap-1.2533*lsd/Math.sqrt(lgs.length),meanLobbyGap+1.2533*lsd/Math.sqrt(lgs.length)];
   }
   const lobbyN=lgs.length;
-  // Blend the two signals on a common scale: c's observed player spread is
-  // roughly ±0.15 and the lobby gap's is roughly ±2 tiers, so each is divided
-  // by its spread before summing. Thresholds absorb the exact scaling.
-  const combined=medianC/0.15+(meanLobbyGap??0)/2;
+  // Blend the two signals on a common scale: each is divided by its observed
+  // player-to-player spread (HMM_C_SPREAD / HMM_LOBBY_SPREAD) before summing,
+  // i.e. equal weight in normalized units. Thresholds absorb the scaling.
+  const cPart=medianC/HMM_C_SPREAD;
+  const lobbyPart=(meanLobbyGap??0)/HMM_LOBBY_SPREAD;
+  const combined=cPart+lobbyPart;
   const lowConfidence=n<HMM_LOW_CONFIDENCE;
+  const T=HMM_THRESHOLDS;
   let verdict='balanced';
-  if(combined>0.35)verdict='strong-under';
-  else if(combined>0.15)verdict='under';
-  else if(combined<-0.35)verdict='strong-over';
-  else if(combined<-0.15)verdict='over';
-  return{rows,n,medianC,cRange,meanLobbyGap,lobbyGapRange,lobbyN,combined,verdict,lowConfidence};
+  if(combined>T.strongPos)verdict='strong-under';
+  else if(combined>T.pos)verdict='under';
+  else if(combined<-T.strongNeg)verdict='strong-over';
+  else if(combined<-T.neg)verdict='over';
+  // How many matches had their lobby gap dropped for party spread — the
+  // card discloses this rather than silently dropping them.
+  const dragged=rows.filter(r=>r.dragging).length;
+  // Average RR per win / per loss — plain box-score numbers, shown next to
+  // the model output so the estimate isn't the only thing on the card.
+  const winRows=rows.filter(r=>r.won),lossRows=rows.filter(r=>!r.won);
+  const avgGain=winRows.length?winRows.reduce((s,r)=>s+r.actual,0)/winRows.length:null;
+  const avgLoss=lossRows.length?-lossRows.reduce((s,r)=>s+r.actual,0)/lossRows.length:null;
+  return{rows,n,medianC,cRange,meanLobbyGap,lobbyGapRange,lobbyN,cPart,lobbyPart,combined,verdict,lowConfidence,dragged,avgGain,avgLoss};
 }
 
 // Formats the payout gap as a RANGE in the most concrete unit players know:
 // RR per match. medianC × mean base ≈ RR/match vs expectation; the c-range
 // maps to an RR range so the card never shows false-precision point values.
 function hmmFormatPayoutGap(medianC,cRange,rows){
-  const meanBase=rows.reduce((s,r)=>s+r.base,0)/rows.length;
+  // netBase (after the party penalty), not base — actual − expected is
+  // exactly netBase·c, so this makes the quoted RR/match figure the same
+  // number the per-match table's GAP column sums to.
+  const meanBase=rows.reduce((s,r)=>s+r.netBase,0)/rows.length;
   const rr=medianC*meanBase;
   const lo=cRange[0]*meanBase,hi=cRange[1]*meanBase;
   const abs=Math.abs(rr);
-  const word=abs<0.75?'typical for your rank'
+  // Reads inside "You're being paid ___." — so the small-gap case needs a
+  // phrase, not an adjective.
+  const word=abs<0.75?'about what your rank should pay'
     :`${abs.toFixed(1)} RR per match ${rr>0?'above':'below'} expectation (±${(Math.abs(hi-lo)/2).toFixed(1)})`;
   return{rr,lo,hi,word};
 }
@@ -3579,6 +3629,43 @@ function hmmFormatPayoutGap(medianC,cRange,rows){
 // renderMMRChart). Same shell (mmr-section-row / mmr-card), new contents:
 // a verdict headline, the two signals as tiles, and a per-match scatter of
 // the payout gap so the number has visible data behind it.
+const HMM_VERDICTS={
+  'strong-under':{label:'Strongly under-ranked',color:'#22c55e',hint:'your rank is well behind your MMR'},
+  'under':{label:'Under-ranked',color:'#4ade80',hint:'your rank is behind your MMR'},
+  'balanced':{label:'Rank matches skill',color:'#9ca3af',hint:'payouts look normal for your rank'},
+  'over':{label:'Over-ranked',color:'#f87171',hint:'your rank is ahead of your MMR'},
+  'strong-over':{label:'Strongly over-ranked',color:'#ef4444',hint:'your rank is well ahead of your MMR'},
+};
+// Display helpers. Signs use U+2212 so columns line up under tabular-nums.
+const hmmSigned=(x,d)=>`${x<0?'\u2212':'+'}${Math.abs(x).toFixed(d)}`;
+const hmmTone=(x,eps)=>x>(eps||0)?'mmr-pos':x<-(eps||0)?'mmr-neg':'mmr-neu';
+const hmmToneColor=(x,eps)=>x>(eps||0)?'#22c55e':x<-(eps||0)?'#ef4444':'rgba(255,255,255,.28)';
+// One row: a name, one number in a unit players already know, and a share
+// bar for how much that signal is driving the estimate. No normalized/
+// abstract number is ever shown \u2014 the model needs one internally to sum
+// two different units, the page doesn't.
+function hmmRow(o){
+  return `<div class="mmr-r">`+
+    `<div class="mmr-r-name">${o.name}<span class="mmr-r-sub">${o.sub}</span></div>`+
+    `<div class="mmr-r-val ${o.valCls||''}">${o.val}${o.valSub?`<small>${o.valSub}</small>`:''}</div>`+
+    `<div class="mmr-r-share">`+
+      (o.share==null?'':`<div class="mmr-r-bar"><i style="width:${Math.max(2,Math.min(100,o.share))}%;background:${o.shareColor||'rgba(255,255,255,.28)'}"></i></div><span class="mmr-r-pct">${Math.round(o.share)}%</span>`)+
+    `</div>`+
+  `</div>`;
+}
+// A single visual for where the two signals land together, instead of a
+// second number ("+2.86") a regular player would have to look up.
+function hmmGauge(combined,color,label,rangeTxt){
+  const pct=Math.max(0,Math.min(100,(combined+0.5)/1*100));
+  return `<div class="mmr-gauge">`+
+    `<div class="mmr-gauge-track"><div class="mmr-gauge-marker" style="left:${pct}%;background:${color}"></div></div>`+
+    `<div class="mmr-gauge-labels"><span>Over-ranked</span><span>Balanced</span><span>Under-ranked</span></div>`+
+    `<div class="mmr-gauge-verdict">Overall: <b style="color:${color}">${label}</b>`+
+      (rangeTxt?` <span class="mmr-gauge-range">\u2014 likely ${rangeTxt}</span>`:'')+
+    `</div>`+
+  `</div>`;
+}
+
 function renderHiddenMMRCard(matches){
   const row=document.getElementById('mmr-section-row');
   if(!row)return;
@@ -3590,118 +3677,98 @@ function renderHiddenMMRCard(matches){
     return;
   }
   row.style.display='block';
-  document.getElementById('mmr-sample').textContent=`from ${res.n} rated matches${res.lobbyN&&res.lobbyN!==res.n?` · ${res.lobbyN} with lobby data`:''}`;
+  document.getElementById('mmr-sample').textContent=`from ${res.n} rated matches${res.lobbyN&&res.lobbyN!==res.n?` \u00b7 ${res.lobbyN} with lobby data`:''}`;
 
   // ── Headline: Rank+RR (point estimate, via the sanctioned c→elo level
   // conversion — see hmmHeadlineRankRR), with the range and qualitative
   // verdict kept as secondary/tertiary context underneath. Never render the
   // point alone — this is the exact honesty rule that got the original
   // regression-based card disabled.
-  const VERDICTS={
-    'strong-under':{label:'Strongly under-ranked',color:'#22c55e',hint:'Expect fast climbing'},
-    'under':{label:'Under-ranked',color:'#4ade80',hint:'Climbing faster than typical'},
-    'balanced':{label:'Rank matches skill',color:'#9ca3af',hint:'Payouts look normal for your rank'},
-    'over':{label:'Over-ranked',color:'#f87171',hint:'Slower climbs than typical'},
-    'strong-over':{label:'Strongly over-ranked',color:'#ef4444',hint:'Expect slower climbing'},
-  };
-  const v=VERDICTS[res.verdict]||VERDICTS.balanced;
+  // The badge and the "likely X–Y" range used to sit right under the hero
+  // rank; both moved to the gauge at the bottom of the WHY section, next to
+  // the same verdict label — see hmmRenderComponents/hmmGauge — so the hero
+  // is just the number now.
+  const v=HMM_VERDICTS[res.verdict]||HMM_VERDICTS.balanced;
   const hero=document.getElementById('mmr-big');
-  const rangeEl=document.getElementById('mmr-hero-range');
   const headline=hmmHeadlineRankRR(res.medianC,res.cRange);
   if(headline){
     setRankValue(hero,headline.point.tierId,headline.point.rr,headline.point.name);
-    const sameTier=headline.lo.tierId===headline.hi.tierId;
-    if(rangeEl)rangeEl.innerHTML=
-      `likely ${sameTier?`${headline.lo.rr}–${headline.hi.rr} RR`:`${headline.lo.name} (${headline.lo.rr}) – ${headline.hi.name} (${headline.hi.rr})`}`+
-      ` <span style="display:inline-flex;align-items:center;gap:6px;margin-left:8px">`+
-      `<span style="width:8px;height:8px;border-radius:50%;background:${v.color};box-shadow:0 0 6px ${v.color}"></span>`+
-      `${v.label}${res.lowConfidence?' · low confidence':''}</span>`;
   }else{
     // No known current rank to anchor against (shouldn't normally happen —
     // res.insufficient already gated the card — but fail safely).
     hero.textContent=v.label;
-    if(rangeEl)rangeEl.textContent=res.lowConfidence?'low confidence':'';
   }
 
-  // ── Two signal tiles (ranges, not points — plan honesty rule #1) ──
+  hmmRenderQuickStats(res);
+  hmmRenderComponents(res,v,headline);
+}
+
+// \u2500\u2500 Quick stats: the two numbers every player already reads off a scoreboard. \u2500\u2500
+function hmmRenderQuickStats(res){
+  const host=document.getElementById('mmr-quick');
+  if(!host)return;
+  const gain=res.avgGain!=null?hmmSigned(res.avgGain,1):'\u2014';
+  const loss=res.avgLoss!=null?hmmSigned(-res.avgLoss,1):'\u2014';
+  host.innerHTML=
+    `<div class="mmr-quick-tile"><div class="mmr-quick-lbl">Avg RR won</div><div class="mmr-quick-val ${res.avgGain!=null?'pos':'neu'}">${gain}</div></div>`+
+    `<div class="mmr-quick-tile"><div class="mmr-quick-lbl">Avg RR lost</div><div class="mmr-quick-val ${res.avgLoss!=null?'neg':'neu'}">${loss}</div></div>`;
+}
+
+// \u2500\u2500 The breakdown: the two signals, in units a player already reads \u2500\u2500\u2500
+// Payout gap in RR/match, lobby gap in tiers, each with a share bar for how
+// much it's driving the estimate (the model divides both by their own
+// spread to sum them \u2014 that division happens here, never on the page as a
+// number the reader has to interpret). Where they land together is the
+// gauge underneath, not a third number.
+// "likely X–Y" — same tier collapses to just an RR range, a tier change
+// spells out both ranks. The one thing the old hero badge used to show.
+function hmmRangeText(headline){
+  if(!headline)return '';
+  return headline.lo.tierId===headline.hi.tierId
+    ?`${headline.lo.rr}\u2013${headline.hi.rr} RR`
+    :`${headline.lo.name} (${headline.lo.rr} RR) \u2013 ${headline.hi.name} (${headline.hi.rr} RR)`;
+}
+function hmmRenderComponents(res,v,headline){
+  const cPart=res.cPart,lPart=res.lobbyPart;
+  const tot=Math.abs(cPart)+Math.abs(lPart);
+  const share=x=>tot>0?Math.abs(x)/tot*100:0;
+  const haveLobby=res.meanLobbyGap!=null;
   const pg=hmmFormatPayoutGap(res.medianC,res.cRange,res.rows);
-  const pgEl=document.getElementById('mmr-payout-win');
-  pgEl.textContent=`${pg.rr>=0?'+':''}${pg.rr.toFixed(1)} RR ±${Math.abs(pg.hi-pg.rr).toFixed(1)}`;
-  pgEl.className='mmr-payout-val '+(pg.rr>0.75?'win':pg.rr<-0.75?'loss':'');
-  const lgEl=document.getElementById('mmr-payout-loss');
-  lgEl.className='mmr-payout-val '+(res.meanLobbyGap!=null&&res.meanLobbyGap>0.25?'win':(res.meanLobbyGap!=null&&res.meanLobbyGap<-0.25?'loss':''));
-  lgEl.textContent=res.meanLobbyGap!=null?`${res.meanLobbyGap>=0?'+':''}${res.meanLobbyGap.toFixed(1)} tiers`:'—';
 
-  // ── Explanation (ranges in prose too) ──
-  const lgAbsSorted=res.lobbyGapRange?[Math.abs(res.lobbyGapRange[0]),Math.abs(res.lobbyGapRange[1])].sort((a,b)=>a-b):null;
-  const lgTxt=res.meanLobbyGap!=null
-    ?`Matchmaking has been placing your lobbies <b>${Math.abs(res.meanLobbyGap)<0.25?'at':(res.meanLobbyGap>0?'above':'below')} your rank</b>${Math.abs(res.meanLobbyGap)>=0.25?` (roughly ${lgAbsSorted[0].toFixed(1)}–${lgAbsSorted[1].toFixed(1)} tiers ${res.meanLobbyGap>0?'above':'below'})`:''}. `
-    :'';
-  document.getElementById('mmr-explain').innerHTML=
-    `You're gaining ${pg.rr>=0?'more':'less'} RR than expected for your rank — about <b>${pg.word}</b>. ${lgTxt}Both signals read the same hidden number from different angles.`;
+  const rows=[
+    hmmRow({
+      name:'Payout gap',sub:'vs what your rank should earn',
+      val:`${pg.rr>=0?'+':'\u2212'}${Math.abs(pg.rr).toFixed(1)}`,valSub:'RR / match',
+      valCls:hmmTone(pg.rr,0.75),
+      share:share(cPart),shareColor:hmmToneColor(cPart,0.02),
+    }),
+    hmmRow({
+      // Riot divisions are exactly 100 RR wide (Gold 1\u2192Gold 2 is a tier
+      // step and a full 0\u2013100 RR reset alike) \u2014 the same RR-scale
+      // convention hmmHeadlineRankRR already anchors the rank estimate on.
+      // \u00d7100 turns "tiers" into the unit the Payout gap row already uses,
+      // instead of introducing a second, Valorant-jargon unit next to it.
+      name:'Lobby gap',sub:'your lobbies vs your rank',
+      val:haveLobby?hmmSigned(res.meanLobbyGap*100,0):'\u2014',valSub:haveLobby?'RR gap':'no data',
+      valCls:haveLobby?hmmTone(res.meanLobbyGap,0.25):'mmr-neu',
+      share:haveLobby?share(lPart):null,shareColor:hmmToneColor(lPart,0.02),
+    }),
+  ].join('');
 
-  renderHiddenMMRScatter(res);
+  document.getElementById('mmr-components').innerHTML=
+    `<div class="mmr-rows">${rows}</div>`+
+    hmmGauge(res.combined,v.color,v.label,hmmRangeText(headline))+
+    (res.dragged||(haveLobby&&cPart*lPart<0&&Math.abs(res.combined)>HMM_THRESHOLDS.pos)
+      ?`<div class="mmr-note">`+
+        (res.dragged?`${res.dragged} match${res.dragged===1?'':'es'} dropped from the lobby signal \u2014 your party's rank spread looked like deliberate rank-dragging. `:'')+
+        (haveLobby&&cPart*lPart<0&&Math.abs(res.combined)>HMM_THRESHOLDS.pos?`Payout and lobby signals disagree here \u2014 treat this estimate as weak until more matches land.`:'')+
+        `</div>`
+      :'');
+  const note=document.getElementById('mmr-components-note');
+  if(note)note.textContent=`${res.n} matches${res.lowConfidence?` \u00b7 low confidence`:''}`;
 }
 
-// Scatter of the payout gap per match (c by date), colored by win/loss, with
-// the median line — the visible data behind the headline number. Replaces the
-// old preRR-vs-RR-change fit chart.
-function renderHiddenMMRScatter(res){
-  const canvas=document.getElementById('mmr-chart-canvas');
-  if(!canvas)return;
-  if(chartInstances.mmrFit){chartInstances.mmrFit.destroy();delete chartInstances.mmrFit;}
-  const pts=res.rows.slice().sort((a,b)=>a.date-b.date).map((r,i)=>({x:r.date||i,y:r.c,won:r.won,m:r}));
-  const accentRgb=getComputedStyle(document.documentElement).getPropertyValue('--accent-rgb').trim()||'59,130,246';
-  const hmmMedianPlugin={
-    id:'hmmMedian',
-    beforeDatasetsDraw(chart){
-      const{ctx,chartArea,scales:{y}}=chart;
-      if(!chartArea)return;
-      const y0=y.getPixelForValue(0);
-      ctx.save();
-      ctx.setLineDash([3,3]);ctx.lineWidth=1;
-      ctx.strokeStyle='rgba(255,255,255,.15)';
-      ctx.beginPath();ctx.moveTo(chartArea.left,y0);ctx.lineTo(chartArea.right,y0);ctx.stroke();
-      const ym=y.getPixelForValue(res.medianC);
-      ctx.setLineDash([]);
-      ctx.strokeStyle=`rgba(${accentRgb},.85)`;ctx.lineWidth=1.5;
-      ctx.beginPath();ctx.moveTo(chartArea.left,ym);ctx.lineTo(chartArea.right,ym);ctx.stroke();
-      ctx.restore();
-    }
-  };
-  chartInstances.mmrFit=new Chart(canvas,{
-    type:'scatter',
-    plugins:[hmmMedianPlugin],
-    data:{datasets:[
-      {label:'Win',data:pts.filter(p=>p.won),backgroundColor:'rgba(34,197,94,.9)',borderColor:'#0d0d10',borderWidth:1.5,pointRadius:4,pointHoverRadius:6},
-      {label:'Loss',data:pts.filter(p=>!p.won),backgroundColor:'rgba(239,68,68,.9)',borderColor:'#0d0d10',borderWidth:1.5,pointHoverRadius:6,pointRadius:4},
-    ]},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      layout:{padding:{top:16,right:8,bottom:0,left:0}},
-      plugins:{
-        legend:{display:false},
-        tooltip:{
-          backgroundColor:'rgba(10,10,12,.95)',borderColor:`rgba(${accentRgb},.4)`,borderWidth:1,padding:10,displayColors:false,
-          titleFont:{family:'Geist',size:11,weight:'700'},bodyFont:{family:'Geist',size:11},
-          callbacks:{
-            title:(items)=>{const r=items[0]?.raw?.m;return r?(r.mapName||'Match'):'';},
-            label:(item)=>{
-              const p=item.raw;
-              return[
-                `${p.won?'Win':'Loss'} · gap ${p.y>=0?'+':''}${p.y.toFixed(2)}`,
-              ].filter(Boolean);
-            }
-          }
-        }
-      },
-      scales:{
-        x:{type:'linear',grid:{display:false},ticks:{color:'#6b7280',font:{family:'Geist',size:10},maxRotation:0,autoSkip:true,callback:function(v){const d=new Date(v);return isNaN(d)?'':d.toLocaleDateString(undefined,{month:'short',day:'numeric'});}},border:{display:true,color:'rgba(255,255,255,.1)'}},
-        y:{grid:{color:'rgba(255,255,255,.04)',z:-1},ticks:{color:'#6b7280',font:{family:'Geist',size:10}},border:{display:false}}
-      }
-    }
-  });
-}
+
 /* ── CLUTCHES (1v1–1v5) ─────────────────────────────────── */
 // Aggregates myClutchAll (computed per match in processMatch — see the 1vX
 // detection block there) across every match in scope. Uses the same match
