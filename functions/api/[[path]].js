@@ -122,22 +122,31 @@ const PREFIX = "/api";
 // shape) are NEVER refit online (identifying a hinge location isn't a simple
 // linear update, and doesn't need to be — only the level constants should
 // drift as the game's RR economy potentially changes over time).
+// Refit for ALL bands (hidden-mmr-research/refit_immortal_split.py, 10,985
+// combined rows) after finding a band-attribution bug: a match was being
+// filed under the tier it RESULTED in rather than the tier it was actually
+// played at, so any match that promoted/demoted got credited to the wrong
+// band's Bw/Bl. Confirmed on real data — 176/575 same-season tier
+// transitions show the account's underlying elo moving further than
+// last_change reports, by 3-10 RR, matching Riot's documented "minimum 10 RR
+// buffer" floor on promotion (hidden-mmr-research/riot-docs/...). last_change
+// itself was never wrong (it's the clean performance payout, unaffected by
+// that floor) — only which band's fit a transition match counted toward
+// was. Also split Immortal+/Radiant (was one 24-27 band) into three: a
+// live-traffic top-up showed a real, well-powered step-change Imm1->Imm2->
+// Imm3 that the merged band was averaging away, but Imm3 and Radiant turned
+// out statistically indistinguishable even at the larger sample, so 26-27
+// stays merged.
 const FROZEN_BANDS = [
-  { lo: 3, hi: 5, Bw: 20.55, Bl: 14.14, S: 0.65, K: 3, P: 5.21 }, // Iron
-  { lo: 6, hi: 8, Bw: 19.30, Bl: 16.84, S: 0.45, K: 3, P: 5.16 }, // Bronze
-  { lo: 9, hi: 11, Bw: 18.48, Bl: 17.18, S: 0.66, K: 5, P: 3.71 }, // Silver
-  { lo: 12, hi: 14, Bw: 18.87, Bl: 16.87, S: 0.59, K: 5, P: 2.52 }, // Gold
-  { lo: 15, hi: 17, Bw: 18.00, Bl: 17.74, S: 0.43, K: 4, P: 1.89 }, // Platinum
-  { lo: 18, hi: 20, Bw: 17.90, Bl: 16.98, S: 0.61, K: 5, P: 1.10 }, // Diamond
-  { lo: 21, hi: 23, Bw: 17.70, Bl: 17.84, S: 0.42, K: 4, P: 0.33 }, // Ascendant
-  // Split from a single Immortal+/Radiant (24-27) band after a live-traffic
-  // top-up (wave6, hidden-mmr-research/refit_immortal_split.py) showed a
-  // real, well-powered step-change from Imm1->Imm2->Imm3 (several standard
-  // errors at n=620-1613/band) that the merged band was averaging away —
-  // but Imm3 and Radiant turned out statistically indistinguishable from
-  // each other even at this larger sample, hence 26-27 stays merged.
-  { lo: 24, hi: 24, Bw: 17.05, Bl: 18.24, S: 0.52, K: 5, P: 0.16 }, // Immortal 1
-  { lo: 25, hi: 25, Bw: 18.28, Bl: 17.35, S: 0.53, K: 5, P: 0.13 }, // Immortal 2
+  { lo: 3, hi: 5, Bw: 20.25, Bl: 13.87, S: 0.66, K: 3, P: 5.24 }, // Iron
+  { lo: 6, hi: 8, Bw: 18.34, Bl: 15.97, S: 0.42, K: 0, P: 5.12 }, // Bronze
+  { lo: 9, hi: 11, Bw: 17.66, Bl: 16.85, S: 0.58, K: 4, P: 3.63 }, // Silver
+  { lo: 12, hi: 14, Bw: 18.80, Bl: 16.77, S: 0.56, K: 5, P: 2.53 }, // Gold
+  { lo: 15, hi: 17, Bw: 17.96, Bl: 17.69, S: 0.42, K: 4, P: 1.85 }, // Platinum
+  { lo: 18, hi: 20, Bw: 17.99, Bl: 16.83, S: 0.61, K: 5, P: 1.07 }, // Diamond
+  { lo: 21, hi: 23, Bw: 17.77, Bl: 17.95, S: 0.35, K: 4, P: 0.27 }, // Ascendant
+  { lo: 24, hi: 24, Bw: 17.25, Bl: 18.17, S: 0.53, K: 5, P: 0.15 }, // Immortal 1
+  { lo: 25, hi: 25, Bw: 18.36, Bl: 17.46, S: 0.54, K: 5, P: 0.12 }, // Immortal 2
   { lo: 26, hi: 27, Bw: 19.93, Bl: 16.06, S: 0.54, K: 5, P: 0.08 }, // Immortal 3+/Radiant
 ];
 const CALIB_MIN_N = 400;          // per-band n before the live fit fully replaces the frozen one
