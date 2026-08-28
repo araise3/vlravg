@@ -64,6 +64,19 @@ CREATE TABLE IF NOT EXISTS calib_bands (
 INSERT OR IGNORE INTO calib_bands (lo, hi) VALUES
   (3, 5), (6, 8), (9, 11), (12, 14), (15, 17), (18, 20), (21, 23), (24, 24), (25, 25), (26, 27);
 
+-- Resetting the live calibration. calib_bands holds running SUMS of a
+-- regressand built from the frozen constants of the day (y = last_change −
+-- s·(1−pen)·S·max(0,rd−K) − U·gap, see foldCalibration). Change S, K or U in
+-- FROZEN_BANDS and every sum already in this table refers to a different
+-- model — and CALIB_DECAY (0.9999/fold) means the stale part effectively
+-- never ages out on its own. So on any deploy that moves those constants,
+-- zero the accumulator once:
+--   npx wrangler d1 execute <DB_NAME> --remote --command \
+--     "UPDATE calib_bands SET n_win=0,n_loss=0,Sww=0,Sll=0,Swz=0,Slz=0,Szz=0,Swy=0,Sly=0,Szy=0,updated_at=NULL;"
+-- The card keeps working throughout — an empty accumulator just means
+-- /api/calib-model serves the frozen constants until live data rebuilds.
+-- Leave calib_seen alone; it's per-match dedup, not model state.
+
 -- Per-player dedup so re-looking-up someone doesn't double-fold a match
 -- already counted. A relational table, not a KV JSON blob, so there's no
 -- single-value size cap to manage — old rows just accumulate; storage is

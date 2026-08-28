@@ -117,11 +117,24 @@ const PREFIX = "/api";
 // Functions don't support them) — this recalibrates inline, on every lookup,
 // via context.waitUntil so it never adds latency to the response.
 //
-// KEEP FROZEN_BANDS' lo/hi/S/K IN SYNC WITH index.html's HMM_BANDS — Bw/Bl/P
+// KEEP FROZEN_BANDS' lo/hi/S/K/U IN SYNC WITH index.html's HMM_BANDS — Bw/Bl/P
 // here are just the same starting point; S/K (the round-margin blowout
-// shape) are NEVER refit online (identifying a hinge location isn't a simple
-// linear update, and doesn't need to be — only the level constants should
-// drift as the game's RR economy potentially changes over time).
+// shape) and U (the underdog slope) are NEVER refit online (identifying a
+// hinge location isn't a simple linear update, and doesn't need to be — only
+// the level constants should drift as the game's RR economy potentially
+// changes over time; U is a slope like S, not a level).
+// Refit again with an UNDERDOG term added for Iron-Ascendant — Riot lists it
+// as an RR factor outright ("whether or not you're the underdog in a match")
+// in the Iron-through-Ascendant article, and the model had everything else on
+// their list. It is 0 from tier 24 up, because the Immortal/Radiant article's
+// own "What affects my RR?" section names only wins, losses and round
+// differential; see UNDERDOG_FREE_MIN_TIER below and index.html's HMM_BANDS
+// comment for the full evidence. U is frozen here and folded into the
+// regressand below, so the accumulator's shape is unchanged.
+// NOTE FOR ANY FUTURE CONSTANT CHANGE: calib_bands holds running sums built
+// from the OLD S/K/U, so those sums are stale the moment this table moves.
+// Reset them on deploy — see the "Resetting the live calibration" note at
+// the bottom of schema.sql.
 // Refit for ALL bands (hidden-mmr-research/refit_immortal_split.py, 10,985
 // combined rows) after finding a band-attribution bug: a match was being
 // filed under the tier it RESULTED in rather than the tier it was actually
@@ -138,16 +151,16 @@ const PREFIX = "/api";
 // out statistically indistinguishable even at the larger sample, so 26-27
 // stays merged.
 const FROZEN_BANDS = [
-  { lo: 3, hi: 5, Bw: 20.25, Bl: 13.87, S: 0.66, K: 3, P: 5.24 }, // Iron
-  { lo: 6, hi: 8, Bw: 18.34, Bl: 15.97, S: 0.42, K: 0, P: 5.12 }, // Bronze
-  { lo: 9, hi: 11, Bw: 17.66, Bl: 16.85, S: 0.58, K: 4, P: 3.63 }, // Silver
-  { lo: 12, hi: 14, Bw: 18.80, Bl: 16.77, S: 0.56, K: 5, P: 2.53 }, // Gold
-  { lo: 15, hi: 17, Bw: 17.96, Bl: 17.69, S: 0.42, K: 4, P: 1.85 }, // Platinum
-  { lo: 18, hi: 20, Bw: 17.99, Bl: 16.83, S: 0.61, K: 5, P: 1.07 }, // Diamond
-  { lo: 21, hi: 23, Bw: 17.77, Bl: 17.95, S: 0.35, K: 4, P: 0.27 }, // Ascendant
-  { lo: 24, hi: 24, Bw: 17.25, Bl: 18.17, S: 0.53, K: 5, P: 0 }, // Immortal 1
-  { lo: 25, hi: 25, Bw: 18.36, Bl: 17.46, S: 0.54, K: 5, P: 0 }, // Immortal 2
-  { lo: 26, hi: 27, Bw: 19.93, Bl: 16.06, S: 0.54, K: 5, P: 0 }, // Immortal 3+/Radiant
+  { lo: 3, hi: 5, Bw: 18.12, Bl: 16.49, S: 0.58, K: 3, P: 6.07, U: 2.75 }, // Iron
+  { lo: 6, hi: 8, Bw: 18.68, Bl: 17.15, S: 0.45, K: 3, P: 6.09, U: 2.77 }, // Bronze
+  { lo: 9, hi: 11, Bw: 18.30, Bl: 16.45, S: 0.55, K: 4, P: 4.29, U: 2.06 }, // Silver
+  { lo: 12, hi: 14, Bw: 18.88, Bl: 16.53, S: 0.60, K: 5, P: 2.87, U: 1.30 }, // Gold
+  { lo: 15, hi: 17, Bw: 18.18, Bl: 17.19, S: 0.47, K: 4, P: 2.02, U: 0.96 }, // Platinum
+  { lo: 18, hi: 20, Bw: 17.90, Bl: 16.70, S: 0.50, K: 4, P: 1.16, U: 0.79 }, // Diamond
+  { lo: 21, hi: 23, Bw: 17.70, Bl: 17.94, S: 0.35, K: 4, P: 0.29, U: 0.48 }, // Ascendant
+  { lo: 24, hi: 24, Bw: 17.29, Bl: 18.19, S: 0.54, K: 5, P: 0, U: 0 }, // Immortal 1
+  { lo: 25, hi: 25, Bw: 18.40, Bl: 17.46, S: 0.54, K: 5, P: 0, U: 0 }, // Immortal 2
+  { lo: 26, hi: 27, Bw: 19.96, Bl: 16.05, S: 0.54, K: 5, P: 0, U: 0 }, // Immortal 3+/Radiant
 ];
 // From this tier up the performance term P is pinned to 0 and never refit,
 // exactly like S/K. Riot: "Immortal and Radiant players' RR is completely
@@ -159,6 +172,17 @@ const FROZEN_BANDS = [
 // HMM_PERF_FREE_MIN_TIER.
 const PERF_FREE_MIN_TIER = 24;
 const isPerfFree = (b) => b.lo >= PERF_FREE_MIN_TIER;
+// The underdog term is pinned to 0 from the same tier up — the docs place it
+// only in Iron-Ascendant ("whether or not you're the underdog in a match",
+// riot-docs/...iron-through-ascendant), while the Immortal/Radiant article's
+// matching "What affects my RR?" section lists only wins, losses and round
+// differential, and the canonical four-factor breakdown never mentions it at
+// all. FROZEN_BANDS already carries U:0 for those bands; this is the belt-and-
+// braces enforcement of it in foldCalibration, so a future edit to that table
+// can't quietly reintroduce an Immortal underdog term into the live fit.
+// KEEP IN SYNC with index.html's HMM_UNDERDOG_FREE_MIN_TIER.
+const UNDERDOG_FREE_MIN_TIER = 24;
+const underdogFor = (b, tierId) => (tierId >= UNDERDOG_FREE_MIN_TIER ? 0 : b.U || 0);
 const CALIB_MIN_N = 400;          // per-band n before the live fit fully replaces the frozen one
 const CALIB_PER_PLAYER_CAP = 500; // lifetime matches one puuid can contribute per band-set
 const CALIB_DECAY = 0.9999;       // per-fold decay on existing sums — lets the model move with
@@ -243,7 +267,10 @@ async function getCalibModel(env) {
 
 // GET /api/calib-model — blends each band's live fit with the frozen research
 // constants, weighted by how much live data that band has (see CALIB_MIN_N).
-// S/K are always the frozen values; only Bw/Bl/P ever move.
+// S/K/U are always the frozen values; only Bw/Bl/P ever move. U is echoed
+// back rather than omitted so the client doesn't have to reconcile a live
+// band against its own frozen table (hmmBand still guards for it, since a
+// response cached from before U existed won't carry one).
 async function handleCalibModel(env) {
   const model = await getCalibModel(env);
   const bands = FROZEN_BANDS.map((frozen) => {
@@ -258,7 +285,7 @@ async function handleCalibModel(env) {
       lo: frozen.lo, hi: frozen.hi,
       Bw: blend(frozen.Bw, live.Bw, wBw),
       Bl: blend(frozen.Bl, live.Bl, wBl),
-      S: frozen.S, K: frozen.K,
+      S: frozen.S, K: frozen.K, U: underdogFor(frozen, frozen.lo),
       P: noP ? 0 : blend(frozen.P, live.P, wP),
       live: wP >= 1,
       n: acc.n_win + acc.n_loss,
@@ -453,10 +480,25 @@ async function foldCalibration(env, bodyText, routeInfo) {
     const z = (myAcs - mean) / sd;
     if (Math.abs(z) > 6) continue; // sanity bound
 
+    // Underdog gap, same definition as index.html's lobbyAvgTier: mean tier
+    // over the rated players in the lobby (unrated excluded, me included),
+    // minus my own tier. Skip the match if nobody in it is rated — U can't be
+    // applied, and folding the row without it would let the online fit push
+    // Bw/Bl back toward absorbing the underdog effect. (Immortal+ rows have
+    // U=0 and so are unaffected either way; the client skips them too, which
+    // is what keeps the two row sets identical.)
+    const lobbyTiers = players.map((p) => p.tier?.id ?? p.currenttier ?? 0).filter((n) => n >= 3);
+    if (!lobbyTiers.length) continue;
+    const gap = lobbyTiers.reduce((x, y2) => x + y2, 0) / lobbyTiers.length - myTierId;
+    if (Math.abs(gap) > 10) continue; // sanity bound
+
     const b = calibBandFor(myTierId);
     const bandKey = `${b.lo}:${b.hi}`;
     const base0 = b.S * Math.max(0, rd - b.K);
-    const y = actualRR - (won ? 1 : -1) * (1 - pen) * base0;
+    // U is frozen, so its contribution is a known constant — subtract it from
+    // the regressand rather than adding a fourth unknown, exactly as S/K are
+    // already handled. Keeps the calib_bands accumulator's shape unchanged.
+    const y = actualRR - (won ? 1 : -1) * (1 - pen) * base0 - underdogFor(b, myTierId) * gap;
 
     let d = bandDeltas.get(bandKey);
     if (!d) { d = { lo: b.lo, hi: b.hi, n_win: 0, n_loss: 0, Sww: 0, Sll: 0, Swz: 0, Slz: 0, Szz: 0, Swy: 0, Sly: 0, Szy: 0 }; bandDeltas.set(bandKey, d); }
