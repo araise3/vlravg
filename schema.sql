@@ -1,7 +1,7 @@
 -- All persistent app state (D1) — replaces RATE_LIMIT_KV entirely: rate-limit
 -- quota, RR-history persistence, and Hidden-MMR live calibration. Run once
 -- against a new D1 database:
---   npx wrangler d1 execute <DB_NAME> --remote --file=schema.sql
+--   npx wrangler d1 execute vlravg-calib --remote --file=schema.sql
 -- (drop --remote for local dev only). See functions/api/[[path]].js's header
 -- comment for the APP_DB binding this expects.
 
@@ -70,12 +70,19 @@ INSERT OR IGNORE INTO calib_bands (lo, hi) VALUES
 -- FROZEN_BANDS and every sum already in this table refers to a different
 -- model — and CALIB_DECAY (0.9999/fold) means the stale part effectively
 -- never ages out on its own. So on any deploy that moves those constants,
--- zero the accumulator once:
---   npx wrangler d1 execute <DB_NAME> --remote --command \
---     "UPDATE calib_bands SET n_win=0,n_loss=0,Sww=0,Sll=0,Swz=0,Slz=0,Szz=0,Swy=0,Sly=0,Szy=0,updated_at=NULL;"
--- The card keeps working throughout — an empty accumulator just means
--- /api/calib-model serves the frozen constants until live data rebuilds.
--- Leave calib_seen alone; it's per-match dedup, not model state.
+-- zero the accumulator once — AFTER the new code is live, or the still-running
+-- old build just refills it with old-model sums (one line, no continuation:
+-- cmd.exe treats a trailing \ as literal, and < > as redirection):
+--   npx wrangler d1 execute vlravg-calib --remote --command "UPDATE calib_bands SET n_win=0,n_loss=0,Sww=0,Sll=0,Swz=0,Slz=0,Szz=0,Swy=0,Sly=0,Szy=0,updated_at=NULL;"
+-- Zero the sums; do NOT delete the rows — runtime only ever UPDATEs them
+-- (they're pre-seeded above, there's no insert path). The card keeps working
+-- throughout: an empty accumulator just means /api/calib-model serves the
+-- frozen constants until live data rebuilds, and those are the current fit.
+-- calib_seen can be left alone — it's per-match dedup, not model state, so
+-- keeping it just means the rebuild draws only on newly-seen matches. Once
+-- the sums are zero there's nothing to double-count, so clearing it too
+-- (DELETE FROM calib_seen;) is safe and refills the fit faster, at the cost
+-- of also resetting the CALIB_PER_PLAYER_CAP lifetime counters.
 
 -- Per-player dedup so re-looking-up someone doesn't double-fold a match
 -- already counted. A relational table, not a KV JSON blob, so there's no

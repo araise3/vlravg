@@ -6,7 +6,7 @@
 // Usage:
 //   npx wrangler kv key get "calibmodel" --namespace-id=<KV_NAMESPACE_ID> --remote > calibmodel.json
 //   node scripts/migrate-calib-kv-to-d1.mjs calibmodel.json > migrate.sql
-//   npx wrangler d1 execute <D1_DB_NAME> --remote --file=migrate.sql
+//   npx wrangler d1 execute vlravg-calib --remote --file=migrate.sql
 //
 // Safe to run more than once — it's a plain UPDATE of the pre-seeded rows,
 // not an accumulate.
