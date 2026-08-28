@@ -145,10 +145,20 @@ const FROZEN_BANDS = [
   { lo: 15, hi: 17, Bw: 17.96, Bl: 17.69, S: 0.42, K: 4, P: 1.85 }, // Platinum
   { lo: 18, hi: 20, Bw: 17.99, Bl: 16.83, S: 0.61, K: 5, P: 1.07 }, // Diamond
   { lo: 21, hi: 23, Bw: 17.77, Bl: 17.95, S: 0.35, K: 4, P: 0.27 }, // Ascendant
-  { lo: 24, hi: 24, Bw: 17.25, Bl: 18.17, S: 0.53, K: 5, P: 0.15 }, // Immortal 1
-  { lo: 25, hi: 25, Bw: 18.36, Bl: 17.46, S: 0.54, K: 5, P: 0.12 }, // Immortal 2
-  { lo: 26, hi: 27, Bw: 19.93, Bl: 16.06, S: 0.54, K: 5, P: 0.08 }, // Immortal 3+/Radiant
+  { lo: 24, hi: 24, Bw: 17.25, Bl: 18.17, S: 0.53, K: 5, P: 0 }, // Immortal 1
+  { lo: 25, hi: 25, Bw: 18.36, Bl: 17.46, S: 0.54, K: 5, P: 0 }, // Immortal 2
+  { lo: 26, hi: 27, Bw: 19.93, Bl: 16.06, S: 0.54, K: 5, P: 0 }, // Immortal 3+/Radiant
 ];
+// From this tier up the performance term P is pinned to 0 and never refit,
+// exactly like S/K. Riot: "Immortal and Radiant players' RR is completely
+// reliant on the outcome of the match" (riot-docs/...immortal-and-radiant-
+// ranks). The small P those bands used to carry (0.15/0.12/0.08) was within
+// noise for the corpus behind it, and leaving it free let the online fit
+// keep re-deriving a phantom carry bonus that eats into the convergence
+// signal the card actually reports. KEEP IN SYNC with index.html's
+// HMM_PERF_FREE_MIN_TIER.
+const PERF_FREE_MIN_TIER = 24;
+const isPerfFree = (b) => b.lo >= PERF_FREE_MIN_TIER;
 const CALIB_MIN_N = 400;          // per-band n before the live fit fully replaces the frozen one
 const CALIB_PER_PLAYER_CAP = 500; // lifetime matches one puuid can contribute per band-set
 const CALIB_DECAY = 0.9999;       // per-fold decay on existing sums — lets the model move with
@@ -166,10 +176,19 @@ function emptyBandAccum(b) {
 // Cramer's rule (fine at this scale — 3 unknowns). The Bw/Bl cross-term is
 // always exactly 0 (a row is never both a win and a loss), so this is exact,
 // not approximate, whenever both n_win>0 and n_loss>0.
-function solveBand(a) {
+function solveBand(a, noP) {
   const out = {};
   const haveW = a.n_win > 0 && a.Sww > 1e-9;
   const haveL = a.n_loss > 0 && a.Sll > 1e-9;
+  if (noP) {
+    // P pinned to 0 (see PERF_FREE_MIN_TIER): fit Bw/Bl alone. Their normal
+    // equations are already orthogonal to each other, so each is just its
+    // own ratio — solving the 3x3 and discarding P instead would leave
+    // Bw/Bl conditioned on a coefficient the model doesn't use.
+    if (haveW) out.Bw = a.Swy / a.Sww;
+    if (haveL) out.Bl = a.Sly / a.Sll;
+    return out;
+  }
   if (haveW && haveL) {
     // [[Sww,0,Swz],[0,Sll,Slz],[Swz,Slz,Szz]] . [Bw,Bl,P] = [Swy,Sly,Szy]
     const { Sww, Sll, Swz, Slz, Szz, Swy, Sly, Szy } = a;
@@ -229,7 +248,8 @@ async function handleCalibModel(env) {
   const model = await getCalibModel(env);
   const bands = FROZEN_BANDS.map((frozen) => {
     const acc = model.bands.find((x) => x.lo === frozen.lo && x.hi === frozen.hi) || emptyBandAccum(frozen);
-    const live = solveBand(acc);
+    const noP = isPerfFree(frozen);
+    const live = solveBand(acc, noP);
     const wBw = Math.min(1, acc.n_win / CALIB_MIN_N);
     const wBl = Math.min(1, acc.n_loss / CALIB_MIN_N);
     const wP = Math.min(1, (acc.n_win + acc.n_loss) / CALIB_MIN_N);
@@ -239,7 +259,7 @@ async function handleCalibModel(env) {
       Bw: blend(frozen.Bw, live.Bw, wBw),
       Bl: blend(frozen.Bl, live.Bl, wBl),
       S: frozen.S, K: frozen.K,
-      P: blend(frozen.P, live.P, wP),
+      P: noP ? 0 : blend(frozen.P, live.P, wP),
       live: wP >= 1,
       n: acc.n_win + acc.n_loss,
     };
