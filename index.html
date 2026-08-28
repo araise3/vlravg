@@ -3465,26 +3465,53 @@ const RANK_MODE_ORDER=['lobby','player','party'];
 //
 //   1. PAYOUT GAP (c): for each match, compare the actual RR change against
 //      the expected payout for someone whose rank matches their skill:
-//        expected = s·(Bw/Bl + S·max(0,|rd|−K))·(1−pen) + P·z
+//        expected = s·(Bw/Bl + S·max(0,|rd|−K))·(1−pen) + P·z + U·gap
 //      (Bw/Bl = win/loss base per band; S/K = blowout bonus; P = RR per ACS
-//      standard deviation vs the lobby; z = my ACS z-score in the lobby).
-//      c = (actual − P·z)/base − 1 on a win, 1 − ... on a loss. Median c
-//      across matches is the payout gap: c=+0.1 ≈ paid like someone 10%
-//      stronger than their rank shows.
+//      standard deviation vs the lobby; z = my ACS z-score in the lobby;
+//      U = RR per tier of underdog, gap = lobby avg tier − my tier).
+//      c = (actual − P·z − U·gap)/base − 1 on a win, 1 − ... on a loss.
+//      Median c across matches is the payout gap: c=+0.1 ≈ paid like someone
+//      10% stronger than their rank shows.
 //
 //   2. LOBBY GAP: mean(lobby avg tier − my tier). Positive = matchmaking
-//      keeps placing me above my displayed rank. Split-half r=0.82, predicts
-//      the payout signal out-of-sample (r=0.54).
+//      keeps placing me above my displayed rank. Split-half r=0.82.
 //
-// Constants calibrated on 355 players / 6,653 matches
-// (hidden-mmr-research/final_params4_wl.json) — the starting point/fallback.
-// Bw/Bl/P keep improving live from real traffic (see loadCalibModel /
-// LIVE_HMM_BANDS below); S/K never do — see the server-side comment above
-// FROZEN_BANDS in functions/api/[[path]].js for why.
-// Refit for a band-attribution bug (transition matches credited to the
-// resulting tier instead of the tier played at) plus the Immortal+/Radiant
-// 3-way split — see FROZEN_BANDS' comment in functions/api/[[path]].js for
-// both. KEEP IN SYNC with that array.
+// THE UNDERDOG TERM (U), Iron-Ascendant only. Riot lists it outright among
+// the things that move RR — "How much you win by, extraordinary plays, and
+// whether or not you're THE UNDERDOG in a match can all have an effect"
+// (riot-docs/a_gameplay_rank-rating-rr-for-iron-through-ascendant-ranks) —
+// and the model had every factor on that list except this one. Measured on
+// the corpus (demeaned within player/season/8-match block/outcome, so the
+// player's own standing MMR-vs-rank gap cancels), a match played one tier
+// above your rank pays +2.75 RR in Iron down to +0.48 in Ascendant, t=6-12.
+// Same sign on wins AND losses — a bigger gain when you win as the underdog,
+// a smaller loss when you lose as one — which is why U is additive and
+// unsigned like P·z rather than living inside the s·(...) base, where it
+// would flip sign with the outcome. Above Ascendant it is pinned to 0; see
+// HMM_UNDERDOG_FREE_MIN_TIER below for the documentary evidence.
+//
+// It matters twice over. Leaving it out inflated per-match error (leave-one-
+// player-out rmse falls 4.86→3.37 RR in Silver, 5.24→4.30 in Bronze,
+// 3.37→2.53 in Gold), and worse, it made the card's two signals share a
+// mechanical term: lobby strength was pushing c up per-match while ALSO
+// being counted again as the lobby gap. Across players, r(median c, mean
+// lobby gap) drops 0.72 → 0.39 once U is modelled — the remaining
+// correlation is the genuine "both signals see the same hidden MMR"
+// agreement the card is meant to show.
+//
+// Constants calibrated on 564 players / 10,985 matches
+// (hidden-mmr-research/refit_underdog.py → underdog_params.json) — the
+// starting point/fallback. Bw/Bl/P keep improving live from real traffic
+// (see loadCalibModel / LIVE_HMM_BANDS below); S/K/U never do — see the
+// server-side comment above FROZEN_BANDS in functions/api/[[path]].js.
+// U/S/K/Bw/Bl/P must be adopted TOGETHER, never mixed across fits: Bw/Bl are
+// residual means taken after U·gap is subtracted, and mean gap is nowhere
+// near zero (Iron lobbies average well above tier 3), so the old bases
+// silently double-count the underdog bonus if paired with a U.
+// This fit also carries the band-attribution fix (transition matches credited
+// to the resulting tier instead of the tier played at) and the Immortal+/
+// Radiant 3-way split — see FROZEN_BANDS' comment in functions/api/[[path]].js
+// for both. KEEP IN SYNC with that array.
 // P is pinned to 0 from tier 24 up (HMM_PERF_FREE_MIN_TIER): Riot states
 // outright that "Immortal and Radiant players' RR is completely reliant on
 // the outcome of the match" (riot-docs/...immortal-and-radiant-ranks), and
@@ -3496,26 +3523,57 @@ const RANK_MODE_ORDER=['lobby','player','party'];
 // bonus" instead of counting as the convergence signal it actually is.
 // The server pins this too (see PERF_FREE_MIN_TIER in functions/api).
 const HMM_PERF_FREE_MIN_TIER=24;
+// U is pinned to 0 from the same tier up, on the same kind of evidence.
+// Across all five fetched Riot articles the word "underdog" appears EXACTLY
+// ONCE, in riot-docs/a_gameplay_rank-rating-rr-for-iron-through-ascendant-
+// ranks — the Iron-through-Ascendant article — under "What affects my RR?".
+// The Immortal/Radiant article has its own "What affects my RR?" section and
+// enumerates a strictly shorter list: "Wins, losses, and round differential
+// (how much you win by) impact whether your RR goes up or down at the end of
+// a match, and by how much... While Iron through Ascendant players can also
+// receive performance bonuses, Immortal and Radiant players' RR is completely
+// reliant on the outcome of the match." Underdog is absent from that list in
+// exactly the way performance is. The canonical four-factor breakdown
+// (…how-rank-rating-rr-is-calculated) never mentions it at all — its factors
+// are outcome, round differential, individual performance and rank
+// convergence, with no instance of "underdog", "lobby", "opponent" or
+// "difficulty" anywhere in the article.
+// Fitting U above tier 23 anyway produced just what you'd expect from a term
+// that isn't there: Immortal 1 came out at 0.57, LARGER than Ascendant's 0.48
+// and breaking the otherwise clean monotone taper, while Imm2/Imm3+Radiant
+// were marginal (t=2.7/1.8) and bought 0.07 and 0.01 RR of out-of-sample
+// accuracy. Tiers 24-27 span one continuous RR ladder hundreds of RR wide,
+// so up there "lobby avg tier − my tier" stops describing a matchup and
+// starts proxying for where inside the band a player sits — which is the
+// convergence signal this card exists to report, the one thing U must not
+// absorb. Pinning it also recovers player-level reliability (split-half
+// 0.755 → 0.769). KEEP IN SYNC with UNDERDOG_FREE_MIN_TIER in functions/api.
+const HMM_UNDERDOG_FREE_MIN_TIER=24;
 const HMM_BANDS=[
-  {lo:3, hi:5, Bw:20.25,Bl:13.87,S:0.66,K:3,P:5.24},  // Iron
-  {lo:6, hi:8, Bw:18.34,Bl:15.97,S:0.42,K:0,P:5.12},  // Bronze
-  {lo:9, hi:11,Bw:17.66,Bl:16.85,S:0.58,K:4,P:3.63},  // Silver
-  {lo:12,hi:14,Bw:18.80,Bl:16.77,S:0.56,K:5,P:2.53},  // Gold
-  {lo:15,hi:17,Bw:17.96,Bl:17.69,S:0.42,K:4,P:1.85},  // Platinum
-  {lo:18,hi:20,Bw:17.99,Bl:16.83,S:0.61,K:5,P:1.07},  // Diamond
-  {lo:21,hi:23,Bw:17.77,Bl:17.95,S:0.35,K:4,P:0.27},  // Ascendant
-  {lo:24,hi:24,Bw:17.25,Bl:18.17,S:0.53,K:5,P:0},     // Immortal 1
-  {lo:25,hi:25,Bw:18.36,Bl:17.46,S:0.54,K:5,P:0},     // Immortal 2
-  {lo:26,hi:27,Bw:19.93,Bl:16.06,S:0.54,K:5,P:0},     // Immortal 3+/Radiant
+  {lo:3, hi:5, Bw:18.12,Bl:16.49,S:0.58,K:3,P:6.07,U:2.75},  // Iron
+  {lo:6, hi:8, Bw:18.68,Bl:17.15,S:0.45,K:3,P:6.09,U:2.77},  // Bronze
+  {lo:9, hi:11,Bw:18.30,Bl:16.45,S:0.55,K:4,P:4.29,U:2.06},  // Silver
+  {lo:12,hi:14,Bw:18.88,Bl:16.53,S:0.60,K:5,P:2.87,U:1.30},  // Gold
+  {lo:15,hi:17,Bw:18.18,Bl:17.19,S:0.47,K:4,P:2.02,U:0.96},  // Platinum
+  {lo:18,hi:20,Bw:17.90,Bl:16.70,S:0.50,K:4,P:1.16,U:0.79},  // Diamond
+  {lo:21,hi:23,Bw:17.70,Bl:17.94,S:0.35,K:4,P:0.29,U:0.48},  // Ascendant
+  {lo:24,hi:24,Bw:17.29,Bl:18.19,S:0.54,K:5,P:0,   U:0},     // Immortal 1
+  {lo:25,hi:25,Bw:18.40,Bl:17.46,S:0.54,K:5,P:0,   U:0},     // Immortal 2
+  {lo:26,hi:27,Bw:19.96,Bl:16.05,S:0.54,K:5,P:0,   U:0},     // Immortal 3+/Radiant
 ];
 // Verdict thresholds on the combined signal (calibrated so ~top/bottom 10%
 // of the 355-player calibration corpus get the strong labels).
 const HMM_THRESHOLDS={pos:0.15,neg:0.15,strongPos:0.35,strongNeg:0.35};
 // Population spreads used to put the two signals on one scale before they're
 // summed (see computeHiddenMMR). Not tuning knobs — they're the observed
-// player-to-player spread of each signal in the calibration corpus, and the
-// card prints them as the divisors in its "Score components" formula.
-const HMM_C_SPREAD=0.15;      // payout gap c
+// player-to-player spread of each signal in the calibration corpus.
+// HMM_C_SPREAD moved 0.15 → 0.109 when the underdog term landed, and HAD to:
+// it's a property of c's definition, and modelling U shrinks c's spread
+// across players from 0.143 to 0.109 (hidden-mmr-research/
+// check_underdog_signal.py). Leaving it at 0.15 would have quietly damped
+// sd(cPart) to 0.73 and slid every verdict toward "balanced" — rescaling
+// keeps sd(cPart) ≈ 1.0, so HMM_THRESHOLDS stay calibrated where they were.
+const HMM_C_SPREAD=0.109;     // payout gap c
 const HMM_LOBBY_SPREAD=2;     // lobby gap, in tiers
 const HMM_MIN_MATCHES=8;     // below this: hide the card entirely
 const HMM_LOW_CONFIDENCE=15; // below this: show it but flag low confidence
@@ -3555,10 +3613,19 @@ async function loadCalibModel(){
 
 function hmmBand(tierId){
   const bands=LIVE_HMM_BANDS||HMM_BANDS;
-  const b=bands.find(x=>tierId>=x.lo&&tierId<=x.hi)||bands[bands.length-1];
+  let b=bands.find(x=>tierId>=x.lo&&tierId<=x.hi)||bands[bands.length-1];
   // Belt and braces: the server pins P=0 above the cutoff too, but a cached
   // /api/calib-model response predating that change would still carry one.
-  return b.lo>=HMM_PERF_FREE_MIN_TIER&&b.P?{...b,P:0}:b;
+  if(b.lo>=HMM_PERF_FREE_MIN_TIER&&b.P)b={...b,P:0};
+  // Same again for U: it's frozen, so the server echoes it back, but a
+  // calib-model response cached from before the underdog term existed has no
+  // U at all — and an undefined U would turn every c into NaN rather than
+  // failing loudly. Fall back to this band's frozen value.
+  if(b.U==null){
+    const f=HMM_BANDS.find(x=>tierId>=x.lo&&tierId<=x.hi)||HMM_BANDS[HMM_BANDS.length-1];
+    b={...b,U:f.U};
+  }
+  return b;
 }
 
 // ── Payout-gap → Rank+RR headline ───────────────────────────────────────
@@ -3669,6 +3736,13 @@ function hmmMatchRow(m){
   const base=(m.won?b.Bw:b.Bl)+b.S*Math.max(0,rd-b.K);
   const netBase=base*(1-(m.myPartyPenalty||0));
   if(netBase<=0)return null;
+  // Underdog gap for THIS match. The payout model needs it, so a match whose
+  // lobby has no rated players at all (rawAvg null — everyone Unranked, which
+  // essentially only happens right after a reset) can no longer contribute to
+  // the payout signal. Those are near-always placements, which this function
+  // already drops above.
+  const rawLobbyGap=(m.lobbyAvgTier!=null&&m.myTierId)?m.lobbyAvgTier-m.myTierId:null;
+  if(rawLobbyGap==null)return null;
   // ACS z-score: my ACS vs everyone in the lobby (both teams — same
   // definition the calibration used).
   const acss=(m.players||[]).map(p=>p._acs).filter(a=>a!=null&&a>0);
@@ -3677,15 +3751,21 @@ function hmmMatchRow(m){
   const sd=Math.sqrt(acss.reduce((s,a)=>s+(a-mean)**2,0)/acss.length);
   if(sd<=0)return null;
   const z=(m.myStats?.acs-mean)/sd;
-  // Invert chg = s·netBase·(1+s·c) + P·z for c. On a win (s=+1) the P·z
-  // cushion ADDS to the payout; on a loss (s=−1) it SHRINKS the deduction —
-  // so the loss branch must flip myRR's sign but keep +P·z:
-  //   win:  c = (myRR − P·z)/netBase − 1
-  //   loss: c = 1 − (−myRR + P·z)/netBase
+  // The two additive, outcome-independent cushions: performance (P·z) and
+  // underdog (U·gap). Both ADD to a win's payout and SHRINK a loss's
+  // deduction, which is why they sit outside the s·(...) base and share one
+  // `adj` term. U·gap is applied on every match including party-dragged ones
+  // — Riot's formula doesn't care WHY the lobby is ranked where it is, so the
+  // payout correction always applies; only the separate lobby-GAP signal
+  // below gets excluded when dragging is suspected.
+  const adj=b.P*z+b.U*rawLobbyGap;
+  // Invert chg = s·netBase·(1+s·c) + adj for c. The loss branch flips myRR's
+  // sign but keeps +adj:
+  //   win:  c = (myRR − adj)/netBase − 1
+  //   loss: c = 1 − (−myRR + adj)/netBase
   const c=m.won
-    ?(m.myRR-b.P*z)/netBase-1
-    :1-((-m.myRR)+b.P*z)/netBase;
-  const rawLobbyGap=(m.lobbyAvgTier!=null&&m.myTierId)?m.lobbyAvgTier-m.myTierId:null;
+    ?(m.myRR-adj)/netBase-1
+    :1-((-m.myRR)+adj)/netBase;
   // Exclude (not adjust) the lobby-gap signal when my own party's internal
   // tier spread suggests deliberate rank-dragging — see HMM_PARTY_DRAG_MIN_SPREAD.
   const dragging=(m.partySize||1)>=2&&hmmPartyTierSpread(m)>=HMM_PARTY_DRAG_MIN_SPREAD;
