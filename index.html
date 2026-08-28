@@ -401,6 +401,12 @@ h1 span{color:var(--accent);}
 .mmr-gauge-range{color:var(--mmr-dimmer);font-size:11px;}
 .mmr-note{margin-top:11px;font-size:10.5px;line-height:1.65;color:var(--mmr-dim);}
 .mmr-note b{color:var(--text);}
+/* Riot-confirmed evidence, kept visually distinct from the model's own
+   numbers above it — this is something Riot did, not something we inferred. */
+.mmr-evidence{display:flex;gap:9px;align-items:flex-start;margin-top:12px;padding:9px 11px;border-radius:var(--radius-sm);background:rgba(34,197,94,.07);border:.5px solid rgba(34,197,94,.22);font-size:11px;line-height:1.55;color:var(--mmr-dim);}
+.mmr-evidence.contra{background:rgba(245,158,11,.07);border-color:rgba(245,158,11,.25);}
+.mmr-evidence svg{flex-shrink:0;margin-top:1px;}
+.mmr-evidence b{color:var(--text);font-weight:600;}
 @media(max-width:640px){
   .mmr-quick{flex-direction:column;}
   .mmr-r{grid-template-columns:1fr auto;grid-template-areas:"name name" "value share";row-gap:8px;padding:11px 2px;}
@@ -1004,6 +1010,13 @@ let CURRENT_RR=null;
 // to be covered (never fetched before, or persisted after this ran). Read via
 // _rrChangeByMatchId[matchId] ?? null, never assume it's present.
 let _rrChangeByMatchId={};
+// Riot's Double Promotion: "When you're promoted to a new tier and your
+// hidden MMR is significantly higher than your visible rank, the system may
+// skip a division entirely (e.g. jumping from Gold I to Gold III) to rapidly
+// realign your rank with your skill level" (riot-docs/...how-rank-rating-rr-
+// is-calculated). Populated by detectDoublePromotions(); entries are
+// {date,fromName,toName,skipped}, oldest first.
+let _doublePromotions=[];
 // match_id -> RR total the player was sitting on BEFORE that match — previous
 // entry's elo within a season, else rr - last_change - refunded_rr. Used by the
 // hidden-MMR card's per-match tooltips and the rank-trend chart.
@@ -1403,7 +1416,7 @@ function runAnalysis(){
   document.getElementById('sg-avg-rank-progress').hidden=true;
   settleSearchBarWidth();
   allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;mhDayStats={};
-  _rrChangeByMatchId={};_preRRByMatchId={};
+  _rrChangeByMatchId={};_preRRByMatchId={};_doublePromotions=[];
   allTeammates=[];tmPage=0;
   // If the season dropdown's prefetch already fetched this exact player (the
   // common case — it runs while the player is still typing), reuse those
@@ -2381,6 +2394,78 @@ function tagPostResetPlacements(matches,days=RESET_GRACE_DAYS){
   return matches;
 }
 
+// The OTHER placement matches. Acts 1 and 4 open an episode with five
+// placement games (tagPostResetPlacements, above), but Riot also requires a
+// single placement match to open Acts 2/3/5/6: "For Acts 2 and 3 within an
+// Episode, if you already completed your initial 5 placements, you only need
+// to play 1 placement match to update your rank" — and for Immortal+ that
+// match runs on RR that was just cut by 90%. Its RR swing is set by
+// placement rules, not by the win/margin/performance model, so the hidden-MMR
+// fit has to drop it (m.actPlacement) the same way it drops the five.
+//
+// A match only qualifies if we can PROVE it's that act's first: we must also
+// hold a match from before the act started, which means pagination actually
+// spans the boundary. Without that guard the oldest match on a truncated
+// page would be mislabelled a placement in every act we happen to cut off in
+// the middle of.
+function tagActPlacements(matches){
+  const byAct=new Map();
+  let oldestMs=Infinity;
+  matches.forEach(m=>{
+    if(m.startedAtMs==null)return;
+    if(m.startedAtMs<oldestMs)oldestMs=m.startedAtMs;
+    const info=getActInfo(m);
+    if(!info||info.resetAct)return;   // episode openers are the 5-game reset
+    const cur=byAct.get(info.start);
+    if(!cur||m.startedAtMs<cur.startedAtMs)byAct.set(info.start,m);
+  });
+  matches.forEach(m=>{m.actPlacement=false;});
+  byAct.forEach((m,actStart)=>{
+    if(oldestMs<actStart)m.actPlacement=true;
+  });
+  return matches;
+}
+
+// Double Promotion detection off the MMR history (see _doublePromotions).
+//
+// The signature is unambiguous. Within a season, elo is exactly
+// (tier-3)*100 + rr — verified on 6,378 sub-Immortal entries, zero
+// mismatches — so for an ordinary match elo moves by exactly last_change.
+// A promotion adds Riot's documented 0-10 RR landing buffer on top. A
+// division SKIP adds a further whole division, so the residual
+//     (elo delta) - last_change - refunded_rr
+// lands at ~100 per skipped division instead of 0-17. Measured across the
+// research corpus: 5,823 same-season sub-Immortal transitions, of which the
+// 8 real double promotions ALL residual to +100..+107 and every ordinary
+// transition residuals to <= +17. Nothing occupies the gap between, so this
+// needs no fuzzy threshold.
+//
+// Immortal+ is excluded on purpose: up there divisions are regional RR
+// thresholds on one continuous ladder (see IMMORTAL_RR_THRESHOLDS), so a
+// big win legitimately crosses two boundaries without any skip occurring.
+const DOUBLE_PROMO_MIN_RESIDUAL=90;   // one skipped division ~= 100 RR
+function detectDoublePromotions(sortedHistory){
+  const out=[];
+  for(let i=1;i<sortedHistory.length;i++){
+    const a=sortedHistory[i-1],b=sortedHistory[i];
+    if(a.season?.id!==b.season?.id)continue;
+    const ta=a.tier?.id,tb=b.tier?.id;
+    if(ta==null||tb==null)continue;
+    if(ta<3||ta>23||tb<3||tb>23)continue;
+    if(tb-ta<2)continue;
+    if(a.elo==null||b.elo==null||b.last_change==null)continue;
+    const residual=(b.elo-a.elo)-b.last_change-(b.refunded_rr||0);
+    if(residual<DOUBLE_PROMO_MIN_RESIDUAL)continue;
+    out.push({
+      date:Date.parse(b.date)||null,
+      fromName:a.tier?.name||rName(ta),
+      toName:b.tier?.name||rName(tb),
+      skipped:Math.max(1,Math.round(residual/100)),
+    });
+  }
+  return out;
+}
+
 /* ── LOAD ─────────────────────────────────────────────────── */
 async function loadAll(prefetchSnapshot=null){
   const myGen=++_analysisGen; // supersede any in-flight analysis
@@ -2513,6 +2598,7 @@ async function loadAll(prefetchSnapshot=null){
       // Entries arrive oldest→newest per the API, but sort defensively so the
       // previous-entry carry-forward below always walks forward in time.
       const sorted=[...history].filter(h=>h.match_id).sort((a,b)=>new Date(a.date)-new Date(b.date));
+      _doublePromotions=detectDoublePromotions(sorted);
       let prev=null;
       sorted.forEach(h=>{
         _rrChangeByMatchId[h.match_id]=h.last_change??null;
@@ -2588,7 +2674,7 @@ async function loadAll(prefetchSnapshot=null){
       seen.add(id);return true;
     });
     await loadSeasonDates(); // ensure real act-start dates are in before filtering
-    allMatches=tagPostResetPlacements(deduped.map(processMatch));
+    allMatches=tagActPlacements(tagPostResetPlacements(deduped.map(processMatch)));
     if(myGen!==_analysisGen)return; // a newer analysis took over
     setProgress(100);
     setTimeout(()=>setProgress(0),600);
@@ -3399,6 +3485,17 @@ const RANK_MODE_ORDER=['lobby','player','party'];
 // resulting tier instead of the tier played at) plus the Immortal+/Radiant
 // 3-way split — see FROZEN_BANDS' comment in functions/api/[[path]].js for
 // both. KEEP IN SYNC with that array.
+// P is pinned to 0 from tier 24 up (HMM_PERF_FREE_MIN_TIER): Riot states
+// outright that "Immortal and Radiant players' RR is completely reliant on
+// the outcome of the match" (riot-docs/...immortal-and-radiant-ranks), and
+// the general RR article agrees there's "even less impact for Immortal &
+// Radiant ranks". The 0.15/0.12/0.08 those bands used to carry were small
+// enough to be sampling noise off a thin Immortal+ corpus rather than a real
+// effect, and fitting a phantom performance term there bleeds into c: any
+// high-ACS Immortal game got a slice of its payout explained away as "carry
+// bonus" instead of counting as the convergence signal it actually is.
+// The server pins this too (see PERF_FREE_MIN_TIER in functions/api).
+const HMM_PERF_FREE_MIN_TIER=24;
 const HMM_BANDS=[
   {lo:3, hi:5, Bw:20.25,Bl:13.87,S:0.66,K:3,P:5.24},  // Iron
   {lo:6, hi:8, Bw:18.34,Bl:15.97,S:0.42,K:0,P:5.12},  // Bronze
@@ -3407,9 +3504,9 @@ const HMM_BANDS=[
   {lo:15,hi:17,Bw:17.96,Bl:17.69,S:0.42,K:4,P:1.85},  // Platinum
   {lo:18,hi:20,Bw:17.99,Bl:16.83,S:0.61,K:5,P:1.07},  // Diamond
   {lo:21,hi:23,Bw:17.77,Bl:17.95,S:0.35,K:4,P:0.27},  // Ascendant
-  {lo:24,hi:24,Bw:17.25,Bl:18.17,S:0.53,K:5,P:0.15},  // Immortal 1
-  {lo:25,hi:25,Bw:18.36,Bl:17.46,S:0.54,K:5,P:0.12},  // Immortal 2
-  {lo:26,hi:27,Bw:19.93,Bl:16.06,S:0.54,K:5,P:0.08},  // Immortal 3+/Radiant
+  {lo:24,hi:24,Bw:17.25,Bl:18.17,S:0.53,K:5,P:0},     // Immortal 1
+  {lo:25,hi:25,Bw:18.36,Bl:17.46,S:0.54,K:5,P:0},     // Immortal 2
+  {lo:26,hi:27,Bw:19.93,Bl:16.06,S:0.54,K:5,P:0},     // Immortal 3+/Radiant
 ];
 // Verdict thresholds on the combined signal (calibrated so ~top/bottom 10%
 // of the 355-player calibration corpus get the strong labels).
@@ -3458,7 +3555,10 @@ async function loadCalibModel(){
 
 function hmmBand(tierId){
   const bands=LIVE_HMM_BANDS||HMM_BANDS;
-  return bands.find(b=>tierId>=b.lo&&tierId<=b.hi)||bands[bands.length-1];
+  const b=bands.find(x=>tierId>=x.lo&&tierId<=x.hi)||bands[bands.length-1];
+  // Belt and braces: the server pins P=0 above the cutoff too, but a cached
+  // /api/calib-model response predating that change would still carry one.
+  return b.lo>=HMM_PERF_FREE_MIN_TIER&&b.P?{...b,P:0}:b;
 }
 
 // ── Payout-gap → Rank+RR headline ───────────────────────────────────────
@@ -3474,21 +3574,45 @@ const HMM_C_TO_ELO_A=0.000425;
 
 // Converts a raw RR-scale offset into {tierId,rr,name} anchored on the
 // player's own current tier+RR — the only fixed reference point available.
-// Recovered from the deleted formatMMRRR (git show HEAD:index.html before
-// this session's rewrite) since it already solved the Immortal+/Radiant
-// continuous-RR-band special case correctly; not re-derived.
 //
 // Below Immortal (tier 3-23) each division resets 0-99, so CURRENT_RR is
 // already a local value: abs = tierId*100+CURRENT_RR. Immortal 1/2/3 and
-// Radiant (tier 24+) share ONE continuous band where RR climbs straight
-// through 100/200/300 without resetting, so the anchor there is
-// IMMORTAL_START_ABS+CURRENT_RR instead.
+// Radiant (tier 24+) share ONE continuous band where RR climbs without
+// resetting, so the anchor there is IMMORTAL_START_ABS+CURRENT_RR instead.
 const MMR_IMMORTAL_TIER=24,MMR_RADIANT_TIER=27,MMR_IMMORTAL_START_ABS=MMR_IMMORTAL_TIER*100;
+
+// Riot's published per-region RR thresholds for the Immortal ladder
+// (riot-docs/a_gameplay_rank-rating-rr-for-immortal-and-radiant-ranks).
+// This band is emphatically NOT 100 RR per division the way Iron-Ascendant
+// is — the older floor(abs/100) treated it as though it were, which
+// mislabeled Immortal+ estimates in every region: an EU player on 450 RR
+// came out Radiant (EU needs 500), a LATAM player on 200 RR came out
+// Immortal 3 when 200 is already LATAM's Radiant line.
+const IMMORTAL_RR_THRESHOLDS={
+  na:   {i2:90, i3:200,rad:450},
+  eu:   {i2:100,i3:200,rad:500},
+  ap:   {i2:80, i3:200,rad:400},  // "APC" in Riot's table
+  kr:   {i2:90, i3:150,rad:200},
+  latam:{i2:90, i3:150,rad:200},
+  br:   {i2:100,i3:230,rad:340},
+};
+function immortalTierForRR(rr){
+  // REGION defaults to 'eu' app-wide, so an unrecognised shard lands there too.
+  const t=IMMORTAL_RR_THRESHOLDS[(REGION||'eu').toLowerCase()]||IMMORTAL_RR_THRESHOLDS.eu;
+  // Radiant needs the regional RR line AND a top-500 regional placing, and
+  // nothing in this data proves the second half. So an estimate only reaches
+  // Radiant for someone already sitting there (which proves it) — everyone
+  // else caps at Immortal 3 no matter how high the RR estimate runs.
+  if(rr>=t.rad&&CURRENT_TIER_ID===MMR_RADIANT_TIER)return MMR_RADIANT_TIER;
+  if(rr>=t.i3)return 26;
+  if(rr>=t.i2)return 25;
+  return MMR_IMMORTAL_TIER;
+}
 function absToTierRR(abs){
   let tierId,rr;
   if(abs>=MMR_IMMORTAL_START_ABS){
-    tierId=Math.min(MMR_RADIANT_TIER,Math.floor(abs/100));
     rr=Math.round(abs-MMR_IMMORTAL_START_ABS);
+    tierId=immortalTierForRR(rr);
   }else{
     tierId=Math.max(3,Math.floor(abs/100));
     rr=Math.round(Math.min(99,Math.max(0,abs-tierId*100)));
@@ -3528,6 +3652,18 @@ function hmmPartyTierSpread(m){
 function hmmMatchRow(m){
   if(m.myRR==null||m.won===undefined||m.won===null)return null;
   if(!m.myTierId||m.myTierId<3)return null;
+  // The one placement match that opens Acts 2/3/5/6 — see tagActPlacements.
+  // (The five-game episode reset is already excluded by the tier 0-2 gate
+  // above, since you're Unranked until those finish.)
+  if(m.actPlacement)return null;
+  // NOTE: Rank Shields need no handling here. A shielded loss ("you are
+  // granted 2 Rank Shields... protect you from demoting... by consuming one
+  // of your shields instead of losing the RR") does freeze displayed RR, but
+  // last_change — which is what myRR carries — still reports the full,
+  // clean payout. Measured across the research corpus: 223 entries with
+  // was_derank_protected=true all carry a normal negative last_change
+  // (−14 to −26) against elo delta 0. So c is already computed from the
+  // true payout on those matches and nothing needs excluding.
   const b=hmmBand(m.myTierId);
   const rd=Math.abs((m.myR??13)-(m.opR??13));
   const base=(m.won?b.Bw:b.Bl)+b.S*Math.max(0,rd-b.K);
@@ -3720,7 +3856,37 @@ function hmmRenderQuickStats(res){
 // spread to sum them \u2014 that division happens here, never on the page as a
 // number the reader has to interpret). Where they land together is the
 // gauge underneath, not a third number.
-// "likely X–Y" — same tier collapses to just an RR range, a tier change
+// Riot's own verdict, when it exists. A division skip is the one thing in
+// this whole card that isn't inferred: Riot only does it when hidden MMR is
+// "significantly higher" than visible rank, so it corroborates the estimate
+// directly.
+//
+// It deliberately does NOT feed the score. A double promotion is
+// self-correcting — the skip exists precisely to close the gap it's evidence
+// of, so by the time we can see it, Riot has already spent most of it.
+// Adding it as a term would double-count a gap that was just consumed, and
+// with 8 occurrences in 5,823 transitions there is nowhere near the data to
+// weight one anyway. It raises or challenges confidence, nothing more.
+function hmmEvidenceHTML(res){
+  const dp=_doublePromotions&&_doublePromotions.length?_doublePromotions[_doublePromotions.length-1]:null;
+  if(!dp)return '';
+  const when=dp.date?new Date(dp.date).toLocaleDateString(undefined,{month:'short',day:'numeric'}):null;
+  // Over-ranked verdict + a recent skip is a genuine contradiction worth
+  // flagging rather than quietly showing agreeing-looking evidence.
+  const contra=res.combined<-HMM_THRESHOLDS.neg;
+  const icon=contra
+    ?`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"><path d="M12 8v5"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>`
+    :`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`;
+  return `<div class="mmr-evidence${contra?' contra':''}">${icon}<div>`+
+    `Riot <b>double-promoted</b> you \u2014 <b>${dp.fromName} \u2192 ${dp.toName}</b>${when?` on ${when}`:''}`+
+    `${dp.skipped>1?` (${dp.skipped} divisions skipped)`:''}. A division only gets skipped when hidden MMR sits well above visible rank. `+
+    (contra
+      ?`That contradicts the over-ranked read above, so treat it with caution.`
+      :`Riot confirming what the signals above measure \u2014 though the skip itself already closed part of that gap.`)+
+    `</div></div>`;
+}
+
+// "likely X\u2013Y" \u2014 same tier collapses to just an RR range, a tier change
 // spells out both ranks. The one thing the old hero badge used to show.
 function hmmRangeText(headline){
   if(!headline)return '';
@@ -3758,6 +3924,7 @@ function hmmRenderComponents(res,v,headline){
   document.getElementById('mmr-components').innerHTML=
     `<div class="mmr-rows">${rows}</div>`+
     hmmGauge(res.combined,v.color,v.label,hmmRangeText(headline))+
+    hmmEvidenceHTML(res)+
     (res.dragged||(haveLobby&&cPart*lPart<0&&Math.abs(res.combined)>HMM_THRESHOLDS.pos)
       ?`<div class="mmr-note">`+
         (res.dragged?`${res.dragged} match${res.dragged===1?'':'es'} dropped from the lobby signal \u2014 your party's rank spread looked like deliberate rank-dragging. `:'')+
