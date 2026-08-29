@@ -166,18 +166,6 @@ h1 span{color:var(--accent);}
 .s-value{font-size:1.6rem;font-weight:700;line-height:1;word-break:break-word;letter-spacing:-.02em;font-variant-numeric:tabular-nums;} .s-value.small{font-size:1.1rem;}
 .rank-card .s-value{font-size:clamp(1.35rem,1.7vw + 1rem,2rem);}
 .s-value-suffix{white-space:nowrap;}
-.rank-progress{margin-top:20px;}
-.rank-progress-track{height:7px;border-radius:99px;background:rgba(255,255,255,0.07);overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,.4);}
-.rank-progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--rank-color,var(--accent)),rgba(255,255,255,.85));width:0%;transition:width 1s cubic-bezier(.22,1,.36,1),background .5s ease;position:relative;overflow:hidden;}
-/* The shine sweep's transform:translateX moves the WHOLE pseudo-element, not
-   just its gradient content, so without this the sweep would slide past the
-   fill's own right edge and stay visible in the still-empty track (the
-   track's overflow:hidden only clips the fill itself, not this pseudo). */
-.rank-progress-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);transform:translateX(-100%);animation:rankShine 2.6s ease-in-out infinite;}
-@keyframes rankShine{0%{transform:translateX(-100%);}60%,100%{transform:translateX(100%);}}
-.rank-progress-fill.maxed{background:linear-gradient(90deg,#f0e0b0,#fff8dc,#f0e0b0);background-size:200% 100%;animation:rankMaxShimmer 2.5s linear infinite;}
-@keyframes rankMaxShimmer{0%{background-position:0% 0;}100%{background-position:200% 0;}}
-.rank-progress-lbl{margin-top:7px;font-size:11px;color:var(--muted);font-family:var(--font-body);display:flex;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums;}
 .s-sub{font-size:12px;color:var(--muted);margin-top:10px;font-family:var(--font-body);}
 /* Wraps rather than crushing: pills sit at full width, but on a narrow
    viewport they reflow instead of squeezing the labels down to nothing. */
@@ -458,13 +446,6 @@ h1 span{color:var(--accent);}
             <div class="rank-compare-col">
               <div class="card-title">Avg Lobby</div>
               <div class="s-value" id="sg-avg-rank" style="display:flex;align-items:center;gap:10px;white-space:nowrap;">—</div>
-              <div class="rank-progress" id="sg-avg-rank-progress" hidden>
-                <div class="rank-progress-track"><div class="rank-progress-fill" id="sg-avg-rank-progress-fill"></div></div>
-                <div class="rank-progress-lbl">
-                  <span id="sg-avg-rank-progress-cur"></span>
-                  <span id="sg-avg-rank-progress-next"></span>
-                </div>
-              </div>
               <div class="stat-pill" id="lobby-gap-pill" title="How your solo-queue lobbies compared to your own rank, on average, converted to RR (100 RR per rank division). Party games are excluded since a high-ranked duo pulls the matchmaker into tougher lobbies regardless of your own rank.">
                 <div class="stat-pill-body">
                   <span class="stat-pill-label">Lobbies vs Rank</span><span class="stat-pill-value" id="lobby-gap-value">—</span>
@@ -867,13 +848,6 @@ function rClass(n){
   return 'r-rad';
 }
 
-// The current all-time world-record RR (held by dfm meiy at time of writing)
-// — the goal the Radiant progress bar scales against. HenrikDev's MMR
-// endpoint's `peak` node never actually carries a usable RR (verified across
-// several accounts — it's 0 regardless of tier), so a personal-peak goal
-// isn't available; the record is the only real reference point there is.
-const RADIANT_RR_RECORD=1452;
-
 // The one shared "headline rank" renderer: a big icon + name + RR, tinted
 // with that tier's OWN color (not the shared site accent — otherwise every
 // headline rank on the page would render in whatever single color the site
@@ -884,46 +858,19 @@ const RADIANT_RR_RECORD=1452;
 // regardless of which element in the chain set them.
 function setRankValue(el,tierId,rr,nameText){
   const c=rColor(tierId);
-  // Set on the parent, not `el` itself — the progress bar's fill sits in a
-  // sibling element (.rank-progress is a sibling of the .s-value this
-  // renders into, not a descendant), so scoping the var to `el` alone left
-  // it invisible to the bar and falling back to the shared site accent
-  // instead, which is wrong whenever the avg lobby tier differs from the
-  // current rank the site accent is derived from.
-  const scope=el.parentElement||el;
-  scope.style.setProperty('--rank-color',c);
-  scope.style.setProperty('--rank-color-rgb',hexToRgb(c));
+  el.style.setProperty('--rank-color-rgb',hexToRgb(c));
   el.innerHTML=`<span class="rank-icon-wrap"><span class="rank-icon-halo"></span>${rankIcon(tierId,44)}</span> <span>${nameText}<span class="s-value-suffix"> (${rr} RR)</span></span>`;
 }
 
-// Renders a headline rank block: the shared big icon + name + RR display,
-// plus a bar showing progress toward the next division (Radiant has no next
-// division, so it targets the world record instead — see RADIANT_RR_RECORD).
+// Renders a headline rank block: the shared big icon + name + RR display.
 // Only the Avg Lobby column uses this now that RR Gains sits opposite it; the
 // idPrefix indirection is kept because a second rank block is cheap to add.
 function renderRankBlock(idPrefix,tierId,rr,nameText,emptyText){
   const valueEl=document.getElementById(idPrefix+'-rank');
-  const progWrap=document.getElementById(idPrefix+'-rank-progress');
   if(tierId!=null&&rr!=null){
     setRankValue(valueEl,tierId,rr,nameText);
-    progWrap.hidden=false;
-    const maxed=tierId>=27; // Radiant — the golden "capped" shimmer treatment
-    // Immortal 3 (26) has no fixed 100-RR checkpoint into Radiant the way
-    // every division below it does — Immortal/Radiant RR climbs continuously
-    // and the Immortal3->Radiant threshold moves with the ladder. So from
-    // Immortal 3 up, target the RR record instead of a "next division at 100
-    // RR" that doesn't actually exist yet (but keep the bar tinted in the
-    // rank's own color rather than switching to Radiant's gold shimmer).
-    const useRecordGoal=tierId>=26;
-    const pct=useRecordGoal?Math.min(99,(rr/RADIANT_RR_RECORD)*100):Math.min(99,Math.max(0,rr));
-    const fill=document.getElementById(idPrefix+'-rank-progress-fill');
-    fill.classList.toggle('maxed',maxed);
-    requestAnimationFrame(()=>{fill.style.width=pct+'%';});
-    document.getElementById(idPrefix+'-rank-progress-cur').textContent=`${rr} RR`;
-    document.getElementById(idPrefix+'-rank-progress-next').textContent=useRecordGoal?`${RADIANT_RR_RECORD} RR`:`100 RR`;
   }else{
     valueEl.textContent=emptyText;
-    progWrap.hidden=true;
   }
 }
 
@@ -1353,7 +1300,6 @@ function runAnalysis(){
   document.getElementById('rr-loss-value').className='stat-pill-value';
   CURRENT_TIER_ID=null;
   CURRENT_RR=null;
-  document.getElementById('sg-avg-rank-progress').hidden=true;
   settleSearchBarWidth();
   allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;mhDayStats={};
   _rrChangeByMatchId={};_preRRByMatchId={};_derankProtectedByMatchId={};
