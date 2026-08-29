@@ -179,7 +179,7 @@ h1 span{color:var(--accent);}
 @keyframes rankMaxShimmer{0%{background-position:0% 0;}100%{background-position:200% 0;}}
 .rank-progress-lbl{margin-top:7px;font-size:11px;color:var(--muted);font-family:var(--font-body);display:flex;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums;}
 .s-sub{font-size:12px;color:var(--muted);margin-top:10px;font-family:var(--font-body);}
-/* Wraps rather than crushing: five pills at full width, but on a narrow
+/* Wraps rather than crushing: pills sit at full width, but on a narrow
    viewport they reflow instead of squeezing the labels down to nothing. */
 .stat-pill-row{display:flex;gap:10px;flex:1;align-items:stretch;flex-wrap:wrap;}
 .stat-pill{display:flex;background:rgba(255,255,255,0.05);border:.5px solid var(--glass-border);border-radius:var(--radius-sm);padding:14px;flex:1 1 120px;min-width:0;box-shadow:inset 0 1px 0 rgba(255,255,255,0.07);}
@@ -340,20 +340,19 @@ h1 span{color:var(--accent);}
 .clutch-behavior-title{font-size:11px;color:var(--muted);font-family:var(--font-body);}
 .clutch-behavior-avg{font-size:12px;font-weight:700;color:var(--text);font-family:var(--font-display);white-space:nowrap;}
 /* RR / Win and RR / Loss reuse the plain stat-pill look (see .stat-pill-row
-   below) with a sign color on the value only. Lobby vs Rank sits on its own
-   row underneath, spanning both columns (.rr-pill-wide) — it's a single
-   value where Win/Loss are a pair, so giving it the full row's width instead
-   of squeezing three pills across one row keeps it from looking like the odd
-   one out. Its value is plain signed RR (not sign-colored like Win/Loss —
-   a lobby above your rank isn't unambiguously "good" or "bad" the way
-   winning RR is), with the sign meaning spelled out in the caption below it
-   rather than left for the reader to guess — see the comment by
-   renderRRCard's gapVal branch for why. The full-width row also has enough
-   room for a caption spelling out the caveat that used to live only in this
-   pill's title="" tooltip: this measures your lobbies, not your rank — see
-   .rr-gap-explain. */
+   below) with a sign color on the value only. */
 .rr-pill-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1;align-content:start;}
-.rr-pill-wide{grid-column:1 / -1;}
+/* Lobbies vs Rank moved here, below the rank progress bar, so it reads as
+   "here's what that Avg Lobby figure is worth in RR" rather than sitting
+   with RR/Win and RR/Loss it has nothing else in common with. Full column
+   width on its own (no grid span needed here, unlike its old spot beside
+   RR/Win and RR/Loss) gives its caption room to breathe. Its value is
+   plain signed RR (not sign-colored like Win/Loss — a lobby above your
+   rank isn't unambiguously "good" or "bad" the way winning RR is), with
+   the sign meaning spelled out in the caption below it rather than left
+   for the reader to guess — see the comment by renderRRCard's gapVal
+   branch for why. */
+#lobby-gap-pill{margin-top:16px;}
 .rr-gap-explain{margin-top:5px;font-size:10.5px;font-weight:400;text-transform:none;letter-spacing:normal;line-height:1.5;color:var(--muted);}
 .stat-pill-value.pos{color:#22c55e;}
 .stat-pill-value.neg{color:#ef4444;}
@@ -452,7 +451,10 @@ h1 span{color:var(--accent);}
             <!-- Avg Lobby sits opposite RR gains: what the matchmaker put you
                  in, next to what those matches actually paid. Current rank
                  isn't duplicated here any more — it's in the header badge
-                 beside the act and region. RR body rendered by renderRRCard. -->
+                 beside the act and region. renderRRCard() fills both
+                 columns: RR/Win, RR/Loss on the right, and #lobby-gap-pill
+                 on the left since it's an RR-equivalent of Avg Lobby, not
+                 of RR/Win or RR/Loss. -->
             <div class="rank-compare-col">
               <div class="card-title">Avg Lobby</div>
               <div class="s-value" id="sg-avg-rank" style="display:flex;align-items:center;gap:10px;white-space:nowrap;">—</div>
@@ -461,6 +463,12 @@ h1 span{color:var(--accent);}
                 <div class="rank-progress-lbl">
                   <span id="sg-avg-rank-progress-cur"></span>
                   <span id="sg-avg-rank-progress-next"></span>
+                </div>
+              </div>
+              <div class="stat-pill" id="lobby-gap-pill" title="How your solo-queue lobbies compared to your own rank, on average, converted to RR (100 RR per rank division). Party games are excluded since a high-ranked duo pulls the matchmaker into tougher lobbies regardless of your own rank.">
+                <div class="stat-pill-body">
+                  <span class="stat-pill-label">Lobbies vs Rank</span><span class="stat-pill-value" id="lobby-gap-value">—</span>
+                  <div class="rr-gap-explain" id="rr-gap-explain"></div>
                 </div>
               </div>
             </div>
@@ -480,11 +488,11 @@ h1 span{color:var(--accent);}
                 <div class="stat-pill" id="rr-loss-pill">
                   <div class="stat-pill-body"><span class="stat-pill-label">RR / Loss</span><span class="stat-pill-value" id="rr-loss-value">—</span></div>
                 </div>
-                <div class="stat-pill rr-pill-wide" id="lobby-gap-pill" title="How your ranked lobbies compared to your own rank, on average, converted to RR (100 RR per rank division).">
-                  <div class="stat-pill-body">
-                    <span class="stat-pill-label">Lobby vs Rank</span><span class="stat-pill-value" id="lobby-gap-value">—</span>
-                    <div class="rr-gap-explain" id="rr-gap-explain"></div>
-                  </div>
+                <div class="stat-pill" id="rr-games-pill" title="Matches in the current scope (Recent/Act) with RR data, eligible under the ordinary RR rules">
+                  <div class="stat-pill-body"><span class="stat-pill-label">Games</span><span class="stat-pill-value" id="rr-games-value">—</span></div>
+                </div>
+                <div class="stat-pill" id="rr-wr-pill" title="Win rate among those same matches (draws excluded)">
+                  <div class="stat-pill-body"><span class="stat-pill-label">Win Rate</span><span class="stat-pill-value" id="rr-wr-value">—</span></div>
                 </div>
               </div>
             </div>
@@ -507,12 +515,6 @@ h1 span{color:var(--accent);}
             </div>
             <div class="stat-pill" id="sg-adr-pill">
               <div class="stat-pill-body"><span class="stat-pill-label" id="sg-adr-lbl">Avg ADR</span><span class="stat-pill-value" id="sg-adr">—</span></div>
-            </div>
-            <div class="stat-pill" id="sg-games-pill">
-              <div class="stat-pill-body"><span class="stat-pill-label" id="sg-games-lbl">Games</span><span class="stat-pill-value" id="sg-games">—</span></div>
-            </div>
-            <div class="stat-pill" id="sg-wr-pill">
-              <div class="stat-pill-body"><span class="stat-pill-label" id="sg-wr-lbl">Win Rate</span><span class="stat-pill-value" id="sg-wr">—</span></div>
             </div>
             <div class="stat-pill" id="sg-playtime-pill">
               <div class="stat-pill-body"><span class="stat-pill-label" id="sg-playtime-lbl">Playtime</span><span class="stat-pill-value" id="sg-playtime">—</span></div>
@@ -2713,7 +2715,6 @@ function renderStats(skipPlaytime){
   // wins/ACS from those games are real results and shouldn't be hidden by
   // default. Mirrors the same reasoning already applied to playtime.
   const statsPanelMatches=allMatches;
-  const n=statsPanelMatches.length;
   // Reflect the toggle: show it only when there are placement-week games to skip.
   // This control now lives in the hero card (replacing the old all-parties
   // toggle slot) instead of the match history filter bar.
@@ -2760,11 +2761,6 @@ function renderStats(skipPlaytime){
   const totalKills=statGames.reduce((a,m)=>a+m.myStats.kills,0);
   const totalDeaths=statGames.reduce((a,m)=>a+m.myStats.deaths,0);
   const avgKD=statGames.length?(totalDeaths>0?+(totalKills/totalDeaths).toFixed(2):totalKills):null;
-
-  const wins=statsPanelMatches.filter(m=>m.won===true).length;
-  const wr=n?(wins/n*100).toFixed(1):'0.0';
-  document.getElementById('sg-games').textContent=n;
-  document.getElementById('sg-wr').textContent=wr+'%';
 
   renderClutchCard(statsPanelMatches);
   renderRRCard(statsPanelMatches);
@@ -3358,14 +3354,18 @@ const RANK_MODE_ORDER=['lobby','player','party'];
 // evidence block and the live /api/calib-model fetch are all gone from the
 // client. The server still folds calibration on /history; nothing reads it.)
 //
-// Lobby Gap is a third pill inside the RR Gains column (#rr-col) — sharing
-// the card rather than getting its own column, since three of these numbers
-// don't need three headers between them. It's the mean lobby-vs-my-rank gap,
-// converted to RR (100 RR per rank division — see the comment on the row's
-// gap field), over the same matches as the rest of this card. It used to
-// carry a richer win/loss/net breakdown split by lobbies above vs at/below
-// your rank (still parked verbatim in reference/lobby-gap.js), but that's
-// more than a pill can hold, so it's just the mean gap here.
+// Lobbies vs Rank (#lobby-gap-pill) lives in the Avg Lobby column, below the
+// rank progress bar — it's the RR-equivalent of the Avg Lobby figure right
+// above it, not something RR/Win and RR/Loss have anything in common with.
+// It's the mean lobby-vs-my-rank gap, converted to RR (100 RR per rank
+// division — see the comment on the row's gap field), over the SOLO subset
+// of the same eligible matches computeRRStats builds for the rest of this
+// card (see gapN vs n) — party games are excluded there since a
+// high-ranked duo pulls the matchmaker into tougher lobbies regardless of
+// your own rank. It used to carry a richer win/loss/net breakdown split by
+// lobbies above vs at/below your rank (still parked verbatim in
+// reference/lobby-gap.js), but that's more than a pill can hold, so it's
+// just the mean gap here.
 //
 // The value itself is plain signed RR ("+30 RR" / "−30 RR" / "Even" below
 // ±5) — not sign-colored like RR/Win and RR/Loss, since a lobby above your
@@ -3439,9 +3439,14 @@ function computeRRStats(matches){
       // uses (a full promotion is always exactly 100 RR). No per-player RR
       // is available for the lobby, only tiers, so this is the finest unit
       // conversion the data supports — not a fitted or inferred number.
-      // null when the lobby had no rated players to average at all (see
-      // lobbyAvgTier in processMatch) — essentially only right after a reset.
-      gap:m.lobbyAvgTier!=null?(m.lobbyAvgTier-m.myTierId)*100:null,
+      // Solo queue only (partySize===1) — same restriction the Avg Lobby
+      // card applies for the same reason: a high-ranked duo/party pulls the
+      // matchmaker into tougher lobbies than your own rank alone would, so
+      // counting party games here would conflate "who I queued with" with
+      // "how the matchmaker reads my rank". null when the lobby had no
+      // rated players to average at all (see lobbyAvgTier in processMatch)
+      // — essentially only right after a reset — or when this wasn't solo.
+      gap:(m.lobbyAvgTier!=null&&(m.partySize||1)===1)?(m.lobbyAvgTier-m.myTierId)*100:null,
     });
   });
   eligible.sort((a,b)=>b.startedAtMs-a.startedAtMs);
@@ -3452,12 +3457,16 @@ function computeRRStats(matches){
   // this isn't limited to whatever the last search happened to fetch.
   const rows=rrScope==='act'?eligible:eligible.slice(0,RR_RECENT_WINDOW);
   const n=rows.length;
+  // Solo-only subset (see the row's gap field above) — smaller than n
+  // whenever party games are in the mix, so it gets its own count rather
+  // than reusing n in the caption.
   const gapRows=rows.filter(r=>r.gap!=null);
   const meanGap=gapRows.length?gapRows.reduce((s,r)=>s+r.gap,0)/gapRows.length:null; // in RR
   return{
     ...rrBucketStats(rows),
     n,
     meanGap,
+    gapN:gapRows.length,
     partyMatches:rows.filter(r=>r.penalty>0).length,
   };
 }
@@ -3470,6 +3479,8 @@ function renderRRCard(matches){
   const winVal=document.getElementById('rr-win-value');
   if(!winVal)return;
   const lossVal=document.getElementById('rr-loss-value');
+  const gamesVal=document.getElementById('rr-games-value');
+  const wrVal=document.getElementById('rr-wr-value');
   const gapVal=document.getElementById('lobby-gap-value');
   const gapExplain=document.getElementById('rr-gap-explain');
   const res=computeRRStats(matches);
@@ -3477,6 +3488,12 @@ function renderRRCard(matches){
   winVal.textContent=res.avgGain!=null?rrSigned(res.avgGain,1):'—';
   lossVal.className='stat-pill-value'+(res.avgLoss!=null?' neg':'');
   lossVal.textContent=res.avgLoss!=null?rrSigned(-res.avgLoss,1):'—';
+  // Games/Win Rate for the same scope RR/Win and RR/Loss use (Recent/Act) —
+  // rrBucketStats already computes count and winRate for these rows, moved
+  // here from the old all-matches Stats-panel figures so they track the
+  // #rr-scope-toggle instead of staying fixed regardless of it.
+  if(gamesVal)gamesVal.textContent=res.n>0?res.n:'—';
+  if(wrVal)wrVal.textContent=res.winRate!=null?`${Math.round(res.winRate)}%`:'—';
   // Plain signed RR, not sign-colored like RR/Win and RR/Loss above (a
   // lobby ranked above you isn't unambiguously "good" or "bad" the way
   // winning RR is) — "above rank"/"below rank" spelled out right after the
@@ -3490,9 +3507,9 @@ function renderRRCard(matches){
   }
   // Now that this pill spans the full row, there's room to put the
   // explanation in front of the reader instead of leaving it to whoever
-  // hovers the title="" tooltip.
+  // hovers the title="" tooltip. gapN (not n) — this is solo games only.
   if(gapExplain){
-    const scopeWord=rrScope==='act'?`all ${res.n} matches this act`:`your last ${res.n} matches`;
+    const scopeWord=rrScope==='act'?`${res.gapN} solo matches this act`:`your last ${res.gapN} solo matches`;
     gapExplain.textContent=res.meanGap==null?''
       :`Averaged over ${scopeWord} — not a rank change, just who queued in with you that game.`;
   }
