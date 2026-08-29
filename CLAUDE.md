@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-vlravg — a Valorant stats tool that shows a player's average lobby rank, K/D breakdowns, clutch stats, most-played duos, and playtime, sourced from the HenrikDev Valorant API. It's a static site with one small serverless proxy, deployed on Cloudflare Pages.
+vlravg — a Valorant stats tool that shows a player's average lobby rank, RR gains/losses, K/D breakdowns, clutch stats, most-played duos, and playtime, sourced from the HenrikDev Valorant API. It's a static site with one small serverless proxy, deployed on Cloudflare Pages.
 
 ## Repo layout
 
@@ -42,11 +42,19 @@ KV is eventually consistent, so this pacing is best-effort, not a hard guarantee
 
 ### Frontend flow (`index.html`)
 
-Entry point is `runAnalysis()`, triggered by the search UI. It resets UI state and calls `loadAll()`, which orchestrates, in order: resolve the account (`/api/account`) → fetch season/MMR data (`/api/rank`) → paginate through match history (`/api/history`, `BATCH=10` per call, matches capped at 10 per page by the upstream API regardless of requested size). Each match is parsed by `processMatch()`, then a family of `render*()` functions (`renderStats`, `renderAll`, `renderMatches`, `renderTeammates`, `renderRankTrend`, `renderPlaytime`, `renderClutchCard`, …) update the DOM and the two Chart.js instances (`chartInstances.rankTrend`, `chartInstances.playtime`).
+Entry point is `runAnalysis()`, triggered by the search UI. It resets UI state and calls `loadAll()`, which orchestrates, in order: resolve the account (`/api/account`) → fetch season/MMR data (`/api/rank`) → paginate through match history (`/api/history`, `BATCH=10` per call, matches capped at 10 per page by the upstream API regardless of requested size). Each match is parsed by `processMatch()`, then a family of `render*()` functions (`renderStats`, `renderAll`, `renderMatches`, `renderTeammates`, `renderRankTrend`, `renderPlaytime`, `renderClutchCard`, `renderRRCard`, …) update the DOM and the two Chart.js instances (`chartInstances.rankTrend`, `chartInstances.playtime`).
 
 `apiGet()` is the shared fetch wrapper: retries network errors and 5xx with exponential backoff, and on a 429 sleeps for the `retryAfterMs` the worker provides (it holds no quota state of its own — that all moved server-side, see above).
 
 App state is plain top-level `let`/`const` globals (e.g. `PLAYER, TAG, REGION, PLATFORM, TARGET_SEASON, PUUID` near line 802, plus `allMatches`, `chartInstances`, `rankModeRows`, etc. scattered near their usage) — there's no store/framework, so grep for a variable name to find everywhere it's read/written.
+
+### RR gains
+
+The right side of the headline rank-compare card (`#rr-col`, opposite Avg Lobby — current rank is not duplicated there; it lives in the header badge): three stat pills in one row, RR / Win, RR / Loss, and Lobby vs Rank (mean lobby-vs-rank gap in divisions). The gap pill prints "0.3 harder" / "0.3 easier" / "Even" rather than a bare signed number — a `title=""` tooltip adds the precise definition, but the value itself is meant to be self-explanatory without it. No net RR/match figure, win rate, match counts, or above/below-rank RR split — those all got cut down to just the three pills. `computeRRStats()` / `renderRRCard()` average Riot's own `last_change` values over matches that Riot pays by the ordinary RR rules (RR data present, tier 3+, not the act-opening placement, not a full 5-stack; draws counted in the net but not in the per-outcome averages), capped to the most recent `RR_RECENT_WINDOW` (20) eligible matches — recent form, not a season-long average. There's no minimum-matches gate: with too few matches the pills just show "—". Nothing here is fitted or inferred.
+
+This replaced a hidden-MMR estimate card that inverted Riot's payout formula to infer where hidden MMR sat relative to displayed rank. Its band constants, `c→elo` conversion, double-promotion evidence and `/api/calib-model` fetch are all gone from the client — but the worker still folds calibration on every `/history` call and still serves `/api/calib-model`, and nothing reads either any more.
+
+The Lobby Gap pill used to carry a richer breakdown — the same win/loss/net RR split broken out between lobbies that averaged above your rank and those at or below it — before being condensed to a single mean-gap pill. That richer version is parked verbatim in [reference/lobby-gap.js](reference/lobby-gap.js) if it's ever worth reattaching as its own card again; it reuses `m.lobbyAvgTier` (computed in `processMatch()`).
 
 ### Clutch detection (~lines 1192–1900+)
 
