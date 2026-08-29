@@ -246,18 +246,21 @@ h1 span{color:var(--accent);}
 .match-day-header:first-child{padding-top:0;}
 .match-day-avg{font-size:11px;font-weight:600;letter-spacing:normal;text-transform:none;color:var(--muted);font-family:var(--font-body);white-space:nowrap;}
 .match-day-avg span{font-weight:700;font-variant-numeric:tabular-nums;}
-.match-card{background:rgba(255,255,255,0.04);border:.5px solid var(--glass-border);border-radius:var(--radius-md);padding:8px 14px;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s;overflow:hidden;box-shadow:inset 0 1px 0 var(--glass-shine);}
+.match-card{position:relative;background:rgba(255,255,255,0.04);border:.5px solid var(--glass-border);border-radius:var(--radius-md);padding:8px 14px;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s;overflow:hidden;box-shadow:inset 0 1px 0 var(--glass-shine);}
 .match-card:hover{border-color:rgba(255,255,255,0.18);background:rgba(255,255,255,0.065);}
 .match-card.expanded{border-color:rgba(var(--accent-rgb),.35);}
-/* Own-match MVP / team-MVP: frame the whole card instead of a small inline
-   badge (see buildMatchCard) so it reads even collapsed. A plain thin border
-   alone got lost against every other card's own border, so this leans on
-   three reinforcing cues instead of one: a background wash (the fastest
-   thing the eye catches while scanning a list), a solid 2px border (thicker
-   than every other card's .5-1px, so it never reads as "just another
-   card"), and an outer glow. Colors match the .mvp-badge palette (gold
-   match-mvp, grey team-mvp) for continuity with the per-player badges still
-   used in the expanded roster breakdown. */
+/* Own-match MVP / team-MVP: frame the whole card (see buildMatchCard) so it
+   reads even collapsed, rather than relying only on a small inline badge
+   that's invisible until expanded. A plain thin border alone got lost
+   against every other card's own border, so this leans on three reinforcing
+   cues instead of one: a background wash (the fastest thing the eye catches
+   while scanning a list), a solid 2px border (thicker than every other
+   card's .5-1px, so it never reads as "just another card"), and an outer
+   glow. A fourth cue, the corner ribbon (.mc-mvp-ribbon, below), layers on
+   top of this to answer *why* the card is highlighted without expanding it.
+   Colors match the .mvp-badge palette (gold match-mvp, silver team-mvp) for
+   continuity with the per-player badges still used in the expanded roster
+   breakdown. */
 .match-card.mvp-match{
   border:2px solid rgba(234,179,8,.75);
   background:linear-gradient(135deg,rgba(234,179,8,.14),rgba(234,179,8,.02) 55%),rgba(255,255,255,0.04);
@@ -272,6 +275,24 @@ h1 span{color:var(--accent);}
 }
 .match-card.mvp-team:hover{border-color:#e2e8f0;background:linear-gradient(135deg,rgba(203,213,225,.18),rgba(203,213,225,.03) 55%),rgba(255,255,255,0.05);}
 .match-card.mvp-team.expanded{border-color:#e2e8f0;}
+/* Corner ribbon: the card-level wash above answers "is this card special"
+   from across the whole list; this answers "why" without having to expand
+   it. A diagonal banner clipped into the top-right corner (classic "on
+   sale" ribbon construction: an oversized rotated strip inside an
+   overflow:hidden box, and .match-card's own overflow:hidden does the
+   corner clipping for free — no clip-path or corner-radius math needed).
+   Purely decorative (aria-hidden via no interactive content, pointer-events
+   off) — the same fact is already read from the card's own title attribute
+   and the roster's .mvp-badge for anyone using assistive tech. */
+.mc-mvp-ribbon{position:absolute;top:0;right:0;width:66px;height:66px;overflow:hidden;pointer-events:none;z-index:1;}
+.mc-mvp-ribbon-strip{position:absolute;top:9px;right:-22px;width:96px;transform:rotate(45deg);display:flex;align-items:center;justify-content:center;gap:2px;padding:2px 0;font-size:7.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-family:var(--font-display);}
+.mc-mvp-ribbon-strip svg{width:8px;height:8px;flex-shrink:0;}
+.mc-mvp-ribbon.mvp-match .mc-mvp-ribbon-strip{color:#422f00;background:linear-gradient(135deg,#fde68a,#eab308 45%,#facc15 55%,#ca8a04);background-size:220% 100%;box-shadow:0 1px 4px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,255,255,.65);animation:rankMaxShimmer 3.2s linear infinite;}
+.mc-mvp-ribbon.mvp-team .mc-mvp-ribbon-strip{color:#1e293b;background:linear-gradient(180deg,#f1f5f9,#cbd5e1 55%,#94a3b8);box-shadow:0 1px 4px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.7);}
+/* Clears the corner ribbon's diagonal sweep so it never sits on top of the
+   avg-lobby badge or match date — both keep their normal position, they
+   just start a little further left on these two cards. */
+.match-card.mvp-match .mc-right,.match-card.mvp-team .mc-right{padding-right:28px;}
 .match-row{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;padding-left:2px;}
 .mc-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
 .mc-right{display:flex;align-items:center;gap:16px;flex-shrink:0;margin-left:auto;}
@@ -347,22 +368,24 @@ h1 span{color:var(--accent);}
 .clutch-behavior-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
 .clutch-behavior-title{font-size:11px;color:var(--muted);font-family:var(--font-body);}
 .clutch-behavior-avg{font-size:12px;font-weight:700;color:var(--text);font-family:var(--font-display);white-space:nowrap;}
-/* RR / Win, RR / Loss and Lobby vs Rank are plain label+value pairs, not
-   boxed stat-pills — .stat-pill's background/border reads fine in a row of
-   six below, but three of them squeezed into half this card, beside Avg
-   Lobby's borderless rank badge, looked like a cramped grid of tiles next to
-   open space. This matches the Avg Lobby side instead: no boxes anywhere in
-   the card. Lobby Gap is the third metric in the same row, unsigned — a
-   harder lobby isn't unambiguously "good" or "bad" the way winning RR is.
-   Its value reads as "0.3 harder"/"easier"/"Even" rather than a bare signed
-   number — see the comment by renderRRCard's gapVal branch for why. */
-.rr-metric-row{display:flex;flex-wrap:wrap;gap:22px 28px;flex:1;align-items:flex-start;margin-top:2px;}
-.rr-metric{display:flex;flex-direction:column;gap:5px;min-width:0;}
-.rr-metric-label{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text);opacity:.85;white-space:nowrap;}
-.rr-metric-value{font-size:1.3rem;font-weight:800;font-family:var(--font-body);line-height:1.15;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--text);}
-.rr-metric-value.pos{color:#22c55e;}
-.rr-metric-value.neg{color:#ef4444;}
-.rr-shield-note{margin-top:16px;font-size:11px;line-height:1.5;color:var(--muted);font-family:var(--font-body);}
+/* RR / Win and RR / Loss reuse the plain stat-pill look (see .stat-pill-row
+   below) with a sign color on the value only. Lobby vs Rank sits on its own
+   row underneath, spanning both columns (.rr-pill-wide) — it's a single
+   value where Win/Loss are a pair, so giving it the full row's width instead
+   of squeezing three pills across one row keeps it from looking like the odd
+   one out. It's unsigned — a harder lobby isn't unambiguously "good" or
+   "bad" the way winning RR is. Its value reads as "0.3 harder"/"easier"/
+   "Even" rather than a bare signed number — see the comment by
+   renderRRCard's gapVal branch for why. The full-width row also has enough
+   room for a caption spelling out the caveat that used to live only in this
+   pill's title="" tooltip: this measures your lobbies, not your rank — see
+   .rr-gap-explain. */
+.rr-pill-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1;align-content:start;}
+.rr-pill-wide{grid-column:1 / -1;}
+.rr-gap-explain{margin-top:5px;font-size:10.5px;font-weight:400;text-transform:none;letter-spacing:normal;line-height:1.5;color:var(--muted);}
+.stat-pill-value.pos{color:#22c55e;}
+.stat-pill-value.neg{color:#ef4444;}
+.rr-shield-note{margin-top:14px;font-size:11px;line-height:1.5;color:var(--muted);font-family:var(--font-body);}
 
 .clutch-behavior-bar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.05);}
 .clutch-behavior-bar>div{height:100%;}
@@ -392,14 +415,21 @@ h1 span{color:var(--accent);}
 .player-1v2{font-size:11px;font-weight:700;color:var(--muted);flex-shrink:0;min-width:40px;text-align:right;font-variant-numeric:tabular-nums;}
 .player-1v2.p1v2-null{color:var(--muted);opacity:.5;}
 .player-1v2.p1v2-win{color:var(--win);}
-.mvp-badge{font-size:8px;font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:var(--radius-xs);flex-shrink:0;text-transform:uppercase;line-height:1.4;}
-.mvp-badge.match-mvp{background:rgba(234,179,8,.15);color:#eab308;border:.5px solid rgba(234,179,8,.35);}
-.mvp-badge.team-mvp{background:rgba(156,163,175,.1);color:#9ca3af;border:.5px solid rgba(156,163,175,.25);}
+/* Foil-pill treatment: a metallic gradient + inset shine instead of a flat
+   tint, so the icon (crown/star, shared with .mc-mvp-ribbon below) reads as
+   a small trophy rather than just colored text. */
+.mvp-badge{display:inline-flex;align-items:center;gap:3px;font-size:8px;font-weight:800;letter-spacing:.05em;padding:1.5px 5px 1.5px 4px;border-radius:var(--radius-xs);flex-shrink:0;text-transform:uppercase;line-height:1.4;}
+.mvp-badge svg{width:8px;height:8px;flex-shrink:0;}
+.mvp-badge.match-mvp{background:linear-gradient(180deg,#fde68a,#eab308 65%,#ca8a04);color:#422f00;box-shadow:0 1px 2px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.6);}
+.mvp-badge.team-mvp{background:linear-gradient(180deg,#f1f5f9,#cbd5e1 65%,#94a3b8);color:#1e293b;box-shadow:0 1px 2px rgba(0,0,0,.3),inset 0 1px 0 rgba(255,255,255,.7);}
 /* Placement-week games after a total reset: greyed in history, marked with a tag */
 .match-card.post-reset{opacity:.45;}
 .match-card.post-reset:hover,.match-card.post-reset.expanded{opacity:.85;}
 #matches-container.counting-reset .match-card.post-reset{opacity:1;}
 .mc-reset-tag{font-size:8px;font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:var(--radius-xs);flex-shrink:0;text-transform:uppercase;line-height:1.4;background:rgba(148,163,184,.12);color:var(--muted);border:.5px dashed var(--border2);}
+/* Informational, not exclusionary like .mc-reset-tag (dashed = "not counted
+   in stats") — this match still counts normally, so a solid blue tag instead. */
+.mc-shield-tag{font-size:8px;font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:var(--radius-xs);flex-shrink:0;text-transform:uppercase;line-height:1.4;background:rgba(59,130,246,.14);color:#60a5fa;border:.5px solid rgba(59,130,246,.35);}
 .r-unr{color:#6b7280}.r-iron{color:#7a7a7e}.r-bronze{color:#b07428}.r-silver{color:#c2c8cf}
 .r-gold{color:#e8a820}.r-plat{color:#36b5c0}.r-diamond{color:#c07de0}.r-asc{color:#2db87a}
 .r-imm{color:#d03248}.r-rad{color:#f0e0b0}
@@ -473,15 +503,18 @@ h1 span{color:var(--accent);}
             <div class="rank-compare-divider"></div>
             <div class="rank-compare-col" id="rr-col">
               <div class="card-title">RR Gains</div>
-              <div class="rr-metric-row" id="rr-pill-row">
-                <div class="rr-metric" id="rr-win-pill">
-                  <span class="rr-metric-label">RR / Win</span><span class="rr-metric-value" id="rr-win-value">—</span>
+              <div class="rr-pill-grid" id="rr-pill-row">
+                <div class="stat-pill" id="rr-win-pill">
+                  <div class="stat-pill-body"><span class="stat-pill-label">RR / Win</span><span class="stat-pill-value" id="rr-win-value">—</span></div>
                 </div>
-                <div class="rr-metric" id="rr-loss-pill">
-                  <span class="rr-metric-label">RR / Loss</span><span class="rr-metric-value" id="rr-loss-value">—</span>
+                <div class="stat-pill" id="rr-loss-pill">
+                  <div class="stat-pill-body"><span class="stat-pill-label">RR / Loss</span><span class="stat-pill-value" id="rr-loss-value">—</span></div>
                 </div>
-                <div class="rr-metric" id="lobby-gap-pill" title="How your ranked lobbies compared to your own rank, on average, in rank divisions.">
-                  <span class="rr-metric-label">Lobby vs Rank</span><span class="rr-metric-value" id="lobby-gap-value">—</span>
+                <div class="stat-pill rr-pill-wide" id="lobby-gap-pill" title="How your ranked lobbies compared to your own rank, on average, in rank divisions.">
+                  <div class="stat-pill-body">
+                    <span class="stat-pill-label">Lobby vs Rank</span><span class="stat-pill-value" id="lobby-gap-value">—</span>
+                    <div class="rr-gap-explain" id="rr-gap-explain"></div>
+                  </div>
                 </div>
               </div>
               <div class="rr-shield-note" id="rr-shield-note" hidden></div>
@@ -1340,9 +1373,9 @@ function runAnalysis(){
   document.getElementById('header-rank-badge').innerHTML='';
   document.getElementById('result-panel').classList.remove('shown');
   document.getElementById('rr-win-value').textContent='—';
-  document.getElementById('rr-win-value').className='rr-metric-value';
+  document.getElementById('rr-win-value').className='stat-pill-value';
   document.getElementById('rr-loss-value').textContent='—';
-  document.getElementById('rr-loss-value').className='rr-metric-value';
+  document.getElementById('rr-loss-value').className='stat-pill-value';
   CURRENT_TIER_ID=null;
   CURRENT_RR=null;
   document.getElementById('sg-avg-rank-progress').hidden=true;
@@ -3458,11 +3491,12 @@ function renderRRCard(matches){
   if(!winVal)return;
   const lossVal=document.getElementById('rr-loss-value');
   const gapVal=document.getElementById('lobby-gap-value');
+  const gapExplain=document.getElementById('rr-gap-explain');
   const shieldNote=document.getElementById('rr-shield-note');
   const res=computeRRStats(matches);
-  winVal.className='rr-metric-value'+(res.avgGain!=null?' pos':'');
+  winVal.className='stat-pill-value'+(res.avgGain!=null?' pos':'');
   winVal.textContent=res.avgGain!=null?rrSigned(res.avgGain,1):'—';
-  lossVal.className='rr-metric-value'+(res.avgLoss!=null?' neg':'');
+  lossVal.className='stat-pill-value'+(res.avgLoss!=null?' neg':'');
   lossVal.textContent=res.avgLoss!=null?rrSigned(-res.avgLoss,1):'—';
   // "+0.3" means nothing on its own — say harder/easier/even instead of
   // making the reader work out what a signed division count implies.
@@ -3472,6 +3506,14 @@ function renderRRCard(matches){
       const mag=Math.abs(res.meanGap);
       gapVal.textContent=mag<0.05?'Even':`${mag.toFixed(1)} ${res.meanGap>0?'harder':'easier'}`;
     }
+  }
+  // Now that this pill spans the full row, there's room to put the caveat
+  // in front of the reader instead of leaving it to whoever hovers the
+  // title="" tooltip: this measures the lobbies you were placed in, not a
+  // change in your own rank.
+  if(gapExplain){
+    gapExplain.textContent=res.meanGap==null?''
+      :`Averaged over your last ${res.n} matches — a harder lobby isn't a rank change, just who queued in with you that game.`;
   }
   // Rank Shield hides the drop on the badge, not the RR loss itself — call
   // that out so RR/Loss above doesn't look inconsistent with a rank that
@@ -3679,6 +3721,13 @@ function toggleIncludeReset(checked){
 }
 
 /* ── SHARED MATCH CARD BUILDER ───────────────────────────── */
+// Match MVP (crown) / team MVP (star) icons, shared between the roster's
+// .mvp-badge pill and the match card's .mc-mvp-ribbon corner banner — one
+// definition so the two surfaces can't drift apart. fill="currentColor" so
+// each caller's own text color (set per badge/ribbon variant) carries through.
+const MVP_CROWN_SVG='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16L3 5l5.5 4L12 3l3.5 6L21 5l-2 11H5z"/><rect x="4" y="16.5" width="16" height="2.5" rx="1"/></svg>';
+const MVP_STAR_SVG='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.6 6.9 7.4.4-5.7 4.8 1.9 7.2L12 17l-6.2 4.3 1.9-7.2L2 9.3l7.4-.4L12 2z"/></svg>';
+
 function buildPlayersGrid(m){
   const me=m.players.find(p=>PUUID?p.puuid===PUUID:p.name?.toLowerCase()===PLAYER.toLowerCase()&&p.tag?.toLowerCase()===TAG.toLowerCase());
   const myTeamId=me?.team_id;
@@ -3703,8 +3752,8 @@ function buildPlayersGrid(m){
     const isMatchMvp=matchMvpPuuid&&p.puuid===matchMvpPuuid;
     const isTeamMvp=!isMatchMvp&&teamMvpPuuids&&teamMvpPuuids.has(p.puuid);
     const mvpBadge=isMatchMvp
-      ?`<span class="mvp-badge match-mvp">MVP</span>`
-      :isTeamMvp?`<span class="mvp-badge team-mvp">TEAM</span>`:'';
+      ?`<span class="mvp-badge match-mvp">${MVP_CROWN_SVG}MVP</span>`
+      :isTeamMvp?`<span class="mvp-badge team-mvp">${MVP_STAR_SVG}TEAM</span>`:'';
     const acsVal=p._acs!=null?Math.round(p._acs):'—';
     const acsCls=p._acs!=null?'player-acs':'player-acs acs-null';
     const kdVal=p._kd!=null?p._kd.toFixed(2):'—';
@@ -3750,7 +3799,7 @@ function buildPlayersGrid(m){
 }
 
 function buildMatchCard(m){
-  const {mapName,startedAt,won,myR,opR,avgRank,myStats,matchMvpPuuid,teamMvpPuuids,myRR}=m;
+  const {mapName,startedAt,won,myR,opR,avgRank,myStats,matchMvpPuuid,teamMvpPuuids,myRR,myDerankProtected}=m;
   const rc=won===true?'win':won===false?'loss':'draw';
   const rt=won===true?'Win':won===false?'Loss':'Draw';
   const score=(myR!=null&&opR!=null)?`${myR}–${opR}`:'—';
@@ -3758,6 +3807,11 @@ function buildMatchCard(m){
   // _rrChangeByMatchId) — most matches simply won't have this.
   const rrChangeTag=myRR!=null
     ?`<span class="match-rr-change ${myRR>=0?'gain':'loss'}" title="RR ${myRR>=0?'gained':'lost'} this match">${myRR>=0?'+':''}${myRR} RR</span>`
+    :'';
+  // was_derank_protected on this match's mmr-history entry — Rank Shield
+  // absorbed the drop on the badge, but the RR loss above still happened.
+  const shieldTag=myDerankProtected
+    ?`<span class="mc-shield-tag" title="Rank Shield protected your rank from dropping this loss — the RR loss above still applied">SHIELDED</span>`
     :'';
   // Show the avg-lobby tier as a rank division + RR (see tierRR).
   let rankTier=null,rankRR=null;
@@ -3774,12 +3828,20 @@ function buildMatchCard(m){
 
   const resetTag=m.postReset?`<span class="mc-reset-tag" title="Placement-week game after a total rank reset — excluded from stats unless you toggle it on">PLACEMENTS</span>`:'';
 
+  // Own-match MVP/team-MVP gets two reinforcing cues: the whole-card gold/
+  // silver wash below (reads even at a glance, scanning a long list) plus a
+  // corner ribbon carrying the actual crown/star icon (see .mc-mvp-ribbon)
+  // so *why* the card is highlighted is visible without expanding it.
+  const mvpRibbon=isMatchMvp
+    ?`<div class="mc-mvp-ribbon mvp-match" title="Highest combat score in the match"><div class="mc-mvp-ribbon-strip">${MVP_CROWN_SVG}MVP</div></div>`
+    :isTeamMvp
+    ?`<div class="mc-mvp-ribbon mvp-team" title="Highest combat score on your team"><div class="mc-mvp-ribbon-strip">${MVP_STAR_SVG}TEAM</div></div>`
+    :'';
+
   const card=document.createElement('div');
-  // Own-match MVP/team-MVP is called out by framing the whole card (gold /
-  // silver) instead of a small inline badge, so it reads at a glance even
-  // collapsed — see .match-card.mvp-match / .mvp-team.
   card.className='match-card'+(m.postReset?' post-reset':'')+(isMatchMvp?' mvp-match':isTeamMvp?' mvp-team':'');
   card.innerHTML=`
+    ${mvpRibbon}
     <div class="match-row">
       <div class="result-bar ${rc}"></div>
       <div class="mc-left">
@@ -3787,6 +3849,7 @@ function buildMatchCard(m){
         <span class="match-map">${mapName}</span>
         <span class="match-score">${score}</span>
         ${rrChangeTag}
+        ${shieldTag}
         ${resetTag}
       </div>
       <div class="mc-right">
