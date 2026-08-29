@@ -660,35 +660,51 @@ async function mergeRRHistory(env, bodyText, waitUntil, route) {
   // an already-seen player won't add anything, and skipping the write here
   // avoids hammering D1 with redundant writes every cache expiry.
   if (hasNew) {
-    const nowIso = new Date().toISOString();
-    const rowStmts = freshHistory
-      .filter((h) => h?.match_id)
-      .map((h) =>
+    // The whole block is guarded, not just the batch: building a statement
+    // dereferences env.APP_DB, so with the binding absent this threw on
+    // `.prepare` before the batch's own .catch() could ever apply. Because
+    // mergeRRHistory is awaited on the response path (unlike foldCalibration,
+    // which is fire-and-forget), that throw surfaced as a 500 on
+    // /api/mmr-history — the one route every per-match RR figure comes from,
+    // while /rank kept working, so current rank rendered and RR gains didn't.
+    // A local `wrangler pages dev` run hits this every time: D1 lives in the
+    // Cloudflare dashboard, so there's no APP_DB binding without one.
+    try {
+      const nowIso = new Date().toISOString();
+      const rowStmts = freshHistory
+        .filter((h) => h?.match_id)
+        .map((h) =>
+          env.APP_DB.prepare(
+            "INSERT INTO rr_history (puuid, match_id, data, date) VALUES (?1,?2,?3,?4) " +
+            "ON CONFLICT(puuid, match_id) DO UPDATE SET data=excluded.data, date=excluded.date"
+          ).bind(puuid, h.match_id, JSON.stringify(h), h.date || null)
+        );
+      // Player identity, refreshed on every merge so a Riot ID rename self-heals
+      // the next time that player is looked up — used by the 12h refresher
+      // (refresh-rr-history.mjs) to list who to re-ping without scanning
+      // rr_history itself.
+      rowStmts.push(
         env.APP_DB.prepare(
-          "INSERT INTO rr_history (puuid, match_id, data, date) VALUES (?1,?2,?3,?4) " +
-          "ON CONFLICT(puuid, match_id) DO UPDATE SET data=excluded.data, date=excluded.date"
-        ).bind(puuid, h.match_id, JSON.stringify(h), h.date || null)
+          "INSERT INTO rr_players (puuid, region, platform, name, tag, updated_at) VALUES (?1,?2,?3,?4,?5,?6) " +
+          "ON CONFLICT(puuid) DO UPDATE SET region=excluded.region, platform=excluded.platform, " +
+          "name=excluded.name, tag=excluded.tag, updated_at=excluded.updated_at"
+        ).bind(
+          puuid, route?.region || null, route?.platform || null,
+          parsed?.data?.account?.name || route?.name || null,
+          parsed?.data?.account?.tag || route?.tag || null, nowIso
+        )
       );
-    // Player identity, refreshed on every merge so a Riot ID rename self-heals
-    // the next time that player is looked up — used by the 12h refresher
-    // (refresh-rr-history.mjs) to list who to re-ping without scanning
-    // rr_history itself.
-    rowStmts.push(
-      env.APP_DB.prepare(
-        "INSERT INTO rr_players (puuid, region, platform, name, tag, updated_at) VALUES (?1,?2,?3,?4,?5,?6) " +
-        "ON CONFLICT(puuid) DO UPDATE SET region=excluded.region, platform=excluded.platform, " +
-        "name=excluded.name, tag=excluded.tag, updated_at=excluded.updated_at"
-      ).bind(
-        puuid, route?.region || null, route?.platform || null,
-        parsed?.data?.account?.name || route?.name || null,
-        parsed?.data?.account?.tag || route?.tag || null, nowIso
-      )
-    );
-    waitUntil(
-      env.APP_DB.batch(rowStmts).catch(() => {
-        // Non-fatal — worst case this player's history doesn't grow this round.
-      })
-    );
+      waitUntil(
+        env.APP_DB.batch(rowStmts).catch(() => {
+          // Non-fatal — worst case this player's history doesn't grow this round.
+        })
+      );
+    } catch (e) {
+      // D1 unbound/unreachable — fail open exactly like the read above. The
+      // merged history returned below is assembled in memory, so the client
+      // still gets a complete, correct response; it just doesn't get persisted
+      // for next time.
+    }
   }
 
   // Always hand back the full accumulated set (could already be more than
