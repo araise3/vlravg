@@ -347,15 +347,22 @@ h1 span{color:var(--accent);}
 .clutch-behavior-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
 .clutch-behavior-title{font-size:11px;color:var(--muted);font-family:var(--font-body);}
 .clutch-behavior-avg{font-size:12px;font-weight:700;color:var(--text);font-family:var(--font-display);white-space:nowrap;}
-/* RR / Win and RR / Loss reuse the plain stat-pill look (see .stat-pill-row
-   below) with a sign color on the value only — everything else about the
-   card (net RR/match, win rate, match counts) was cut in favor of just these
-   pills. Lobby Gap is a third pill in the same row, unsigned — a harder
-   lobby isn't unambiguously "good" or "bad" the way winning RR is. Its value
-   reads as "0.3 harder"/"easier"/"Even" rather than a bare signed number —
-   see the comment by renderRRCard's gapVal branch for why. */
-.stat-pill-value.pos{color:#22c55e;}
-.stat-pill-value.neg{color:#ef4444;}
+/* RR / Win, RR / Loss and Lobby vs Rank are plain label+value pairs, not
+   boxed stat-pills — .stat-pill's background/border reads fine in a row of
+   six below, but three of them squeezed into half this card, beside Avg
+   Lobby's borderless rank badge, looked like a cramped grid of tiles next to
+   open space. This matches the Avg Lobby side instead: no boxes anywhere in
+   the card. Lobby Gap is the third metric in the same row, unsigned — a
+   harder lobby isn't unambiguously "good" or "bad" the way winning RR is.
+   Its value reads as "0.3 harder"/"easier"/"Even" rather than a bare signed
+   number — see the comment by renderRRCard's gapVal branch for why. */
+.rr-metric-row{display:flex;flex-wrap:wrap;gap:22px 28px;flex:1;align-items:flex-start;margin-top:2px;}
+.rr-metric{display:flex;flex-direction:column;gap:5px;min-width:0;}
+.rr-metric-label{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text);opacity:.85;white-space:nowrap;}
+.rr-metric-value{font-size:1.3rem;font-weight:800;font-family:var(--font-body);line-height:1.15;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--text);}
+.rr-metric-value.pos{color:#22c55e;}
+.rr-metric-value.neg{color:#ef4444;}
+.rr-shield-note{margin-top:16px;font-size:11px;line-height:1.5;color:var(--muted);font-family:var(--font-body);}
 
 .clutch-behavior-bar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.05);}
 .clutch-behavior-bar>div{height:100%;}
@@ -466,17 +473,18 @@ h1 span{color:var(--accent);}
             <div class="rank-compare-divider"></div>
             <div class="rank-compare-col" id="rr-col">
               <div class="card-title">RR Gains</div>
-              <div class="stat-pill-row" id="rr-pill-row">
-                <div class="stat-pill" id="rr-win-pill">
-                  <div class="stat-pill-body"><span class="stat-pill-label">RR / Win</span><span class="stat-pill-value" id="rr-win-value">—</span></div>
+              <div class="rr-metric-row" id="rr-pill-row">
+                <div class="rr-metric" id="rr-win-pill">
+                  <span class="rr-metric-label">RR / Win</span><span class="rr-metric-value" id="rr-win-value">—</span>
                 </div>
-                <div class="stat-pill" id="rr-loss-pill">
-                  <div class="stat-pill-body"><span class="stat-pill-label">RR / Loss</span><span class="stat-pill-value" id="rr-loss-value">—</span></div>
+                <div class="rr-metric" id="rr-loss-pill">
+                  <span class="rr-metric-label">RR / Loss</span><span class="rr-metric-value" id="rr-loss-value">—</span>
                 </div>
-                <div class="stat-pill" id="lobby-gap-pill" title="How your ranked lobbies compared to your own rank, on average, in rank divisions.">
-                  <div class="stat-pill-body"><span class="stat-pill-label">Lobby vs Rank</span><span class="stat-pill-value" id="lobby-gap-value">—</span></div>
+                <div class="rr-metric" id="lobby-gap-pill" title="How your ranked lobbies compared to your own rank, on average, in rank divisions.">
+                  <span class="rr-metric-label">Lobby vs Rank</span><span class="rr-metric-value" id="lobby-gap-value">—</span>
                 </div>
               </div>
+              <div class="rr-shield-note" id="rr-shield-note" hidden></div>
             </div>
           </div>
         </div>
@@ -937,6 +945,12 @@ let _rrChangeByMatchId={};
 // on each match as myPreRR; nothing renders it today (it fed the retired
 // hidden-MMR card), kept because it is the only pre-match RR anchor available.
 let _preRRByMatchId={};
+// match_id -> was_derank_protected from the same /api/mmr-history entries.
+// Riot's Rank Shield: last_change still applies its normal negative payout
+// on a protected loss, but the displayed tier/RR doesn't drop — so a player
+// reading only their badge can be sitting on more losses than it shows.
+// Surfaced on each match as myDerankProtected.
+let _derankProtectedByMatchId={};
 // Single reused canvas 2D context for text-width measurement, created lazily on
 // first use — avoids allocating a fresh <canvas> every renderStats call.
 let _measureCtx=null;
@@ -1326,15 +1340,15 @@ function runAnalysis(){
   document.getElementById('header-rank-badge').innerHTML='';
   document.getElementById('result-panel').classList.remove('shown');
   document.getElementById('rr-win-value').textContent='—';
-  document.getElementById('rr-win-value').className='stat-pill-value';
+  document.getElementById('rr-win-value').className='rr-metric-value';
   document.getElementById('rr-loss-value').textContent='—';
-  document.getElementById('rr-loss-value').className='stat-pill-value';
+  document.getElementById('rr-loss-value').className='rr-metric-value';
   CURRENT_TIER_ID=null;
   CURRENT_RR=null;
   document.getElementById('sg-avg-rank-progress').hidden=true;
   settleSearchBarWidth();
   allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;mhDayStats={};
-  _rrChangeByMatchId={};_preRRByMatchId={};
+  _rrChangeByMatchId={};_preRRByMatchId={};_derankProtectedByMatchId={};
   allTeammates=[];tmPage=0;
   // If the season dropdown's prefetch already fetched this exact player (the
   // common case — it runs while the player is still typing), reuse those
@@ -2158,7 +2172,10 @@ function processMatch(m){
   const myRR=_rrChangeByMatchId[matchId]??null;
   // RR total going into this match — used by the rank-trend chart.
   const myPreRR=_preRRByMatchId[matchId]??null;
-  return{mapName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lobbyAvgTier,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,myPreRR,myPartyPenalty,partySize,myPartyId,myAcsPlace,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
+  // Whether Rank Shield absorbed this match's loss (badge didn't drop even
+  // though myRR above still carries the normal negative payout).
+  const myDerankProtected=_derankProtectedByMatchId[matchId]??false;
+  return{mapName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lobbyAvgTier,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,myPreRR,myDerankProtected,myPartyPenalty,partySize,myPartyId,myAcsPlace,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
 }
 
 function extractStats(p,fallbackRounds=null){
@@ -2475,6 +2492,7 @@ async function loadAll(prefetchSnapshot=null){
       let prev=null;
       sorted.forEach(h=>{
         _rrChangeByMatchId[h.match_id]=h.last_change??null;
+        _derankProtectedByMatchId[h.match_id]=!!h.was_derank_protected;
         // Pre-match RR: the previous entry's elo is the exact value when the
         // season hasn't changed (elo = tier*100 + rr is continuous within an
         // act). Across a season boundary (or for the very first entry) derive
@@ -3348,6 +3366,14 @@ const RANK_MODE_ORDER=['lobby','player','party'];
 // instead of the number alone (see renderRRCard); the title="" tooltip is
 // still there as a bonus for anyone who wants the precise definition.
 //
+// Rank Shield note (#rr-shield-note): was_derank_protected comes straight off
+// the same /api/mmr-history entries myRR is read from (see
+// _derankProtectedByMatchId) — a real Riot flag, not derived. On a protected
+// loss last_change still applies its normal negative payout, but the
+// displayed tier/RR doesn't move, so someone reading only their rank badge
+// can be several real losses behind what it shows. The note only appears
+// when shieldedLosses>0, so it's silent for anyone it doesn't apply to.
+//
 // Match eligibility — the matches Riot pays by the ordinary RR rules:
 //   - myRR (last_change) present; an uncovered match carries no RR data at all
 //   - tier 3+; Unranked/placement games pay by placement rules instead
@@ -3399,6 +3425,7 @@ function computeRRStats(matches){
       won:m.won===true?true:(m.won===false?false:null),
       penalty:m.myPartyPenalty||0,
       startedAtMs:m.startedAtMs??0,
+      shielded:m.myDerankProtected||false,
       // Lobby strength for this match in divisions relative to my own rank.
       // null when the lobby had no rated players to average at all (see
       // lobbyAvgTier in processMatch) — essentially only right after a reset.
@@ -3415,6 +3442,10 @@ function computeRRStats(matches){
     n,
     meanGap,
     partyMatches:rows.filter(r=>r.penalty>0).length,
+    // Losses where Rank Shield kept the badge from dropping — RR/Loss above
+    // still counts the real payout on these, so it stays honest even though
+    // the displayed rank looked untouched at the time.
+    shieldedLosses:rows.filter(r=>r.won===false&&r.shielded).length,
   };
 }
 
@@ -3427,10 +3458,11 @@ function renderRRCard(matches){
   if(!winVal)return;
   const lossVal=document.getElementById('rr-loss-value');
   const gapVal=document.getElementById('lobby-gap-value');
+  const shieldNote=document.getElementById('rr-shield-note');
   const res=computeRRStats(matches);
-  winVal.className='stat-pill-value'+(res.avgGain!=null?' pos':'');
+  winVal.className='rr-metric-value'+(res.avgGain!=null?' pos':'');
   winVal.textContent=res.avgGain!=null?rrSigned(res.avgGain,1):'—';
-  lossVal.className='stat-pill-value'+(res.avgLoss!=null?' neg':'');
+  lossVal.className='rr-metric-value'+(res.avgLoss!=null?' neg':'');
   lossVal.textContent=res.avgLoss!=null?rrSigned(-res.avgLoss,1):'—';
   // "+0.3" means nothing on its own — say harder/easier/even instead of
   // making the reader work out what a signed division count implies.
@@ -3439,6 +3471,15 @@ function renderRRCard(matches){
     else{
       const mag=Math.abs(res.meanGap);
       gapVal.textContent=mag<0.05?'Even':`${mag.toFixed(1)} ${res.meanGap>0?'harder':'easier'}`;
+    }
+  }
+  // Rank Shield hides the drop on the badge, not the RR loss itself — call
+  // that out so RR/Loss above doesn't look inconsistent with a rank that
+  // never budged.
+  if(shieldNote){
+    shieldNote.hidden=!res.shieldedLosses;
+    if(res.shieldedLosses){
+      shieldNote.textContent=`${res.shieldedLosses} of these loss${res.shieldedLosses===1?'':'es'} didn't drop your rank — Rank Shield protected the badge, but the RR loss above still happened.`;
     }
   }
 }
