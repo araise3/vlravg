@@ -49,6 +49,21 @@ export async function refreshPlayer(player, { origin, fetchImpl = fetch, sleepIm
   return { name, rr, ok: name.ok && rr.ok };
 }
 
+export async function backfillPlayer(player, { origin, pages=2, fetchImpl=fetch, sleepImpl=sleep }) {
+  let last;
+  for(let i=0;i<pages;i++) {
+    const response=await requestJSON(`${origin}/api/name-backfill/${encodeURIComponent(player.puuid)}`,fetchImpl,sleepImpl);
+    if(!response.ok)return response;
+    const state=response.data.backfill;
+    if(response.data.puuid!==player.puuid.toLowerCase() || !state || !Number.isSafeInteger(state.next_start))return {ok:false,reason:'invalid backfill response'};
+    last={ok:true,...state};
+    if(!state.available || state.complete)return last;
+    if(state.limited)return {ok:false,reason:'backfill safety limit reached'};
+    if(i<pages-1)await sleepImpl(DELAY_MS);
+  }
+  return last || {ok:true,skipped:true};
+}
+
 async function listPlayers(env) {
   const endpoint = `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/d1/database/${env.CF_D1_DATABASE_ID}/query`;
   const players = [];
@@ -72,11 +87,17 @@ export async function main(env = process.env) {
   for (const key of ['CF_API_TOKEN', 'CF_ACCOUNT_ID', 'CF_D1_DATABASE_ID']) {
     if (!env[key]) throw new Error(`Missing required secret: ${key}`);
   }
-  const origin = new URL(env.SITE_ORIGIN || 'https://vlravg.pages.dev').origin;
+  const origin = new URL(env.SITE_ORIGIN || 'https://vlravg1.pages.dev').origin;
   const maxPlayers = Number(env.MAX_PLAYERS || 0);
   if (!Number.isSafeInteger(maxPlayers) || maxPlayers < 0) throw new Error('MAX_PLAYERS must be a nonnegative integer');
+  const pages=Number(env.BACKFILL_PAGES ?? 2);
+  if(!Number.isSafeInteger(pages)||pages<0||pages>1000)throw new Error('BACKFILL_PAGES must be between 0 and 1000');
+  const target=(env.TARGET_PUUID || '').trim().toLowerCase();
+  if(target && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(target))throw new Error('Invalid TARGET_PUUID');
   const allPlayers = await listPlayers(env);
-  const players = maxPlayers ? allPlayers.slice(0, maxPlayers) : allPlayers;
+  const selected=target?allPlayers.filter(p=>p.puuid.toLowerCase()===target):allPlayers;
+  if(target && !selected.length)throw new Error('Target player is not tracked');
+  const players = maxPlayers ? selected.slice(0, maxPlayers) : selected;
   console.log(`Checking names and RR for ${players.length} tracked player(s).`);
   let failed = 0;
   for (const [i, player] of players.entries()) {
@@ -88,6 +109,14 @@ export async function main(env = process.env) {
     if (i < players.length - 1) await sleep(DELAY_MS);
   }
   console.log(`Done: ${players.length - failed} succeeded, ${failed} failed.`);
+  // Finish the time-sensitive daily checks for everyone before spending quota
+  // on the one-time historical scan. Cursors persist across scheduled runs.
+  if(pages) for(const [i,player] of players.entries()) {
+    await sleep(DELAY_MS);
+    const result=await backfillPlayer(player,{origin,pages});
+    if(!result.ok)failed++;
+    console.log(`[backfill ${i+1}/${players.length}] ${player.puuid}: ${!result.ok?'FAILED: '+result.reason:!result.available?'no ranked platform yet':result.complete?'complete ('+result.next_start+' matches scanned)':'continuing from match '+result.next_start}`);
+  }
   if (failed) process.exitCode = 1;
 }
 

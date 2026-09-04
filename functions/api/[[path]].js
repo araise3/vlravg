@@ -92,7 +92,8 @@
  * never leaks real quota to the browser" already satisfies the actual goal.
  */
 
-import { observeName } from "../../lib/name-history.mjs";
+import { observeName, readNameHistory } from "../../lib/name-history.mjs";
+import { backfillState, saveBackfillPage } from "../../lib/name-backfill.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
 const PREFIX = "/api";
@@ -551,6 +552,11 @@ const GLIDE_CAP_MS = 4000;    // don't glide if the resulting spacing would be a
 // Public route -> real upstream HenrikDev path + this route's cache TTL.
 const ROUTES = [
   {
+    match: /^\/name-backfill\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,
+    upstream: (m) => `/valorant/v4/by-puuid/matches/${m.state.region}/${m.state.platform}/${m[1]}?mode=competitive&size=10&start=${m.state.next_start}`,
+    nameBackfill: true,
+  },
+  {
     // Fresh Riot ID by permanent account ID, then persist and return its timeline.
     match: /^\/name-history\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,
     upstream: (m) => `/valorant/v1/by-puuid/account/${m[1]}?force=true`,
@@ -790,11 +796,20 @@ export async function onRequestGet(context) {
   if (!route) return json({ error: "Unknown route" }, 404);
   // One cache key per PUUID: arbitrary query strings must not bypass the
   // hourly refresh or supply their own force/name/timestamp parameters.
-  if (route.nameHistory) {
+  if (route.nameHistory || route.nameBackfill) {
     match[1] = match[1].toLowerCase();
-    url.pathname = PREFIX + '/name-history/' + match[1];
+    url.pathname = PREFIX + (route.nameBackfill ? '/name-backfill/' : '/name-history/') + match[1];
     url.search = '';
     if (!env.APP_DB) return json({ error: "Name history storage unavailable" }, 503);
+  }
+  if (route.nameBackfill) {
+    try {
+      match.state = await backfillState(env.APP_DB,match[1]);
+      if (!match.state.available || match.state.complete || match.state.limited) {
+        const res=json({data:{puuid:match[1],backfill:match.state,history:await readNameHistory(env.APP_DB,match[1])}},200);
+        res.headers.set('Cache-Control','no-store');return res;
+      }
+    } catch { return json({error:'Name backfill storage unavailable'},503); }
   }
   if (!env.HENRIK_KEY) return json({ error: "Proxy misconfigured: HENRIK_KEY secret not set" }, 500);
   // No hard-fail on a missing APP_DB binding — every function that touches it
@@ -805,8 +820,18 @@ export async function onRequestGet(context) {
 
   const cache = caches.default;
   const cacheKey = new Request(url.toString(), request);
-  const cached = await cache.match(cacheKey);
+  const cached = route.nameBackfill ? null : await cache.match(cacheKey);
   if (cached) {
+    // The upstream account check can stay cached, but newly backfilled names
+    // and progress must be visible immediately rather than an hour later.
+    if (route.nameHistory) {
+      try {
+        const body = await cached.json();
+        body.data.history = await readNameHistory(env.APP_DB,match[1]);
+        body.data.backfill = await backfillState(env.APP_DB,match[1]);
+        const res = json(body,200); res.headers.set('X-Proxy-Cache','HIT');res.headers.set('Cache-Control','no-store');return res;
+      } catch { return json({error:'Name history storage unavailable'},503); }
+    }
     const res = new Response(cached.body, cached);
     res.headers.set("X-Proxy-Cache", "HIT");
     return res;
@@ -855,6 +880,21 @@ export async function onRequestGet(context) {
   let bodyText = await upstream.text();
   const contentType = upstream.headers.get("Content-Type") || "application/json";
 
+  if (upstream.status === 200 && route.nameBackfill) {
+    let matches;
+    try { matches=JSON.parse(bodyText).data; } catch {}
+    if (!Array.isArray(matches)) return json({error:'Invalid match history response'},502);
+    try {
+      const backfill=await saveBackfillPage(env.APP_DB,match[1],match.state,matches);
+      const history=await readNameHistory(env.APP_DB,match[1]);
+      const res=json({data:{puuid:match[1],backfill,history}},200);
+      res.headers.set('Cache-Control','no-store');return res;
+    } catch {
+      console.error('Name backfill page could not be saved');
+      return json({error:'Name backfill page unavailable'},503);
+    }
+  }
+
   if (upstream.status === 200 && route.nameHistory) {
     let account;
     try { account = JSON.parse(bodyText).data; } catch {}
@@ -863,7 +903,8 @@ export async function onRequestGet(context) {
     }
     try {
       const history = await observeName(env.APP_DB, { ...account, puuid: match[1] }, observedAt);
-      bodyText = JSON.stringify({ data: { puuid: match[1], region: account.region, history } });
+      const backfill = await backfillState(env.APP_DB,match[1]);
+      bodyText = JSON.stringify({ data: { puuid: match[1], region: account.region, history, backfill } });
     } catch {
       // Do not report a successful daily check if the observation wasn't saved.
       console.error('Name history persistence failed');
@@ -894,11 +935,12 @@ export async function onRequestGet(context) {
     headers: { "Content-Type": contentType },
   });
   res.headers.set("X-Proxy-Cache", "MISS");
+  if (route.nameHistory || route.nameBackfill) res.headers.set('Cache-Control','no-store');
   // Deliberately no rate-limit headers of any kind on the response — that's
   // the whole point of this rewrite. The client only ever sees success or a
   // 429 with retryAfterMs in the body.
 
-  if (upstream.status === 200) {
+  if (upstream.status === 200 && !route.nameBackfill) {
     const cacheRes = new Response(bodyText, {
       status: 200,
       headers: {
