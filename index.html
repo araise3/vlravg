@@ -460,7 +460,7 @@ h1 span{color:var(--accent);}
   .overview-clutch-details #clutch-grid{flex-wrap:wrap;}
   .overview-clutch-details #clutch-grid>div{min-width:75px;}
 }
-.page-nav{display:flex;gap:8px;margin:-12px 0 24px;border-bottom:1px solid var(--surface-border);}
+.page-nav{display:flex;flex-wrap:wrap;gap:8px;margin:-12px 0 24px;border-bottom:1px solid var(--surface-border);}
 .page-nav[hidden]{display:none;}
 .page-nav a{display:flex;align-items:center;min-height:44px;padding:0 14px;color:#a1a1aa;text-decoration:none;font-size:14px;border-bottom:2px solid transparent;}
 .page-nav a:hover{color:var(--text);}
@@ -475,7 +475,11 @@ h1 span{color:var(--accent);}
 .page-empty[hidden]{display:none;}
 .detail-view #results-section > :not(#error-container){display:none!important;}
 /* Shared table surface across Duos, Lobby Rank, and RR Breakdown. */
-#sg-rank-card,#party-size-section,#teammates-section,.rr-table-card{padding:0;overflow:hidden;border:1px solid var(--surface-border);border-radius:10px;background:#141416;box-shadow:none;}
+#sg-rank-card,#party-size-section,#teammates-section,#name-history-card,.rr-table-card{padding:0;overflow:hidden;border:1px solid var(--surface-border);border-radius:10px;background:#141416;box-shadow:none;}
+#name-history-card[hidden]{display:none;}
+.name-history-current{font-size:10px;font-weight:600;padding:3px 6px;border:1px solid #3c4655;border-radius:4px;color:var(--brand);}
+.name-history-note{font-size:12px;color:#a1a1aa;line-height:1.6;margin-top:14px;}
+.name-history-retry{color:var(--brand);text-decoration:underline;text-underline-offset:3px;margin-left:8px;}
 #sg-rank-overview,.table-scroll{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
 #sg-rank-overview:focus-visible,.table-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:-2px;}
 .duo-player-name{display:flex;align-items:baseline;gap:3px;max-width:240px;}
@@ -589,7 +593,19 @@ h1 span{color:var(--accent);}
     <a href="/lobbyrank" data-page="lobby-rank">Lobby Rank</a>
     <a href="/rr" data-page="rr">RR Breakdown</a>
     <a href="/matches" data-page="matches">Match History</a>
+    <a href="/names" data-page="names">Name History</a>
   </nav>
+  <main id="names-page" class="detail-page" hidden aria-labelledby="names-title">
+    <div class="page-heading">
+      <h1 id="names-title" tabindex="-1">Name History</h1>
+      <p>Riot IDs seen on this account, across all acts. Names and tags are checked daily.</p>
+    </div>
+    <div id="names-empty" class="page-empty" role="status">Search for a player above to see their name history.</div>
+    <div id="name-history-card" class="s-card" hidden>
+      <div id="name-history-table" class="table-scroll" role="region" aria-label="Name history table" tabindex="0"></div>
+    </div>
+    <p class="name-history-note">From and To are the first and last dates we observed each Riot ID (UTC). Exact rename dates may fall between checks. Earlier names cannot be recovered from before tracking began.</p>
+  </main>
   <main id="duos-page" class="detail-page" hidden aria-labelledby="duos-title">
     <div class="page-heading">
       <h1 id="duos-title" tabindex="-1">Duos</h1>
@@ -1052,6 +1068,54 @@ let allTeammates=[];
 // Pages share one search/data flow and one placement filter. Their result
 // sections stay mounted so navigation preserves loaded data and open matches.
 let activePage='overview',analysisState='idle',rrHasData=false;
+let nameHistoryRows=[],nameHistoryState='idle';
+async function loadNameHistory(puuid,generation=_analysisGen){
+  nameHistoryState='loading';renderNameHistory();
+  try{
+    const {j}=await apiGet(`${API_BASE}/name-history/${encodeURIComponent(puuid)}`,{quiet:true});
+    if(generation!==_analysisGen||puuid!==PUUID)return;
+    if(!Array.isArray(j.data?.history))throw new Error('Invalid name history');
+    nameHistoryRows=j.data.history;nameHistoryState='ready';
+  }catch{
+    if(generation!==_analysisGen||puuid!==PUUID)return;
+    nameHistoryState='error';
+  }
+  renderNameHistory();
+}
+function renderNameHistory(){
+  const empty=document.getElementById('names-empty');
+  const card=document.getElementById('name-history-card');
+  const container=document.getElementById('name-history-table');
+  const hasRows=nameHistoryState==='ready'&&nameHistoryRows.length>0;
+  card.hidden=!hasRows;empty.hidden=hasRows;
+  container.replaceChildren();
+  if(!hasRows){
+    empty.textContent=nameHistoryState==='loading'?'Checking this player’s name history…':nameHistoryState==='error'?'Name history is temporarily unavailable.':nameHistoryState==='ready'?'No name observations have been saved for this account yet.':'Search for a player above to see their name history.';
+    if(nameHistoryState==='error'&&PUUID){
+      const retry=document.createElement('button');retry.type='button';retry.className='name-history-retry';retry.textContent='Try again';
+      retry.addEventListener('click',()=>loadNameHistory(PUUID));empty.appendChild(retry);
+    }
+    return;
+  }
+  const table=document.createElement('table');table.className='rank-table';
+  table.innerHTML='<caption class="rank-sr-only">Observed Riot ID date ranges in UTC</caption><thead><tr><th scope="col">Riot ID</th><th scope="col">From</th><th scope="col">To</th><th scope="col">Status</th></tr></thead><tbody></tbody>';
+  const dateFormat=new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
+  const values=[];
+  nameHistoryRows.forEach(h=>{
+    const row=table.tBodies[0].insertRow();
+    const name=document.createElement('th');name.scope='row';name.textContent=h.name+'#'+h.tag;row.appendChild(name);
+    [h.first_seen,h.last_seen].forEach(stamp=>{
+      const cell=row.insertCell();const date=new Date(stamp);
+      if(!Number.isFinite(date.getTime())){cell.textContent='—';return;}
+      const time=document.createElement('time');time.dateTime=date.toISOString();time.textContent=dateFormat.format(date);time.title=date.toUTCString();cell.appendChild(time);
+    });
+    const status=row.insertCell();
+    if(h.ended_at==null){const badge=document.createElement('span');badge.className='name-history-current';badge.textContent='Current';status.appendChild(badge);}
+    else status.textContent='Previous';
+    values.push([h.name+'#'+h.tag,Date.parse(h.first_seen),Date.parse(h.last_seen),h.ended_at==null?'Current':'Previous']);
+  });
+  container.appendChild(table);initTableSorting(container,values);
+}
 function updateDetailPages(){
   const ready=analysisState==='ready';
   document.querySelector('.page-nav').hidden=!ready;
@@ -1096,7 +1160,7 @@ function applyPage(focus=false){
     path='/lobbyrank';
     history.replaceState(history.state,'',path+location.search+location.hash);
   }
-  activePage=path==='/duos'?'duos':path==='/matches'?'matches':path==='/lobbyrank'?'lobby-rank':path==='/rr'?'rr':'overview';
+  activePage=path==='/duos'?'duos':path==='/matches'?'matches':path==='/lobbyrank'?'lobby-rank':path==='/rr'?'rr':path==='/names'?'names':'overview';
   const isDuos=activePage==='duos';
   document.body.classList.toggle('duos-view',isDuos);
   document.body.classList.toggle('detail-view',activePage!=='overview');
@@ -1104,14 +1168,15 @@ function applyPage(focus=false){
   document.getElementById('matches-page').hidden=activePage!=='matches';
   document.getElementById('lobby-rank-page').hidden=activePage!=='lobby-rank';
   document.getElementById('rr-page').hidden=activePage!=='rr';
-  const titles={overview:'vlravg — Average Lobby Rank & Valorant Stats',duos:'Duos — vlravg',matches:'Match History — vlravg','lobby-rank':'Lobby Rank — vlravg',rr:'RR Breakdown — vlravg'};
+  document.getElementById('names-page').hidden=activePage!=='names';
+  const titles={overview:'vlravg — Average Lobby Rank & Valorant Stats',duos:'Duos — vlravg',matches:'Match History — vlravg','lobby-rank':'Lobby Rank — vlravg',rr:'RR Breakdown — vlravg',names:'Name History — vlravg'};
   document.title=titles[activePage];
   document.querySelectorAll('.page-nav a').forEach(link=>{
     if(link.dataset.page===activePage)link.setAttribute('aria-current','page');
     else link.removeAttribute('aria-current');
   });
   const resetToggle=document.getElementById('reset-toggle');
-  if(activePage!=='overview')document.getElementById(activePage+'-filter-host').appendChild(resetToggle);
+  if(activePage!=='overview'&&activePage!=='names')document.getElementById(activePage+'-filter-host').appendChild(resetToggle);
   else document.getElementById('overview-filter-host').appendChild(resetToggle);
   updateDetailPages();
   if(focus){
@@ -1496,6 +1561,7 @@ function runAnalysis(){
   // loadAll's account step fills those in from the by-puuid lookup.
   PLAYER=playerName;TAG=playerTag;REGION=playerRegion;PLATFORM=playerPlatform;TARGET_SEASON=playerSeason;PUUID=parsed.puuid;
   analysisState='loading';
+  nameHistoryRows=[];nameHistoryState='idle';renderNameHistory();
   updateDetailPages();
   setAccent('#3b82f6');
   document.body.classList.remove('rank-colored');
@@ -1576,7 +1642,7 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
     // fetch() itself threw → network/CORS failure (e.g. proxy 5xx with no CORS).
     if(_attempt>=MAX_RETRIES)throw new Error('Network error — check your connection');
     const wait=Math.min(1500*Math.pow(2,_attempt),20000);
-    setStatus(`Network error — retrying in ${Math.ceil(wait/1000)}s… (${_attempt+1}/${MAX_RETRIES})`,true);
+    if(!opts.quiet)setStatus(`Network error — retrying in ${Math.ceil(wait/1000)}s… (${_attempt+1}/${MAX_RETRIES})`,true);
     await sleep(wait);
     return apiGet(url,opts,_attempt+1,_rl);
   }
@@ -1594,7 +1660,7 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
       if(typeof body.retryAfterMs==='number')retryMs=Math.max(body.retryAfterMs,RL_WAIT_FLOOR_MS);
     }catch(_){/* fall back to the floor if the body isn't as expected */}
     const wait=Math.min(retryMs,MAX_WAIT_MS);
-    setStatus(`Rate limit reached — waiting ${Math.ceil(wait/1000)}s for reset…`,true);
+    if(!opts.quiet)setStatus(`Rate limit reached — waiting ${Math.ceil(wait/1000)}s for reset…`,true);
     await sleep(wait);
     return apiGet(url,opts,_attempt,_rl+1);
   }
@@ -1603,7 +1669,7 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
   if([500,502,503,504].includes(r.status)){
     if(_attempt>=MAX_RETRIES)throw new Error(await parseApiError(r));
     const wait=Math.min(1000*Math.pow(2,_attempt),16000); // 1,2,4,8,16s
-    setStatus(`Server error (${r.status}) — retrying in ${Math.ceil(wait/1000)}s… (${_attempt+1}/${MAX_RETRIES})`,true);
+    if(!opts.quiet)setStatus(`Server error (${r.status}) — retrying in ${Math.ceil(wait/1000)}s… (${_attempt+1}/${MAX_RETRIES})`,true);
     await sleep(wait);
     return apiGet(url,opts,_attempt+1,_rl);
   }
@@ -2558,6 +2624,8 @@ async function loadAll(prefetchSnapshot=null){
     }
     if(byPuuid&&(!PLAYER||!TAG))throw new Error('No account found for that PUUID');
     if(myGen!==_analysisGen)return;
+    // Account-level history loads independently of match/act availability.
+    if(PUUID)void loadNameHistory(PUUID,myGen);
     // Autocorrect the input's casing now that it's resolved (corrected casing
     // on success, the originally-typed value stays as a fallback on failure).
     {

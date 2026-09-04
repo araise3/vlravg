@@ -1,10 +1,10 @@
-# Keeps the persisted RR history growing even when nobody visits the site.
+# Checks names and keeps persisted RR history growing without site visits.
 #
 # The /api/mmr-history route only ever sees a player when someone searches
 # them, and HenrikDev only returns that player's most recent ~20 games. If a
 # player plays 30 games between visits, the ones in the middle are lost for
 # good. This job walks every player tracked in D1's rr_players table every
-# 12h and re-pings the public endpoint, which does the fetch + merge + persist
+# 24h and re-pings the public endpoints, which do the fetch + merge + persist
 # through the existing worker logic (rate limiting and quota pacing included).
 #
 # REQUIRED REPO SECRETS (Settings -> Secrets and variables -> Actions):
@@ -17,14 +17,19 @@
 # OPTIONAL REPO VARIABLE:
 #   SITE_ORIGIN        defaults to https://vlravg.pages.dev
 
-name: Refresh RR history
+name: Refresh names and RR history
 
 on:
   schedule:
-    # 05:00 and 17:00 UTC. GitHub's scheduler is best-effort and can lag
-    # under load, so treat this as "about every 12h", not to the minute.
-    - cron: "0 5,17 * * *"
-  workflow_dispatch: {}
+    # Once daily at 05:17 UTC, away from the busy start of the hour.
+    # GitHub's scheduler is best-effort; checks can be delayed.
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+    inputs:
+      max_players:
+        description: 'Limit a manual verification run (0 = all players)'
+        required: false
+        default: '0'
 
 concurrency:
   # Never let a slow run overlap the next scheduled one — that would double
@@ -32,17 +37,24 @@ concurrency:
   group: refresh-rr-history
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
 
-      - name: Refresh every tracked player
+      - name: Check names and refresh RR for every tracked player
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_D1_DATABASE_ID: ${{ secrets.CF_D1_DATABASE_ID }}
           SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg.pages.dev' }}
+          MAX_PLAYERS: ${{ inputs.max_players || '0' }}
         run: node .github/scripts/refresh-rr-history.mjs

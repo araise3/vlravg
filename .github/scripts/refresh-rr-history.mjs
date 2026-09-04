@@ -1,138 +1,96 @@
-// Walks every player in the rr_players D1 table and re-pings the site's own
-// /api/mmr-history endpoint for each, so persisted history keeps growing
-// without anyone visiting the site. See the workflow file for required
-// secrets.
-//
-// Deliberately goes through the PUBLIC endpoint rather than calling HenrikDev
-// directly: that reuses the worker's rate limiting, shared quota pacing and
-// mergeRRHistory persistence, so this job needs no API key of its own and
-// can't out-run the quota the live site is also sharing.
+// Both calls go through the site's proxy: no HenrikDev key is needed here,
+// and daily checks share the live site's quota pacing and persistence.
+import { pathToFileURL } from 'node:url';
 
-const {
-  CF_API_TOKEN,
-  CF_ACCOUNT_ID,
-  CF_D1_DATABASE_ID,
-  SITE_ORIGIN = "https://vlravg.pages.dev",
-} = process.env;
-
-// Pacing. HenrikDev allows ~60 req/min on this key and the live site shares
-// it, so stay well under: one player per ~2.5s leaves plenty of headroom.
-// No player-count ceiling — D1's Free-plan cap (100k rows written/day) has
-// no trouble with the full player list; the run just takes longer as the
-// list grows (bounded by the workflow's own timeout-minutes instead).
 const DELAY_MS = 2500;
-const RETRY_429_MS = 30000;
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-for (const [k, v] of Object.entries({ CF_API_TOKEN, CF_ACCOUNT_ID, CF_D1_DATABASE_ID })) {
-  if (!v) {
-    console.error(`Missing required secret: ${k}`);
-    process.exit(1);
-  }
-}
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-// One query against the rr_players table (see schema.sql) — populated by
-// mergeRRHistory() on every real lookup — gives every player's identity in
-// one round trip, no paging needed the way KV's key-list API required.
-async function listPlayers() {
-  const url = `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/d1/database/${CF_D1_DATABASE_ID}/query`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${CF_API_TOKEN}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ sql: "SELECT puuid, region, platform, name, tag, updated_at FROM rr_players" }),
-  });
-  if (!res.ok) {
-    throw new Error(`D1 query failed: ${res.status} ${await res.text()}`);
-  }
-  const body = await res.json();
-  if (!body.success) {
-    throw new Error(`D1 query error: ${JSON.stringify(body.errors)}`);
-  }
-  const rows = body.result?.[0]?.results || [];
-  return rows
-    .filter((r) => r.region && r.platform && r.name && r.tag)
-    .map((r) => ({
-      puuid: r.puuid,
-      region: r.region,
-      platform: r.platform,
-      name: r.name,
-      tag: r.tag,
-      updatedAt: r.updated_at || null,
-    }));
-}
-
-async function refresh(p) {
-  const url =
-    `${SITE_ORIGIN}/api/mmr-history/${encodeURIComponent(p.region)}/${encodeURIComponent(p.platform)}` +
-    `/${encodeURIComponent(p.name)}/${encodeURIComponent(p.tag)}`;
-
-  for (let attempt = 0; attempt < 2; attempt++) {
-    let res;
+export async function requestJSON(url, fetchImpl = fetch, sleepImpl = sleep) {
+  for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      res = await fetch(url, { headers: { Accept: "application/json" } });
-    } catch (e) {
-      return { ok: false, reason: `network: ${e.message}` };
-    }
-
-    if (res.status === 429) {
-      // Worker declined on shared quota — wait out the window it gives us.
-      let waitMs = RETRY_429_MS;
-      try {
-        const b = await res.json();
-        if (typeof b.retryAfterMs === "number") waitMs = Math.min(b.retryAfterMs, 120000);
-      } catch {}
-      if (attempt === 0) {
-        await sleep(waitMs);
-        continue;
+      const res = await fetchImpl(url, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(30000) });
+      const body = await res.json().catch(() => null);
+      if (res.status === 429 || res.status >= 500) {
+        if (attempt < 2) {
+          const retry = res.status === 429 ? body?.retryAfterMs : 2500 * 2 ** attempt;
+          await sleepImpl(Number.isFinite(retry) ? Math.max(1000, Math.min(retry, 120000)) : 30000);
+          continue;
+        }
       }
-      return { ok: false, reason: "rate limited" };
-    }
-
-    if (!res.ok) return { ok: false, reason: `http ${res.status}` };
-
-    try {
-      const body = await res.json();
-      const n = body?.data?.history?.length ?? 0;
-      return { ok: true, matches: n, cache: res.headers.get("X-Proxy-Cache") };
+      if (!res.ok) return { ok: false, reason: `http ${res.status}` };
+      if (!body?.data) return { ok: false, reason: 'invalid JSON response' };
+      return { ok: true, data: body.data };
     } catch {
-      return { ok: true, matches: null };
+      if (attempt === 2) return { ok: false, reason: 'network error or timeout' };
+      await sleepImpl(2500 * 2 ** attempt);
     }
   }
-  return { ok: false, reason: "retries exhausted" };
+  return { ok: false, reason: 'retries exhausted' };
 }
 
-const started = Date.now();
-const players = await listPlayers();
-console.log(`Found ${players.length} tracked player(s) in D1.`);
-
-if (!players.length) {
-  console.log("Nothing to refresh — rr_players is empty, or no row carries identity fields yet.");
-  process.exit(0);
-}
-
-let ok = 0, failed = 0;
-for (const [i, p] of players.entries()) {
-  const r = await refresh(p);
-  if (r.ok) {
-    ok++;
-    console.log(`  [${i + 1}/${players.length}] ${p.name}#${p.tag} (${p.region}) -> ${r.matches ?? "?"} matches${r.cache ? ` [${r.cache}]` : ""}`);
-  } else {
-    failed++;
-    console.log(`  [${i + 1}/${players.length}] ${p.name}#${p.tag} (${p.region}) -> FAILED: ${r.reason}`);
+export async function refreshPlayer(player, { origin, fetchImpl = fetch, sleepImpl = sleep }) {
+  const id = encodeURIComponent(player.puuid);
+  const name = await requestJSON(`${origin}/api/name-history/${id}`, fetchImpl, sleepImpl);
+  if (name.ok && (!Array.isArray(name.data.history) || !name.data.history.length ||
+      name.data.puuid !== player.puuid.toLowerCase())) {
+    name.ok = false; name.reason = 'invalid name history response';
   }
-  if (i < players.length - 1) await sleep(DELAY_MS);
+  // A failed name check must not prevent RR refreshes. The immutable PUUID
+  // also lets RR continue working after a rename or a stale stored Riot ID.
+  const region = name.ok ? name.data.region || player.region : player.region;
+  let rr = { ok: true, skipped: true };
+  if (region && player.platform) {
+    await sleepImpl(DELAY_MS);
+    rr = await requestJSON(`${origin}/api/mmr-history-by-puuid/${encodeURIComponent(region)}/${encodeURIComponent(player.platform)}/${id}`, fetchImpl, sleepImpl);
+    if (rr.ok && (!Array.isArray(rr.data.history) || rr.data.account?.puuid?.toLowerCase() !== player.puuid.toLowerCase())) {
+      rr.ok = false; rr.reason = 'invalid RR response';
+    }
+  }
+  return { name, rr, ok: name.ok && rr.ok };
 }
 
-const mins = ((Date.now() - started) / 60000).toFixed(1);
-console.log(`\nDone in ${mins} min — ${ok} refreshed, ${failed} failed.`);
+async function listPlayers(env) {
+  const endpoint = `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/d1/database/${env.CF_D1_DATABASE_ID}/query`;
+  const players = [];
+  let cursor = '';
+  for (;;) {
+    const res = await fetch(endpoint, {
+      method: 'POST', signal: AbortSignal.timeout(30000),
+      headers: { Authorization: `Bearer ${env.CF_API_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sql: 'SELECT puuid,region,platform,name,tag FROM rr_players WHERE puuid>?1 ORDER BY puuid LIMIT 500', params: [cursor] }),
+    });
+    const body = await res.json();
+    if (!res.ok || !body.success || !body.result?.[0]?.success) throw new Error(`D1 player query failed (${res.status})`);
+    const rows = body.result[0].results || [];
+    players.push(...rows);
+    if (rows.length < 500) return players;
+    cursor = rows.at(-1).puuid;
+  }
+}
 
-// A few individual failures (a renamed Riot ID, a transient upstream blip) are
-// expected and shouldn't redden the run; a wholesale failure should.
-if (failed > 0 && ok === 0) {
-  console.error("Every refresh failed — check SITE_ORIGIN and that /api/mmr-history is reachable.");
-  process.exit(1);
+export async function main(env = process.env) {
+  for (const key of ['CF_API_TOKEN', 'CF_ACCOUNT_ID', 'CF_D1_DATABASE_ID']) {
+    if (!env[key]) throw new Error(`Missing required secret: ${key}`);
+  }
+  const origin = new URL(env.SITE_ORIGIN || 'https://vlravg.pages.dev').origin;
+  const maxPlayers = Number(env.MAX_PLAYERS || 0);
+  if (!Number.isSafeInteger(maxPlayers) || maxPlayers < 0) throw new Error('MAX_PLAYERS must be a nonnegative integer');
+  const allPlayers = await listPlayers(env);
+  const players = maxPlayers ? allPlayers.slice(0, maxPlayers) : allPlayers;
+  console.log(`Checking names and RR for ${players.length} tracked player(s).`);
+  let failed = 0;
+  for (const [i, player] of players.entries()) {
+    const result = await refreshPlayer(player, { origin });
+    if (!result.ok) failed++;
+    const current = result.name.ok ? result.name.data.history.find(h => h.ended_at == null) : null;
+    const renamed = current && (current.name !== player.name || current.tag !== player.tag);
+    console.log(`[${i + 1}/${players.length}] ${player.puuid}: name ${result.name.ok ? renamed ? 'changed' : 'checked' : 'FAILED: ' + result.name.reason}; RR ${result.rr.ok ? result.rr.skipped ? 'not tracked yet' : result.rr.data.history.length + ' matches' : 'FAILED: ' + result.rr.reason}`);
+    if (i < players.length - 1) await sleep(DELAY_MS);
+  }
+  console.log(`Done: ${players.length - failed} succeeded, ${failed} failed.`);
+  if (failed) process.exitCode = 1;
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch(error => { console.error(error.message); process.exitCode = 1; });
 }
