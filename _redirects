@@ -1,0 +1,10 @@
+/duos /index.html 200
+/duos/ /duos 301
+/matches /index.html 200
+/matches/ /matches 301
+/rr /index.html 200
+/rr/ /rr 301
+/lobbyrank /index.html 200
+/lobbyrank/ /lobbyrank 301
+/lobby-rank /lobbyrank 301
+/lobby-rank/ /lobbyrank 301
