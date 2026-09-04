@@ -1,0 +1,52 @@
+name: Backfill all name histories
+
+on:
+  workflow_dispatch:
+    inputs:
+      runtime_minutes:
+        description: 'Run budget before automatic continuation (1–300 minutes)'
+        required: false
+        default: '300'
+
+# Share the lock with daily name/RR refreshes so separate jobs cannot multiply
+# traffic to the one upstream key. Saved D1 cursors survive cancellation.
+concurrency:
+  group: refresh-rr-history
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      contents: read
+      actions: write # Only used to dispatch this workflow's continuation.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Scan all unfinished players at the shared request limit
+        id: scan
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_D1_DATABASE_ID: ${{ secrets.CF_D1_DATABASE_ID }}
+          SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg1.pages.dev' }}
+          RUNTIME_MINUTES: ${{ inputs.runtime_minutes || '300' }}
+        run: node .github/scripts/backfill-all-names.mjs
+      - name: Continue immediately while unfinished players remain
+        if: steps.scan.outputs.continue == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          pending_daily=$(gh run list --workflow refresh-rr-history.yml --limit 100 --json status --jq '[.[] | select(.status != "completed")] | length')
+          if [ "$pending_daily" -gt 0 ]; then
+            echo "Daily refresh is waiting; it will resume the backfill afterward."
+            exit 0
+          fi
+          gh workflow run backfill-all-names.yml --ref main -f runtime_minutes=300
