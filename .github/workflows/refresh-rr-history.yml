@@ -34,9 +34,9 @@ on:
         description: 'Optional tracked PUUID for a focused historical backfill'
         required: false
       backfill_pages:
-        description: 'Historical pages per player (0 = skip; 2 daily; up to 1000)'
+        description: 'Optional inline historical pages (0 = use the continuous backfill job)'
         required: false
-        default: '2'
+        default: '0'
 
 concurrency:
   # Never let a slow run overlap the next scheduled one — that would double
@@ -65,5 +65,16 @@ jobs:
           SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg1.pages.dev' }}
           MAX_PLAYERS: ${{ inputs.max_players || '0' }}
           TARGET_PUUID: ${{ inputs.target_puuid || '' }}
-          BACKFILL_PAGES: ${{ inputs.backfill_pages || '2' }}
+          BACKFILL_PAGES: ${{ inputs.backfill_pages || '0' }}
         run: node .github/scripts/refresh-rr-history.mjs
+  continue-backfill:
+    needs: refresh
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Resume historical backfill after daily checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh workflow run backfill-all-names.yml --ref main -f runtime_minutes=300

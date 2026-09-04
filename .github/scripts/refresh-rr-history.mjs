@@ -1,8 +1,9 @@
 // Both calls go through the site's proxy: no HenrikDev key is needed here,
 // and daily checks share the live site's quota pacing and persistence.
 import { pathToFileURL } from 'node:url';
+import { createRequestScheduler } from './request-scheduler.mjs';
 
-const DELAY_MS = 2500;
+const DELAY_MS = 0; // Request starts are paced centrally; no extra per-player pause.
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function requestJSON(url, fetchImpl = fetch, sleepImpl = sleep) {
@@ -64,7 +65,7 @@ export async function backfillPlayer(player, { origin, pages=2, fetchImpl=fetch,
   return last || {ok:true,skipped:true};
 }
 
-async function listPlayers(env) {
+export async function listPlayers(env) {
   const endpoint = `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/d1/database/${env.CF_D1_DATABASE_ID}/query`;
   const players = [];
   let cursor = '';
@@ -72,7 +73,11 @@ async function listPlayers(env) {
     const res = await fetch(endpoint, {
       method: 'POST', signal: AbortSignal.timeout(30000),
       headers: { Authorization: `Bearer ${env.CF_API_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sql: 'SELECT puuid,region,platform,name,tag FROM rr_players WHERE puuid>?1 ORDER BY puuid LIMIT 500', params: [cursor] }),
+      body: JSON.stringify({ sql: `SELECT p.puuid,p.region,p.platform,p.name,p.tag,
+        COALESCE(b.complete,0) AS backfill_complete,COALESCE(b.next_start,0) AS next_start,
+        b.updated_at AS backfill_updated_at FROM rr_players p LEFT JOIN player_name_backfill b
+        ON b.puuid=p.puuid AND b.region=p.region AND b.platform=p.platform
+        WHERE p.puuid>?1 ORDER BY p.puuid LIMIT 500`, params: [cursor] }),
     });
     const body = await res.json();
     if (!res.ok || !body.success || !body.result?.[0]?.success) throw new Error(`D1 player query failed (${res.status})`);
@@ -90,7 +95,7 @@ export async function main(env = process.env) {
   const origin = new URL(env.SITE_ORIGIN || 'https://vlravg1.pages.dev').origin;
   const maxPlayers = Number(env.MAX_PLAYERS || 0);
   if (!Number.isSafeInteger(maxPlayers) || maxPlayers < 0) throw new Error('MAX_PLAYERS must be a nonnegative integer');
-  const pages=Number(env.BACKFILL_PAGES ?? 2);
+  const pages=Number(env.BACKFILL_PAGES ?? 0);
   if(!Number.isSafeInteger(pages)||pages<0||pages>1000)throw new Error('BACKFILL_PAGES must be between 0 and 1000');
   const target=(env.TARGET_PUUID || '').trim().toLowerCase();
   if(target && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(target))throw new Error('Invalid TARGET_PUUID');
@@ -99,9 +104,10 @@ export async function main(env = process.env) {
   if(target && !selected.length)throw new Error('Target player is not tracked');
   const players = maxPlayers ? selected.slice(0, maxPlayers) : selected;
   console.log(`Checking names and RR for ${players.length} tracked player(s).`);
+  const fetchImpl=createRequestScheduler();
   let failed = 0;
   for (const [i, player] of players.entries()) {
-    const result = await refreshPlayer(player, { origin });
+    const result = await refreshPlayer(player, { origin,fetchImpl });
     if (!result.ok) failed++;
     const current = result.name.ok ? result.name.data.history.find(h => h.ended_at == null) : null;
     const renamed = current && (current.name !== player.name || current.tag !== player.tag);
@@ -113,7 +119,7 @@ export async function main(env = process.env) {
   // on the one-time historical scan. Cursors persist across scheduled runs.
   if(pages) for(const [i,player] of players.entries()) {
     await sleep(DELAY_MS);
-    const result=await backfillPlayer(player,{origin,pages});
+    const result=await backfillPlayer(player,{origin,pages,fetchImpl});
     if(!result.ok)failed++;
     console.log(`[backfill ${i+1}/${players.length}] ${player.puuid}: ${!result.ok?'FAILED: '+result.reason:!result.available?'no ranked platform yet':result.complete?'complete ('+result.next_start+' matches scanned)':'continuing from match '+result.next_start}`);
   }
