@@ -34,7 +34,7 @@
  * per match — see mergeRRHistory), so the response — and what gets edge-
  * cached — grows to cover everything ever seen for that player, not just
  * today's rolling window. rr_players tracks identity (region/platform/
- * name/tag) per puuid so the 12h refresh job (refresh-rr-history.mjs) can
+ * name/tag) per puuid so the 24h refresh job (refresh-rr-history.mjs) can
  * list who to re-ping without scanning rr_history itself.
  *
  * HIDDEN-MMR LIVE CALIBRATION: the /history route (flagged foldCalibration)
@@ -50,7 +50,7 @@
  * WHY D1 AND NOT KV: this Function used to keep all of the above in a KV
  * namespace. KV's Free-plan write cap (1,000/day) got hit fast once live
  * calibration started folding on every /history page, and separately once
- * the 12h refresh job's rrhist writes grew past a few hundred tracked
+ * the 24h refresh job's rrhist writes grew past a few hundred tracked
  * players. D1's Free-plan cap is 100,000 rows written/day, and its UPDATEs
  * are atomic (no KV-style get-then-put race) — see CONSISTENCY CAVEAT below
  * for the one caveat that carries over.
@@ -91,6 +91,8 @@
  * justified for a first pass, since "occasionally still gets a real 429, but
  * never leaks real quota to the browser" already satisfies the actual goal.
  */
+
+import { observeName } from "../../lib/name-history.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
 const PREFIX = "/api";
@@ -549,6 +551,20 @@ const GLIDE_CAP_MS = 4000;    // don't glide if the resulting spacing would be a
 // Public route -> real upstream HenrikDev path + this route's cache TTL.
 const ROUTES = [
   {
+    // Fresh Riot ID by permanent account ID, then persist and return its timeline.
+    match: /^\/name-history\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,
+    upstream: (m) => `/valorant/v1/by-puuid/account/${m[1]}?force=true`,
+    cacheTtl: 3600,
+    nameHistory: true,
+  },
+  {
+    match: /^\/mmr-history-by-puuid\/([^/]+)\/([^/]+)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,
+    upstream: (m) => `/valorant/v2/by-puuid/mmr-history/${m[1]}/${m[2]}/${m[3]}`,
+    cacheTtl: 150,
+    persistRRHistory: true,
+    byPuuid: true,
+  },
+  {
     // /api/account/{name}/{tag}
     match: /^\/account\/([^/]+)\/([^/]+)$/,
     upstream: (m) => `/valorant/v1/account/${m[1]}/${m[2]}`,
@@ -670,7 +686,6 @@ async function mergeRRHistory(env, bodyText, waitUntil, route) {
     // A local `wrangler pages dev` run hits this every time: D1 lives in the
     // Cloudflare dashboard, so there's no APP_DB binding without one.
     try {
-      const nowIso = new Date().toISOString();
       const rowStmts = freshHistory
         .filter((h) => h?.match_id)
         .map((h) =>
@@ -679,21 +694,6 @@ async function mergeRRHistory(env, bodyText, waitUntil, route) {
             "ON CONFLICT(puuid, match_id) DO UPDATE SET data=excluded.data, date=excluded.date"
           ).bind(puuid, h.match_id, JSON.stringify(h), h.date || null)
         );
-      // Player identity, refreshed on every merge so a Riot ID rename self-heals
-      // the next time that player is looked up — used by the 12h refresher
-      // (refresh-rr-history.mjs) to list who to re-ping without scanning
-      // rr_history itself.
-      rowStmts.push(
-        env.APP_DB.prepare(
-          "INSERT INTO rr_players (puuid, region, platform, name, tag, updated_at) VALUES (?1,?2,?3,?4,?5,?6) " +
-          "ON CONFLICT(puuid) DO UPDATE SET region=excluded.region, platform=excluded.platform, " +
-          "name=excluded.name, tag=excluded.tag, updated_at=excluded.updated_at"
-        ).bind(
-          puuid, route?.region || null, route?.platform || null,
-          parsed?.data?.account?.name || route?.name || null,
-          parsed?.data?.account?.tag || route?.tag || null, nowIso
-        )
-      );
       waitUntil(
         env.APP_DB.batch(rowStmts).catch(() => {
           // Non-fatal — worst case this player's history doesn't grow this round.
@@ -706,6 +706,18 @@ async function mergeRRHistory(env, bodyText, waitUntil, route) {
       // for next time.
     }
   }
+
+  // Enrol and retain the RR platform even for an empty/unchanged match list.
+  // Existing names are owned by the fresh account observations, never rolled
+  // back by possibly older MMR data. Pre-feature rows still get enrolled here.
+  try {
+    await env.APP_DB.prepare(
+      "INSERT INTO rr_players (puuid,region,platform,name,tag,updated_at) VALUES (?1,?2,?3,?4,?5,?6) " +
+      "ON CONFLICT(puuid) DO UPDATE SET platform=excluded.platform,region=COALESCE(rr_players.region,excluded.region)"
+    ).bind(puuid, route?.region || null, route?.platform || null,
+      parsed.data.account.name || route?.name || null, parsed.data.account.tag || route?.tag || null,
+      new Date().toISOString()).run();
+  } catch { /* RR fetching remains available if persistence is unavailable. */ }
 
   // Always hand back the full accumulated set (could already be more than
   // these ~20 from a prior visit), regardless of whether the write above has
@@ -776,6 +788,14 @@ export async function onRequestGet(context) {
     if (m) { route = r; match = m; break; }
   }
   if (!route) return json({ error: "Unknown route" }, 404);
+  // One cache key per PUUID: arbitrary query strings must not bypass the
+  // hourly refresh or supply their own force/name/timestamp parameters.
+  if (route.nameHistory) {
+    match[1] = match[1].toLowerCase();
+    url.pathname = PREFIX + '/name-history/' + match[1];
+    url.search = '';
+    if (!env.APP_DB) return json({ error: "Name history storage unavailable" }, 503);
+  }
   if (!env.HENRIK_KEY) return json({ error: "Proxy misconfigured: HENRIK_KEY secret not set" }, 500);
   // No hard-fail on a missing APP_DB binding — every function that touches it
   // (getQuota/putQuota/mergeRRHistory/foldCalibration/handleCalibModel) already
@@ -805,6 +825,7 @@ export async function onRequestGet(context) {
   if (delay > 0) await sleep(delay);
 
   const upstreamUrl = UPSTREAM + route.upstream(match) + url.search;
+  const observedAt = new Date().toISOString();
   let upstream;
   try {
     upstream = await fetch(upstreamUrl, {
@@ -834,6 +855,22 @@ export async function onRequestGet(context) {
   let bodyText = await upstream.text();
   const contentType = upstream.headers.get("Content-Type") || "application/json";
 
+  if (upstream.status === 200 && route.nameHistory) {
+    let account;
+    try { account = JSON.parse(bodyText).data; } catch {}
+    if (account?.puuid?.toLowerCase() !== match[1] || !account?.name || !account?.tag) {
+      return json({ error: "Invalid account response" }, 502);
+    }
+    try {
+      const history = await observeName(env.APP_DB, { ...account, puuid: match[1] }, observedAt);
+      bodyText = JSON.stringify({ data: { puuid: match[1], region: account.region, history } });
+    } catch {
+      // Do not report a successful daily check if the observation wasn't saved.
+      console.error('Name history persistence failed');
+      return json({ error: "Name history storage unavailable" }, 503);
+    }
+  }
+
   if (upstream.status === 200 && route.foldCalibration) {
     // Fire-and-forget: never touches bodyText/the response, so this adds
     // zero latency to the user-facing request either way.
@@ -847,7 +884,8 @@ export async function onRequestGet(context) {
   if (upstream.status === 200 && route.persistRRHistory) {
     // match[] is /mmr-history/{region}/{platform}/{name}/{tag}
     bodyText = await mergeRRHistory(env, bodyText, context.waitUntil.bind(context), {
-      region: match[1], platform: match[2], name: decodeURIComponent(match[3]), tag: match[4],
+      region: match[1], platform: match[2],
+      name: route.byPuuid ? null : decodeURIComponent(match[3]), tag: route.byPuuid ? null : decodeURIComponent(match[4]),
     });
   }
 
