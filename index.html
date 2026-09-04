@@ -480,6 +480,10 @@ h1 span{color:var(--accent);}
 .name-history-current{font-size:10px;font-weight:600;padding:3px 6px;border:1px solid #3c4655;border-radius:4px;color:var(--brand);}
 .name-history-note{font-size:12px;color:#a1a1aa;line-height:1.6;margin-top:14px;}
 .name-history-retry{color:var(--brand);text-decoration:underline;text-underline-offset:3px;margin-left:8px;}
+.name-backfill-controls{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:16px;font-size:12px;color:#a1a1aa;}
+.name-backfill-controls[hidden]{display:none;}
+.name-backfill-button{padding:7px 11px;border:1px solid var(--surface-border);border-radius:6px;background:#1d1d20;color:#e4e4e7;cursor:pointer;}
+.name-backfill-button:disabled{opacity:.6;cursor:default;}
 #sg-rank-overview,.table-scroll{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
 #sg-rank-overview:focus-visible,.table-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:-2px;}
 .duo-player-name{display:flex;align-items:baseline;gap:3px;max-width:240px;}
@@ -604,7 +608,11 @@ h1 span{color:var(--accent);}
     <div id="name-history-card" class="s-card" hidden>
       <div id="name-history-table" class="table-scroll" role="region" aria-label="Name history table" tabindex="0"></div>
     </div>
-    <p class="name-history-note">From and To are the first and last dates we observed each Riot ID (UTC). Exact rename dates may fall between checks. Earlier names cannot be recovered from before tracking began.</p>
+    <div id="name-backfill-controls" class="name-backfill-controls" hidden>
+      <button id="name-backfill-button" class="name-backfill-button" type="button">Load older names</button>
+      <span id="name-backfill-status" role="status" aria-live="polite"></span>
+    </div>
+    <p class="name-history-note">From and To are the first and last dates found in available ranked matches or account checks (UTC). Exact rename dates may fall between observations; missing matches can leave gaps in the history.</p>
   </main>
   <main id="duos-page" class="detail-page" hidden aria-labelledby="duos-title">
     <div class="page-heading">
@@ -1069,24 +1077,54 @@ let allTeammates=[];
 // sections stay mounted so navigation preserves loaded data and open matches.
 let activePage='overview',analysisState='idle',rrHasData=false;
 let nameHistoryRows=[],nameHistoryState='idle';
+let nameHistoryBackfill=null,nameBackfillBusy=false,nameBackfillError=false;
 async function loadNameHistory(puuid,generation=_analysisGen){
   nameHistoryState='loading';renderNameHistory();
   try{
-    const {j}=await apiGet(`${API_BASE}/name-history/${encodeURIComponent(puuid)}`,{quiet:true});
+    const {j}=await apiGet(`${API_BASE}/name-history/${encodeURIComponent(puuid)}`,{quiet:true,cache:'no-store'});
     if(generation!==_analysisGen||puuid!==PUUID)return;
     if(!Array.isArray(j.data?.history))throw new Error('Invalid name history');
-    nameHistoryRows=j.data.history;nameHistoryState='ready';
+    nameHistoryRows=j.data.history;nameHistoryBackfill=j.data.backfill;nameHistoryState='ready';
   }catch{
     if(generation!==_analysisGen||puuid!==PUUID)return;
     nameHistoryState='error';
   }
   renderNameHistory();
 }
+async function loadOlderNames(){
+  if(nameBackfillBusy||!PUUID)return;
+  const puuid=PUUID,generation=_analysisGen;
+  nameBackfillBusy=true;nameBackfillError=false;renderNameHistory();
+  try{
+    // Small resumable batches keep a tab visit bounded; the daily job continues
+    // unfinished scans. The server owns the cursor and trusts only match rosters.
+    for(let page=0;page<20;page++){
+      if(generation!==_analysisGen||puuid!==PUUID)break;
+      const {j}=await apiGet(`${API_BASE}/name-backfill/${encodeURIComponent(puuid)}`,{quiet:true,cache:'no-store'});
+      if(generation!==_analysisGen||puuid!==PUUID)return;
+      if(!j.data?.backfill||!Array.isArray(j.data.history))throw new Error('Invalid backfill response');
+      nameHistoryRows=j.data.history;nameHistoryBackfill=j.data.backfill;renderNameHistory();
+      if(!nameHistoryBackfill.available||nameHistoryBackfill.complete||nameHistoryBackfill.limited||activePage!=='names')break;
+      await sleep(2500);
+    }
+  }catch{
+    if(generation===_analysisGen&&puuid===PUUID)nameBackfillError=true;
+  }finally{
+    if(generation===_analysisGen&&puuid===PUUID){nameBackfillBusy=false;renderNameHistory();}
+  }
+}
+document.getElementById('name-backfill-button').addEventListener('click',loadOlderNames);
 function renderNameHistory(){
   const empty=document.getElementById('names-empty');
   const card=document.getElementById('name-history-card');
   const container=document.getElementById('name-history-table');
   const hasRows=nameHistoryState==='ready'&&nameHistoryRows.length>0;
+  document.getElementById('name-backfill-controls').hidden=!hasRows;
+  const backfill=nameHistoryBackfill;
+  const button=document.getElementById('name-backfill-button');
+  button.hidden=!!backfill?.complete;button.disabled=nameBackfillBusy||!!backfill?.limited;
+  button.textContent=nameBackfillBusy?'Loading older names…':backfill?.next_start?'Continue backfill':'Load older names';
+  document.getElementById('name-backfill-status').textContent=nameBackfillError?'Could not finish this batch. Your progress is saved; try again.':backfill?.limited?'Scan limit reached; the available history may be incomplete.':backfill?.complete?`Backfill complete · ${backfill.next_start.toLocaleString()} ranked matches checked`:backfill?.next_start?`${backfill.next_start.toLocaleString()} ranked matches checked · the daily job continues unfinished scans`:'Older names can be recovered from available ranked matches across past acts.';
   card.hidden=!hasRows;empty.hidden=hasRows;
   container.replaceChildren();
   if(!hasRows){
@@ -1098,7 +1136,7 @@ function renderNameHistory(){
     return;
   }
   const table=document.createElement('table');table.className='rank-table';
-  table.innerHTML='<caption class="rank-sr-only">Observed Riot ID date ranges in UTC</caption><thead><tr><th scope="col">Riot ID</th><th scope="col">From</th><th scope="col">To</th><th scope="col">Status</th></tr></thead><tbody></tbody>';
+  table.innerHTML='<caption class="rank-sr-only">Observed Riot ID date ranges in UTC</caption><thead><tr><th scope="col">Riot ID</th><th scope="col">From</th><th scope="col">To</th><th scope="col">Source</th><th scope="col">Status</th></tr></thead><tbody></tbody>';
   const dateFormat=new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
   const values=[];
   nameHistoryRows.forEach(h=>{
@@ -1109,10 +1147,11 @@ function renderNameHistory(){
       if(!Number.isFinite(date.getTime())){cell.textContent='—';return;}
       const time=document.createElement('time');time.dateTime=date.toISOString();time.textContent=dateFormat.format(date);time.title=date.toUTCString();cell.appendChild(time);
     });
+    row.insertCell().textContent=h.source||'Checks';
     const status=row.insertCell();
     if(h.ended_at==null){const badge=document.createElement('span');badge.className='name-history-current';badge.textContent='Current';status.appendChild(badge);}
     else status.textContent='Previous';
-    values.push([h.name+'#'+h.tag,Date.parse(h.first_seen),Date.parse(h.last_seen),h.ended_at==null?'Current':'Previous']);
+    values.push([h.name+'#'+h.tag,Date.parse(h.first_seen),Date.parse(h.last_seen),h.source||'Checks',h.ended_at==null?'Current':'Previous']);
   });
   container.appendChild(table);initTableSorting(container,values);
 }
@@ -1561,7 +1600,7 @@ function runAnalysis(){
   // loadAll's account step fills those in from the by-puuid lookup.
   PLAYER=playerName;TAG=playerTag;REGION=playerRegion;PLATFORM=playerPlatform;TARGET_SEASON=playerSeason;PUUID=parsed.puuid;
   analysisState='loading';
-  nameHistoryRows=[];nameHistoryState='idle';renderNameHistory();
+  nameHistoryRows=[];nameHistoryState='idle';nameHistoryBackfill=null;nameBackfillBusy=false;nameBackfillError=false;renderNameHistory();
   updateDetailPages();
   setAccent('#3b82f6');
   document.body.classList.remove('rank-colored');
@@ -1637,7 +1676,7 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
 
   let r;
   try{
-    r=await fetch(url);
+    r=await fetch(url,{cache:opts.cache||'default'});
   }catch(e){
     // fetch() itself threw → network/CORS failure (e.g. proxy 5xx with no CORS).
     if(_attempt>=MAX_RETRIES)throw new Error('Network error — check your connection');
