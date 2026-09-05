@@ -520,7 +520,7 @@ h1 span{color:var(--accent);}
 .rank-row-identity img{width:24px;height:24px;object-fit:contain;}
 .rank-table td{font-size:14px;}
 .rank-positive{color:#4ade80;}.rank-negative{color:#f87171;}
-.duos-table td.table-best{position:relative;background:rgba(var(--accent-rgb),.13);box-shadow:inset 0 -2px 0 var(--accent);color:#f4f4f5;font-weight:750;}
+.rank-table td.table-best{position:relative;background:rgba(var(--accent-rgb),.13);box-shadow:inset 0 -2px 0 var(--accent);color:#f4f4f5;font-weight:750;}
 .rank-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 #party-size-section{margin-bottom:24px;}
 .rr-table-card{padding:0;overflow:hidden;margin-bottom:24px;}
@@ -538,10 +538,15 @@ h1 span{color:var(--accent);}
 .detail-filter-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
 .detail-filter-row[hidden]{display:none;}
 .detail-filter-row .hero-scope-toggle{margin:0;}
-.compact-filter{display:inline-flex;align-items:center;gap:7px;color:#a1a1aa;font-size:11px;font-weight:700;letter-spacing:.04em;white-space:nowrap;}
-.compact-filter select{height:30px;padding:0 28px 0 10px;border:1px solid #36363b;border-radius:6px;background:#1c1c1f;color:var(--text);font:600 12px var(--font-body);cursor:pointer;color-scheme:dark;}
-.compact-filter select:hover{border-color:#52525b;background:#222226;}
-.compact-filter select:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
+.party-size-filter{display:inline-flex;align-items:center;gap:8px;max-width:100%;color:#a1a1aa;font-size:11px;font-weight:700;letter-spacing:.04em;white-space:nowrap;}
+.party-size-options{display:inline-flex;max-width:100%;padding:2px;border:1px solid #36363b;border-radius:8px;background:#161618;overflow-x:auto;scrollbar-width:none;}
+.party-size-options::-webkit-scrollbar{display:none;}
+.party-size-options label{position:relative;cursor:pointer;}
+.party-size-options input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
+.party-size-options span{display:flex;align-items:center;justify-content:center;min-height:28px;padding:0 10px;border-radius:5px;color:#a1a1aa;font-size:12px;font-weight:650;letter-spacing:0;transition:background-color .15s,color .15s,box-shadow .15s;}
+.party-size-options label:hover span{color:var(--text);background:#222226;}
+.party-size-options input:checked+span{color:#fff;background:#303036;box-shadow:0 1px 3px rgba(0,0,0,.35);}
+.party-size-options input:focus-visible+span{outline:2px solid var(--brand);outline-offset:1px;}
 .match-context{display:flex;flex-direction:column;align-items:flex-end;gap:3px;}
 .match-server{font-family:var(--font-body);font-size:11px;color:#a1a1aa;white-space:nowrap;}
 .rr-draw{color:#facc15;}
@@ -562,7 +567,7 @@ h1 span{color:var(--accent);}
 .rr-movement-legend span{display:inline-flex;align-items:center;gap:6px;}
 .rr-legend-mark{display:inline-block;width:10px;height:10px;border-radius:50%;background:#71717a;}
 .rr-legend-mark.win{background:#4ade80;}.rr-legend-mark.loss{background:#f87171;}
-.rr-legend-mark.volume{width:13px;height:13px;background:#60a5fa;border:3px solid rgba(96,165,250,.3);}
+.rr-legend-mark.trend{width:18px;height:3px;border-radius:999px;background:linear-gradient(90deg,#4ade80,#f87171);}
 .rr-movement-scroll{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
 .rr-movement-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:3px;}
 .rr-movement-svg{display:block;width:100%;min-width:720px;height:auto;font-family:var(--font-body);}
@@ -571,9 +576,10 @@ h1 span{color:var(--accent);}
 .rr-movement-svg .rank-band-label{fill:#c4c4cc;font-size:10px;font-weight:600;}
 .rr-movement-svg .trend-area{fill:rgba(96,165,250,.08);}
 .rr-movement-svg .trend-line{fill:none;stroke:url(#rr-movement-gradient);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
-.rr-movement-svg .trend-point{stroke:#141416;stroke-width:2;}
+.rr-movement-svg .trend-point{opacity:.42;stroke:#141416;stroke-width:1.5;}
 .rr-movement-svg .trend-point.positive{fill:#4ade80;}.rr-movement-svg .trend-point.negative{fill:#f87171;}.rr-movement-svg .trend-point.neutral{fill:#a1a1aa;}
-.rr-movement-svg g[tabindex]:focus{outline:none;}.rr-movement-svg g[tabindex]:focus .trend-point{stroke:#fff;stroke-width:3;}
+.rr-movement-svg g[tabindex]:hover .trend-point,.rr-movement-svg g[tabindex]:focus .trend-point{opacity:1;stroke:#fff;stroke-width:2.5;}
+.rr-movement-svg g[tabindex]:focus{outline:none;}
 @media(max-width:600px){
   .rank-table th,.rank-table td,.rank-table.duos-table th,.rank-table.duos-table td{padding-left:14px;padding-right:14px;}
   .rr-movement-card{padding:14px;}
@@ -675,7 +681,18 @@ h1 span{color:var(--accent);}
     <div class="page-heading">
       <h1 id="lobby-rank-title" tabindex="-1">Lobby Rank</h1>
     </div>
-    <div id="lobby-rank-filter-host"></div>
+    <div id="lobby-rank-filter-host" class="detail-filter-row">
+      <div class="party-size-filter" role="radiogroup" aria-labelledby="lobby-rank-party-size-label">
+        <span id="lobby-rank-party-size-label">Party size</span>
+        <div class="party-size-options">
+          <label><input type="radio" name="lobby-rank-party-size" value="0" checked onchange="setLobbyRankPartySize(this.value)"><span>All</span></label>
+          <label><input type="radio" name="lobby-rank-party-size" value="1" onchange="setLobbyRankPartySize(this.value)"><span>Solo</span></label>
+          <label><input type="radio" name="lobby-rank-party-size" value="2" onchange="setLobbyRankPartySize(this.value)"><span>Duo</span></label>
+          <label><input type="radio" name="lobby-rank-party-size" value="3" onchange="setLobbyRankPartySize(this.value)"><span>Trio</span></label>
+          <label><input type="radio" name="lobby-rank-party-size" value="5" onchange="setLobbyRankPartySize(this.value)"><span>5-Stack</span></label>
+        </div>
+      </div>
+    </div>
     <div id="lobby-rank-card-host">
         <div class="s-card" id="sg-rank-card" style="display:none">
           <div class="rank-overview" id="sg-rank-overview" role="region" aria-label="Rank comparison table" tabindex="0"></div>
@@ -689,17 +706,16 @@ h1 span{color:var(--accent);}
       <p>See where the selected act’s matches were played and compare results and performance on each server.</p>
     </div>
     <div id="servers-filter-host" class="detail-filter-row">
-      <label class="compact-filter" for="servers-party-size">
-        <span>Party size</span>
-        <select id="servers-party-size" onchange="setServerPartySize(this.value)">
-          <option value="0">All parties</option>
-          <option value="1">Solo</option>
-          <option value="2">Duo</option>
-          <option value="3">Trio</option>
-          <option value="4">Quad</option>
-          <option value="5">5-Stack</option>
-        </select>
-      </label>
+      <div class="party-size-filter" role="radiogroup" aria-labelledby="servers-party-size-label">
+        <span id="servers-party-size-label">Party size</span>
+        <div class="party-size-options">
+          <label><input type="radio" name="servers-party-size" value="0" checked onchange="setServerPartySize(this.value)"><span>All</span></label>
+          <label><input type="radio" name="servers-party-size" value="1" onchange="setServerPartySize(this.value)"><span>Solo</span></label>
+          <label><input type="radio" name="servers-party-size" value="2" onchange="setServerPartySize(this.value)"><span>Duo</span></label>
+          <label><input type="radio" name="servers-party-size" value="3" onchange="setServerPartySize(this.value)"><span>Trio</span></label>
+          <label><input type="radio" name="servers-party-size" value="5" onchange="setServerPartySize(this.value)"><span>5-Stack</span></label>
+        </div>
+      </div>
     </div>
     <div id="servers-content" hidden>
       <dl id="servers-summary-stats" class="server-summary-stats" aria-label="Server summary"></dl>
@@ -716,10 +732,10 @@ h1 span{color:var(--accent);}
       <dl id="rr-summary-stats" class="rr-summary-stats" aria-label="RR summary"></dl>
       <section id="rr-movement-section" class="rr-movement-section" hidden aria-labelledby="rr-movement-title">
         <div class="rr-movement-card">
-          <div class="rr-movement-head"><h2 id="rr-movement-title">Average RR movement by starting rank</h2><span id="rr-movement-count" class="rr-movement-count"></span></div>
-          <p class="rr-movement-note">Nearby starting ranks are grouped so dense match histories stay readable. The curve and dots show mean applied RR; dot size reflects matches in the bucket. Refunds are added, protected losses stay at zero, and recorded payouts already include party penalties. Covered penalized five-stacks remain in this chart; the aggregate tables retain their ordinary-RR eligibility rules.</p>
+          <div class="rr-movement-head"><h2 id="rr-movement-title">RR movement by starting rank</h2><span id="rr-movement-count" class="rr-movement-count"></span></div>
+          <p class="rr-movement-note">Every covered match is shown as a point. The curve is a locally weighted trend calculated from all entries, without buckets. Refunds are added, protected losses stay at zero, and recorded payouts already include party penalties. Covered penalized five-stacks remain in this chart; the aggregate tables retain their ordinary-RR eligibility rules.</p>
           <div class="rr-movement-legend" aria-label="Chart legend">
-            <span><i class="rr-legend-mark win"></i>Average gain</span><span><i class="rr-legend-mark loss"></i>Average loss</span><span><i class="rr-legend-mark volume"></i>Larger dot = more matches</span>
+            <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span><span><i class="rr-legend-mark trend"></i>All-entry trend</span>
           </div>
           <div id="rr-movement-chart" class="rr-movement-scroll" role="region" aria-label="RR movement chart" tabindex="0"></div>
         </div>
@@ -843,7 +859,7 @@ const RANK_ICONS={
 // using the current tier set (Ascendant at 21–23). Smaller badges stay embedded.
 function rankIcon(tier,size=16){const src=size>=64&&RANK_ICONS[tier]?`/assets/ranks/${tier}.png`:RANK_ICONS[tier];return src?`<img src="${src}" width="${size}" height="${size}" style="image-rendering:auto;flex-shrink:0;vertical-align:middle" alt="">`:"";}
 
-const PARTY_LABELS={1:'Solo',2:'Duo',3:'Trio',4:'Quad',5:'5-Stack'};
+const PARTY_LABELS={1:'Solo',2:'Duo',3:'Trio',5:'5-Stack'};
 function partyIcon(sz){
   const svgP=`<svg width="9" height="11" viewBox="0 0 9 11" fill="currentColor" style="opacity:.6"><circle cx="4.5" cy="3" r="2.5"/><path d="M0 11c0-2.485 2.015-4.5 4.5-4.5S9 8.515 9 11"/></svg>`;
   let h='';
@@ -1152,7 +1168,7 @@ function measureCtx(){
   if(!_measureCtx)_measureCtx=document.createElement('canvas').getContext('2d');
   return _measureCtx;
 }
-let allTeammates=[],serverData=[],serverPartySize=0,serverFilteredMatchCount=0;
+let allTeammates=[],serverData=[],serverPartySize=0,serverFilteredMatchCount=0,lobbyRankPartySize=0,lobbyRankFilteredMatchCount=0;
 
 // ── CURRENT-ACT MATCH CACHE ──────────────────────────────────────────────
 // Full HenrikDev v4 matches are hundreds of KB each because they include the
@@ -1380,7 +1396,9 @@ function updateDetailPages(){
   const rankEmpty=document.getElementById('lobby-rank-empty');
   rankEmpty.hidden=hasRanks||analysisState==='error';
   rankEmpty.textContent=analysisState==='loading'?'Loading this player’s matches…':ready
-    ?(allMatches.length?'No rank breakdown available for these filters. Try another act or include placements.':'No matches found for this season. Try another act.')
+    ?(lobbyRankPartySize&&lobbyRankFilteredMatchCount===0
+      ?`No ${PARTY_LABELS[lobbyRankPartySize]||lobbyRankPartySize+'-Stack'} matches found for these filters.`
+      :allMatches.length?'No rank breakdown available for these filters. Try another act or include placements.':'No matches found for this season. Try another act.')
     :'Search for a player above to explore their rank breakdown.';
   document.getElementById('servers-filter-host').hidden=!ready||!allMatches.length;
   const hasServers=ready&&serverData.length>0;
@@ -1840,9 +1858,11 @@ function runAnalysis(){
   settleSearchBarWidth();
   allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;mhDayStats={};
   _rrChangeByMatchId={};_preRRByMatchId={};_refundedRRByMatchId={};_derankProtectedByMatchId={};
-  allTeammates=[];serverData=[];serverPartySize=0;serverFilteredMatchCount=0;
-  const serverPartySelect=document.getElementById('servers-party-size');
-  if(serverPartySelect)serverPartySelect.value='0';
+  allTeammates=[];serverData=[];serverPartySize=0;serverFilteredMatchCount=0;lobbyRankPartySize=0;lobbyRankFilteredMatchCount=0;
+  const serverPartyAll=document.querySelector('input[name="servers-party-size"][value="0"]');
+  if(serverPartyAll)serverPartyAll.checked=true;
+  const lobbyRankPartyAll=document.querySelector('input[name="lobby-rank-party-size"][value="0"]');
+  if(lobbyRankPartyAll)lobbyRankPartyAll.checked=true;
   // If the season dropdown's prefetch already fetched this exact player (the
   // common case — it runs while the player is still typing), reuse those
   // responses instead of re-fetching account+mmr from scratch.
@@ -3437,13 +3457,18 @@ function renderServers(matches){
     const share=tr.insertCell();share.textContent=row.share==null?'—':Math.round(row.share)+'%';
     tbody.appendChild(tr);
   });
+  const values=serverData.map(row=>[row.name,row.games,row.avgLobby,row.kd,row.acs,row.winRate,row.share]);
+  highlightTableMaxima(table,values,[
+    {column:1,label:'matches'},{column:2,label:'average lobby rank'},{column:3,label:'K/D'},
+    {column:4,label:'average ACS'},{column:5,label:'win rate'},{column:6,label:'match share'},
+  ]);
   container.appendChild(table);
-  initTableSorting(container,serverData.map(row=>[row.name,row.games,row.avgLobby,row.kd,row.acs,row.winRate,row.share]));
+  initTableSorting(container,values);
 }
 
 function setServerPartySize(value){
   const size=Number(value);
-  serverPartySize=Number.isInteger(size)&&size>=1&&size<=5?size:0;
+  serverPartySize=[1,2,3,5].includes(size)?size:0;
   renderServers(statMatches);
   updateDetailPages();
 }
@@ -3553,11 +3578,6 @@ function renderTeammates(){
     lobby:t.rankCount?t.rankSum/t.rankCount:null,
     wr:t.wins/t.games*100,
   }));
-  const statLabels=['matches','average lobby rank','K/D','average ACS','win rate'];
-  const maxima=statLabels.map((_,index)=>{
-    const values=teammateRows.map(t=>[t.games,t.lobby,t.kd,t.acs,t.wr][index]).filter(value=>value!=null);
-    return values.length?Math.max(...values):null;
-  });
   teammateRows.forEach(t=>{
     const wr=Math.round(t.wr);
     const row=document.createElement('tr');
@@ -3569,18 +3589,15 @@ function renderTeammates(){
       <td class="${wr===50?'':wr>50?'rank-positive':'rank-negative'}">${wr}%</td>`;
     row.querySelector('.duo-name').textContent=t.name;
     row.querySelector('.duo-tag').textContent='#'+t.tag;
-    [t.games,t.lobby,t.kd,t.acs,t.wr].forEach((value,index)=>{
-      if(value==null||value!==maxima[index])return;
-      const cell=row.cells[index+1];
-      cell.classList.add('table-best');
-      const suffix=`Highest ${statLabels[index]} among listed teammates`;
-      cell.title=cell.title?cell.title+' · '+suffix:suffix;
-      cell.setAttribute('aria-label',cell.textContent.trim()+'. '+suffix);
-    });
     tbody.appendChild(row);
   });
+  const values=teammateRows.map(t=>[t.name+'#'+t.tag,t.games,t.lobby,t.kd,t.acs,t.wr]);
+  highlightTableMaxima(table,values,[
+    {column:1,label:'matches'},{column:2,label:'average lobby rank'},{column:3,label:'K/D'},
+    {column:4,label:'average ACS'},{column:5,label:'win rate'},
+  ]);
   list.appendChild(table);
-  initTableSorting(list,teammateRows.map(t=>[t.name+'#'+t.tag,t.games,t.lobby,t.kd,t.acs,t.wr]));
+  initTableSorting(list,values);
 }
 
 // Keep each table's chosen sort through incremental loads and filter changes.
@@ -3630,6 +3647,24 @@ function initTableSorting(container,values){
   });
   const saved=tableSortState.get(container.id);
   if(saved&&saved.column<headers.length)applySort(saved);
+}
+
+function highlightTableMaxima(table,values,specs){
+  const rows=[...table.tBodies[0].rows];
+  specs.forEach(({column,label})=>{
+    const numeric=values.map(row=>row[column]).filter(value=>typeof value==='number'&&Number.isFinite(value));
+    if(!numeric.length)return;
+    const maximum=Math.max(...numeric);
+    values.forEach((row,index)=>{
+      if(row[column]!==maximum)return;
+      const cell=rows[index]?.cells[column];
+      if(!cell)return;
+      const suffix=`Highest ${label} in this table`;
+      cell.classList.add('table-best');
+      cell.title=cell.title?cell.title+' · '+suffix:suffix;
+      cell.setAttribute('aria-label',cell.textContent.trim()+'. '+suffix);
+    });
+  });
 }
 
 function tableLobbyValue(sum,count){
@@ -3691,9 +3726,9 @@ function renderPlaytime(){
 let lobbyRankData=[],partySizeData=[];
 
 // Aggregate the same match statistics by lobby rank or party size.
-function buildKdRankBuckets(bucketFn,{includeLobby}={}){
+function buildKdRankBuckets(bucketFn,{includeLobby,matches=statMatches}={}){
   const rb={};
-  statMatches.filter(m=>m.myStats).forEach(m=>{
+  matches.filter(m=>m.myStats).forEach(m=>{
     const info=bucketFn(m);
     if(!info)return;
     const t=info.tier;
@@ -3836,35 +3871,8 @@ function renderRRMovement(matches){
   const rawMin=Math.min(...rows.map(row=>row.m.myPreRR));
   const rawMax=Math.max(...rows.map(row=>row.m.myPreRR));
   const rawSpan=Math.max(1,rawMax-rawMin);
-  // Aim for roughly 6–18 readable points, then snap to familiar RR steps so
-  // bucket ranges remain easy to understand in tooltips.
-  const targetBucketCount=Math.min(18,Math.max(6,Math.round(Math.sqrt(rows.length)*1.7)));
-  const idealBucketSize=rawSpan/targetBucketCount;
-  const bucketSize=[10,20,25,50,100,200].find(step=>step>=idealBucketSize)||Math.ceil(idealBucketSize/100)*100;
-  const bucketOrigin=Math.floor(rawMin/bucketSize)*bucketSize;
-  const bucketMap=new Map();
-  rows.forEach(row=>{
-    const index=Math.floor((row.m.myPreRR-bucketOrigin)/bucketSize);
-    if(!bucketMap.has(index))bucketMap.set(index,{start:bucketOrigin+index*bucketSize,count:0,sumX:0,sumNet:0,wins:0,losses:0,draws:0,refunds:0,refundTotal:0,shields:0,penalties:0});
-    const bucket=bucketMap.get(index);
-    bucket.count++;
-    bucket.sumX+=row.m.myPreRR;
-    bucket.sumNet+=row.net;
-    if(row.m.won===true)bucket.wins++;
-    else if(row.m.won===false)bucket.losses++;
-    else bucket.draws++;
-    if(row.refund){bucket.refunds++;bucket.refundTotal+=row.refund;}
-    if(row.shielded)bucket.shields++;
-    if(row.penalty)bucket.penalties++;
-  });
-  const buckets=[...bucketMap.values()].map(bucket=>({
-    ...bucket,
-    x:bucket.sumX/bucket.count,
-    net:bucket.sumNet/bucket.count,
-  })).sort((a,b)=>a.x-b.x);
   document.getElementById('rr-movement-count').textContent=[
     `${rows.length} covered ${rows.length===1?'match':'matches'}`,
-    `${buckets.length} rank ${buckets.length===1?'bucket':'buckets'}`,
     refunds?`${refunds} ${refunds===1?'refund':'refunds'}`:null,
     shields?`${shields} protected`:null,
     penalties?`${penalties} penalized`:null,
@@ -3881,14 +3889,14 @@ function renderRRMovement(matches){
   const plotRight=width-right,plotBottom=height-bottom,plotWidth=plotRight-left,plotHeight=plotBottom-top;
   const xPad=Math.max(25,(rawMax-rawMin)*.06);
   const xMin=Math.max(0,rawMin-xPad),xMax=rawMax+xPad;
-  const movementMax=Math.max(...buckets.map(bucket=>Math.abs(bucket.net)),10);
+  const movementMax=Math.max(...rows.map(row=>Math.abs(row.net)),10);
   const yMax=Math.ceil(movementMax/5)*5;
   const x=value=>left+(value-xMin)/(xMax-xMin)*plotWidth;
   const y=value=>top+(yMax-value)/(yMax*2)*plotHeight;
   const svg=node('svg',{class:'rr-movement-svg',viewBox:`0 0 ${width} ${height}`,role:'img','aria-labelledby':'rr-movement-svg-title rr-movement-svg-desc'});
   svg.append(
-    node('title',{id:'rr-movement-svg-title'},'Average RR movement by starting rank and RR'),
-    node('desc',{id:'rr-movement-svg-desc'},'A smooth curve connects average applied RR movement for nearby starting-rank buckets. Larger points contain more matches. Refunds, protected losses, and party-penalized payouts are included in the averages.'),
+    node('title',{id:'rr-movement-svg-title'},'RR movement by starting rank and RR'),
+    node('desc',{id:'rr-movement-svg-desc'},'Every covered match appears as a point. A locally weighted curve calculated from all entries shows the trend. Refunds, protected losses, and party-penalized payouts are included.'),
   );
   const defs=node('defs');
   const gradient=node('linearGradient',{id:'rr-movement-gradient',x1:'0',x2:'0',y1:top,y2:plotBottom,gradientUnits:'userSpaceOnUse'});
@@ -3925,10 +3933,9 @@ function renderRRMovement(matches){
     svg.appendChild(node('text',{x:px,y:plotBottom+22,'text-anchor':'middle',class:'tick-label'},rrPositionFromElo(value).label));
   }
   svg.appendChild(node('text',{x:(left+plotRight)/2,y:height-12,'text-anchor':'middle',class:'axis-label'},'Starting rank + RR'));
-  const yTitle=node('text',{x:15,y:(top+plotBottom)/2,'text-anchor':'middle',class:'axis-label',transform:`rotate(-90 15 ${(top+plotBottom)/2})`},'Average applied RR');
+  const yTitle=node('text',{x:15,y:(top+plotBottom)/2,'text-anchor':'middle',class:'axis-label',transform:`rotate(-90 15 ${(top+plotBottom)/2})`},'Applied RR movement');
   svg.appendChild(yTitle);
 
-  const points=buckets.map(bucket=>({...bucket,px:x(bucket.x),py:y(bucket.net)}));
   const smoothPath=curvePoints=>{
     if(!curvePoints.length)return'';
     if(curvePoints.length===1)return`M ${curvePoints[0].px} ${curvePoints[0].py}`;
@@ -3947,27 +3954,56 @@ function renderRRMovement(matches){
     }
     return path;
   };
-  if(points.length>1){
-    const curve=smoothPath(points);
-    svg.appendChild(node('path',{d:`${curve} L ${points[points.length-1].px} ${y(0)} L ${points[0].px} ${y(0)} Z`,class:'trend-area','aria-hidden':'true'}));
+  // Gaussian smoothing keeps every match in the calculation: distant entries
+  // receive progressively less weight, but no match is assigned to or replaced
+  // by a bucket. Sampling only controls how finely the SVG curve is drawn.
+  const bandwidth=Math.max(30,rawSpan*.12);
+  const trendSampleCount=rawMax===rawMin?1:Math.min(100,Math.max(40,rows.length));
+  const trendPoints=Array.from({length:trendSampleCount},(_,index)=>{
+    const value=trendSampleCount===1?rawMin:rawMin+rawSpan*index/(trendSampleCount-1);
+    let weightedTotal=0,weightTotal=0;
+    rows.forEach(row=>{
+      const distance=(row.m.myPreRR-value)/bandwidth;
+      const weight=Math.exp(-.5*distance*distance);
+      weightedTotal+=row.net*weight;
+      weightTotal+=weight;
+    });
+    const net=weightTotal?weightedTotal/weightTotal:0;
+    return{px:x(value),py:y(net)};
+  });
+  if(trendPoints.length>1){
+    const curve=smoothPath(trendPoints);
+    svg.appendChild(node('path',{d:`${curve} L ${trendPoints[trendPoints.length-1].px} ${y(0)} L ${trendPoints[0].px} ${y(0)} Z`,class:'trend-area','aria-hidden':'true'}));
     svg.appendChild(node('path',{d:curve,class:'trend-line','aria-hidden':'true'}));
   }
-  points.forEach(point=>{
-    const position=rrPositionFromElo(point.x);
-    const rangeStart=rrPositionFromElo(point.start).label;
-    const rangeEnd=rrPositionFromElo(point.start+bucketSize-1).label;
-    const parts=[
-      `${position.label} average; ${point.count} ${point.count===1?'match':'matches'} from ${rangeStart} to ${rangeEnd}`,
-      `${point.net>=0?'+':''}${point.net.toFixed(1)} average applied RR`,
-      `${point.wins} wins, ${point.losses} losses${point.draws?`, ${point.draws} draws`:''}`,
-    ];
-    if(point.refunds)parts.push(`${point.refunds} ${point.refunds===1?'refund':'refunds'} totaling ${point.refundTotal>=0?'+':''}${point.refundTotal} RR`);
-    if(point.shields)parts.push(`${point.shields} protected ${point.shields===1?'loss':'losses'}`);
-    if(point.penalties)parts.push(`${point.penalties} party-penalized ${point.penalties===1?'match':'matches'}`);
+
+  const sortedRows=rows.slice().sort((a,b)=>a.m.myPreRR-b.m.myPreRR||(a.m.startedAtMs||0)-(b.m.startedAtMs||0));
+  const overlapTotals=new Map();
+  sortedRows.forEach(row=>{
+    const key=Math.round(row.m.myPreRR);
+    overlapTotals.set(key,(overlapTotals.get(key)||0)+1);
+  });
+  const overlapIndexes=new Map();
+  sortedRows.forEach(row=>{
+    const key=Math.round(row.m.myPreRR);
+    const total=overlapTotals.get(key)||1;
+    const index=overlapIndexes.get(key)||0;
+    overlapIndexes.set(key,index+1);
+    const spacing=total>1?Math.min(3,18/(total-1)):0;
+    const px=x(row.m.myPreRR)+(index-(total-1)/2)*spacing;
+    const py=y(row.net);
+    const position=rrPositionFromElo(row.m.myPreRR,row.m.myTierId);
+    const date=row.m.startedAtMs?new Date(row.m.startedAtMs).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}):'Unknown date';
+    const result=row.m.won===true?'Win':row.m.won===false?'Loss':'Draw';
+    const parts=[`${date}, ${position.label}, ${result}`,`${row.payout>=0?'+':''}${row.payout} RR recorded payout`];
+    if(row.refund)parts.push(`${row.refund>=0?'+':''}${row.refund} RR refund`);
+    if(row.shielded)parts.push('Rank Shield / derank protection blocked the loss');
+    if(row.penalty)parts.push(`payout includes a ${Math.round(row.penalty*100)}% party penalty`);
+    parts.push(`${row.net>=0?'+':''}${row.net} RR applied movement`);
     const group=node('g',{tabindex:'0',role:'img','aria-label':parts.join('. ')});
     group.appendChild(node('title',{},parts.join(' · ')));
-    const pointClass=point.net>.05?'positive':point.net<-.05?'negative':'neutral';
-    group.appendChild(node('circle',{cx:point.px,cy:point.py,r:Math.min(8,3.5+Math.sqrt(point.count)),class:`trend-point ${pointClass}`}));
+    const pointClass=row.net>0?'positive':row.net<0?'negative':'neutral';
+    group.appendChild(node('circle',{cx:px,cy:py,r:3.5,class:`trend-point ${pointClass}`}));
     svg.appendChild(group);
   });
   container.appendChild(svg);
@@ -4009,8 +4045,14 @@ function renderRRBreakdown(matches){
       acs:acsMatches.length?acsMatches.reduce((sum,s)=>sum+s.acs,0)/acsMatches.length:null,
     }};
   }).filter(row=>row.stats.n);
-  document.getElementById('rr-rank-table').innerHTML=`<table class="rank-table"><caption class="rank-sr-only">RR gains and losses grouped by your rank in each match. ${scope}</caption><thead><tr><th scope="col">Player rank</th><th scope="col">Games</th>${columns}</tr></thead><tbody>${rows.map(({tier,stats})=>`<tr><th scope="row"><div class="rank-row-identity">${rankIcon(tier,24)}<span>${avgLabel(tier)}</span></div></th>${cells(stats)}</tr>`).join('')}</tbody></table>`;
-  initTableSorting(document.getElementById('rr-rank-table'),rows.map(({tier,stats:s})=>[tier,s.n,s.kd,s.acs,s.winRate,s.avgGain,s.avgLoss==null?null:-s.avgLoss]));
+  const rankContainer=document.getElementById('rr-rank-table');
+  rankContainer.innerHTML=`<table class="rank-table"><caption class="rank-sr-only">RR gains and losses grouped by your rank in each match. ${scope}</caption><thead><tr><th scope="col">Player rank</th><th scope="col">Games</th>${columns}</tr></thead><tbody>${rows.map(({tier,stats})=>`<tr><th scope="row"><div class="rank-row-identity">${rankIcon(tier,24)}<span>${avgLabel(tier)}</span></div></th>${cells(stats)}</tr>`).join('')}</tbody></table>`;
+  const values=rows.map(({tier,stats:s})=>[tier,s.n,s.kd,s.acs,s.winRate,s.avgGain,s.avgLoss==null?null:-s.avgLoss]);
+  highlightTableMaxima(rankContainer.querySelector('table'),values,[
+    {column:1,label:'games'},{column:2,label:'K/D'},{column:3,label:'ACS'},
+    {column:4,label:'win rate'},{column:5,label:'RR per win'},
+  ]);
+  initTableSorting(rankContainer,values);
   renderRRByScore(matches);
 }
 
@@ -4038,7 +4080,12 @@ function renderRRByScore(matches){
   container.innerHTML=`<table class="rank-table"><caption class="rank-sr-only">Average RR by exact scoreline, grouped from closest to widest round margin. Only eligible wins and losses with recorded scores are included.</caption>
     <thead><tr><th scope="col">Scoreline</th><th scope="col">Round margin</th><th scope="col">Wins</th><th scope="col">RR / Win</th><th scope="col">Losses</th><th scope="col">RR / Loss</th></tr></thead>
     <tbody>${rows.map(({high,low,margin,stats:s})=>`<tr><th scope="row">${high}–${low}</th><td>${margin}</td><td>${s.wins}</td><td class="rank-positive">${s.avgGain==null?'—':rrSigned(s.avgGain,1)}</td><td>${s.losses}</td><td class="rank-negative">${s.avgLoss==null?'—':rrSigned(-s.avgLoss,1)}</td></tr>`).join('')}</tbody></table>`;
-  initTableSorting(container,rows.map(({high,low,margin,stats:s})=>[high*1000+low,margin,s.wins,s.avgGain,s.losses,s.avgLoss==null?null:-s.avgLoss]));
+  const values=rows.map(({high,low,margin,stats:s})=>[high*1000+low,margin,s.wins,s.avgGain,s.losses,s.avgLoss==null?null:-s.avgLoss]);
+  highlightTableMaxima(container.querySelector('table'),values,[
+    {column:2,label:'wins'},{column:3,label:'RR per win'},{column:4,label:'losses'},
+    {column:5,label:'RR retained on a loss'},
+  ]);
+  initTableSorting(container,values);
 }
 
 /* ── CLUTCHES (1v1–1v5) ─────────────────────────────────── */
@@ -4114,12 +4161,16 @@ function renderClutchCard(matches){
 
 
 function renderRankByRankCard(){
+  const lobbyMatches=lobbyRankPartySize
+    ?statMatches.filter(m=>(m.partySize||1)===lobbyRankPartySize)
+    :statMatches;
+  lobbyRankFilteredMatchCount=lobbyMatches.length;
   lobbyRankData=buildKdRankBuckets(m=>{
     if(m.avgRank==null)return null;
     const tier=Math.round(m.avgRank);
     if(tier<3)return null;
     return{tier,label:avgLabel(tier)};
-  });
+  },{matches:lobbyMatches});
   partySizeData=buildKdRankBuckets(m=>{
     const size=m.partySize||1;
     return{tier:size,label:PARTY_LABELS[size]||size+'-Stack',icon:partyIcon(size)};
@@ -4127,6 +4178,13 @@ function renderRankByRankCard(){
   renderPerformanceTable('sg-rank-overview',lobbyRankData,false);
   renderPerformanceTable('party-size-list',partySizeData,true);
   document.getElementById('sg-rank-card').style.display=lobbyRankData.length?'block':'none';
+}
+
+function setLobbyRankPartySize(value){
+  const size=Number(value);
+  lobbyRankPartySize=[1,2,3,5].includes(size)?size:0;
+  renderRankByRankCard();
+  updateDetailPages();
 }
 
 function renderPerformanceTable(containerId,rows,party){
@@ -4151,13 +4209,21 @@ function renderPerformanceTable(containerId,rows,party){
     row.querySelector('.rank-row-name').textContent=b.label||rName(b.tier);
     tbody.appendChild(row);
   });
-  container.appendChild(table);
-  initTableSorting(container,rows.map(b=>[
+  const values=rows.map(b=>[
     b.tier,b.total,...(party?[b.lobbyCount?b.lobbySum/b.lobbyCount:null]:[]),
     b.totalDeaths>0?b.totalKills/b.totalDeaths:b.totalKills>0?b.totalKills:null,
     b.acsCount?b.acsSum/b.acsCount:null,
     b.wins/b.total*100,
-  ]));
+  ]);
+  highlightTableMaxima(table,values,party?[
+    {column:1,label:'matches'},{column:2,label:'average lobby rank'},{column:3,label:'K/D'},
+    {column:4,label:'average ACS'},{column:5,label:'win rate'},
+  ]:[
+    {column:1,label:'matches'},{column:2,label:'K/D'},{column:3,label:'average ACS'},
+    {column:4,label:'win rate'},
+  ]);
+  container.appendChild(table);
+  initTableSorting(container,values);
 }
 
 /* ── MATCH LIST ──────────────────────────────────────────── */
