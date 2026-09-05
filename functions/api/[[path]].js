@@ -697,7 +697,8 @@ async function mergeRRHistory(env, bodyText, waitUntil, route) {
         .map((h) =>
           env.APP_DB.prepare(
             "INSERT INTO rr_history (puuid, match_id, data, date) VALUES (?1,?2,?3,?4) " +
-            "ON CONFLICT(puuid, match_id) DO UPDATE SET data=excluded.data, date=excluded.date"
+            "ON CONFLICT(puuid, match_id) DO UPDATE SET data=excluded.data, date=excluded.date " +
+            "WHERE rr_history.data<>excluded.data OR COALESCE(rr_history.date,'')<>COALESCE(excluded.date,'')"
           ).bind(puuid, h.match_id, JSON.stringify(h), h.date || null)
         );
       waitUntil(

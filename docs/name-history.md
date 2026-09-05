@@ -32,6 +32,13 @@ work remains and progress was made. It stops with an error if remaining players
 cannot make progress. Daily refreshes share the workflow lock and take priority
 at continuation boundaries; afterward they resume the backfill.
 
+Only the earliest and latest match of each consecutive Riot ID run on a page
+are stored. This preserves displayed date ranges and one-match name changes
+without writing ten redundant rows for ten matches under the same name. RR rows
+are also left untouched when a refresh returns byte-for-byte unchanged data.
+The backfill has its own 00:07 UTC schedule so a Free-plan D1 write-limit pause
+resumes just after Cloudflare resets daily usage at 00:00 UTC.
+
 An empty page ends the scan; short
 pages do not. A 10,000-match safety limit is explicitly reported as incomplete.
 The Name History tab's Load older names button processes up to 20 pages, and

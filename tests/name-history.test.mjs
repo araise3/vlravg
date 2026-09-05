@@ -136,6 +136,19 @@ test('malformed pages do not advance the cursor and blank names are skipped',asy
   assert.throws(()=>matchNameEvidence([historicalMatch('2','A','EU','2099-01-01')],puuid));
 });
 
+test('unchanged match pages retain range endpoints instead of every redundant row',()=>{
+  const page=Array.from({length:10},(_,i)=>historicalMatch(String(i),'Same','EU',
+    `2026-08-${String(i+1).padStart(2,'0')}T05:17:00.000Z`));
+  const evidence=matchNameEvidence(page,puuid,Date.parse(day(6)));
+  assert.deepEqual(evidence.map(e=>e.match_id),['0','9']);
+  const changed=matchNameEvidence([
+    historicalMatch('a','First','EU','2026-08-01T00:00:00Z'),
+    historicalMatch('b','Second','EU','2026-08-02T00:00:00Z'),
+    historicalMatch('c','First','EU','2026-08-03T00:00:00Z'),
+  ],puuid,Date.parse(day(6)));
+  assert.deepEqual(changed.map(e=>e.match_id),['a','b','c']);
+});
+
 test('scheduled backfill stops when complete and reports failed pages for a later retry',async()=>{
   let calls=0;
   const result=await backfillPlayer({puuid},{origin:'https://example.test',pages:20,sleepImpl:async()=>{},fetchImpl:async()=>{
