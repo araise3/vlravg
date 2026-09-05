@@ -778,6 +778,28 @@ function planDelay(quota) {
   return since >= want ? 0 : want - since;
 }
 
+const NAME_HISTORY_REFRESH_MS = 24 * 60 * 60 * 1000;
+
+async function savedNameHistory(env, puuid) {
+  const history = await readNameHistory(env.APP_DB, puuid);
+  const backfill = await backfillState(env.APP_DB, puuid);
+  return { puuid, region: backfill.region || null, history, backfill };
+}
+
+function hasFreshCurrentName(snapshot, now = Date.now()) {
+  const current = snapshot.history.find((row) => row.ended_at == null);
+  const lastSeen = Date.parse(current?.last_seen);
+  return Number.isFinite(lastSeen) && lastSeen >= now - NAME_HISTORY_REFRESH_MS;
+}
+
+function savedNameHistoryResponse(snapshot, source, refreshDeferred = false) {
+  const data = refreshDeferred ? { ...snapshot, refreshDeferred: true } : snapshot;
+  const res = json({ data }, 200);
+  res.headers.set('Cache-Control', 'no-store');
+  res.headers.set('X-Name-History-Source', source);
+  return res;
+}
+
 export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
@@ -797,11 +819,25 @@ export async function onRequestGet(context) {
   if (!route) return json({ error: "Unknown route" }, 404);
   // One cache key per PUUID: arbitrary query strings must not bypass the
   // hourly refresh or supply their own force/name/timestamp parameters.
+  let storedNameHistory = null;
   if (route.nameHistory || route.nameBackfill) {
     match[1] = match[1].toLowerCase();
     url.pathname = PREFIX + (route.nameBackfill ? '/name-backfill/' : '/name-history/') + match[1];
     url.search = '';
     if (!env.APP_DB) return json({ error: "Name history storage unavailable" }, 503);
+  }
+  if (route.nameHistory) {
+    try {
+      storedNameHistory = await savedNameHistory(env, match[1]);
+      // D1 is the display source. A current identity observed within the last
+      // day needs no upstream refresh, so never hold its saved timeline behind
+      // quota pacing or an account API call.
+      if (storedNameHistory.history.length && hasFreshCurrentName(storedNameHistory)) {
+        return savedNameHistoryResponse(storedNameHistory, 'SAVED-FRESH');
+      }
+    } catch {
+      return json({ error: "Name history storage unavailable" }, 503);
+    }
   }
   if (route.nameBackfill) {
     try {
@@ -828,8 +864,8 @@ export async function onRequestGet(context) {
     if (route.nameHistory) {
       try {
         const body = await cached.json();
-        body.data.history = await readNameHistory(env.APP_DB,match[1]);
-        body.data.backfill = await backfillState(env.APP_DB,match[1]);
+        body.data.history = storedNameHistory.history;
+        body.data.backfill = storedNameHistory.backfill;
         const res = json(body,200); res.headers.set('X-Proxy-Cache','HIT');res.headers.set('Cache-Control','no-store');return res;
       } catch { return json({error:'Name history storage unavailable'},503); }
     }
@@ -844,6 +880,9 @@ export async function onRequestGet(context) {
   // just 429.
   let quota = await getQuota(env);
   if (quota.remaining != null && quota.remaining <= 0 && quota.resetAt > Date.now()) {
+    if (route.nameHistory && storedNameHistory.history.length) {
+      return savedNameHistoryResponse(storedNameHistory, 'SAVED-REFRESH-DEFERRED', true);
+    }
     return json({ error: "Rate limited", retryAfterMs: quota.resetAt - Date.now() }, 429);
   }
 
@@ -858,6 +897,9 @@ export async function onRequestGet(context) {
       headers: { Authorization: env.HENRIK_KEY, Accept: "application/json" },
     });
   } catch (e) {
+    if (route.nameHistory && storedNameHistory.history.length) {
+      return savedNameHistoryResponse(storedNameHistory, 'SAVED-REFRESH-DEFERRED', true);
+    }
     return json({ error: "Upstream fetch failed" }, 502);
   }
 
@@ -872,6 +914,9 @@ export async function onRequestGet(context) {
   context.waitUntil(putQuota(env, nextQuota));
 
   if (upstream.status === 429) {
+    if (route.nameHistory && storedNameHistory.history.length) {
+      return savedNameHistoryResponse(storedNameHistory, 'SAVED-REFRESH-DEFERRED', true);
+    }
     const headerRetry = upstream.headers.get("retry-after");
     const retryMs = headerRetry != null ? Math.max(parseInt(headerRetry, 10), 0) * 1000 : 0;
     const resetMs = nextQuota.resetAt ? Math.max(0, nextQuota.resetAt - Date.now()) : 0;
@@ -880,6 +925,10 @@ export async function onRequestGet(context) {
 
   let bodyText = await upstream.text();
   const contentType = upstream.headers.get("Content-Type") || "application/json";
+
+  if (route.nameHistory && upstream.status >= 500 && storedNameHistory.history.length) {
+    return savedNameHistoryResponse(storedNameHistory, 'SAVED-REFRESH-DEFERRED', true);
+  }
 
   if (upstream.status === 200 && route.nameBackfill) {
     let matches;
