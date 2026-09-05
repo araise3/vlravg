@@ -251,7 +251,7 @@ h1 span{color:var(--accent);}
 .mc-map-panel.has-player-rank .mc-map-meta-row:last-child{padding-right:68px;}
 .mc-map-server{flex-shrink:0;}
 .mc-player-rank{color:#fff;font-weight:400;white-space:nowrap;}
-.mc-player-rank-icon{position:absolute;right:10px;bottom:10px;z-index:1;display:flex;width:64px;height:64px;align-items:center;justify-content:center;filter:drop-shadow(0 4px 10px rgba(0,0,0,.55));pointer-events:none;}
+.mc-player-rank-icon{position:absolute;right:10px;bottom:10px;z-index:1;display:flex;width:64px;height:64px;align-items:center;justify-content:center;filter:drop-shadow(0 0 7px rgba(var(--rank-glow-rgb),.42)) drop-shadow(0 4px 10px rgba(0,0,0,.55));pointer-events:none;}
 .mc-player-rank-icon img{width:64px;height:64px;object-fit:contain;}
 .mc-body{display:flex;flex-direction:column;justify-content:space-between;gap:18px;padding:18px 20px;min-width:0;}
 .mc-topline{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
@@ -626,7 +626,7 @@ h1 span{color:var(--accent);}
   .mc-map-panel{min-height:110px;padding:16px;}.mc-map-image{object-position:center 45%;}
   .mc-map-panel:after{background:linear-gradient(90deg,rgba(9,9,11,.82),rgba(9,9,11,.12));}
   .mc-body{padding:15px;gap:20px;}.mc-performance{gap:8px;grid-template-columns:1.1fr .6fr 1.4fr .85fr;}
-  .mc-performance-val{font-size:14px;}.mc-lobby-value img{width:19px;height:19px;}
+  .mc-performance-val{font-size:14px;}
   .mc-rr-stat .match-rr-change{font-size:15px;}.mc-performance-lbl{font-size:8px;}
   .match-day-header{flex-wrap:wrap;gap:10px;}.match-day-heading{width:100%;}
   .match-day-stats{width:100%;justify-content:space-between;}.match-day-stat{padding:0 10px;}.match-day-stat:first-child{padding-left:0;}
@@ -636,7 +636,7 @@ h1 span{color:var(--accent);}
   .mc-performance{grid-template-columns:1fr 1fr;gap:16px;}
   .mc-performance-stat:nth-child(even){align-items:flex-end;}
   .mc-performance-val{font-size:16px;}
-  .mc-performance-lbl{font-size:9px;}.mc-lobby-value img{width:22px;height:22px;}
+  .mc-performance-lbl{font-size:9px;}
   .mc-rr-stat .match-rr-change{font-size:17px;}
 }
 @media(max-width:480px){.page-nav{gap:0;flex-wrap:wrap;}.page-nav a{padding:0 10px;font-size:13px;}}
@@ -4528,12 +4528,12 @@ function buildMatchCard(m){
         '<span class="mc-map-meta-row">'+[time,duration].filter(Boolean).map(v=>'<span>'+matchHtml(v)+'</span>').join('')+
         (serverName?'<span class="mc-map-server" title="'+matchHtml(serverName)+'">'+matchHtml(serverName)+'</span>':'')+'</span>'+
         (preMatchRankText?'<span class="mc-map-meta-row"><span class="mc-player-rank" title="Your rank at the start of this match">'+matchHtml(preMatchRankText)+'</span></span>':'')+'</span>'+
-        (preMatchRankIcon?'<span class="mc-player-rank-icon" title="Your rank at the start of this match">'+preMatchRankIcon+'</span>':'')+'</span>'+
+        (preMatchRankIcon?'<span class="mc-player-rank-icon" style="--rank-glow-rgb:'+hexToRgb(rColor(preMatchRank.tier))+'" title="Your rank at the start of this match">'+preMatchRankIcon+'</span>':'')+'</span>'+
       '<span class="mc-body"><span class="mc-topline"><span class="mc-result"><span class="m-result-tag '+rc+'">'+rt+'</span><span class="match-score">'+scoreHtml+'</span></span>'+awardTag+resetTag+
         '<span class="mc-expand-icon"><span class="mc-expand-label">Roster</span><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 7.5 5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>'+
       '<span class="mc-performance"><span class="mc-performance-stat"><span class="mc-performance-lbl">K / D / A</span><span class="mc-performance-val">'+kdaHtml+'</span></span>'+
       '<span class="mc-performance-stat"><span class="mc-performance-lbl">ACS</span><span class="mc-performance-val">'+acs+'</span></span>'+
-      '<span class="mc-performance-stat" title="'+matchHtml(rankTitle)+'"><span class="mc-performance-lbl">Avg lobby</span><span class="mc-performance-val mc-lobby-value">'+(rank?rankIcon(rank.tier,22):'')+rankLabel+(rank?' ('+rank.rr+' RR)':'')+'</span></span>'+
+      '<span class="mc-performance-stat" title="'+matchHtml(rankTitle)+'"><span class="mc-performance-lbl">Avg lobby</span><span class="mc-performance-val mc-lobby-value">'+rankLabel+(rank?' ('+rank.rr+' RR)':'')+'</span></span>'+
       '<span class="mc-performance-stat mc-rr-stat"><span class="mc-performance-lbl">RR change</span><span class="match-rr-change '+(myRR!=null?(myRR>=0?'gain':'loss'):'')+(shielded?' shielded':'')+'" title="'+(myRR==null?'No RR data for this match':shielded?'Rank Shield protected your displayed rank; this recorded RR loss still applied':'Recorded RR change for this match')+'">'+shieldIcon+(myRR!=null?(myRR>=0?'+':'')+myRR:'—')+'</span></span></span></span></button>';
   const trigger=card.querySelector('button');
   const label=rt+' on '+mapName+', '+score+'. '+(awardLabel?awardLabel+'. ':'')+kda+' KDA, '+acs+' ACS.';
