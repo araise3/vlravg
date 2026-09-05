@@ -1073,6 +1073,128 @@ function measureCtx(){
 }
 let allTeammates=[];
 
+// ── CURRENT-ACT MATCH CACHE ──────────────────────────────────────────────
+// Full HenrikDev v4 matches are hundreds of KB each because they include the
+// complete kill feed and round economy. processMatch() reduces that to the few
+// KB the UI actually reads, so persist those summaries in IndexedDB and never
+// put the raw response in browser storage. The cache is local to this browser.
+//
+// There is deliberately no time-based expiry: a cached profile lives for the
+// current act. As soon as act metadata says a newer act has started, every row
+// from the previous act is removed. Browsers may still evict IndexedDB under
+// storage pressure, and clearing site data removes it immediately.
+const MATCH_CACHE_DB='vlravg-match-cache';
+const MATCH_CACHE_STORE='current-act-profiles';
+const MATCH_CACHE_DB_VERSION=1;
+const MATCH_CACHE_FORMAT=1;
+let _matchCacheDbPromise=null;
+
+function openMatchCacheDb(){
+  if(!('indexedDB' in window))return Promise.resolve(null);
+  if(_matchCacheDbPromise)return _matchCacheDbPromise;
+  _matchCacheDbPromise=new Promise((resolve,reject)=>{
+    const req=indexedDB.open(MATCH_CACHE_DB,MATCH_CACHE_DB_VERSION);
+    req.onupgradeneeded=()=>{
+      const db=req.result;
+      if(!db.objectStoreNames.contains(MATCH_CACHE_STORE))db.createObjectStore(MATCH_CACHE_STORE,{keyPath:'puuid'});
+    };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error||new Error('Could not open match cache'));
+    req.onblocked=()=>reject(new Error('Match cache upgrade blocked'));
+  });
+  return _matchCacheDbPromise;
+}
+
+function matchCacheRequest(req){
+  return new Promise((resolve,reject)=>{
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error||new Error('Match cache request failed'));
+  });
+}
+
+async function purgeMatchCacheExceptAct(seasonId){
+  const db=await openMatchCacheDb();
+  if(!db||!seasonId)return;
+  await new Promise((resolve,reject)=>{
+    const tx=db.transaction(MATCH_CACHE_STORE,'readwrite');
+    const req=tx.objectStore(MATCH_CACHE_STORE).openCursor();
+    req.onsuccess=()=>{
+      const cursor=req.result;
+      if(!cursor)return;
+      const row=cursor.value;
+      if(row?.format!==MATCH_CACHE_FORMAT||row?.seasonId!==seasonId)cursor.delete();
+      cursor.continue();
+    };
+    req.onerror=()=>reject(req.error||new Error('Could not scan match cache'));
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error||new Error('Could not prune match cache'));
+    tx.onabort=()=>reject(tx.error||new Error('Could not prune match cache'));
+  });
+}
+
+async function readCurrentActMatchCache(puuid,seasonId){
+  const db=await openMatchCacheDb();
+  if(!db||!puuid||!seasonId)return null;
+  const tx=db.transaction(MATCH_CACHE_STORE,'readonly');
+  const row=await matchCacheRequest(tx.objectStore(MATCH_CACHE_STORE).get(puuid.toLowerCase()));
+  if(row?.format!==MATCH_CACHE_FORMAT||row?.seasonId!==seasonId||!Array.isArray(row.matches))return null;
+  return row;
+}
+
+function matchForCache(m){
+  const out={...m,
+    // RR history is refreshed separately and reattached by match_id on read.
+    myRR:null,myPreRR:null,myDerankProtected:false,
+    // Store a plain array for maximum IndexedDB/structured-clone portability.
+    teamMvpPuuids:[...(m.teamMvpPuuids||[])],
+  };
+  delete out.postReset;
+  delete out.actPlacement;
+  return out;
+}
+
+function matchFromCache(m){
+  const matchId=m.matchId||null;
+  return{...m,
+    teamMvpPuuids:new Set(Array.isArray(m.teamMvpPuuids)?m.teamMvpPuuids:[]),
+    myRR:matchId?_rrChangeByMatchId[matchId]??null:null,
+    myPreRR:matchId?_preRRByMatchId[matchId]??null:null,
+    myDerankProtected:matchId?!!_derankProtectedByMatchId[matchId]:false,
+  };
+}
+
+async function writeCurrentActMatchCache(puuid,seasonId,expectedGames,matches,complete){
+  const db=await openMatchCacheDb();
+  if(!db||!puuid||!seasonId)return;
+  const row={
+    puuid:puuid.toLowerCase(),seasonId,format:MATCH_CACHE_FORMAT,
+    expectedGames,complete:!!complete,updatedAt:Date.now(),
+    matches:matches.map(matchForCache),
+  };
+  const tx=db.transaction(MATCH_CACHE_STORE,'readwrite');
+  const committed=new Promise((resolve,reject)=>{
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error||new Error('Could not write match cache'));
+    tx.onabort=()=>reject(tx.error||new Error('Could not write match cache'));
+  });
+  const saved=matchCacheRequest(tx.objectStore(MATCH_CACHE_STORE).put(row));
+  await Promise.all([saved,committed]);
+}
+
+// The live season feed contains all acts, including future ones. The newest
+// start date that is not in the future is the one cacheable act. If both live
+// metadata and the hardcoded fallback are unavailable, caching fails open and
+// the normal history pagination remains unchanged.
+function currentActId(){
+  const source=_actMeta&&Object.keys(_actMeta).length?_actMeta:HARDCODED_ACT_META;
+  const now=Date.now();
+  let bestId=null,bestStart=-Infinity;
+  Object.entries(source||{}).forEach(([id,info])=>{
+    if(Number.isFinite(info?.start)&&info.start<=now&&info.start>bestStart){bestId=id.toLowerCase();bestStart=info.start;}
+  });
+  return bestId;
+}
+
 // Pages share one search/data flow and one placement filter. Their result
 // sections stay mounted so navigation preserves loaded data and open matches.
 let activePage='overview',analysisState='idle',rrHasData=false;
@@ -2677,6 +2799,8 @@ async function loadAll(prefetchSnapshot=null){
     let start=0;
     let finalCurrent=null;
     let finalSeasonLabel=null;
+    let useCurrentActCache=false;
+    let cachedActRecord=null;
     setStatus('Fetching season history…',true);
     try{
       let mmrJ;
@@ -2742,6 +2866,18 @@ async function loadAll(prefetchSnapshot=null){
       // explicitly chose a season before hitting Search.
       finalSeasonLabel=TARGET_SEASON?getSeasonPreviewLabel():'All';
     }
+    // Resolve the real calendar-current act before consulting local history.
+    // Cache failures never affect the normal API path.
+    await loadSeasonDates();
+    const liveCurrentActId=currentActId();
+    if(liveCurrentActId){
+      try{await purgeMatchCacheExceptAct(liveCurrentActId);}catch(_){/* IndexedDB unavailable: fetch normally. */}
+      useCurrentActCache=!!(PUUID&&TARGET_SEASON&&targetCount!=null&&TARGET_SEASON.toLowerCase()===liveCurrentActId);
+      if(useCurrentActCache){
+        try{cachedActRecord=await readCurrentActMatchCache(PUUID,liveCurrentActId);}catch(_){cachedActRecord=null;}
+        start=0; // current-act incremental scans always begin at the newest match
+      }
+    }
     // Reveal rank, season, and region together — nothing pops in separately.
     if(myGen!==_analysisGen)return;
     finalizeHeader(finalCurrent,finalSeasonLabel||getSeasonPreviewLabel());
@@ -2783,8 +2919,17 @@ async function loadAll(prefetchSnapshot=null){
     }
     if(myGen!==_analysisGen)return;
 
-    // Step 2: paginate match history, stopping when we hit targetCount
+    // Step 2: paginate match history. A complete current-act cache can satisfy
+    // the whole request; if the act has grown, scan newest-first only until a
+    // previously cached match proves we've reached the stored history.
     let collected=[];
+    const cachedMatches=useCurrentActCache&&cachedActRecord
+      ?cachedActRecord.matches.map(matchFromCache).filter(m=>m.seasonId?.toLowerCase()===TARGET_SEASON.toLowerCase())
+      :[];
+    const cachedIds=new Set(cachedMatches.map(m=>m.matchId).filter(Boolean));
+    const cacheComplete=!!(cachedActRecord?.complete&&cachedMatches.length);
+    const cacheSatisfies=!!(cacheComplete&&targetCount!=null&&cachedMatches.length>=targetCount);
+    const stopAtCachedMatch=!!(useCurrentActCache&&cacheComplete&&!cacheSatisfies);
     // Safety bound: the v4 matchlist response has no total/pagination metadata
     // (only status+data), so an empty page is the sole reliable end signal. Since
     // we no longer treat a short page as the end, guard against a pathological
@@ -2793,13 +2938,18 @@ async function loadAll(prefetchSnapshot=null){
     const MAX_OFFSET=5000;
     let guardPages=0, MAX_PAGES=600; // ~ MAX_OFFSET/min-page-size, belt-and-braces
 
-    while(true){
+    if(cacheSatisfies){
+      setStatus(`Loading ${cachedMatches.length} cached matches…`,true);
+      setProgress(95);
+    }
+    while(!cacheSatisfies){
       if(start>=MAX_OFFSET||++guardPages>MAX_PAGES)break; // safety stop
       // Update status and progress bar together from the same value so they stay in sync
-      const pct=targetCount?Math.round(collected.length/targetCount*100):null;
-      setStatus(`Fetching matches ${start+1}–${start+BATCH} · ${collected.length}${targetCount?'/'+targetCount:''} found${pct?' ('+pct+'%)':''}…`,true);
+      const found=(stopAtCachedMatch?cachedMatches.length:0)+collected.length;
+      const pct=targetCount?Math.round(found/targetCount*100):null;
+      setStatus(`Fetching matches ${start+1}–${start+BATCH} · ${found}${targetCount?'/'+targetCount:''} found${pct?' ('+pct+'%)':''}…`,true);
       setProgress(targetCount
-        ?Math.min(5+collected.length/targetCount*90,95)
+        ?Math.min(5+found/targetCount*90,95)
         :Math.min(10+start/4,85));
 
       const url=`${API_BASE}/history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}?mode=competitive&size=${BATCH}&start=${start}`;
@@ -2810,10 +2960,20 @@ async function loadAll(prefetchSnapshot=null){
       if(!data.length)break;
 
       const onPage=TARGET_SEASON?data.filter(m=>isSeason(m)):data;
-      onPage.forEach(m=>collected.push(m));
+      let reachedCache=false;
+      onPage.forEach(m=>{
+        const id=m.metadata?.match_id||m.match_id||'';
+        if(stopAtCachedMatch&&id&&cachedIds.has(id)){reachedCache=true;return;}
+        collected.push(m);
+      });
+
+      // With a previously complete cache, the first overlap means every older
+      // match on subsequent pages is already stored. Only the new prefix was
+      // downloaded, even when more than one page of matches was added.
+      if(reachedCache)break;
 
       // If we're fetching a specific act and have all its games, stop.
-      if(TARGET_SEASON&&targetCount&&collected.length>=targetCount)break;
+      if(TARGET_SEASON&&targetCount&&collected.length+(stopAtCachedMatch?cachedMatches.length:0)>=targetCount)break;
       // Scrolled past the season — a full-ish page with zero matching games
       // means we've paged beyond the target act.
       if(TARGET_SEASON&&collected.length>0&&onPage.length===0)break;
@@ -2833,8 +2993,20 @@ async function loadAll(prefetchSnapshot=null){
       if(!id||seen.has(id))return false;
       seen.add(id);return true;
     });
-    await loadSeasonDates(); // ensure real act-start dates are in before filtering
-    allMatches=tagActPlacements(tagPostResetPlacements(deduped.map(processMatch)));
+    const freshMatches=deduped.map(processMatch);
+    let processed=freshMatches;
+    if(useCurrentActCache&&cachedMatches.length){
+      const merged=new Map(cachedMatches.map(m=>[m.matchId,m]));
+      freshMatches.forEach(m=>merged.set(m.matchId,m)); // fresh summaries win on overlap
+      processed=[...merged.values()]
+        .filter(m=>m.seasonId?.toLowerCase()===TARGET_SEASON.toLowerCase())
+        .sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0));
+    }
+    if(useCurrentActCache&&PUUID){
+      const complete=targetCount!=null&&processed.length>=targetCount;
+      try{await writeCurrentActMatchCache(PUUID,TARGET_SEASON.toLowerCase(),targetCount,processed,complete);}catch(_){/* Cache writes are best-effort. */}
+    }
+    allMatches=tagActPlacements(tagPostResetPlacements(processed));
     if(myGen!==_analysisGen)return; // a newer analysis took over
     setProgress(100);
     setTimeout(()=>setProgress(0),600);
