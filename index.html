@@ -584,12 +584,10 @@ h1 span{color:var(--accent);}
 .rr-legend-mark{display:inline-block;width:10px;height:10px;border-radius:50%;background:#71717a;}
 .rr-legend-mark.win{background:#4ade80;}.rr-legend-mark.loss{background:#f87171;}
 .rr-legend-mark.trend{width:18px;height:3px;border-radius:999px;background:linear-gradient(90deg,#4ade80,#f87171);}
-.rr-legend-mark.shield{border-radius:2px;background:#60a5fa;transform:rotate(45deg);}
 .rr-movement-scroll{position:relative;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
 .rr-movement-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:3px;}
 .rr-movement-svg{display:block;width:100%;min-width:720px;height:auto;font-family:var(--font-body);}
-.rr-movement-svg .rank-band{cursor:zoom-in;}
-.rr-movement-svg.zoomed .rank-band{cursor:zoom-out;}
+.rr-movement-svg .rank-band{cursor:pointer;}
 .rr-movement-svg .rank-band:focus{outline:none;stroke:var(--brand);stroke-width:2;}
 .rr-movement-svg .grid{stroke:#303034;stroke-width:1;}.rr-movement-svg .zero{stroke:#71717a;stroke-width:1.5;}
 .rr-movement-svg .axis-label,.rr-movement-svg .tick-label{fill:#a1a1aa;font-size:11px;}
@@ -598,10 +596,7 @@ h1 span{color:var(--accent);}
 .rr-movement-svg .trend-line{fill:none;stroke:url(#rr-movement-gradient);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
 .rr-movement-svg .trend-point{opacity:.42;stroke:#141416;stroke-width:1.5;}
 .rr-movement-svg .trend-point.positive{fill:#4ade80;}.rr-movement-svg .trend-point.negative{fill:#f87171;}.rr-movement-svg .trend-point.neutral{fill:#a1a1aa;}
-.rr-movement-svg .shield-point{fill:#60a5fa;stroke:#141416;stroke-width:2;}
-.rr-movement-svg .shield-letter{fill:#fff;font-size:8px;font-weight:800;text-anchor:middle;dominant-baseline:central;pointer-events:none;}
 .rr-movement-svg g[tabindex]:hover .trend-point,.rr-movement-svg g[tabindex]:focus .trend-point{opacity:1;stroke:#fff;stroke-width:2.5;}
-.rr-movement-svg g[tabindex]:hover .shield-point,.rr-movement-svg g[tabindex]:focus .shield-point{stroke:#fff;stroke-width:2.5;}
 .rr-movement-svg g[tabindex]:focus{outline:none;}
 .rr-dot-tooltip{position:absolute;z-index:4;display:flex;flex-direction:column;gap:3px;min-width:max-content;padding:8px 10px;border:1px solid #3f3f46;border-radius:7px;background:#202023;color:#f4f4f5;box-shadow:0 8px 24px rgba(0,0,0,.4);font-size:12px;line-height:1.25;pointer-events:none;transform:translate(-50%,calc(-100% - 10px));}
 .rr-dot-tooltip[hidden]{display:none;}
@@ -771,9 +766,9 @@ h1 span{color:var(--accent);}
       <section id="rr-movement-section" class="rr-movement-section" hidden aria-labelledby="rr-movement-title">
         <div class="rr-movement-card">
           <div class="rr-movement-head"><h2 id="rr-movement-title">RR movement by starting rank</h2><span id="rr-movement-count" class="rr-movement-count"></span></div>
-          <p class="rr-movement-note">Every covered match is shown at its reconstructed starting rank + RR. Double-click a rank area to zoom into only that rank; double-click again to reset. Protected losses remain part of rank reconstruction and stay visible as blue S markers; only their forced zero movement is excluded from the trend fit because it is not a normal payout. Refunds are added, and recorded payouts already include party penalties. Covered penalized five-stacks remain in this chart; the aggregate tables retain their ordinary-RR eligibility rules.</p>
+          <p class="rr-movement-note">Every covered win or loss is shown at its reconstructed starting rank + RR. Draws and Rank Shield-protected losses are hidden from this chart. Double-click a rank area to zoom into only that rank; double-click again to reset. Refunds are added, and recorded payouts already include party penalties. Covered penalized five-stacks remain in this chart; the aggregate tables retain their ordinary-RR eligibility rules.</p>
           <div class="rr-movement-legend" aria-label="Chart legend">
-            <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span><span><i class="rr-legend-mark shield"></i>S protected</span><span><i class="rr-legend-mark trend"></i>Trend excluding shields</span>
+            <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span><span><i class="rr-legend-mark trend"></i>Trend</span>
           </div>
           <div id="rr-movement-chart" class="rr-movement-scroll" role="region" aria-label="RR movement chart" tabindex="0"></div>
         </div>
@@ -3915,12 +3910,16 @@ function rrPositionFromElo(elo,tierHint=null){
 function renderRRMovement(matches){
   const section=document.getElementById('rr-movement-section');
   const container=document.getElementById('rr-movement-chart');
-  const allRows=matches.filter(m=>m.myRR!=null&&m.myPreRR!=null&&m.myTierId>=3&&!m.actPlacement).map(m=>{
+  // The movement chart describes ordinary wins and losses only. Draws and
+  // Rank Shield-protected losses remain in the surrounding RR summaries, but
+  // do not contribute points, domains, counts, or the fitted trend here.
+  const allRows=matches.filter(m=>
+    m.myRR!=null&&m.myPreRR!=null&&m.myTierId>=3&&!m.actPlacement&&
+    (m.won===true||m.won===false)&&!(m.myDerankProtected&&m.myRR<0)
+  ).map(m=>{
     const payout=m.myRR;
     const refund=Number.isFinite(m.myRefundedRR)?m.myRefundedRR:0;
-    const shielded=!!m.myDerankProtected&&payout<0;
-    const appliedMatch=shielded?0:payout;
-    return{m,payout,refund,shielded,net:appliedMatch+refund,penalty:m.myPartyPenalty||0};
+    return{m,payout,refund,net:payout+refund,penalty:m.myPartyPenalty||0};
   });
   const rowTier=row=>rrPositionFromElo(row.m.myPreRR,row.m.myPreTierId??row.m.myTierId).tier;
   let rows=rrMovementZoomTier==null?allRows:allRows.filter(row=>rowTier(row)===rrMovementZoomTier);
@@ -3930,7 +3929,6 @@ function renderRRMovement(matches){
   if(!allRows.length)return;
 
   const refunds=rows.filter(row=>row.refund!==0).length;
-  const shields=rows.filter(row=>row.shielded).length;
   const penalties=rows.filter(row=>row.penalty>0).length;
   const rawMin=Math.min(...rows.map(row=>row.m.myPreRR));
   const rawMax=Math.max(...rows.map(row=>row.m.myPreRR));
@@ -3939,7 +3937,6 @@ function renderRRMovement(matches){
     rrMovementZoomTier!=null?`${avgLabel(rrMovementZoomTier)} only`:null,
     `${rows.length} covered ${rows.length===1?'match':'matches'}`,
     refunds?`${refunds} ${refunds===1?'refund':'refunds'}`:null,
-    shields?`${shields} protected`:null,
     penalties?`${penalties} penalized`:null,
     rrMovementZoomTier!=null?'double-click to reset':null,
   ].filter(Boolean).join(' · ');
@@ -3958,7 +3955,9 @@ function renderRRMovement(matches){
   tooltip.hidden=true;
   const width=900,height=320,left=68,right=20,top=34,bottom=38;
   const plotRight=width-right,plotBottom=height-bottom,plotWidth=plotRight-left,plotHeight=plotBottom-top;
-  const xPad=Math.max(25,(rawMax-rawMin)*.06);
+  // Once a rank is zoomed, spread its observed RR range across almost the
+  // entire plot instead of retaining the broad all-ranks domain padding.
+  const xPad=rrMovementZoomTier==null?Math.max(25,rawSpan*.06):Math.max(2,rawSpan*.02);
   const xMin=Math.max(0,rawMin-xPad);
   const xMax=rawMax+xPad;
   const movementMax=Math.max(...rows.map(row=>Math.abs(row.net)),10);
@@ -3968,7 +3967,7 @@ function renderRRMovement(matches){
   const svg=node('svg',{class:`rr-movement-svg${rrMovementZoomTier!=null?' zoomed':''}`,viewBox:`0 0 ${width} ${height}`,role:'img','aria-labelledby':'rr-movement-svg-title rr-movement-svg-desc'});
   svg.append(
     node('title',{id:'rr-movement-svg-title'},'RR movement by starting rank and RR'),
-    node('desc',{id:'rr-movement-svg-desc'},'Every covered match appears at its reconstructed starting rank and RR. Protected losses remain visible as blue S markers and remain part of rank reconstruction, but their forced zero movement is excluded only from the trend fit.'),
+    node('desc',{id:'rr-movement-svg-desc'},'Every covered win or loss appears at its reconstructed starting rank and RR. Draws and Rank Shield-protected losses are excluded.'),
   );
   const defs=node('defs');
   const gradient=node('linearGradient',{id:'rr-movement-gradient',x1:'0',x2:'0',y1:top,y2:plotBottom,gradientUnits:'userSpaceOnUse'});
@@ -4062,17 +4061,12 @@ function renderRRMovement(matches){
     }
     return path;
   };
-  // Shields remain in `rows` and therefore keep their exact reconstructed x
-  // position. Exclude only their forced-zero y value from the statistical fit:
-  // that zero describes rank protection, not the payout relationship the trend
-  // is meant to show. This does not touch _preRRByMatchId or later matches.
-  const trendRows=rows.filter(row=>!row.shielded);
   const bandwidth=Math.max(30,rawSpan*.12);
-  const trendSampleCount=!trendRows.length?0:rawMax===rawMin||trendRows.length===1?1:Math.min(100,Math.max(40,trendRows.length));
+  const trendSampleCount=rawMax===rawMin||rows.length===1?1:Math.min(100,Math.max(40,rows.length));
   const trendPoints=Array.from({length:trendSampleCount},(_,index)=>{
     const value=trendSampleCount===1?rawMin:rawMin+rawSpan*index/(trendSampleCount-1);
     let weightedTotal=0,weightTotal=0;
-    trendRows.forEach(row=>{
+    rows.forEach(row=>{
       const distance=(row.m.myPreRR-value)/bandwidth;
       const weight=Math.exp(-.5*distance*distance);
       weightedTotal+=row.net*weight;
@@ -4104,23 +4098,14 @@ function renderRRMovement(matches){
     const py=y(row.net);
     return{row,px,py};
   });
-  // Draw shields last so their larger blue markers cannot disappear behind
-  // ordinary zero-movement points at the same starting RR.
-  positionedRows.sort((a,b)=>Number(a.row.shielded)-Number(b.row.shielded)).forEach(({row,px,py})=>{
+  positionedRows.forEach(({row,px,py})=>{
     const position=rrPositionFromElo(row.m.myPreRR,row.m.myPreTierId??row.m.myTierId);
     const rankText=`${avgLabel(position.tier)} · ${position.rr} RR`;
     const changeText=row.net===0?'0 RR':`${rrSigned(row.net,0)} RR`;
     const group=node('g',{tabindex:'0',role:'img','aria-label':`${rankText}. ${changeText}`,'aria-describedby':tooltip.id});
-    let marker;
-    if(row.shielded){
-      marker=node('rect',{x:px-6,y:py-6,width:12,height:12,rx:1.5,class:'shield-point',transform:`rotate(45 ${px} ${py})`});
-      group.appendChild(marker);
-      group.appendChild(node('text',{x:px,y:py,class:'shield-letter'},'S'));
-    }else{
-      const pointClass=row.net>0?'positive':row.net<0?'negative':'neutral';
-      marker=node('circle',{cx:px,cy:py,r:3.5,class:`trend-point ${pointClass}`});
-      group.appendChild(marker);
-    }
+    const pointClass=row.net>0?'positive':row.net<0?'negative':'neutral';
+    const marker=node('circle',{cx:px,cy:py,r:3.5,class:`trend-point ${pointClass}`});
+    group.appendChild(marker);
     const showTooltip=(clientX,clientY)=>{
       const rank=document.createElement('strong');rank.textContent=rankText;
       const change=document.createElement('span');change.textContent=changeText;
