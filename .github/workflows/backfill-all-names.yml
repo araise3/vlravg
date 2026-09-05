@@ -1,6 +1,10 @@
 name: Backfill all name histories
 
 on:
+  schedule:
+    # Free-plan D1 counters reset at 00:00 UTC. Resume shortly afterward if a
+    # previous run exhausted that day's write allowance.
+    - cron: "7 0 * * *"
   workflow_dispatch:
     inputs:
       runtime_minutes:
