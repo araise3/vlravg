@@ -242,19 +242,25 @@ h1 span{color:var(--accent);}
 .match-row{display:grid;grid-template-columns:210px minmax(0,1fr);width:100%;text-align:left;cursor:pointer;}
 .match-row:focus-visible{outline:2px solid var(--brand);outline-offset:-3px;border-radius:11px;}
 .mc-map-panel{position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:flex-end;min-height:158px;padding:18px;overflow:hidden;background:radial-gradient(ellipse at top right,#344657,#1d242d 60%,#141416);border-left:3px solid var(--result-color);}
-.mc-map-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;opacity:.85;transition:transform .3s;}
+.mc-map-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;opacity:.85;}
 .mc-map-panel:after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(9,9,11,.08),rgba(9,9,11,.3) 30%,rgba(9,9,11,.92));}
-.match-card:hover .mc-map-image{transform:scale(1.04);}
 .match-map{font-size:23px;font-weight:750;letter-spacing:-.035em;line-height:1.2;overflow-wrap:anywhere;color:#fff;}
-.mc-map-meta{display:flex;flex-wrap:wrap;gap:5px 9px;color:#d4d4d8;font-size:10px;margin-top:7px;}
+.mc-map-meta{display:flex;flex-direction:column;gap:5px;color:#d4d4d8;font-size:10px;margin-top:7px;min-width:0;}
+.mc-map-meta-row{display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap;}
+.mc-map-meta-row:first-child{gap:5px;font-size:9px;}
+.mc-map-panel.has-player-rank .mc-map-meta-row:last-child{padding-right:68px;}
+.mc-map-server{flex-shrink:0;}
+.mc-player-rank{color:#fff;font-weight:400;white-space:nowrap;}
+.mc-player-rank-icon{position:absolute;right:10px;bottom:10px;z-index:1;display:flex;width:64px;height:64px;align-items:center;justify-content:center;filter:drop-shadow(0 4px 10px rgba(0,0,0,.55));pointer-events:none;}
+.mc-player-rank-icon img{width:64px;height:64px;object-fit:contain;}
 .mc-body{display:flex;flex-direction:column;justify-content:space-between;gap:18px;padding:18px 20px;min-width:0;}
 .mc-topline{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
 .mc-result{display:flex;align-items:center;gap:13px;}
 .m-result-tag{color:var(--result-color);font-size:10px;font-weight:750;text-transform:uppercase;letter-spacing:.1em;}
 .match-score{display:flex;align-items:baseline;gap:7px;font-size:25px;font-weight:750;letter-spacing:-.04em;font-variant-numeric:tabular-nums;line-height:1;}
 .match-score .mc-score-divider{font-size:16px;color:#71717a;font-weight:400;}.match-score .mc-score-opponent{color:#a1a1aa;}
-.mc-award{display:inline-flex;align-items:center;gap:5px;padding:5px 7px;border:1px solid;font-size:9px;font-weight:750;letter-spacing:.045em;text-transform:uppercase;border-radius:5px;white-space:nowrap;}
-.mc-award svg{width:12px;height:12px;flex-shrink:0;}.mc-award.mvp-match{color:#f2cf80;background:#2b2416;border-color:#65512c;}.mc-award.mvp-team{color:#cbd5e1;background:#242830;border-color:#454e5b;}
+.mc-accolade{display:inline-flex;align-items:center;gap:5px;margin-left:2px;padding-left:12px;border-left:1px solid #3f3f46;font-size:9px;font-weight:650;letter-spacing:.045em;text-transform:uppercase;white-space:nowrap;}
+.mc-accolade svg{width:13px;height:13px;flex-shrink:0;}.mc-accolade.mvp-match{color:#f2cf80;}.mc-accolade.mvp-team{color:#cbd5e1;}
 .mc-expand-icon{display:flex;align-items:center;gap:5px;margin-left:auto;color:#a1a1aa;font-size:10px;}
 .mc-expand-icon svg{width:15px;height:15px;transition:transform .2s;}.match-card.expanded .mc-expand-icon svg{transform:rotate(180deg);}
 .mc-performance{display:grid;grid-template-columns:1.1fr .65fr 1.5fr 1fr;gap:12px;align-items:start;}
@@ -262,12 +268,14 @@ h1 span{color:var(--accent);}
 .mc-performance-lbl{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#a1a1aa;}
 .mc-performance-val{display:flex;align-items:center;gap:5px;font-size:16px;font-weight:700;line-height:1.3;white-space:nowrap;font-variant-numeric:tabular-nums;}
 .mc-performance-val .mc-deaths{color:#a1a1aa;}.mc-kda-separator{font-size:11px;color:#71717a;font-weight:400;}
-.mc-lobby-value{font-size:12px;}.mc-lobby-rr{font-size:10px;color:#a1a1aa;margin-left:27px;margin-top:-4px;}
+.mc-lobby-value{width:max-content;color:var(--text);}
 .mc-rr-stat{align-items:flex-end;}.mc-rr-stat .match-rr-change{font-size:17px;padding:0;background:none;line-height:1.3;}
+.mc-rr-stat .match-rr-change.shielded{display:inline-flex;align-items:center;gap:5px;padding:0 5px;border:0;border-radius:6px;background:rgba(37,99,235,.1);box-shadow:0 0 0 1px #60a5fa,0 0 0 2px rgba(96,165,250,.12);}
+.match-rr-change.shielded svg{width:13px;height:13px;flex-shrink:0;color:#60a5fa;}
 .match-rr-change{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;padding:1px 6px;border-radius:var(--radius-xs);white-space:nowrap;}
 .match-rr-change.gain{color:#4ade80;background:#13271a;}.match-rr-change.loss{color:#f87171;background:#2c1717;}
 .match-card .players-grid{margin:0;padding:18px 12px;border-top:1px solid var(--border);background:#101012;}
-@media(prefers-reduced-motion:reduce){.match-card,.mc-map-image,.mc-expand-icon svg{transition:none;}.match-card:hover .mc-map-image{transform:none;}}
+@media(prefers-reduced-motion:reduce){.match-card,.mc-expand-icon svg{transition:none;}}
 
 .my-stat{font-family:var(--font-body);font-size:12px;}
 .my-stat-lbl{color:var(--muted);font-size:10px;display:block;}
@@ -356,9 +364,6 @@ h1 span{color:var(--accent);}
 .match-card.post-reset:hover,.match-card.post-reset.expanded{opacity:.85;}
 #matches-container.counting-reset .match-card.post-reset{opacity:1;}
 .mc-reset-tag{font-size:8px;font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:var(--radius-xs);flex-shrink:0;text-transform:uppercase;line-height:1.4;background:#212325;color:var(--muted);border:.5px dashed var(--border2);}
-/* Informational, not exclusionary like .mc-reset-tag (dashed = "not counted
-   in stats") — this match still counts normally, so a solid blue tag instead. */
-.mc-shield-tag{font-size:10px;font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:var(--radius-xs);flex-shrink:0;text-transform:uppercase;line-height:1.4;background:#172131;color:#60a5fa;border:.5px solid #203961;}
 .r-unr{color:#6b7280}.r-iron{color:#7a7a7e}.r-bronze{color:#b07428}.r-silver{color:#c2c8cf}
 .r-gold{color:#e8a820}.r-plat{color:#36b5c0}.r-diamond{color:#c07de0}.r-asc{color:#2db87a}
 .r-imm{color:#d03248}.r-rad{color:#f0e0b0}
@@ -621,7 +626,7 @@ h1 span{color:var(--accent);}
   .mc-map-panel{min-height:110px;padding:16px;}.mc-map-image{object-position:center 45%;}
   .mc-map-panel:after{background:linear-gradient(90deg,rgba(9,9,11,.82),rgba(9,9,11,.12));}
   .mc-body{padding:15px;gap:20px;}.mc-performance{gap:8px;grid-template-columns:1.1fr .6fr 1.4fr .85fr;}
-  .mc-performance-val{font-size:14px;}.mc-lobby-value{font-size:11px;}.mc-lobby-value img{width:19px;height:19px;}.mc-lobby-rr{margin-left:24px;}
+  .mc-performance-val{font-size:14px;}.mc-lobby-value img{width:19px;height:19px;}
   .mc-rr-stat .match-rr-change{font-size:15px;}.mc-performance-lbl{font-size:8px;}
   .match-day-header{flex-wrap:wrap;gap:10px;}.match-day-heading{width:100%;}
   .match-day-stats{width:100%;justify-content:space-between;}.match-day-stat{padding:0 10px;}.match-day-stat:first-child{padding-left:0;}
@@ -630,9 +635,9 @@ h1 span{color:var(--accent);}
 @media(max-width:440px){
   .mc-performance{grid-template-columns:1fr 1fr;gap:16px;}
   .mc-performance-stat:nth-child(even){align-items:flex-end;}
-  .mc-performance-val{font-size:16px;}.mc-lobby-value{font-size:13px;}
+  .mc-performance-val{font-size:16px;}
   .mc-performance-lbl{font-size:9px;}.mc-lobby-value img{width:22px;height:22px;}
-  .mc-lobby-rr{margin-left:27px;}.mc-rr-stat .match-rr-change{font-size:17px;}
+  .mc-rr-stat .match-rr-change{font-size:17px;}
 }
 @media(max-width:480px){.page-nav{gap:0;flex-wrap:wrap;}.page-nav a{padding:0 10px;font-size:13px;}}
 </style>
@@ -4450,7 +4455,9 @@ function loadMatchMapMetadata(){
       .then(j=>{
         const maps=new Map();
         for(const map of Array.isArray(j.data)?j.data:[]){
-          const artwork=map.listViewIcon||map.splash;
+          // The full splash stays crisp when the card is scaled on high-DPI
+          // displays; listViewIcon is a smaller thumbnail and looked soft.
+          const artwork=map.splash||map.stylizedBackgroundImage||map.listViewIcon;
           if(typeof artwork!=='string')continue;
           const url=new URL(artwork);
           if(url.protocol!=='https:'||url.hostname!=='media.valorant-api.com')continue;
@@ -4493,9 +4500,10 @@ function buildMatchCard(m){
   const award=matchAward(m);
   const awardLabel=award==='match'?'Match MVP':award==='team'?'Team MVP':'';
   const awardIcon='<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2h6v4a3 3 0 0 1-6 0V2Zm0 1H2v2a3 3 0 0 0 3 3m6-5h3v2a3 3 0 0 1-3 3M8 9v3m-3 2h6m-5-2h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  const awardTag=award?'<span class="mc-award mvp-'+award+'" title="Highest ACS '+(award==='match'?'in the match':'on your team')+'">'+awardIcon+awardLabel+'</span>':'';
+  const awardTag=award?'<span class="mc-accolade mvp-'+award+'" title="Highest ACS '+(award==='match'?'in the match':'on your team')+'">'+awardIcon+awardLabel+'</span>':'';
   const resetTag=m.postReset?'<span class="mc-reset-tag" title="Placement-week game after a total rank reset">Placements</span>':'';
-  const shieldTag=myDerankProtected?'<span class="mc-shield-tag" title="Rank Shield protected your rank; the recorded RR loss still applied">Shielded</span>':'';
+  const shielded=!!myDerankProtected&&myRR<0;
+  const shieldIcon=shielded?'<svg viewBox="0 0 16 18" fill="none" aria-hidden="true"><path d="M8 1.5 14 4v4.3c0 3.7-2.4 6.6-6 8.2-3.6-1.6-6-4.5-6-8.2V4l6-2.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>':'';
   const rank=avgRank!=null?tierRR(avgRank):null;
   const rankLabel=rank?avgLabelShort(rank.tier):m.lowRated?'Unrated':'—';
   const rankTitle=m.lowRated?'Only '+m.ratedCount+' players were rated; excluded from stats':rank?'Average lobby: '+avgLabel(rank.tier)+', '+rank.rr+' RR':'Lobby rank unavailable';
@@ -4504,19 +4512,29 @@ function buildMatchCard(m){
   const acs=myStats?.acs!=null?Math.round(myStats.acs):'—';
   const time=startedAtMs!=null?new Date(startedAtMs).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):startedAt;
   const duration=m.durationMs>0?Math.round(m.durationMs/60000)+' min':null;
+  const preMatchRank=m.myPreRR!=null
+    ?rrPositionFromElo(m.myPreRR,m.myPreTierId??m.myTierId)
+    :null;
+  const preMatchRankText=preMatchRank
+    ?avgLabelShort(preMatchRank.tier)+' ('+preMatchRank.rr+' RR)'
+    :null;
+  const preMatchRankIcon=preMatchRank?rankIcon(preMatchRank.tier,64):'';
   const detailId='match-details-'+(++matchDetailsId);
   const card=document.createElement('article');
   card.className='match-card '+rc+(m.postReset?' post-reset':'');
   card.innerHTML=
     '<button type="button" class="match-row" aria-expanded="false" aria-controls="'+detailId+'">'+
-      '<span class="mc-map-panel"><span class="match-map">'+matchHtml(mapName)+'</span><span class="mc-map-meta">'+
-        [time,duration,serverName].filter(Boolean).map(v=>'<span>'+matchHtml(v)+'</span>').join('')+'</span></span>'+
+      '<span class="mc-map-panel'+(preMatchRank?' has-player-rank':'')+'"><span class="match-map">'+matchHtml(mapName)+'</span><span class="mc-map-meta">'+
+        '<span class="mc-map-meta-row">'+[time,duration].filter(Boolean).map(v=>'<span>'+matchHtml(v)+'</span>').join('')+
+        (serverName?'<span class="mc-map-server" title="'+matchHtml(serverName)+'">'+matchHtml(serverName)+'</span>':'')+'</span>'+
+        (preMatchRankText?'<span class="mc-map-meta-row"><span class="mc-player-rank" title="Your rank at the start of this match">'+matchHtml(preMatchRankText)+'</span></span>':'')+'</span>'+
+        (preMatchRankIcon?'<span class="mc-player-rank-icon" title="Your rank at the start of this match">'+preMatchRankIcon+'</span>':'')+'</span>'+
       '<span class="mc-body"><span class="mc-topline"><span class="mc-result"><span class="m-result-tag '+rc+'">'+rt+'</span><span class="match-score">'+scoreHtml+'</span></span>'+awardTag+resetTag+
         '<span class="mc-expand-icon"><span class="mc-expand-label">Roster</span><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 7.5 5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>'+
       '<span class="mc-performance"><span class="mc-performance-stat"><span class="mc-performance-lbl">K / D / A</span><span class="mc-performance-val">'+kdaHtml+'</span></span>'+
       '<span class="mc-performance-stat"><span class="mc-performance-lbl">ACS</span><span class="mc-performance-val">'+acs+'</span></span>'+
-      '<span class="mc-performance-stat" title="'+matchHtml(rankTitle)+'"><span class="mc-performance-lbl">Avg lobby</span><span class="mc-performance-val mc-lobby-value '+(rank?rClass(rank.tier):'')+'">'+(rank?rankIcon(rank.tier,22):'')+rankLabel+'</span>'+(rank?'<span class="mc-lobby-rr">'+rank.rr+' RR</span>':'')+'</span>'+
-      '<span class="mc-performance-stat mc-rr-stat"><span class="mc-performance-lbl">RR change</span><span class="match-rr-change '+(myRR!=null?(myRR>=0?'gain':'loss'):'')+'"'+(myRR==null?' title="No RR data for this match"':'')+'>'+(myRR!=null?(myRR>=0?'+':'')+myRR:'—')+'</span>'+shieldTag+'</span></span></span></button>';
+      '<span class="mc-performance-stat" title="'+matchHtml(rankTitle)+'"><span class="mc-performance-lbl">Avg lobby</span><span class="mc-performance-val mc-lobby-value">'+(rank?rankIcon(rank.tier,22):'')+rankLabel+(rank?' ('+rank.rr+' RR)':'')+'</span></span>'+
+      '<span class="mc-performance-stat mc-rr-stat"><span class="mc-performance-lbl">RR change</span><span class="match-rr-change '+(myRR!=null?(myRR>=0?'gain':'loss'):'')+(shielded?' shielded':'')+'" title="'+(myRR==null?'No RR data for this match':shielded?'Rank Shield protected your displayed rank; this recorded RR loss still applied':'Recorded RR change for this match')+'">'+shieldIcon+(myRR!=null?(myRR>=0?'+':'')+myRR:'—')+'</span></span></span></span></button>';
   const trigger=card.querySelector('button');
   const label=rt+' on '+mapName+', '+score+'. '+(awardLabel?awardLabel+'. ':'')+kda+' KDA, '+acs+' ACS.';
   trigger.setAttribute('aria-label',label+' Show roster');
@@ -4570,7 +4588,7 @@ function buildMatchRows(slice,startDayKey){
       if(stat?.wins)recordParts.push(`<span class="win">${stat.wins}W</span>`);
       if(stat?.losses)recordParts.push(`<span class="loss">${stat.losses}L</span>`);
       if(stat?.draws)recordParts.push(`<span class="draw">${stat.draws}D</span>`);
-      const record=recordParts.length?recordParts.join('<span aria-hidden="true"> · </span>'):'—';
+      const record=recordParts.length?recordParts.join('<span aria-hidden="true"> – </span>'):'—';
       const matchCount=stat?.matches??0;
       const rrTitle=stat?.rrCount
         ?`Net RR from ${stat.rrCount} of ${matchCount} matches with RR data. Rank Shield losses include their recorded loss.`
