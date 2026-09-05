@@ -474,8 +474,8 @@ h1 span{color:var(--accent);}
 .page-empty{padding:32px 20px;border:1px dashed var(--surface-border);border-radius:var(--radius-md);color:#a1a1aa;font-size:14px;line-height:1.6;text-align:center;}
 .page-empty[hidden]{display:none;}
 .detail-view #results-section > :not(#error-container){display:none!important;}
-/* Shared table surface across Duos, Lobby Rank, and RR Breakdown. */
-#sg-rank-card,#party-size-section,#teammates-section,#name-history-card,.rr-table-card{padding:0;overflow:hidden;border:1px solid var(--surface-border);border-radius:10px;background:#141416;box-shadow:none;}
+/* Shared table surface across the detailed statistic pages. */
+#sg-rank-card,#party-size-section,#teammates-section,#name-history-card,.rr-table-card,.servers-table-card{padding:0;overflow:hidden;border:1px solid var(--surface-border);border-radius:10px;background:#141416;box-shadow:none;}
 #name-history-card[hidden]{display:none;}
 .name-history-current{font-size:10px;font-weight:600;padding:3px 6px;border:1px solid #3c4655;border-radius:4px;color:var(--brand);}
 .name-history-note{font-size:12px;color:#a1a1aa;line-height:1.6;margin-top:14px;}
@@ -520,6 +520,7 @@ h1 span{color:var(--accent);}
 .rank-row-identity img{width:24px;height:24px;object-fit:contain;}
 .rank-table td{font-size:14px;}
 .rank-positive{color:#4ade80;}.rank-negative{color:#f87171;}
+.duos-table td.table-best{position:relative;background:rgba(var(--accent-rgb),.13);box-shadow:inset 0 -2px 0 var(--accent);color:#f4f4f5;font-weight:750;}
 .rank-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 #party-size-section{margin-bottom:24px;}
 .rr-table-card{padding:0;overflow:hidden;margin-bottom:24px;}
@@ -527,6 +528,15 @@ h1 span{color:var(--accent);}
 .rr-summary-stat{min-width:0;padding:14px;background:#1c1c1c;border:1px solid var(--surface-border);border-radius:7px;}
 .rr-summary-stat dt{font-size:11px;font-weight:700;text-transform:uppercase;color:#c4c4cc;margin-bottom:5px;}
 .rr-summary-stat dd{margin:0;font-size:24px;font-weight:750;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.server-summary-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 24px;}
+.server-summary-stat{min-width:0;padding:14px;background:#1c1c1c;border:1px solid var(--surface-border);border-radius:7px;}
+.server-summary-stat dt{font-size:11px;font-weight:700;text-transform:uppercase;color:#c4c4cc;margin-bottom:5px;}
+.server-summary-stat dd{margin:0;overflow:hidden;font-size:clamp(18px,2vw,24px);font-weight:750;line-height:1.2;text-overflow:ellipsis;white-space:nowrap;}
+.server-summary-stat small{display:block;margin-top:5px;color:#a1a1aa;font-size:11px;line-height:1.4;}
+.server-record{display:inline-flex;align-items:baseline;gap:3px;}
+.servers-table-card .rank-table{min-width:760px;}
+.match-context{display:flex;flex-direction:column;align-items:flex-end;gap:3px;}
+.match-server{font-family:var(--font-body);font-size:11px;color:#a1a1aa;white-space:nowrap;}
 .rr-draw{color:#facc15;}
 .rr-record{display:inline-flex;align-items:baseline;}
 .rr-summary-stat .rr-record{font-size:clamp(16px,2vw,22px);}
@@ -535,12 +545,37 @@ h1 span{color:var(--accent);}
 .rr-score-note{font-size:13px;line-height:1.6;color:#a1a1aa;margin:0 0 16px;max-width:760px;}
 .rr-score-note a{color:var(--brand);text-underline-offset:3px;}
 .rr-score-empty{padding:20px;color:#a1a1aa;font-size:13px;}
+.rr-movement-section{margin:0 0 24px;}
+.rr-movement-card{padding:20px;border:1px solid var(--surface-border);border-radius:10px;background:#141416;}
+.rr-movement-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.rr-movement-head h2{margin:0;font-size:18px;font-weight:650;}
+.rr-movement-count{color:#a1a1aa;font-size:12px;font-variant-numeric:tabular-nums;}
+.rr-movement-note{max-width:780px;margin:8px 0 14px;color:#a1a1aa;font-size:12px;line-height:1.6;}
+.rr-movement-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px;color:#b4b4bd;font-size:11px;}
+.rr-movement-legend span{display:inline-flex;align-items:center;gap:6px;}
+.rr-legend-mark{display:inline-block;width:10px;height:10px;border-radius:50%;background:#71717a;}
+.rr-legend-mark.win{background:#4ade80;}.rr-legend-mark.loss{background:#f87171;}.rr-legend-mark.refund{background:#facc15;}
+.rr-legend-mark.shield{border-radius:2px;background:#60a5fa;transform:rotate(45deg);}
+.rr-legend-mark.penalty{background:transparent;border:2px dashed #c084fc;}
+.rr-movement-scroll{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
+.rr-movement-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:3px;}
+.rr-movement-svg{display:block;width:100%;min-width:720px;height:auto;font-family:var(--font-body);}
+.rr-movement-svg .grid{stroke:#303034;stroke-width:1;}.rr-movement-svg .zero{stroke:#71717a;stroke-width:1.5;}
+.rr-movement-svg .axis-label,.rr-movement-svg .tick-label{fill:#a1a1aa;font-size:11px;}
+.rr-movement-svg .rank-band-label{fill:#c4c4cc;font-size:10px;font-weight:600;}
+.rr-movement-svg .payout-win{stroke:#4ade80;}.rr-movement-svg .payout-loss{stroke:#f87171;}
+.rr-movement-svg .refund-line{stroke:#facc15;}.rr-movement-svg .shield-loss{stroke:#60a5fa;stroke-dasharray:4 3;}
+.rr-movement-svg .event-line{stroke-width:3;stroke-linecap:round;}.rr-movement-svg .event-point{stroke:#141416;stroke-width:2;}
+.rr-movement-svg .penalty-ring{fill:none;stroke:#c084fc;stroke-width:2;stroke-dasharray:3 2;}
+.rr-movement-svg .modifier-letter{fill:#f4f4f5;font-size:8px;font-weight:800;text-anchor:middle;dominant-baseline:central;}
+.rr-movement-svg g[tabindex]:focus{outline:none;}.rr-movement-svg g[tabindex]:focus .event-point{stroke:#fff;stroke-width:3;}
 @media(max-width:600px){
   .rank-table th,.rank-table td,.rank-table.duos-table th,.rank-table.duos-table td{padding-left:14px;padding-right:14px;}
+  .rr-movement-card{padding:14px;}
 }
 @media(prefers-reduced-motion:reduce){.rank-table tbody tr{transition:none;}}
-@media(max-width:700px){.rr-summary-stats{grid-template-columns:repeat(2,minmax(0,1fr));}}
-@media(max-width:440px){.rr-summary-stats{grid-template-columns:repeat(2,minmax(0,1fr));}.rr-summary-stat dd{font-size:22px;}}
+@media(max-width:700px){.rr-summary-stats,.server-summary-stats{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:440px){.rr-summary-stats{grid-template-columns:repeat(2,minmax(0,1fr));}.rr-summary-stat dd{font-size:22px;}.server-summary-stat dd{font-size:19px;}}
 @media(max-width:760px){
   #matches-page .match-card.expanded .players-grid{grid-template-columns:minmax(0,1fr);gap:16px;}
 }
@@ -552,6 +587,7 @@ h1 span{color:var(--accent);}
   #matches-page .mc-left{flex-wrap:wrap;}
   #matches-page .match-score{white-space:nowrap;}
   #matches-page .mc-right{grid-column:2;margin-left:0;justify-content:space-between;}
+  #matches-page .match-context{align-items:flex-end;}
   #matches-page .m-badge{width:auto;text-align:left;}
   #matches-page .match-day-header{flex-wrap:wrap;gap:8px;}
 }
@@ -595,6 +631,7 @@ h1 span{color:var(--accent);}
     <a href="/" data-page="overview" aria-current="page">Overview</a>
     <a href="/duos" data-page="duos">Duos</a>
     <a href="/lobbyrank" data-page="lobby-rank">Lobby Rank</a>
+    <a href="/servers" data-page="servers">Servers</a>
     <a href="/rr" data-page="rr">RR Breakdown</a>
     <a href="/matches" data-page="matches">Match History</a>
     <a href="/names" data-page="names">Name History</a>
@@ -641,11 +678,35 @@ h1 span{color:var(--accent);}
     </div>
     <div id="lobby-rank-empty" class="page-empty" role="status">Search for a player above to explore their rank breakdown.</div>
   </main>
+  <main id="servers-page" class="detail-page" hidden aria-labelledby="servers-title">
+    <div class="page-heading">
+      <h1 id="servers-title" tabindex="-1">Servers</h1>
+      <p>See where the selected act’s matches were played and compare results and performance on each server.</p>
+    </div>
+    <div id="servers-filter-host"></div>
+    <div id="servers-content" hidden>
+      <dl id="servers-summary-stats" class="server-summary-stats" aria-label="Server summary"></dl>
+      <div class="s-card servers-table-card">
+        <div id="servers-table" class="table-scroll" role="region" aria-label="Performance by server" tabindex="0"></div>
+      </div>
+    </div>
+    <div id="servers-empty" class="page-empty" role="status">Search for a player above to compare their servers.</div>
+  </main>
   <main id="rr-page" class="detail-page" hidden aria-labelledby="rr-title">
     <div class="page-heading"><h1 id="rr-title" tabindex="-1">RR Breakdown</h1></div>
     <div id="rr-filter-host" hidden></div>
     <div id="rr-tables" hidden>
       <dl id="rr-summary-stats" class="rr-summary-stats" aria-label="RR summary"></dl>
+      <section id="rr-movement-section" class="rr-movement-section" hidden aria-labelledby="rr-movement-title">
+        <div class="rr-movement-card">
+          <div class="rr-movement-head"><h2 id="rr-movement-title">RR movement by starting rank</h2><span id="rr-movement-count" class="rr-movement-count"></span></div>
+          <p class="rr-movement-note">Each marker starts at the rank and RR held before that match. Refunds are added separately; protected losses stay at zero, and recorded payouts already include party penalties. This chart includes covered penalized five-stacks; the aggregate tables retain their ordinary-RR eligibility rules.</p>
+          <div class="rr-movement-legend" aria-label="Chart legend">
+            <span><i class="rr-legend-mark win"></i>Gain</span><span><i class="rr-legend-mark loss"></i>Loss</span><span><i class="rr-legend-mark refund"></i>Refund</span><span><i class="rr-legend-mark shield"></i>S protected</span><span><i class="rr-legend-mark penalty"></i>P penalty</span>
+          </div>
+          <div id="rr-movement-chart" class="rr-movement-scroll" role="region" aria-label="RR movement chart" tabindex="0"></div>
+        </div>
+      </section>
       <div class="s-card rr-table-card"><div id="rr-rank-table" class="table-scroll" role="region" aria-label="RR by player rank" tabindex="0"></div></div>
       <section aria-labelledby="rr-score-title">
         <h2 id="rr-score-title" class="rr-score-heading">RR by scoreline</h2>
@@ -1054,10 +1115,13 @@ let CURRENT_RR=null;
 // _rrChangeByMatchId[matchId] ?? null, never assume it's present.
 let _rrChangeByMatchId={};
 // match_id -> RR total the player was sitting on BEFORE that match — previous
-// entry's elo within a season, else rr - last_change - refunded_rr. Surfaced
-// on each match as myPreRR; nothing renders it today (it fed the retired
-// hidden-MMR card), kept because it is the only pre-match RR anchor available.
+// entry's elo within a season, else the post-match total minus the movement
+// that actually applied. Used as the x-axis anchor in the RR movement chart.
 let _preRRByMatchId={};
+// match_id -> refunded_rr from MMR history. Riot applies this on top of the
+// match payout, so it is rendered as a separate segment instead of being
+// silently folded into last_change.
+let _refundedRRByMatchId={};
 // match_id -> was_derank_protected from the same /api/mmr-history entries.
 // Riot's Rank Shield: last_change still applies its normal negative payout
 // on a protected loss, but the displayed tier/RR doesn't drop — so a player
@@ -1071,7 +1135,7 @@ function measureCtx(){
   if(!_measureCtx)_measureCtx=document.createElement('canvas').getContext('2d');
   return _measureCtx;
 }
-let allTeammates=[];
+let allTeammates=[],serverData=[];
 
 // ── CURRENT-ACT MATCH CACHE ──────────────────────────────────────────────
 // Full HenrikDev v4 matches are hundreds of KB each because they include the
@@ -1086,7 +1150,9 @@ let allTeammates=[];
 const MATCH_CACHE_DB='vlravg-match-cache';
 const MATCH_CACHE_STORE='current-act-profiles';
 const MATCH_CACHE_DB_VERSION=1;
-const MATCH_CACHE_FORMAT=1;
+// Version 2 adds metadata.cluster to every cached match summary. Old rows are
+// intentionally discarded once so server coverage is complete and trustworthy.
+const MATCH_CACHE_FORMAT=2;
 let _matchCacheDbPromise=null;
 
 function openMatchCacheDb(){
@@ -1144,7 +1210,7 @@ async function readCurrentActMatchCache(puuid,seasonId){
 function matchForCache(m){
   const out={...m,
     // RR history is refreshed separately and reattached by match_id on read.
-    myRR:null,myPreRR:null,myDerankProtected:false,
+    myRR:null,myPreRR:null,myRefundedRR:0,myDerankProtected:false,
     // Store a plain array for maximum IndexedDB/structured-clone portability.
     teamMvpPuuids:[...(m.teamMvpPuuids||[])],
   };
@@ -1159,6 +1225,7 @@ function matchFromCache(m){
     teamMvpPuuids:new Set(Array.isArray(m.teamMvpPuuids)?m.teamMvpPuuids:[]),
     myRR:matchId?_rrChangeByMatchId[matchId]??null:null,
     myPreRR:matchId?_preRRByMatchId[matchId]??null:null,
+    myRefundedRR:matchId?_refundedRRByMatchId[matchId]??0:0,
     myDerankProtected:matchId?!!_derankProtectedByMatchId[matchId]:false,
   };
 }
@@ -1298,6 +1365,14 @@ function updateDetailPages(){
   rankEmpty.textContent=analysisState==='loading'?'Loading this player’s matches…':ready
     ?(allMatches.length?'No rank breakdown available for these filters. Try another act or include placements.':'No matches found for this season. Try another act.')
     :'Search for a player above to explore their rank breakdown.';
+  document.getElementById('servers-filter-host').hidden=!ready||!allMatches.length;
+  const hasServers=ready&&serverData.length>0;
+  document.getElementById('servers-content').hidden=!hasServers;
+  const serversEmpty=document.getElementById('servers-empty');
+  serversEmpty.hidden=hasServers||analysisState==='error';
+  serversEmpty.textContent=analysisState==='loading'?'Loading this player’s matches…':ready
+    ?(allMatches.length?'No server information was returned for these matches.':'No matches found for this season. Try another act.')
+    :'Search for a player above to compare their servers.';
   const hasMatches=ready&&allMatches.length>0;
   document.getElementById('match-list-section').style.display=hasMatches?'block':'none';
   const matchesEmpty=document.getElementById('matches-empty');
@@ -1321,16 +1396,17 @@ function applyPage(focus=false){
     path='/lobbyrank';
     history.replaceState(history.state,'',path+location.search+location.hash);
   }
-  activePage=path==='/duos'?'duos':path==='/matches'?'matches':path==='/lobbyrank'?'lobby-rank':path==='/rr'?'rr':path==='/names'?'names':'overview';
+  activePage=path==='/duos'?'duos':path==='/matches'?'matches':path==='/lobbyrank'?'lobby-rank':path==='/servers'?'servers':path==='/rr'?'rr':path==='/names'?'names':'overview';
   const isDuos=activePage==='duos';
   document.body.classList.toggle('duos-view',isDuos);
   document.body.classList.toggle('detail-view',activePage!=='overview');
   document.getElementById('duos-page').hidden=!isDuos;
   document.getElementById('matches-page').hidden=activePage!=='matches';
   document.getElementById('lobby-rank-page').hidden=activePage!=='lobby-rank';
+  document.getElementById('servers-page').hidden=activePage!=='servers';
   document.getElementById('rr-page').hidden=activePage!=='rr';
   document.getElementById('names-page').hidden=activePage!=='names';
-  const titles={overview:'vlravg — Average Lobby Rank & Valorant Stats',duos:'Duos — vlravg',matches:'Match History — vlravg','lobby-rank':'Lobby Rank — vlravg',rr:'RR Breakdown — vlravg',names:'Name History — vlravg'};
+  const titles={overview:'vlravg — Average Lobby Rank & Valorant Stats',duos:'Duos — vlravg',matches:'Match History — vlravg','lobby-rank':'Lobby Rank — vlravg',servers:'Servers — vlravg',rr:'RR Breakdown — vlravg',names:'Name History — vlravg'};
   document.title=titles[activePage];
   document.querySelectorAll('.page-nav a').forEach(link=>{
     if(link.dataset.page===activePage)link.setAttribute('aria-current','page');
@@ -1744,8 +1820,8 @@ function runAnalysis(){
   CURRENT_RR=null;
   settleSearchBarWidth();
   allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;mhDayStats={};
-  _rrChangeByMatchId={};_preRRByMatchId={};_derankProtectedByMatchId={};
-  allTeammates=[];
+  _rrChangeByMatchId={};_preRRByMatchId={};_refundedRRByMatchId={};_derankProtectedByMatchId={};
+  allTeammates=[];serverData=[];
   // If the season dropdown's prefetch already fetched this exact player (the
   // common case — it runs while the player is still typing), reuse those
   // responses instead of re-fetching account+mmr from scratch.
@@ -2465,6 +2541,7 @@ function processMatch(m){
     else won=undefined; // genuine draw (14-14, 15-15 overtime tie)
   }
   const mapName=meta.map?.name||meta.map||'Unknown';
+  const serverName=[meta.cluster,meta.server].find(value=>typeof value==='string'&&value.trim())?.trim()||null;
   const durationMs=meta.game_length_in_ms??(meta.game_length!=null?meta.game_length*1000:null);
   const startedAtDate=meta.started_at
     ?new Date(meta.started_at)
@@ -2559,12 +2636,14 @@ function processMatch(m){
   // all. Only populated for whichever recent matches that fetch covered;
   // null for everything else, not just genuinely unrated games.
   const myRR=_rrChangeByMatchId[matchId]??null;
-  // RR total going into this match — used by the rank-trend chart.
+  // RR total going into this match — the x-axis position in RR movement.
   const myPreRR=_preRRByMatchId[matchId]??null;
+  // RR restored alongside this result (for example after a cheater ban).
+  const myRefundedRR=_refundedRRByMatchId[matchId]??0;
   // Whether Rank Shield absorbed this match's loss (badge didn't drop even
   // though myRR above still carries the normal negative payout).
   const myDerankProtected=_derankProtectedByMatchId[matchId]??false;
-  return{mapName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,myPreRR,myDerankProtected,myPartyPenalty,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
+  return{mapName,serverName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,myPreRR,myRefundedRR,myDerankProtected,myPartyPenalty,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
 }
 
 function extractStats(p,fallbackRounds=null){
@@ -2896,21 +2975,25 @@ async function loadAll(prefetchSnapshot=null){
       const sorted=[...history].filter(h=>h.match_id).sort((a,b)=>new Date(a.date)-new Date(b.date));
       let prev=null;
       sorted.forEach(h=>{
-        _rrChangeByMatchId[h.match_id]=h.last_change??null;
-        _derankProtectedByMatchId[h.match_id]=!!h.was_derank_protected;
+        const lastChange=Number.isFinite(h.last_change)?h.last_change:null;
+        const refundedRR=Number.isFinite(h.refunded_rr)?h.refunded_rr:0;
+        const derankProtected=!!h.was_derank_protected;
+        _rrChangeByMatchId[h.match_id]=lastChange;
+        _refundedRRByMatchId[h.match_id]=refundedRR;
+        _derankProtectedByMatchId[h.match_id]=derankProtected;
         // Pre-match RR: the previous entry's elo is the exact value when the
-        // season hasn't changed (elo = tier*100 + rr is continuous within an
-        // act). Across a season boundary (or for the very first entry) derive
-        // it from this entry's totals — and subtract refunded_rr too, since
-        // elo = prev + last_change + refunded_rr (verified across 20/22 refund
-        // entries; last_change is the pure match payout, the refund rides on
-        // top), so rr - last_change alone would overstate the pre-match RR by
-        // the refunded amount.
+        // season hasn't changed. Across a season boundary (or for the first
+        // persisted entry) derive it from the ending total. Refunds apply on
+        // top of the match payout, while a protected loss reports its normal
+        // negative last_change but does not reduce the displayed RR.
         const sameSeason=prev&&prev.season?.short===h.season?.short;
-        if(sameSeason&&prev.elo!=null){
-          _preRRByMatchId[h.match_id]=prev.elo;
-        }else if(h.rr!=null&&h.last_change!=null){
-          _preRRByMatchId[h.match_id]=h.rr-h.last_change-(h.refunded_rr||0);
+        const previousTotal=Number.isFinite(prev?.elo)?prev.elo:null;
+        const endingTotal=Number.isFinite(h.elo)?h.elo:(Number.isFinite(h.rr)?h.rr:null);
+        if(sameSeason&&previousTotal!=null){
+          _preRRByMatchId[h.match_id]=previousTotal;
+        }else if(endingTotal!=null&&lastChange!=null){
+          const appliedMatchChange=derankProtected&&lastChange<0?0:lastChange;
+          _preRRByMatchId[h.match_id]=endingTotal-appliedMatchChange-refundedRR;
         }
         prev=h;
       });
@@ -3216,6 +3299,7 @@ function renderStats(skipPlaytime){
   document.getElementById('sg-adr').textContent=avgAdr!=null?avgAdr:'—';
 
   renderRankByRankCard();
+  renderServers(statMatches);
 
   // Widest avg-lobby badge label, used to fix the badge column width. Only the
   // distinct labels matter (there are at most ~28 possible rank+RR strings), so
@@ -3251,6 +3335,83 @@ function renderAll(){
   renderStats();
   setStatus('',false);
   renderMatches();
+}
+
+/* ── SERVERS ────────────────────────────────────────────── */
+function renderServers(matches){
+  const groups=new Map();
+  matches.forEach(m=>{
+    if(!m.serverName)return;
+    const key=m.serverName.toLocaleLowerCase();
+    if(!groups.has(key))groups.set(key,{name:m.serverName,games:0,wins:0,losses:0,draws:0,kills:0,deaths:0,combatGames:0,score:0,rounds:0});
+    const row=groups.get(key);
+    row.games++;
+    if(m.won===true)row.wins++;
+    else if(m.won===false)row.losses++;
+    else row.draws++;
+    const stats=m.myStats;
+    if(stats?.kills!=null&&stats?.deaths!=null){
+      row.kills+=stats.kills;
+      row.deaths+=stats.deaths;
+      row.combatGames++;
+    }
+    if(stats?.score!=null&&stats?.rounds_played>0){
+      row.score+=stats.score;
+      row.rounds+=stats.rounds_played;
+    }
+  });
+  const knownMatches=[...groups.values()].reduce((sum,row)=>sum+row.games,0);
+  serverData=[...groups.values()].map(row=>{
+    const decided=row.wins+row.losses;
+    return{...row,
+      share:knownMatches?row.games/knownMatches*100:null,
+      winRate:decided?row.wins/decided*100:null,
+      kd:row.combatGames?(row.deaths>0?row.kills/row.deaths:row.kills):null,
+      acs:row.rounds?row.score/row.rounds:null,
+    };
+  }).sort((a,b)=>b.games-a.games||a.name.localeCompare(b.name));
+
+  const summaryEl=document.getElementById('servers-summary-stats');
+  summaryEl.replaceChildren();
+  const addSummary=(label,value,note)=>{
+    const item=document.createElement('div');
+    item.className='server-summary-stat';
+    const term=document.createElement('dt');term.textContent=label;
+    const detail=document.createElement('dd');detail.textContent=value;
+    item.append(term,detail);
+    if(note){const small=document.createElement('small');small.textContent=note;item.appendChild(small);}
+    summaryEl.appendChild(item);
+  };
+  const mostPlayed=serverData[0]||null;
+  const best=[...serverData].filter(row=>row.games>=3&&row.winRate!=null).sort((a,b)=>b.winRate-a.winRate||b.games-a.games)[0]||null;
+  addSummary('Most played',mostPlayed?.name||'—',mostPlayed?`${mostPlayed.games} matches · ${Math.round(mostPlayed.share)}% of identified matches`:'');
+  addSummary('Best win rate',best?.name||'—',best?`${Math.round(best.winRate)}% across ${best.games} matches`:'Requires 3 matches on a server');
+  addSummary('Servers played',serverData.length?String(serverData.length):'—','Distinct servers this selection');
+  addSummary('Server coverage',matches.length?`${knownMatches}/${matches.length}`:'—',matches.length?`${Math.round(knownMatches/matches.length*100)}% of matches identified`:'');
+
+  const container=document.getElementById('servers-table');
+  container.replaceChildren();
+  if(!serverData.length)return;
+  const table=document.createElement('table');
+  table.className='rank-table';
+  table.innerHTML='<caption class="rank-sr-only">Match results and performance grouped by game server</caption><thead><tr><th scope="col">Server</th><th scope="col">Matches</th><th scope="col">Share</th><th scope="col">Record</th><th scope="col" title="Wins divided by wins plus losses; draws excluded">Win rate</th><th scope="col">K/D</th><th scope="col" title="Average combat score">Avg ACS</th></tr></thead><tbody></tbody>';
+  const tbody=table.tBodies[0];
+  serverData.forEach(row=>{
+    const tr=document.createElement('tr');
+    const server=document.createElement('th');server.scope='row';server.textContent=row.name;tr.appendChild(server);
+    const matchesCell=tr.insertCell();matchesCell.textContent=row.games;
+    const share=tr.insertCell();share.textContent=row.share==null?'—':Math.round(row.share)+'%';
+    const recordCell=tr.insertCell();
+    const record=document.createElement('span');record.className='server-record';record.setAttribute('aria-label',`${row.wins} wins, ${row.losses} losses, ${row.draws} draws`);
+    [['rank-positive',row.wins+'W'],['rr-record-separator','/'],['rank-negative',row.losses+'L'],['rr-record-separator','/'],['rr-draw',row.draws+'D']].forEach(([className,text])=>{const span=document.createElement('span');span.className=className;span.textContent=text;record.appendChild(span);});
+    recordCell.appendChild(record);
+    const winRate=tr.insertCell();winRate.textContent=row.winRate==null?'—':Math.round(row.winRate)+'%';
+    const kd=tr.insertCell();kd.textContent=row.kd==null?'—':row.kd.toFixed(2);if(row.kd!=null&&row.kd!==1)kd.className=row.kd>1?'rank-positive':'rank-negative';
+    const acs=tr.insertCell();acs.textContent=row.acs==null?'—':Math.round(row.acs);
+    tbody.appendChild(tr);
+  });
+  container.appendChild(table);
+  initTableSorting(container,serverData.map(row=>[row.name,row.games,row.share,row.wins-row.losses,row.winRate,row.kd,row.acs]));
 }
 
 /* ── TEAMMATES ───────────────────────────────────────────── */
@@ -3351,25 +3512,41 @@ function renderTeammates(){
   table.innerHTML=`<caption class="rank-sr-only">Teammates you played with, including their K/D and average ACS</caption>
     <thead><tr><th scope="col">Teammate</th><th scope="col">Matches</th><th scope="col" title="Teammate K/D">K/D</th><th scope="col" title="Teammate average ACS">Avg ACS</th><th scope="col">Avg Lobby</th><th scope="col">Win rate</th></tr></thead><tbody></tbody>`;
   const tbody=table.querySelector('tbody');
-  allTeammates.forEach(t=>{
-    const kd=t.deaths>0?t.kills/t.deaths:t.kills;
-    const wr=Math.round(t.wins/t.games*100);
+  const teammateRows=allTeammates.map(t=>({
+    ...t,
+    kd:t.deaths>0?t.kills/t.deaths:t.kills,
+    acs:t.acsCount?t.acsSum/t.acsCount:null,
+    lobby:t.rankCount?t.rankSum/t.rankCount:null,
+    wr:t.wins/t.games*100,
+  }));
+  const statLabels=['matches','K/D','average ACS','average lobby rank','win rate'];
+  const maxima=statLabels.map((_,index)=>{
+    const values=teammateRows.map(t=>[t.games,t.kd,t.acs,t.lobby,t.wr][index]).filter(value=>value!=null);
+    return values.length?Math.max(...values):null;
+  });
+  teammateRows.forEach(t=>{
+    const wr=Math.round(t.wr);
     const row=document.createElement('tr');
     row.innerHTML=`<th scope="row"><div class="duo-player-name"><span class="duo-name"></span><span class="duo-tag"></span></div></th>
       <td>${t.games}</td>
-      <td class="${kd===1?'':kd>1?'rank-positive':'rank-negative'}" title="${t.kills} kills / ${t.deaths} deaths">${kd.toFixed(2)}</td>
-      <td>${t.acsCount?Math.round(t.acsSum/t.acsCount):'—'}</td>
+      <td class="${t.kd===1?'':t.kd>1?'rank-positive':'rank-negative'}" title="${t.kills} kills / ${t.deaths} deaths">${t.kd.toFixed(2)}</td>
+      <td>${t.acs==null?'—':Math.round(t.acs)}</td>
       <td>${tableLobbyValue(t.rankSum,t.rankCount)}</td>
       <td class="${wr>=50?'rank-positive':'rank-negative'}">${wr}%</td>`;
     row.querySelector('.duo-name').textContent=t.name;
     row.querySelector('.duo-tag').textContent='#'+t.tag;
+    [t.games,t.kd,t.acs,t.lobby,t.wr].forEach((value,index)=>{
+      if(value==null||value!==maxima[index])return;
+      const cell=row.cells[index+1];
+      cell.classList.add('table-best');
+      const suffix=`Highest ${statLabels[index]} among listed teammates`;
+      cell.title=cell.title?cell.title+' · '+suffix:suffix;
+      cell.setAttribute('aria-label',cell.textContent.trim()+'. '+suffix);
+    });
     tbody.appendChild(row);
   });
   list.appendChild(table);
-  initTableSorting(list,allTeammates.map(t=>[
-    t.name+'#'+t.tag,t.games,t.deaths>0?t.kills/t.deaths:t.kills,
-    t.acsCount?t.acsSum/t.acsCount:null,t.rankCount?t.rankSum/t.rankCount:null,t.wins/t.games*100,
-  ]));
+  initTableSorting(list,teammateRows.map(t=>[t.name+'#'+t.tag,t.games,t.kd,t.acs,t.lobby,t.wr]));
 }
 
 // Keep each table's chosen sort through incremental loads and filter changes.
@@ -3596,12 +3773,137 @@ function renderRRCard(matches){
   if(wrVal)wrVal.textContent=res.winRate!=null?`${Math.round(res.winRate)}%`:'—';
 }
 
+function rrPositionFromElo(elo,tierHint=null){
+  let tier=tierHint>=3?tierHint:Math.floor(elo/100)+3;
+  tier=Math.max(3,Math.min(27,tier));
+  let rr=Math.round(elo-(tier-3)*100);
+  while(rr<0&&tier>3){tier--;rr+=100;}
+  while(rr>=100&&tier<27){tier++;rr-=100;}
+  return{tier,rr,label:`${avgLabelShort(tier)} · ${rr} RR`};
+}
+
+function renderRRMovement(matches){
+  const section=document.getElementById('rr-movement-section');
+  const container=document.getElementById('rr-movement-chart');
+  const rows=matches.filter(m=>m.myRR!=null&&m.myPreRR!=null&&m.myTierId>=3&&!m.actPlacement).map(m=>{
+    const payout=m.myRR;
+    const refund=Number.isFinite(m.myRefundedRR)?m.myRefundedRR:0;
+    const shielded=!!m.myDerankProtected&&payout<0;
+    const appliedMatch=shielded?0:payout;
+    return{m,payout,refund,shielded,net:appliedMatch+refund,penalty:m.myPartyPenalty||0};
+  });
+  section.hidden=!rows.length;
+  container.replaceChildren();
+  if(!rows.length)return;
+
+  const refunds=rows.filter(row=>row.refund!==0).length;
+  const shields=rows.filter(row=>row.shielded).length;
+  const penalties=rows.filter(row=>row.penalty>0).length;
+  document.getElementById('rr-movement-count').textContent=[
+    `${rows.length} covered ${rows.length===1?'match':'matches'}`,
+    refunds?`${refunds} ${refunds===1?'refund':'refunds'}`:null,
+    shields?`${shields} protected`:null,
+    penalties?`${penalties} penalized`:null,
+  ].filter(Boolean).join(' · ');
+
+  const NS='http://www.w3.org/2000/svg';
+  const node=(tag,attrs={},textValue=null)=>{
+    const el=document.createElementNS(NS,tag);
+    Object.entries(attrs).forEach(([name,value])=>el.setAttribute(name,String(value)));
+    if(textValue!=null)el.textContent=textValue;
+    return el;
+  };
+  const width=900,height=350,left=68,right=20,top=34,bottom=72;
+  const plotRight=width-right,plotBottom=height-bottom,plotWidth=plotRight-left,plotHeight=plotBottom-top;
+  const rawMin=Math.min(...rows.map(row=>row.m.myPreRR));
+  const rawMax=Math.max(...rows.map(row=>row.m.myPreRR));
+  const xPad=Math.max(25,(rawMax-rawMin)*.06);
+  const xMin=Math.max(0,rawMin-xPad),xMax=rawMax+xPad;
+  const movementMax=Math.max(...rows.flatMap(row=>[Math.abs(row.payout),Math.abs(row.net)]),10);
+  const yMax=Math.ceil(movementMax/10)*10;
+  const x=value=>left+(value-xMin)/(xMax-xMin)*plotWidth;
+  const y=value=>top+(yMax-value)/(yMax*2)*plotHeight;
+  const svg=node('svg',{class:'rr-movement-svg',viewBox:`0 0 ${width} ${height}`,role:'img','aria-labelledby':'rr-movement-svg-title rr-movement-svg-desc'});
+  svg.append(
+    node('title',{id:'rr-movement-svg-title'},'RR movement by starting rank and RR'),
+    node('desc',{id:'rr-movement-svg-desc'},'Match payouts appear above or below zero at the rank held before each match. Yellow segments are refunds, S markers are protected losses, and P rings mark party penalties.'),
+  );
+
+  const firstBand=Math.floor(xMin/100)*100;
+  for(let start=firstBand,index=0;start<xMax;start+=100,index++){
+    const bandLeft=Math.max(left,x(start));
+    const bandRight=Math.min(plotRight,x(start+100));
+    if(bandRight<=bandLeft)continue;
+    svg.appendChild(node('rect',{x:bandLeft,y:top,width:bandRight-bandLeft,height:plotHeight,fill:index%2?'rgba(255,255,255,.018)':'rgba(255,255,255,.035)'}));
+    if(bandRight-bandLeft>54){
+      const pos=rrPositionFromElo(start+50);
+      svg.appendChild(node('text',{x:(bandLeft+bandRight)/2,y:top-10,'text-anchor':'middle',class:'rank-band-label'},avgLabelShort(pos.tier)));
+    }
+  }
+  [-yMax,-yMax/2,0,yMax/2,yMax].forEach(value=>{
+    const py=y(value);
+    svg.appendChild(node('line',{x1:left,y1:py,x2:plotRight,y2:py,class:value===0?'zero':'grid'}));
+    svg.appendChild(node('text',{x:left-10,y:py+4,'text-anchor':'end',class:'tick-label'},value>0?`+${value}`:String(value)));
+  });
+  for(let index=0;index<5;index++){
+    const value=xMin+(xMax-xMin)*index/4;
+    const px=x(value);
+    svg.appendChild(node('line',{x1:px,y1:plotBottom,x2:px,y2:plotBottom+5,class:'grid'}));
+    svg.appendChild(node('text',{x:px,y:plotBottom+22,'text-anchor':'middle',class:'tick-label'},rrPositionFromElo(value).label));
+  }
+  svg.appendChild(node('text',{x:(left+plotRight)/2,y:height-12,'text-anchor':'middle',class:'axis-label'},'Starting rank + RR'));
+  const yTitle=node('text',{x:15,y:(top+plotBottom)/2,'text-anchor':'middle',class:'axis-label',transform:`rotate(-90 15 ${(top+plotBottom)/2})`},'Applied RR movement');
+  svg.appendChild(yTitle);
+
+  const overlaps=new Map();
+  rows.slice().sort((a,b)=>(a.m.startedAtMs||0)-(b.m.startedAtMs||0)).forEach(row=>{
+    const overlapKey=Math.round(row.m.myPreRR);
+    const overlapIndex=overlaps.get(overlapKey)||0;
+    overlaps.set(overlapKey,overlapIndex+1);
+    const jitter=((overlapIndex%5)-2)*2.5;
+    const px=x(row.m.myPreRR)+jitter;
+    const zeroY=y(0),payoutY=y(row.payout),netY=y(row.net);
+    const position=rrPositionFromElo(row.m.myPreRR,row.m.myTierId);
+    const date=row.m.startedAtMs?new Date(row.m.startedAtMs).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}):'Unknown date';
+    const result=row.m.won===true?'Win':row.m.won===false?'Loss':'Draw';
+    const parts=[`${date}, ${position.label}, ${result}`,`${row.payout>=0?'+':''}${row.payout} RR match payout`];
+    if(row.refund)parts.push(`${row.refund>=0?'+':''}${row.refund} RR refund`);
+    if(row.shielded)parts.push('Rank Shield / derank protection blocked the loss');
+    if(row.penalty)parts.push(`payout includes a ${Math.round(row.penalty*100)}% party penalty`);
+    parts.push(`${row.net>=0?'+':''}${row.net} RR applied movement`);
+    const group=node('g',{tabindex:'0',role:'img','aria-label':parts.join('. ')});
+    group.appendChild(node('title',{},parts.join(' · ')));
+    group.appendChild(node('line',{x1:px,y1:zeroY,x2:px,y2:payoutY,class:`event-line ${row.shielded?'shield-loss':row.payout>=0?'payout-win':'payout-loss'}`}));
+    const refundStart=row.shielded?0:row.payout;
+    if(row.refund)group.appendChild(node('line',{x1:px,y1:y(refundStart),x2:px,y2:netY,class:'event-line refund-line'}));
+    const pointColor=row.net>0?'#4ade80':row.net<0?'#f87171':'#a1a1aa';
+    if(row.shielded){
+      group.appendChild(node('rect',{x:px-5,y:netY-5,width:10,height:10,rx:1,fill:'#60a5fa',class:'event-point',transform:`rotate(45 ${px} ${netY})`}));
+      group.appendChild(node('text',{x:px,y:netY,class:'modifier-letter'},'S'));
+    }else{
+      group.appendChild(node('circle',{cx:px,cy:netY,r:5,fill:pointColor,class:'event-point'}));
+    }
+    if(row.penalty){
+      group.appendChild(node('circle',{cx:px,cy:netY,r:9,class:'penalty-ring'}));
+      group.appendChild(node('text',{x:px+12,y:netY-7,class:'modifier-letter'},'P'));
+    }
+    svg.appendChild(group);
+  });
+  container.appendChild(svg);
+}
+
 function renderRRBreakdown(matches){
   const summary=computeRRStats(matches);
   rrHasData=summary.n>0;
-  const record=s=>`<span class="rr-record" aria-label="${s.wins} wins, ${s.losses} losses, ${s.draws} draws"><span class="rank-positive">${s.wins}W</span><span class="rr-record-separator">/</span><span class="rank-negative">${s.losses}L</span><span class="rr-record-separator">/</span><span class="rr-draw">${s.draws}D</span></span>`;
+  renderRRMovement(matches);
+  const record=s=>{
+    const drawLabel=s.draws?`, ${s.draws} draws`:'';
+    const drawValue=s.draws?`<span class="rr-record-separator">/</span><span class="rr-draw">${s.draws}D</span>`:'';
+    return `<span class="rr-record" aria-label="${s.wins} wins, ${s.losses} losses${drawLabel}"><span class="rank-positive">${s.wins}W</span><span class="rr-record-separator">/</span><span class="rank-negative">${s.losses}L</span>${drawValue}</span>`;
+  };
   const columns=`<th scope="col">RR / Win</th><th scope="col">RR / Loss</th><th scope="col">K/D</th><th scope="col" title="Average combat score">ACS</th><th scope="col" title="Wins divided by wins plus losses; draws excluded">WR%</th>`;
-  const cells=s=>`<td class="rank-positive">${s.avgGain==null?'—':rrSigned(s.avgGain,1)}</td><td class="rank-negative">${s.avgLoss==null?'—':rrSigned(-s.avgLoss,1)}</td><td class="${s.kd==null||s.kd===1?'':s.kd>1?'rank-positive':'rank-negative'}">${s.kd==null?'—':s.kd.toFixed(2)}</td><td>${s.acs==null?'—':Math.round(s.acs)}</td><td>${s.winRate==null?'—':Math.round(s.winRate)+'%'}</td>`;
+  const winRateClass=rate=>rate==null||Math.round(rate)===50?'':Math.round(rate)>50?'rank-positive':'rank-negative';
+  const cells=s=>`<td>${s.n}</td><td class="rank-positive">${s.avgGain==null?'—':rrSigned(s.avgGain,1)}</td><td class="rank-negative">${s.avgLoss==null?'—':rrSigned(-s.avgLoss,1)}</td><td class="${s.kd==null||s.kd===1?'':s.kd>1?'rank-positive':'rank-negative'}">${s.kd==null?'—':s.kd.toFixed(2)}</td><td>${s.acs==null?'—':Math.round(s.acs)}</td><td class="${winRateClass(s.winRate)}">${s.winRate==null?'—':Math.round(s.winRate)+'%'}</td>`;
   const scope='RR matches in this act, excluding placements, unrated ranks and full 5-stacks.';
   const stat=(label,value,color='')=>`<div class="rr-summary-stat"><dt>${label}</dt><dd class="${color}">${value}</dd></div>`;
   document.getElementById('rr-summary-stats').innerHTML=
@@ -3626,8 +3928,8 @@ function renderRRBreakdown(matches){
       acs:acsMatches.length?acsMatches.reduce((sum,s)=>sum+s.acs,0)/acsMatches.length:null,
     }};
   }).filter(row=>row.stats.n);
-  document.getElementById('rr-rank-table').innerHTML=`<table class="rank-table"><caption class="rank-sr-only">RR gains and losses grouped by your rank in each match. ${scope}</caption><thead><tr><th scope="col">Player rank</th>${columns}</tr></thead><tbody>${rows.map(({tier,stats})=>`<tr><th scope="row"><div class="rank-row-identity">${rankIcon(tier,24)}<span>${avgLabel(tier)}</span></div></th>${cells(stats)}</tr>`).join('')}</tbody></table>`;
-  initTableSorting(document.getElementById('rr-rank-table'),rows.map(({tier,stats:s})=>[tier,s.avgGain,s.avgLoss==null?null:-s.avgLoss,s.kd,s.acs,s.winRate]));
+  document.getElementById('rr-rank-table').innerHTML=`<table class="rank-table"><caption class="rank-sr-only">RR gains and losses grouped by your rank in each match. ${scope}</caption><thead><tr><th scope="col">Player rank</th><th scope="col">Games</th>${columns}</tr></thead><tbody>${rows.map(({tier,stats})=>`<tr><th scope="row"><div class="rank-row-identity">${rankIcon(tier,24)}<span>${avgLabel(tier)}</span></div></th>${cells(stats)}</tr>`).join('')}</tbody></table>`;
+  initTableSorting(document.getElementById('rr-rank-table'),rows.map(({tier,stats:s})=>[tier,s.n,s.avgGain,s.avgLoss==null?null:-s.avgLoss,s.kd,s.acs,s.winRate]));
   renderRRByScore(matches);
 }
 
@@ -3863,7 +4165,7 @@ function buildPlayersGrid(m){
 }
 
 function buildMatchCard(m){
-  const {mapName,startedAt,won,myR,opR,avgRank,myStats,matchMvpPuuid,teamMvpPuuids,myRR,myDerankProtected}=m;
+  const {mapName,serverName,startedAt,won,myR,opR,avgRank,myStats,matchMvpPuuid,teamMvpPuuids,myRR,myDerankProtected}=m;
   const rc=won===true?'win':won===false?'loss':'draw';
   const rt=won===true?'Win':won===false?'Loss':'Draw';
   const score=(myR!=null&&opR!=null)?`${myR}–${opR}`:'—';
@@ -3913,9 +4215,11 @@ function buildMatchCard(m){
           <div class="m-badge-lbl">avg lobby</div>
           <div class="m-badge-val ${rankColorClass}${m.lowRated?' m-badge-settling':''}">${rankLabel}</div>
         </div>
-        <span class="match-date">${startedAt}</span>
+        <span class="match-context">${serverName?'<span class="match-server" title="Game server"></span>':''}<span class="match-date">${startedAt}</span></span>
       </div>
     </div>`;
+  const serverEl=card.querySelector('.match-server');
+  if(serverEl)serverEl.textContent=serverName;
   card.addEventListener('click',()=>{
     if(window.getSelection()&&window.getSelection().toString().length>0)return;
     card.classList.toggle('expanded');

@@ -8,5 +8,7 @@
 /lobbyrank/ /lobbyrank 301
 /lobby-rank /lobbyrank 301
 /lobby-rank/ /lobbyrank 301
+/servers /index.html 200
+/servers/ /servers 301
 /names / 200
 /names/ /names 301
