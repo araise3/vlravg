@@ -215,48 +215,59 @@ h1 span{color:var(--accent);}
 .hero-scope-toggle[hidden]{display:none;}
 .hero-scope-toggle:hover{color:var(--text);}
 .hero-scope-toggle input{width:13px;height:13px;accent-color:var(--accent);cursor:pointer;margin:0;flex-shrink:0;}
-.matches{display:flex;flex-direction:column;gap:8px;}
-.match-day-header{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;font-family:var(--font-body);padding-top:10px;}
-.match-day-header:first-child{padding-top:0;}
-.match-day-avg{font-size:11px;font-weight:600;letter-spacing:normal;text-transform:none;color:var(--muted);font-family:var(--font-body);white-space:nowrap;}
-.match-day-avg span{font-weight:700;font-variant-numeric:tabular-nums;}
-/* Groups avg-lobby + the day's total RR into one flex item, so the header
-   (justify-content:space-between) still only has two top-level children —
-   the date label and this group — instead of drifting the RR figure into
-   the middle when both stats are present. */
-.match-day-stats{display:flex;align-items:baseline;gap:10px;}
-.match-card{background:#1b1b1b;border:.5px solid var(--surface-border);border-radius:var(--radius-md);padding:8px 14px;cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s;overflow:hidden;}
-.match-card:hover{border-color:#3c3c3c;background:#202020;}
-.match-card.match-mvp{background:#1d1a11;}
-.match-card.match-mvp:hover{background:#221e10;}
-.match-card.team-mvp{background:#1c1d1d;}
-.match-card.team-mvp:hover{background:#212223;}
-.match-card.expanded{border-color:color-mix(in srgb, var(--accent) 35%, #111111);}
-.match-row{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;padding-left:2px;}
-.mc-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
-.mc-right{display:flex;align-items:center;gap:16px;flex-shrink:0;margin-left:auto;}
-.mc-stats-row{display:none;gap:6px;padding-top:10px;margin-top:6px;border-top:.5px solid var(--border);}
-.match-card.expanded .mc-stats-row{display:flex;}
-.mc-stat{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;flex:0 0 auto;background:var(--bg);border:.5px solid var(--border2);border-radius:var(--radius-sm);padding:6px 10px;}
-.mc-stat-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-family:var(--font-display);}
-.mc-stat-val{font-size:13px;font-weight:700;color:var(--text);line-height:1.2;font-variant-numeric:tabular-nums;}
-.result-bar{width:3px;align-self:stretch;border-radius:2px;flex-shrink:0;min-height:28px;}
-.result-bar.win{background:var(--win);}.result-bar.loss{background:var(--loss);}.result-bar.draw{background:var(--draw);}
-.match-map{font-size:.9rem;font-weight:700;white-space:nowrap;flex-shrink:0;}
-.match-score{font-family:var(--font-body);font-size:13px;color:var(--muted);}
-.match-date{font-family:var(--font-body);font-size:11px;color:var(--muted);opacity:.6;white-space:nowrap;}
-.m-result-tag{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border-radius:var(--radius-xs);flex-shrink:0;}
-.m-result-tag.win{background:#22c55e;color:#fff;}
-.m-result-tag.loss{background:#ef4444;color:#fff;}
-.m-result-tag.draw{background:#f59e0b;color:#fff;}
-.match-rr-change{font-family:var(--font-body);font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;padding:1px 6px;border-radius:var(--radius-xs);flex-shrink:0;white-space:nowrap;}
-.match-rr-change.gain{color:#22c55e;background:#13271a;}
-.match-rr-change.loss{color:#f87171;background:#2c1717;}
-.m-badge{text-align:right;flex-shrink:0;width:var(--match-badge-w,140px);}
-.m-badge-lbl{font-size:10px;color:var(--muted);font-family:var(--font-body);line-height:1;}
-.m-badge-val{font-size:13px;font-weight:700;line-height:1.3;font-variant-numeric:tabular-nums;}
-.m-badge-val.m-badge-settling{color:var(--muted);font-weight:600;font-style:italic;font-size:11px;}
-
+.mh-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:28px;}
+.mh-summary-item{display:flex;flex-direction:column;gap:7px;padding:20px 22px;background:#121214;}
+.mh-summary-value{font-size:26px;font-weight:750;letter-spacing:-.04em;font-variant-numeric:tabular-nums;}
+.mh-summary-label{font-size:10px;color:#a1a1aa;letter-spacing:.09em;text-transform:uppercase;}
+.mh-summary-item.mvp-match .mh-summary-value{color:#f2cf80;}.mh-summary-item.mvp-team .mh-summary-value{color:#cbd5e1;}
+.mh-list-heading{display:flex;justify-content:space-between;gap:12px;margin-bottom:15px;font-size:11px;color:#a1a1aa;}
+.mh-list-heading>span:first-child{font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#e4e4e7;}
+.matches{display:flex;flex-direction:column;gap:10px;}
+.match-day-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:20px;padding:12px 0;border-bottom:1px solid var(--border);}
+.match-day-header:first-child{margin-top:0;}
+.match-day-heading{display:flex;align-items:baseline;gap:9px;min-width:0;}
+.match-day-title{font-size:13px;font-weight:750;color:#e4e4e7;white-space:nowrap;}
+.match-day-count{font-size:10px;color:#a1a1aa;white-space:nowrap;}
+.match-day-stats{display:flex;align-items:center;}
+.match-day-stat{display:flex;align-items:baseline;gap:7px;padding:0 12px;border-left:1px solid var(--border2);}
+.match-day-stat:first-child{border-left:0;}.match-day-stat:last-child{padding-right:0;}
+.match-day-stat-label{font-size:9px;color:#a1a1aa;white-space:nowrap;}
+.match-day-stat-value{font-size:11px;font-weight:650;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.match-day-record .win{color:#4ade80;}.match-day-record .loss{color:#f87171;}.match-day-record .draw{color:var(--draw);}
+.match-day-rr.gain{color:#4ade80;}.match-day-rr.loss{color:#f87171;}
+.match-day-coverage{color:#a1a1aa;font-size:9px;}
+.match-card{--result-color:#fbbf24;background:#141416;border:1px solid #2a2a2e;border-radius:12px;overflow:hidden;transition:border-color .15s;}
+.match-card.win{--result-color:#4ade80;}.match-card.loss{--result-color:#fb7185;}
+.match-card:hover{border-color:#52525b;}.match-card.expanded{border-color:#52647c;}
+.match-row{display:grid;grid-template-columns:210px minmax(0,1fr);width:100%;text-align:left;cursor:pointer;}
+.match-row:focus-visible{outline:2px solid var(--brand);outline-offset:-3px;border-radius:11px;}
+.mc-map-panel{position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:flex-end;min-height:158px;padding:18px;overflow:hidden;background:radial-gradient(ellipse at top right,#344657,#1d242d 60%,#141416);border-left:3px solid var(--result-color);}
+.mc-map-image{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;opacity:.85;transition:transform .3s;}
+.mc-map-panel:after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(9,9,11,.08),rgba(9,9,11,.3) 30%,rgba(9,9,11,.92));}
+.match-card:hover .mc-map-image{transform:scale(1.04);}
+.match-map{font-size:23px;font-weight:750;letter-spacing:-.035em;line-height:1.2;overflow-wrap:anywhere;color:#fff;}
+.mc-map-meta{display:flex;flex-wrap:wrap;gap:5px 9px;color:#d4d4d8;font-size:10px;margin-top:7px;}
+.mc-body{display:flex;flex-direction:column;justify-content:space-between;gap:18px;padding:18px 20px;min-width:0;}
+.mc-topline{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.mc-result{display:flex;align-items:center;gap:13px;}
+.m-result-tag{color:var(--result-color);font-size:10px;font-weight:750;text-transform:uppercase;letter-spacing:.1em;}
+.match-score{display:flex;align-items:baseline;gap:7px;font-size:25px;font-weight:750;letter-spacing:-.04em;font-variant-numeric:tabular-nums;line-height:1;}
+.match-score .mc-score-divider{font-size:16px;color:#71717a;font-weight:400;}.match-score .mc-score-opponent{color:#a1a1aa;}
+.mc-award{display:inline-flex;align-items:center;gap:5px;padding:5px 7px;border:1px solid;font-size:9px;font-weight:750;letter-spacing:.045em;text-transform:uppercase;border-radius:5px;white-space:nowrap;}
+.mc-award svg{width:12px;height:12px;flex-shrink:0;}.mc-award.mvp-match{color:#f2cf80;background:#2b2416;border-color:#65512c;}.mc-award.mvp-team{color:#cbd5e1;background:#242830;border-color:#454e5b;}
+.mc-expand-icon{display:flex;align-items:center;gap:5px;margin-left:auto;color:#a1a1aa;font-size:10px;}
+.mc-expand-icon svg{width:15px;height:15px;transition:transform .2s;}.match-card.expanded .mc-expand-icon svg{transform:rotate(180deg);}
+.mc-performance{display:grid;grid-template-columns:1.1fr .65fr 1.5fr 1fr;gap:12px;align-items:start;}
+.mc-performance-stat{display:flex;flex-direction:column;gap:6px;min-width:0;}
+.mc-performance-lbl{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#a1a1aa;}
+.mc-performance-val{display:flex;align-items:center;gap:5px;font-size:16px;font-weight:700;line-height:1.3;white-space:nowrap;font-variant-numeric:tabular-nums;}
+.mc-performance-val .mc-deaths{color:#a1a1aa;}.mc-kda-separator{font-size:11px;color:#71717a;font-weight:400;}
+.mc-lobby-value{font-size:12px;}.mc-lobby-rr{font-size:10px;color:#a1a1aa;margin-left:27px;margin-top:-4px;}
+.mc-rr-stat{align-items:flex-end;}.mc-rr-stat .match-rr-change{font-size:17px;padding:0;background:none;line-height:1.3;}
+.match-rr-change{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;padding:1px 6px;border-radius:var(--radius-xs);white-space:nowrap;}
+.match-rr-change.gain{color:#4ade80;background:#13271a;}.match-rr-change.loss{color:#f87171;background:#2c1717;}
+.match-card .players-grid{margin:0;padding:18px 12px;border-top:1px solid var(--border);background:#101012;}
+@media(prefers-reduced-motion:reduce){.match-card,.mc-map-image,.mc-expand-icon svg{transition:none;}.match-card:hover .mc-map-image{transform:none;}}
 
 .my-stat{font-family:var(--font-body);font-size:12px;}
 .my-stat-lbl{color:var(--muted);font-size:10px;display:block;}
@@ -341,7 +352,7 @@ h1 span{color:var(--accent);}
 .player-1v2.p1v2-null{color:var(--muted);opacity:.5;}
 .player-1v2.p1v2-win{color:var(--win);}
 /* Placement-week games after a total reset: greyed in history, marked with a tag */
-.match-card.post-reset{opacity:.45;}
+.match-card.post-reset{opacity:.7;}
 .match-card.post-reset:hover,.match-card.post-reset.expanded{opacity:.85;}
 #matches-container.counting-reset .match-card.post-reset{opacity:1;}
 .mc-reset-tag{font-size:8px;font-weight:700;letter-spacing:.05em;padding:1px 4px;border-radius:var(--radius-xs);flex-shrink:0;text-transform:uppercase;line-height:1.4;background:#212325;color:var(--muted);border:.5px dashed var(--border2);}
@@ -568,9 +579,13 @@ h1 span{color:var(--accent);}
 .rr-legend-mark{display:inline-block;width:10px;height:10px;border-radius:50%;background:#71717a;}
 .rr-legend-mark.win{background:#4ade80;}.rr-legend-mark.loss{background:#f87171;}
 .rr-legend-mark.trend{width:18px;height:3px;border-radius:999px;background:linear-gradient(90deg,#4ade80,#f87171);}
-.rr-movement-scroll{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
+.rr-legend-mark.shield{border-radius:2px;background:#60a5fa;transform:rotate(45deg);}
+.rr-movement-scroll{position:relative;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
 .rr-movement-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:3px;}
 .rr-movement-svg{display:block;width:100%;min-width:720px;height:auto;font-family:var(--font-body);}
+.rr-movement-svg .rank-band{cursor:zoom-in;}
+.rr-movement-svg.zoomed .rank-band{cursor:zoom-out;}
+.rr-movement-svg .rank-band:focus{outline:none;stroke:var(--brand);stroke-width:2;}
 .rr-movement-svg .grid{stroke:#303034;stroke-width:1;}.rr-movement-svg .zero{stroke:#71717a;stroke-width:1.5;}
 .rr-movement-svg .axis-label,.rr-movement-svg .tick-label{fill:#a1a1aa;font-size:11px;}
 .rr-movement-svg .rank-band-label{fill:#c4c4cc;font-size:10px;font-weight:600;}
@@ -578,8 +593,14 @@ h1 span{color:var(--accent);}
 .rr-movement-svg .trend-line{fill:none;stroke:url(#rr-movement-gradient);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
 .rr-movement-svg .trend-point{opacity:.42;stroke:#141416;stroke-width:1.5;}
 .rr-movement-svg .trend-point.positive{fill:#4ade80;}.rr-movement-svg .trend-point.negative{fill:#f87171;}.rr-movement-svg .trend-point.neutral{fill:#a1a1aa;}
+.rr-movement-svg .shield-point{fill:#60a5fa;stroke:#141416;stroke-width:2;}
+.rr-movement-svg .shield-letter{fill:#fff;font-size:8px;font-weight:800;text-anchor:middle;dominant-baseline:central;pointer-events:none;}
 .rr-movement-svg g[tabindex]:hover .trend-point,.rr-movement-svg g[tabindex]:focus .trend-point{opacity:1;stroke:#fff;stroke-width:2.5;}
+.rr-movement-svg g[tabindex]:hover .shield-point,.rr-movement-svg g[tabindex]:focus .shield-point{stroke:#fff;stroke-width:2.5;}
 .rr-movement-svg g[tabindex]:focus{outline:none;}
+.rr-dot-tooltip{position:absolute;z-index:4;display:flex;flex-direction:column;gap:3px;min-width:max-content;padding:8px 10px;border:1px solid #3f3f46;border-radius:7px;background:#202023;color:#f4f4f5;box-shadow:0 8px 24px rgba(0,0,0,.4);font-size:12px;line-height:1.25;pointer-events:none;transform:translate(-50%,calc(-100% - 10px));}
+.rr-dot-tooltip[hidden]{display:none;}
+.rr-dot-tooltip strong{font-weight:700;}.rr-dot-tooltip span{font-weight:750;font-variant-numeric:tabular-nums;}
 @media(max-width:600px){
   .rank-table th,.rank-table td,.rank-table.duos-table th,.rank-table.duos-table td{padding-left:14px;padding-right:14px;}
   .rr-movement-card{padding:14px;}
@@ -589,19 +610,31 @@ h1 span{color:var(--accent);}
 @media(max-width:440px){.rr-summary-stats{grid-template-columns:repeat(2,minmax(0,1fr));}.rr-summary-stat dd{font-size:22px;}.server-summary-stat dd{font-size:19px;}}
 @media(max-width:760px){
   #matches-page .match-card.expanded .players-grid{grid-template-columns:minmax(0,1fr);gap:16px;}
+  .match-row{grid-template-columns:170px minmax(0,1fr);}
+  .mc-body{padding:16px;}.mc-topline{gap:8px;}.mc-expand-label{display:none;}
+  .match-day-stat{flex-direction:column;gap:3px;}.match-day-coverage{font-size:8px;}
 }
-@media(max-width:480px){
-  .page-nav{gap:0;flex-wrap:wrap;}
-  .page-nav a{padding:0 10px;font-size:13px;}
-  #matches-page .match-row{display:grid;grid-template-columns:3px minmax(0,1fr);gap:10px;}
-  #matches-page .result-bar{grid-row:1/3;}
-  #matches-page .mc-left{flex-wrap:wrap;}
-  #matches-page .match-score{white-space:nowrap;}
-  #matches-page .mc-right{grid-column:2;margin-left:0;justify-content:space-between;}
-  #matches-page .match-context{align-items:flex-end;}
-  #matches-page .m-badge{width:auto;text-align:left;}
-  #matches-page .match-day-header{flex-wrap:wrap;gap:8px;}
+@media(max-width:600px){
+  .mh-summary-item{padding:16px 12px;}.mh-summary-value{font-size:23px;}.mh-summary-label{font-size:8px;letter-spacing:.04em;}
+  .mh-list-heading{flex-direction:column;gap:5px;}
+  .match-row{grid-template-columns:minmax(0,1fr);}
+  .mc-map-panel{min-height:110px;padding:16px;}.mc-map-image{object-position:center 45%;}
+  .mc-map-panel:after{background:linear-gradient(90deg,rgba(9,9,11,.82),rgba(9,9,11,.12));}
+  .mc-body{padding:15px;gap:20px;}.mc-performance{gap:8px;grid-template-columns:1.1fr .6fr 1.4fr .85fr;}
+  .mc-performance-val{font-size:14px;}.mc-lobby-value{font-size:11px;}.mc-lobby-value img{width:19px;height:19px;}.mc-lobby-rr{margin-left:24px;}
+  .mc-rr-stat .match-rr-change{font-size:15px;}.mc-performance-lbl{font-size:8px;}
+  .match-day-header{flex-wrap:wrap;gap:10px;}.match-day-heading{width:100%;}
+  .match-day-stats{width:100%;justify-content:space-between;}.match-day-stat{padding:0 10px;}.match-day-stat:first-child{padding-left:0;}
+  .match-card .players-grid{padding:15px 6px;}
 }
+@media(max-width:440px){
+  .mc-performance{grid-template-columns:1fr 1fr;gap:16px;}
+  .mc-performance-stat:nth-child(even){align-items:flex-end;}
+  .mc-performance-val{font-size:16px;}.mc-lobby-value{font-size:13px;}
+  .mc-performance-lbl{font-size:9px;}.mc-lobby-value img{width:22px;height:22px;}
+  .mc-lobby-rr{margin-left:27px;}.mc-rr-stat .match-rr-change{font-size:17px;}
+}
+@media(max-width:480px){.page-nav{gap:0;flex-wrap:wrap;}.page-nav a{padding:0 10px;font-size:13px;}}
 </style>
 </head>
 <body>
@@ -733,9 +766,9 @@ h1 span{color:var(--accent);}
       <section id="rr-movement-section" class="rr-movement-section" hidden aria-labelledby="rr-movement-title">
         <div class="rr-movement-card">
           <div class="rr-movement-head"><h2 id="rr-movement-title">RR movement by starting rank</h2><span id="rr-movement-count" class="rr-movement-count"></span></div>
-          <p class="rr-movement-note">Every covered match is shown as a point. The curve is a locally weighted trend calculated from all entries, without buckets. Refunds are added, protected losses stay at zero, and recorded payouts already include party penalties. Covered penalized five-stacks remain in this chart; the aggregate tables retain their ordinary-RR eligibility rules.</p>
+          <p class="rr-movement-note">Every covered match is shown at its reconstructed starting rank + RR. Double-click a rank area to zoom into only that rank; double-click again to reset. Protected losses remain part of rank reconstruction and stay visible as blue S markers; only their forced zero movement is excluded from the trend fit because it is not a normal payout. Refunds are added, and recorded payouts already include party penalties. Covered penalized five-stacks remain in this chart; the aggregate tables retain their ordinary-RR eligibility rules.</p>
           <div class="rr-movement-legend" aria-label="Chart legend">
-            <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span><span><i class="rr-legend-mark trend"></i>All-entry trend</span>
+            <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span><span><i class="rr-legend-mark shield"></i>S protected</span><span><i class="rr-legend-mark trend"></i>Trend excluding shields</span>
           </div>
           <div id="rr-movement-chart" class="rr-movement-scroll" role="region" aria-label="RR movement chart" tabindex="0"></div>
         </div>
@@ -752,11 +785,13 @@ h1 span{color:var(--accent);}
   <main id="matches-page" class="detail-page" hidden aria-labelledby="matches-title">
     <div class="page-heading">
       <h1 id="matches-title" tabindex="-1">Match History</h1>
-      <p>Your competitive matches, grouped by day. Track your RR changes and lobby ranks, and open any match for the full breakdown.</p>
+      <p>Every match, at a glance. Explore your performance, lobby ranks, and standout games.</p>
     </div>
     <div id="matches-filter-host"></div>
     <div id="matches-empty" class="page-empty" role="status">Search for a player above to explore their match history.</div>
     <div id="match-list-section" style="display:none">
+      <div id="match-history-summary" class="mh-summary" aria-label="Match history summary"></div>
+      <div class="mh-list-heading"><span>Match log</span><span>Newest first · Select a match for the roster</span></div>
       <div id="matches-container"></div>
       <button class="load-more-btn" id="load-more-btn" style="display:none" onclick="loadMoreMatches()">Load More</button>
     </div>
@@ -1147,10 +1182,13 @@ let CURRENT_RR=null;
 // to be covered (never fetched before, or persisted after this ran). Read via
 // _rrChangeByMatchId[matchId] ?? null, never assume it's present.
 let _rrChangeByMatchId={};
-// match_id -> RR total the player was sitting on BEFORE that match — previous
-// entry's elo within a season, else the post-match total minus the movement
-// that actually applied. Used as the x-axis anchor in the RR movement chart.
+// match_id -> continuous RR position BEFORE that match — previous history
+// position within a season, else the post-match position minus the movement
+// that actually applied. Immortal+ is normalized to 2100 + cumulative RR.
 let _preRRByMatchId={};
+// Exact tier at that pre-match position when a preceding MMR-history entry is
+// available. Immortal+ tier thresholds vary by region rather than every 100 RR.
+let _preTierByMatchId={};
 // match_id -> refunded_rr from MMR history. Riot applies this on top of the
 // match payout, so it is rendered as a separate segment instead of being
 // silently folded into last_change.
@@ -1168,7 +1206,7 @@ function measureCtx(){
   if(!_measureCtx)_measureCtx=document.createElement('canvas').getContext('2d');
   return _measureCtx;
 }
-let allTeammates=[],serverData=[],serverPartySize=0,serverFilteredMatchCount=0,lobbyRankPartySize=0,lobbyRankFilteredMatchCount=0;
+let allTeammates=[],serverData=[],serverPartySize=0,serverFilteredMatchCount=0,lobbyRankPartySize=0,lobbyRankFilteredMatchCount=0,rrMovementZoomTier=null;
 
 // ── CURRENT-ACT MATCH CACHE ──────────────────────────────────────────────
 // Full HenrikDev v4 matches are hundreds of KB each because they include the
@@ -1243,7 +1281,7 @@ async function readCurrentActMatchCache(puuid,seasonId){
 function matchForCache(m){
   const out={...m,
     // RR history is refreshed separately and reattached by match_id on read.
-    myRR:null,myPreRR:null,myRefundedRR:0,myDerankProtected:false,
+    myRR:null,myPreRR:null,myPreTierId:null,myRefundedRR:0,myDerankProtected:false,
     // Store a plain array for maximum IndexedDB/structured-clone portability.
     teamMvpPuuids:[...(m.teamMvpPuuids||[])],
   };
@@ -1258,6 +1296,7 @@ function matchFromCache(m){
     teamMvpPuuids:new Set(Array.isArray(m.teamMvpPuuids)?m.teamMvpPuuids:[]),
     myRR:matchId?_rrChangeByMatchId[matchId]??null:null,
     myPreRR:matchId?_preRRByMatchId[matchId]??null:null,
+    myPreTierId:matchId?_preTierByMatchId[matchId]??null:null,
     myRefundedRR:matchId?_refundedRRByMatchId[matchId]??0:0,
     myDerankProtected:matchId?!!_derankProtectedByMatchId[matchId]:false,
   };
@@ -1857,8 +1896,8 @@ function runAnalysis(){
   CURRENT_RR=null;
   settleSearchBarWidth();
   allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;mhDayStats={};
-  _rrChangeByMatchId={};_preRRByMatchId={};_refundedRRByMatchId={};_derankProtectedByMatchId={};
-  allTeammates=[];serverData=[];serverPartySize=0;serverFilteredMatchCount=0;lobbyRankPartySize=0;lobbyRankFilteredMatchCount=0;
+  _rrChangeByMatchId={};_preRRByMatchId={};_preTierByMatchId={};_refundedRRByMatchId={};_derankProtectedByMatchId={};
+  allTeammates=[];serverData=[];serverPartySize=0;serverFilteredMatchCount=0;lobbyRankPartySize=0;lobbyRankFilteredMatchCount=0;rrMovementZoomTier=null;
   const serverPartyAll=document.querySelector('input[name="servers-party-size"][value="0"]');
   if(serverPartyAll)serverPartyAll.checked=true;
   const lobbyRankPartyAll=document.querySelector('input[name="lobby-rank-party-size"][value="0"]');
@@ -2679,12 +2718,13 @@ function processMatch(m){
   const myRR=_rrChangeByMatchId[matchId]??null;
   // RR total going into this match — the x-axis position in RR movement.
   const myPreRR=_preRRByMatchId[matchId]??null;
+  const myPreTierId=_preTierByMatchId[matchId]??null;
   // RR restored alongside this result (for example after a cheater ban).
   const myRefundedRR=_refundedRRByMatchId[matchId]??0;
   // Whether Rank Shield absorbed this match's loss (badge didn't drop even
   // though myRR above still carries the normal negative payout).
   const myDerankProtected=_derankProtectedByMatchId[matchId]??false;
-  return{mapName,serverName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,myPreRR,myRefundedRR,myDerankProtected,myPartyPenalty,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
+  return{mapName,serverName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,myPreRR,myPreTierId,myRefundedRR,myDerankProtected,myPartyPenalty,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
 }
 
 function extractStats(p,fallbackRounds=null){
@@ -3028,13 +3068,24 @@ async function loadAll(prefetchSnapshot=null){
         // top of the match payout, while a protected loss reports its normal
         // negative last_change but does not reduce the displayed RR.
         const sameSeason=prev&&prev.season?.short===h.season?.short;
-        const previousTotal=Number.isFinite(prev?.elo)?prev.elo:null;
-        const endingTotal=Number.isFinite(h.elo)?h.elo:(Number.isFinite(h.rr)?h.rr:null);
+        // Henrik's `elo` is tier-base + RR. At Immortal+, Riot's `rr` is
+        // cumulative while the tier changes at a regional threshold, so use a
+        // continuous coordinate rooted at the Immortal 1 floor. Otherwise a
+        // promotion would introduce a fake 100-point jump into this chart.
+        const historyTotal=entry=>{
+          const tier=entry?.tier?.id??0;
+          if(tier>=24&&Number.isFinite(entry?.rr))return 2100+entry.rr;
+          return Number.isFinite(entry?.elo)?entry.elo:(Number.isFinite(entry?.rr)?entry.rr:null);
+        };
+        const previousTotal=historyTotal(prev);
+        const endingTotal=historyTotal(h);
         if(sameSeason&&previousTotal!=null){
           _preRRByMatchId[h.match_id]=previousTotal;
+          if((prev?.tier?.id??0)>=3)_preTierByMatchId[h.match_id]=prev.tier.id;
         }else if(endingTotal!=null&&lastChange!=null){
           const appliedMatchChange=derankProtected&&lastChange<0?0:lastChange;
           _preRRByMatchId[h.match_id]=endingTotal-appliedMatchChange-refundedRR;
+          if((h?.tier?.id??0)>=3)_preTierByMatchId[h.match_id]=h.tier.id;
         }
         prev=h;
       });
@@ -3845,25 +3896,33 @@ function renderRRCard(matches){
 function rrPositionFromElo(elo,tierHint=null){
   let tier=tierHint>=3?tierHint:Math.floor(elo/100)+3;
   tier=Math.max(3,Math.min(27,tier));
-  let rr=Math.round(elo-(tier-3)*100);
-  while(rr<0&&tier>3){tier--;rr+=100;}
-  while(rr>=100&&tier<27){tier++;rr-=100;}
+  // Iron through Ascendant use a 0–99 progress bar per division. Immortal+
+  // instead displays leaderboard RR accumulated from the Immortal 1 floor;
+  // it must not reset when the API's tier changes to Immortal 2/3/Radiant.
+  let rr=Math.round(elo-(tier>=24?2100:(tier-3)*100));
+  if(tier<24){
+    while(rr<0&&tier>3){tier--;rr+=100;}
+    while(rr>=100&&tier<24){tier++;rr-=100;}
+  }
   return{tier,rr,label:`${avgLabelShort(tier)} · ${rr} RR`};
 }
 
 function renderRRMovement(matches){
   const section=document.getElementById('rr-movement-section');
   const container=document.getElementById('rr-movement-chart');
-  const rows=matches.filter(m=>m.myRR!=null&&m.myPreRR!=null&&m.myTierId>=3&&!m.actPlacement).map(m=>{
+  const allRows=matches.filter(m=>m.myRR!=null&&m.myPreRR!=null&&m.myTierId>=3&&!m.actPlacement).map(m=>{
     const payout=m.myRR;
     const refund=Number.isFinite(m.myRefundedRR)?m.myRefundedRR:0;
     const shielded=!!m.myDerankProtected&&payout<0;
     const appliedMatch=shielded?0:payout;
     return{m,payout,refund,shielded,net:appliedMatch+refund,penalty:m.myPartyPenalty||0};
   });
-  section.hidden=!rows.length;
+  const rowTier=row=>rrPositionFromElo(row.m.myPreRR,row.m.myPreTierId??row.m.myTierId).tier;
+  let rows=rrMovementZoomTier==null?allRows:allRows.filter(row=>rowTier(row)===rrMovementZoomTier);
+  if(rrMovementZoomTier!=null&&!rows.length){rrMovementZoomTier=null;rows=allRows;}
+  section.hidden=!allRows.length;
   container.replaceChildren();
-  if(!rows.length)return;
+  if(!allRows.length)return;
 
   const refunds=rows.filter(row=>row.refund!==0).length;
   const shields=rows.filter(row=>row.shielded).length;
@@ -3872,10 +3931,12 @@ function renderRRMovement(matches){
   const rawMax=Math.max(...rows.map(row=>row.m.myPreRR));
   const rawSpan=Math.max(1,rawMax-rawMin);
   document.getElementById('rr-movement-count').textContent=[
+    rrMovementZoomTier!=null?`${avgLabel(rrMovementZoomTier)} only`:null,
     `${rows.length} covered ${rows.length===1?'match':'matches'}`,
     refunds?`${refunds} ${refunds===1?'refund':'refunds'}`:null,
     shields?`${shields} protected`:null,
     penalties?`${penalties} penalized`:null,
+    rrMovementZoomTier!=null?'double-click to reset':null,
   ].filter(Boolean).join(' · ');
 
   const NS='http://www.w3.org/2000/svg';
@@ -3885,18 +3946,24 @@ function renderRRMovement(matches){
     if(textValue!=null)el.textContent=textValue;
     return el;
   };
-  const width=900,height=350,left=68,right=20,top=34,bottom=72;
+  const tooltip=document.createElement('div');
+  tooltip.id='rr-dot-tooltip';
+  tooltip.className='rr-dot-tooltip';
+  tooltip.role='tooltip';
+  tooltip.hidden=true;
+  const width=900,height=320,left=68,right=20,top=34,bottom=38;
   const plotRight=width-right,plotBottom=height-bottom,plotWidth=plotRight-left,plotHeight=plotBottom-top;
   const xPad=Math.max(25,(rawMax-rawMin)*.06);
-  const xMin=Math.max(0,rawMin-xPad),xMax=rawMax+xPad;
+  const xMin=Math.max(0,rawMin-xPad);
+  const xMax=rawMax+xPad;
   const movementMax=Math.max(...rows.map(row=>Math.abs(row.net)),10);
   const yMax=Math.ceil(movementMax/5)*5;
   const x=value=>left+(value-xMin)/(xMax-xMin)*plotWidth;
   const y=value=>top+(yMax-value)/(yMax*2)*plotHeight;
-  const svg=node('svg',{class:'rr-movement-svg',viewBox:`0 0 ${width} ${height}`,role:'img','aria-labelledby':'rr-movement-svg-title rr-movement-svg-desc'});
+  const svg=node('svg',{class:`rr-movement-svg${rrMovementZoomTier!=null?' zoomed':''}`,viewBox:`0 0 ${width} ${height}`,role:'img','aria-labelledby':'rr-movement-svg-title rr-movement-svg-desc'});
   svg.append(
     node('title',{id:'rr-movement-svg-title'},'RR movement by starting rank and RR'),
-    node('desc',{id:'rr-movement-svg-desc'},'Every covered match appears as a point. A locally weighted curve calculated from all entries shows the trend. Refunds, protected losses, and party-penalized payouts are included.'),
+    node('desc',{id:'rr-movement-svg-desc'},'Every covered match appears at its reconstructed starting rank and RR. Protected losses remain visible as blue S markers and remain part of rank reconstruction, but their forced zero movement is excluded only from the trend fit.'),
   );
   const defs=node('defs');
   const gradient=node('linearGradient',{id:'rr-movement-gradient',x1:'0',x2:'0',y1:top,y2:plotBottom,gradientUnits:'userSpaceOnUse'});
@@ -3910,29 +3977,65 @@ function renderRRMovement(matches){
   defs.appendChild(gradient);
   svg.appendChild(defs);
 
-  const firstBand=Math.floor(xMin/100)*100;
-  for(let start=firstBand,index=0;start<xMax;start+=100,index++){
+  const availableTiers=new Set(allRows.map(rowTier));
+  const toggleRankZoom=tier=>{
+    if(!availableTiers.has(tier))return;
+    rrMovementZoomTier=rrMovementZoomTier===tier?null:tier;
+    renderRRMovement(matches);
+  };
+  // Derive rank bands from the actual rank attached to each match. This is
+  // essential at Immortal+, whose regional tier thresholds are not fixed
+  // 100-RR divisions even though its RR/Elo coordinate remains continuous.
+  const tierGroups=[...availableTiers].sort((a,b)=>a-b).map(tier=>{
+    const values=allRows.filter(row=>rowTier(row)===tier).map(row=>row.m.myPreRR);
+    return{tier,min:Math.min(...values),max:Math.max(...values)};
+  });
+  const visibleGroups=rrMovementZoomTier==null?tierGroups:tierGroups.filter(group=>group.tier===rrMovementZoomTier);
+  const rankBands=visibleGroups.map((group,index)=>{
+    const previous=visibleGroups[index-1],next=visibleGroups[index+1];
+    return{
+      tier:group.tier,
+      start:previous?(previous.max+group.min)/2:xMin,
+      end:next?(group.max+next.min)/2:xMax,
+    };
+  });
+  rankBands.forEach(({tier,start,end},index)=>{
     const bandLeft=Math.max(left,x(start));
-    const bandRight=Math.min(plotRight,x(start+100));
-    if(bandRight<=bandLeft)continue;
-    svg.appendChild(node('rect',{x:bandLeft,y:top,width:bandRight-bandLeft,height:plotHeight,fill:index%2?'rgba(255,255,255,.018)':'rgba(255,255,255,.035)'}));
-    if(bandRight-bandLeft>54){
-      const pos=rrPositionFromElo(start+50);
-      svg.appendChild(node('text',{x:(bandLeft+bandRight)/2,y:top-10,'text-anchor':'middle',class:'rank-band-label'},avgLabelShort(pos.tier)));
+    const bandRight=Math.min(plotRight,x(end));
+    if(bandRight<=bandLeft)return;
+    const interactive=availableTiers.has(tier);
+    const band=node('rect',{x:bandLeft,y:top,width:bandRight-bandLeft,height:plotHeight,fill:index%2?'rgba(255,255,255,.018)':'rgba(255,255,255,.035)',class:interactive?'rank-band':'','aria-hidden':interactive?'false':'true'});
+    if(interactive){
+      band.setAttribute('tabindex','0');
+      band.setAttribute('role','button');
+      band.setAttribute('aria-label',rrMovementZoomTier===tier?`${avgLabel(tier)} is zoomed. Press Enter to reset`:`Zoom chart to ${avgLabel(tier)}`);
+      band.addEventListener('keydown',event=>{
+        if(event.key!=='Enter'&&event.key!==' ')return;
+        event.preventDefault();
+        toggleRankZoom(tier);
+      });
     }
-  }
+    svg.appendChild(band);
+    if(bandRight-bandLeft>54){
+      svg.appendChild(node('text',{x:(bandLeft+bandRight)/2,y:top-10,'text-anchor':'middle',class:'rank-band-label'},avgLabelShort(tier)));
+    }
+  });
+  svg.addEventListener('dblclick',event=>{
+    const matrix=svg.getScreenCTM();
+    if(!matrix)return;
+    const point=svg.createSVGPoint();point.x=event.clientX;point.y=event.clientY;
+    const local=point.matrixTransform(matrix.inverse());
+    if(local.x<left||local.x>plotRight||local.y<top||local.y>plotBottom)return;
+    if(rrMovementZoomTier!=null){rrMovementZoomTier=null;renderRRMovement(matches);return;}
+    const value=xMin+(local.x-left)/plotWidth*(xMax-xMin);
+    const target=rankBands.find(band=>value>=band.start&&value<=band.end);
+    if(target)toggleRankZoom(target.tier);
+  });
   [-yMax,-yMax/2,0,yMax/2,yMax].forEach(value=>{
     const py=y(value);
     svg.appendChild(node('line',{x1:left,y1:py,x2:plotRight,y2:py,class:value===0?'zero':'grid'}));
     svg.appendChild(node('text',{x:left-10,y:py+4,'text-anchor':'end',class:'tick-label'},value>0?`+${value}`:String(value)));
   });
-  for(let index=0;index<5;index++){
-    const value=xMin+(xMax-xMin)*index/4;
-    const px=x(value);
-    svg.appendChild(node('line',{x1:px,y1:plotBottom,x2:px,y2:plotBottom+5,class:'grid'}));
-    svg.appendChild(node('text',{x:px,y:plotBottom+22,'text-anchor':'middle',class:'tick-label'},rrPositionFromElo(value).label));
-  }
-  svg.appendChild(node('text',{x:(left+plotRight)/2,y:height-12,'text-anchor':'middle',class:'axis-label'},'Starting rank + RR'));
   const yTitle=node('text',{x:15,y:(top+plotBottom)/2,'text-anchor':'middle',class:'axis-label',transform:`rotate(-90 15 ${(top+plotBottom)/2})`},'Applied RR movement');
   svg.appendChild(yTitle);
 
@@ -3954,15 +4057,17 @@ function renderRRMovement(matches){
     }
     return path;
   };
-  // Gaussian smoothing keeps every match in the calculation: distant entries
-  // receive progressively less weight, but no match is assigned to or replaced
-  // by a bucket. Sampling only controls how finely the SVG curve is drawn.
+  // Shields remain in `rows` and therefore keep their exact reconstructed x
+  // position. Exclude only their forced-zero y value from the statistical fit:
+  // that zero describes rank protection, not the payout relationship the trend
+  // is meant to show. This does not touch _preRRByMatchId or later matches.
+  const trendRows=rows.filter(row=>!row.shielded);
   const bandwidth=Math.max(30,rawSpan*.12);
-  const trendSampleCount=rawMax===rawMin?1:Math.min(100,Math.max(40,rows.length));
+  const trendSampleCount=!trendRows.length?0:rawMax===rawMin||trendRows.length===1?1:Math.min(100,Math.max(40,trendRows.length));
   const trendPoints=Array.from({length:trendSampleCount},(_,index)=>{
     const value=trendSampleCount===1?rawMin:rawMin+rawSpan*index/(trendSampleCount-1);
     let weightedTotal=0,weightTotal=0;
-    rows.forEach(row=>{
+    trendRows.forEach(row=>{
       const distance=(row.m.myPreRR-value)/bandwidth;
       const weight=Math.exp(-.5*distance*distance);
       weightedTotal+=row.net*weight;
@@ -3984,7 +4089,7 @@ function renderRRMovement(matches){
     overlapTotals.set(key,(overlapTotals.get(key)||0)+1);
   });
   const overlapIndexes=new Map();
-  sortedRows.forEach(row=>{
+  const positionedRows=sortedRows.map(row=>{
     const key=Math.round(row.m.myPreRR);
     const total=overlapTotals.get(key)||1;
     const index=overlapIndexes.get(key)||0;
@@ -3992,21 +4097,44 @@ function renderRRMovement(matches){
     const spacing=total>1?Math.min(3,18/(total-1)):0;
     const px=x(row.m.myPreRR)+(index-(total-1)/2)*spacing;
     const py=y(row.net);
-    const position=rrPositionFromElo(row.m.myPreRR,row.m.myTierId);
-    const date=row.m.startedAtMs?new Date(row.m.startedAtMs).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}):'Unknown date';
-    const result=row.m.won===true?'Win':row.m.won===false?'Loss':'Draw';
-    const parts=[`${date}, ${position.label}, ${result}`,`${row.payout>=0?'+':''}${row.payout} RR recorded payout`];
-    if(row.refund)parts.push(`${row.refund>=0?'+':''}${row.refund} RR refund`);
-    if(row.shielded)parts.push('Rank Shield / derank protection blocked the loss');
-    if(row.penalty)parts.push(`payout includes a ${Math.round(row.penalty*100)}% party penalty`);
-    parts.push(`${row.net>=0?'+':''}${row.net} RR applied movement`);
-    const group=node('g',{tabindex:'0',role:'img','aria-label':parts.join('. ')});
-    group.appendChild(node('title',{},parts.join(' · ')));
-    const pointClass=row.net>0?'positive':row.net<0?'negative':'neutral';
-    group.appendChild(node('circle',{cx:px,cy:py,r:3.5,class:`trend-point ${pointClass}`}));
+    return{row,px,py};
+  });
+  // Draw shields last so their larger blue markers cannot disappear behind
+  // ordinary zero-movement points at the same starting RR.
+  positionedRows.sort((a,b)=>Number(a.row.shielded)-Number(b.row.shielded)).forEach(({row,px,py})=>{
+    const position=rrPositionFromElo(row.m.myPreRR,row.m.myPreTierId??row.m.myTierId);
+    const rankText=`${avgLabel(position.tier)} · ${position.rr} RR`;
+    const changeText=row.net===0?'0 RR':`${rrSigned(row.net,0)} RR`;
+    const group=node('g',{tabindex:'0',role:'img','aria-label':`${rankText}. ${changeText}`,'aria-describedby':tooltip.id});
+    let marker;
+    if(row.shielded){
+      marker=node('rect',{x:px-6,y:py-6,width:12,height:12,rx:1.5,class:'shield-point',transform:`rotate(45 ${px} ${py})`});
+      group.appendChild(marker);
+      group.appendChild(node('text',{x:px,y:py,class:'shield-letter'},'S'));
+    }else{
+      const pointClass=row.net>0?'positive':row.net<0?'negative':'neutral';
+      marker=node('circle',{cx:px,cy:py,r:3.5,class:`trend-point ${pointClass}`});
+      group.appendChild(marker);
+    }
+    const showTooltip=(clientX,clientY)=>{
+      const rank=document.createElement('strong');rank.textContent=rankText;
+      const change=document.createElement('span');change.textContent=changeText;
+      change.className=row.net>0?'rank-positive':row.net<0?'rank-negative':'';
+      tooltip.replaceChildren(rank,change);
+      const bounds=container.getBoundingClientRect();
+      const minX=container.scrollLeft+72,maxX=container.scrollLeft+container.clientWidth-72;
+      tooltip.style.left=Math.max(minX,Math.min(maxX,clientX-bounds.left+container.scrollLeft))+'px';
+      tooltip.style.top=Math.max(44,clientY-bounds.top+container.scrollTop)+'px';
+      tooltip.hidden=false;
+    };
+    group.addEventListener('pointerenter',event=>showTooltip(event.clientX,event.clientY));
+    group.addEventListener('pointermove',event=>showTooltip(event.clientX,event.clientY));
+    group.addEventListener('pointerleave',()=>{tooltip.hidden=true;});
+    group.addEventListener('focus',()=>{const bounds=marker.getBoundingClientRect();showTooltip(bounds.left+bounds.width/2,bounds.top);});
+    group.addEventListener('blur',()=>{tooltip.hidden=true;});
     svg.appendChild(group);
   });
-  container.appendChild(svg);
+  container.append(svg,tooltip);
 }
 
 function renderRRBreakdown(matches){
@@ -4312,72 +4440,105 @@ function buildPlayersGrid(m){
   return grid;
 }
 
+// Public map metadata is optional: match data renders immediately, even offline.
+// One request per page, shared by the initial list and subsequent pagination.
+let matchMapMetadataPromise=null,matchDetailsId=0;
+function loadMatchMapMetadata(){
+  if(!matchMapMetadataPromise){
+    matchMapMetadataPromise=fetch('https://valorant-api.com/v1/maps',{signal:AbortSignal.timeout(10000)})
+      .then(r=>{if(!r.ok)throw new Error('Map metadata unavailable');return r.json();})
+      .then(j=>{
+        const maps=new Map();
+        for(const map of Array.isArray(j.data)?j.data:[]){
+          const artwork=map.listViewIcon||map.splash;
+          if(typeof artwork!=='string')continue;
+          const url=new URL(artwork);
+          if(url.protocol!=='https:'||url.hostname!=='media.valorant-api.com')continue;
+          for(const key of [map.displayName,map.uuid,map.mapUrl]){
+            if(typeof key==='string')maps.set(key.toLowerCase(),url.href);
+          }
+        }
+        return maps;
+      }).catch(()=>new Map());
+  }
+  return matchMapMetadataPromise;
+}
+function matchHtml(value){
+  return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function matchAward(m){
+  const myPuuid=PUUID||m.players?.find(p=>p.name?.toLowerCase()===PLAYER.toLowerCase()&&p.tag?.toLowerCase()===TAG.toLowerCase())?.puuid;
+  if(!myPuuid)return null;
+  if(m.matchMvpPuuid===myPuuid)return 'match';
+  if(m.teamMvpPuuids?.has(myPuuid))return 'team';
+  return null;
+}
+function renderMatchHistorySummary(){
+  const n=mhData.length,wins=mhData.filter(m=>m.won===true).length;
+  let matchMvps=0,teamMvps=0;
+  for(const m of mhData){const award=matchAward(m);if(award==='match')matchMvps++;else if(award==='team')teamMvps++;}
+  document.getElementById('match-history-summary').innerHTML=[
+    [n.toLocaleString(),'Matches',''],
+    [n?Math.round(wins/n*100)+'%':'—','Win rate',''],
+    [matchMvps,'Match MVP','mvp-match'],
+    [teamMvps,'Team MVP','mvp-team'],
+  ].map(([value,label,cls])=>'<div class="mh-summary-item '+cls+'"><span class="mh-summary-value">'+value+'</span><span class="mh-summary-label">'+label+'</span></div>').join('');
+}
 function buildMatchCard(m){
-  const {mapName,serverName,startedAt,won,myR,opR,avgRank,myStats,matchMvpPuuid,teamMvpPuuids,myRR,myDerankProtected}=m;
+  const {mapName,serverName,startedAt,startedAtMs,won,myR,opR,avgRank,myStats,myRR,myDerankProtected}=m;
   const rc=won===true?'win':won===false?'loss':'draw';
   const rt=won===true?'Win':won===false?'Loss':'Draw';
-  const score=(myR!=null&&opR!=null)?`${myR}–${opR}`:'—';
-  // Only shown for matches the RR-history fetch actually covered (see
-  // _rrChangeByMatchId) — most matches simply won't have this.
-  const rrChangeTag=myRR!=null
-    ?`<span class="match-rr-change ${myRR>=0?'gain':'loss'}" title="RR ${myRR>=0?'gained':'lost'} this match">${myRR>=0?'+':''}${myRR} RR</span>`
-    :'';
-  // was_derank_protected on this match's mmr-history entry — Rank Shield
-  // absorbed the drop on the badge, but the RR loss above still happened.
-  const shieldTag=myDerankProtected
-    ?`<span class="mc-shield-tag" title="Rank Shield protected your rank from dropping this loss — the RR loss above still applied">SHIELDED</span>`
-    :'';
-  // Show the avg-lobby tier as a rank division + RR (see tierRR).
-  let rankTier=null,rankRR=null;
-  if(avgRank!=null){const _t=tierRR(avgRank);rankTier=_t.tier;rankRR=_t.rr;}
-  const rankLabel=avgRank!=null?`${avgLabelShort(rankTier)} (${rankRR} RR)`:(m.lowRated?'unrated lobby':'—');
-  const rankTitle=m.lowRated
-    ? `Only ${m.ratedCount} of the lobby were rated — too many unranked, excluded from stats`
-    : (avgRank!=null?`Avg lobby rank — ${avgLabel(rankTier)}, ${rankRR} RR`:'');
-  const rankColorClass=rankTier!=null?rClass(rankTier):'';
-
-  const myPuuid=PUUID||null;
-  const isMatchMvp=myPuuid&&matchMvpPuuid&&myPuuid===matchMvpPuuid;
-  const isTeamMvp=!isMatchMvp&&myPuuid&&teamMvpPuuids&&teamMvpPuuids.has(myPuuid);
-
-  const resetTag=m.postReset?`<span class="mc-reset-tag" title="Placement-week game after a total rank reset — excluded from stats unless you toggle it on">PLACEMENTS</span>`:'';
-
-  const resultTagCls='m-result-tag '+rc;
-  const resultTagTitle=isMatchMvp?' title="Highest combat score in the match"':isTeamMvp?' title="Highest combat score on your team"':'';
-
-  const card=document.createElement('div');
-  card.className='match-card'+(m.postReset?' post-reset':'')+(isMatchMvp?' match-mvp':isTeamMvp?' team-mvp':'');
-  card.innerHTML=`
-    <div class="match-row">
-      <div class="result-bar ${rc}"></div>
-      <div class="mc-left">
-        <span class="${resultTagCls}"${resultTagTitle}>${rt}</span>
-        <span class="match-map">${mapName}</span>
-        <span class="match-score">${score}</span>
-        ${rrChangeTag}
-        ${shieldTag}
-        ${resetTag}
-      </div>
-      <div class="mc-right">
-        <div class="m-badge"${rankTitle?` title="${rankTitle}"`:''}>
-          <div class="m-badge-lbl">avg lobby</div>
-          <div class="m-badge-val ${rankColorClass}${m.lowRated?' m-badge-settling':''}">${rankLabel}</div>
-        </div>
-        <span class="match-context">${serverName?'<span class="match-server" title="Game server"></span>':''}<span class="match-date">${startedAt}</span></span>
-      </div>
-    </div>`;
-  const serverEl=card.querySelector('.match-server');
-  if(serverEl)serverEl.textContent=serverName;
-  card.addEventListener('click',()=>{
-    if(window.getSelection()&&window.getSelection().toString().length>0)return;
-    card.classList.toggle('expanded');
+  const score=myR!=null&&opR!=null?myR+'–'+opR:'—';
+  const scoreHtml=myR!=null&&opR!=null?'<span>'+myR+'</span><span class="mc-score-divider">:</span><span class="mc-score-opponent">'+opR+'</span>':'—';
+  const award=matchAward(m);
+  const awardLabel=award==='match'?'Match MVP':award==='team'?'Team MVP':'';
+  const awardIcon='<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 2h6v4a3 3 0 0 1-6 0V2Zm0 1H2v2a3 3 0 0 0 3 3m6-5h3v2a3 3 0 0 1-3 3M8 9v3m-3 2h6m-5-2h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const awardTag=award?'<span class="mc-award mvp-'+award+'" title="Highest ACS '+(award==='match'?'in the match':'on your team')+'">'+awardIcon+awardLabel+'</span>':'';
+  const resetTag=m.postReset?'<span class="mc-reset-tag" title="Placement-week game after a total rank reset">Placements</span>':'';
+  const shieldTag=myDerankProtected?'<span class="mc-shield-tag" title="Rank Shield protected your rank; the recorded RR loss still applied">Shielded</span>':'';
+  const rank=avgRank!=null?tierRR(avgRank):null;
+  const rankLabel=rank?avgLabelShort(rank.tier):m.lowRated?'Unrated':'—';
+  const rankTitle=m.lowRated?'Only '+m.ratedCount+' players were rated; excluded from stats':rank?'Average lobby: '+avgLabel(rank.tier)+', '+rank.rr+' RR':'Lobby rank unavailable';
+  const kda=myStats?[myStats.kills,myStats.deaths,myStats.assists].join(' / '):'—';
+  const kdaHtml=myStats?matchHtml(myStats.kills)+'<span class="mc-kda-separator">/</span><span class="mc-deaths">'+matchHtml(myStats.deaths)+'</span><span class="mc-kda-separator">/</span>'+matchHtml(myStats.assists):'—';
+  const acs=myStats?.acs!=null?Math.round(myStats.acs):'—';
+  const time=startedAtMs!=null?new Date(startedAtMs).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):startedAt;
+  const duration=m.durationMs>0?Math.round(m.durationMs/60000)+' min':null;
+  const detailId='match-details-'+(++matchDetailsId);
+  const card=document.createElement('article');
+  card.className='match-card '+rc+(m.postReset?' post-reset':'');
+  card.innerHTML=
+    '<button type="button" class="match-row" aria-expanded="false" aria-controls="'+detailId+'">'+
+      '<span class="mc-map-panel"><span class="match-map">'+matchHtml(mapName)+'</span><span class="mc-map-meta">'+
+        [time,duration,serverName].filter(Boolean).map(v=>'<span>'+matchHtml(v)+'</span>').join('')+'</span></span>'+
+      '<span class="mc-body"><span class="mc-topline"><span class="mc-result"><span class="m-result-tag '+rc+'">'+rt+'</span><span class="match-score">'+scoreHtml+'</span></span>'+awardTag+resetTag+
+        '<span class="mc-expand-icon"><span class="mc-expand-label">Roster</span><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 7.5 5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>'+
+      '<span class="mc-performance"><span class="mc-performance-stat"><span class="mc-performance-lbl">K / D / A</span><span class="mc-performance-val">'+kdaHtml+'</span></span>'+
+      '<span class="mc-performance-stat"><span class="mc-performance-lbl">ACS</span><span class="mc-performance-val">'+acs+'</span></span>'+
+      '<span class="mc-performance-stat" title="'+matchHtml(rankTitle)+'"><span class="mc-performance-lbl">Avg lobby</span><span class="mc-performance-val mc-lobby-value '+(rank?rClass(rank.tier):'')+'">'+(rank?rankIcon(rank.tier,22):'')+rankLabel+'</span>'+(rank?'<span class="mc-lobby-rr">'+rank.rr+' RR</span>':'')+'</span>'+
+      '<span class="mc-performance-stat mc-rr-stat"><span class="mc-performance-lbl">RR change</span><span class="match-rr-change '+(myRR!=null?(myRR>=0?'gain':'loss'):'')+'"'+(myRR==null?' title="No RR data for this match"':'')+'>'+(myRR!=null?(myRR>=0?'+':'')+myRR:'—')+'</span>'+shieldTag+'</span></span></span></button>';
+  const trigger=card.querySelector('button');
+  const label=rt+' on '+mapName+', '+score+'. '+(awardLabel?awardLabel+'. ':'')+kda+' KDA, '+acs+' ACS.';
+  trigger.setAttribute('aria-label',label+' Show roster');
+  trigger.addEventListener('click',()=>{
+    const expanded=card.classList.toggle('expanded');
+    trigger.setAttribute('aria-expanded',String(expanded));
+    trigger.setAttribute('aria-label',label+(expanded?' Hide roster':' Show roster'));
   });
+  loadMatchMapMetadata().then(maps=>{
+    const src=maps.get(String(m.mapId||'').toLowerCase())||maps.get(String(mapName).toLowerCase());
+    if(!src)return;
+    const img=document.createElement('img');
+    img.className='mc-map-image';img.alt='';img.loading='lazy';img.decoding='async';
+    img.addEventListener('error',()=>img.remove(),{once:true});
+    img.src=src;
+    card.querySelector('.mc-map-panel').prepend(img);
+  });
+  const players=buildPlayersGrid(m);
+  players.id=detailId;
+  card.appendChild(players);
   return card;
 }
-
-
-
-
 
 function dayHeaderLabel(ms){
   if(ms==null)return 'Unknown date';
@@ -4393,22 +4554,41 @@ function buildMatchRows(slice,startDayKey){
       const header=document.createElement('div');
       header.className='match-day-header';
       const stat=mhDayStats[dayKey];
-      let avgHtml='',rrHtml='';
+      let avgValue='—',avgClass='',rrValue='—',rrClass='',rrCoverage='';
       if(stat&&stat.count>0){
         const dayAvg=stat.sum/stat.count;
         const{tier,rr}=tierRR(dayAvg);
-        avgHtml=`<span class="match-day-avg">avg lobby <span class="${rClass(tier)}">${avgLabelShort(tier)} (${rr} RR)</span></span>`;
+        avgValue=`${avgLabelShort(tier)} (${rr} RR)`;
+        avgClass=rClass(tier);
       }
       if(stat&&stat.rrCount>0){
-        rrHtml=`<span class="match-rr-change ${stat.rrTotal>=0?'gain':'loss'}" title="Total RR change this day, across ${stat.rrCount} match${stat.rrCount===1?'':'es'} — Rank Shield losses count their real RR loss here even though the badge didn't drop">${stat.rrTotal>=0?'+':''}${stat.rrTotal} RR</span>`;
+        rrValue=`${stat.rrTotal>=0?'+':''}${stat.rrTotal} RR`;
+        rrClass=stat.rrTotal>=0?'gain':'loss';
+        if(stat.rrCount<stat.matches)rrCoverage=`<span class="match-day-coverage">${stat.rrCount}/${stat.matches} covered</span>`;
       }
-      const statsHtml=(avgHtml||rrHtml)?`<span class="match-day-stats">${avgHtml}${rrHtml}</span>`:'';
-      header.innerHTML=`<span>${dayHeaderLabel(m.startedAtMs)}</span>${statsHtml}`;
+      const recordParts=[];
+      if(stat?.wins)recordParts.push(`<span class="win">${stat.wins}W</span>`);
+      if(stat?.losses)recordParts.push(`<span class="loss">${stat.losses}L</span>`);
+      if(stat?.draws)recordParts.push(`<span class="draw">${stat.draws}D</span>`);
+      const record=recordParts.length?recordParts.join('<span aria-hidden="true"> · </span>'):'—';
+      const matchCount=stat?.matches??0;
+      const rrTitle=stat?.rrCount
+        ?`Net RR from ${stat.rrCount} of ${matchCount} matches with RR data. Rank Shield losses include their recorded loss.`
+        :'No RR data is available for this day.';
+      header.innerHTML=`
+        <div class="match-day-heading">
+          <span class="match-day-title">${dayHeaderLabel(m.startedAtMs)}</span>
+          <span class="match-day-count">${matchCount} ${matchCount===1?'match':'matches'}</span>
+        </div>
+        <div class="match-day-stats" aria-label="Daily recap">
+          <span class="match-day-stat"><span class="match-day-stat-label">Record</span><span class="match-day-stat-value match-day-record">${record}</span></span>
+          <span class="match-day-stat"><span class="match-day-stat-label">Avg lobby</span><span class="match-day-stat-value ${avgClass}">${avgValue}</span></span>
+          <span class="match-day-stat" title="${rrTitle}"><span class="match-day-stat-label">Net RR</span><span class="match-day-stat-value match-day-rr ${rrClass}">${rrValue}</span>${rrCoverage}</span>
+        </div>`;
       frag.appendChild(header);
       lastDayKey=dayKey;
     }
     const card=buildMatchCard(m);
-    card.appendChild(buildPlayersGrid(m));
     frag.appendChild(card);
   });
   return{frag,lastDayKey};
@@ -4434,9 +4614,12 @@ function renderMatches(){
   // More/pagination.
   mhDayStats={};
   mhData.forEach(m=>{
-    if(m.startedAtMs==null)return;
-    const k=new Date(m.startedAtMs).toDateString();
-    if(!mhDayStats[k])mhDayStats[k]={sum:0,count:0,rrTotal:0,rrCount:0};
+    const k=m.startedAtMs!=null?new Date(m.startedAtMs).toDateString():'unknown';
+    if(!mhDayStats[k])mhDayStats[k]={sum:0,count:0,rrTotal:0,rrCount:0,matches:0,wins:0,losses:0,draws:0};
+    mhDayStats[k].matches++;
+    if(m.won===true)mhDayStats[k].wins++;
+    else if(m.won===false)mhDayStats[k].losses++;
+    else mhDayStats[k].draws++;
     if(m.avgRank!=null){
       mhDayStats[k].sum+=m.avgRank;
       mhDayStats[k].count++;
@@ -4451,11 +4634,12 @@ function renderMatches(){
       mhDayStats[k].rrCount++;
     }
   });
+  renderMatchHistorySummary();
   const slice=mhData.slice(0,mhVisible);
   const el=document.getElementById('matches-container');
   el.innerHTML='';
   if(!slice.length){
-    el.innerHTML='<div class="empty">No matches.</div>';
+    el.innerHTML='<div class="empty">No competitive matches found for this act.</div>';
     mhLastDayKey=null;
     document.getElementById('load-more-btn').style.display='none';
     return;
