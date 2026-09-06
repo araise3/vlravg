@@ -4,13 +4,14 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { observeName, readNameHistory } from '../lib/name-history.mjs';
 import { refreshPlayer, requestJSON, backfillPlayer } from '../.github/scripts/refresh-rr-history.mjs';
-import { backfillState, saveBackfillPage, matchNameEvidence, mergeNameTimeline } from '../lib/name-backfill.mjs';
+import { backfillState, saveBackfillPage, matchNameEvidence, compactMatchEvidence, mergeNameTimeline } from '../lib/name-backfill.mjs';
 import { onRequestGet } from '../functions/api/[[path]].js';
 
 const puuid = '11111111-1111-4111-8111-111111111111';
 const account = (name='Alpha',tag='EU') => ({puuid,name,tag,region:'eu'});
 const day = n => `2026-09-${String(n).padStart(2,'0')}T05:17:00.000Z`;
 const migration = readFileSync(new URL('../migrations/0001_name_history.sql',import.meta.url),'utf8');
+const compactMigration = readFileSync(new URL('../migrations/0003_compact_name_evidence.sql',import.meta.url),'utf8');
 function database(t) {
   const sql = new DatabaseSync(':memory:');t.after(()=>sql.close());
   sql.exec(readFileSync(new URL('../schema.sql',import.meta.url),'utf8'));
@@ -49,6 +50,16 @@ test('migration preserves only known dates and is safe to re-run',t=>{
   sql.exec(migration);sql.exec(migration);
   const rows=sql.prepare('SELECT * FROM player_name_history').all();
   assert.equal(rows.length,1);assert.equal(rows[0].first_seen,day(1));assert.equal(rows[0].last_seen,day(1));
+});
+test('compact evidence migration preserves existing backfill cursors',t=>{
+  const sql=new DatabaseSync(':memory:');t.after(()=>sql.close());
+  sql.exec(`CREATE TABLE player_name_backfill(puuid TEXT NOT NULL,region TEXT NOT NULL,platform TEXT NOT NULL,
+    next_start INTEGER NOT NULL DEFAULT 0,complete INTEGER NOT NULL DEFAULT 0,updated_at TEXT NOT NULL,
+    PRIMARY KEY(puuid,region,platform));
+    INSERT INTO player_name_backfill VALUES('${puuid}','eu','pc',420,0,'${day(1)}');`);
+  sql.exec(compactMigration);
+  const row=sql.prepare('SELECT next_start,evidence FROM player_name_backfill').get();
+  assert.equal(row.next_start,420);assert.equal(row.evidence,'[]');
 });
 test('invalid observations do not write history',async t=>{
   const {db}=database(t);await assert.rejects(observeName(db,account(''),day(1)));
@@ -108,6 +119,14 @@ test('backfill merges historical ranges, preserves name reuse, and never changes
   rows=await readNameHistory(db,puuid);assert.equal(rows.some(r=>r.name==='Wrong'),false);
 });
 
+test('legacy rows and compact evidence form one historical timeline',async t=>{
+  const {db}=await trackedDatabase(t);
+  await db.prepare(`INSERT INTO player_name_matches(puuid,match_id,name,tag,played_at)
+    VALUES(?1,?2,?3,?4,?5)`).bind(puuid,'legacy','Beta','EU',day(2)).run();
+  await saveBackfillPage(db,puuid,await backfillState(db,puuid),[historicalMatch('compact','Alpha','EU',day(1))]);
+  assert.deepEqual((await readNameHistory(db,puuid)).map(row=>row.name),['Current','Beta','Alpha']);
+});
+
 test('matching historical names extend the current range without assuming a 90-day start date',()=>{
   const live=[{name:'A',tag:'EU',first_seen:day(4),last_seen:day(5),ended_at:null}];
   const rows=mergeNameTimeline(live,[{name:'A',tag:'EU',played_at:day(1)},{name:'A',tag:'EU',played_at:day(3)}]);
@@ -125,7 +144,9 @@ test('backfill retries deduplicate evidence and concurrent old pages cannot adva
   await saveBackfillPage(db,puuid,next,[]);
   await saveBackfillPage(db,puuid,initial,page);
   assert.equal((await backfillState(db,puuid)).complete,true);
-  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM player_name_matches').first()).n,1);
+  assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM player_name_matches').first()).n,0);
+  const saved=await db.prepare('SELECT evidence FROM player_name_backfill WHERE puuid=?1').bind(puuid).first();
+  assert.deepEqual(JSON.parse(saved.evidence),[{name:'Old',tag:'EU',played_at:day(1)}]);
 });
 
 test('malformed pages do not advance the cursor and blank names are skipped',async t=>{
@@ -147,6 +168,19 @@ test('unchanged match pages retain range endpoints instead of every redundant ro
     historicalMatch('c','First','EU','2026-08-03T00:00:00Z'),
   ],puuid,Date.parse(day(6)));
   assert.deepEqual(changed.map(e=>e.match_id),['a','b','c']);
+});
+
+test('compact evidence merges page boundaries while preserving reused names',()=>{
+  const rows=compactMatchEvidence([
+    {name:'A',tag:'EU',played_at:day(1)},{name:'A',tag:'EU',played_at:day(2)},
+    {name:'B',tag:'EU',played_at:day(3)},{name:'A',tag:'EU',played_at:day(4)},
+    {name:'A',tag:'EU',played_at:day(5)},
+  ]);
+  assert.deepEqual(rows,[
+    {name:'A',tag:'EU',played_at:day(1)},{name:'A',tag:'EU',played_at:day(2)},
+    {name:'B',tag:'EU',played_at:day(3)},
+    {name:'A',tag:'EU',played_at:day(4)},{name:'A',tag:'EU',played_at:day(5)},
+  ]);
 });
 
 test('scheduled backfill stops when complete and reports failed pages for a later retry',async()=>{

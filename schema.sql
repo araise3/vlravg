@@ -137,5 +137,6 @@ CREATE TABLE IF NOT EXISTS player_name_backfill (
   next_start INTEGER NOT NULL DEFAULT 0,
   complete INTEGER NOT NULL DEFAULT 0,
   updated_at TEXT NOT NULL,
+  evidence TEXT NOT NULL DEFAULT '[]',
   PRIMARY KEY (puuid,region,platform)
 );
