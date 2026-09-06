@@ -24,18 +24,19 @@ match records, identified by PUUID; no act filter is applied. The compact stored
 matches endpoint was tested but returned blank name/tag fields for the sample
 account, while full match rosters preserved an earlier name from July 2025.
 
-Progress and match evidence are saved atomically. Subsequent jobs resume the
-cursor, and completed players are skipped before any API request. Pages rotate
+Progress and match evidence are saved atomically in one per-player cursor row.
+Subsequent jobs resume the cursor, and completed players are skipped before any API request. Pages rotate
 between players, with oldest-touched players first after a restart. Each run
 has a five-hour budget and dispatches its next run immediately when unfinished
 work remains and progress was made. It stops with an error if remaining players
 cannot make progress. Daily refreshes share the workflow lock and take priority
 at continuation boundaries; afterward they resume the backfill.
 
-Only the earliest and latest match of each consecutive Riot ID run on a page
-are stored. This preserves displayed date ranges and one-match name changes
-without writing ten redundant rows for ten matches under the same name. RR rows
-are also left untouched when a refresh returns byte-for-byte unchanged data.
+Only the earliest and latest observation of each consecutive Riot ID period
+are retained. This preserves displayed date ranges and one-match name changes
+without writing indexed evidence rows for every page. Evidence saved before
+this optimization remains readable and is merged with the compact periods. RR
+rows are also left untouched when a refresh returns byte-for-byte unchanged data.
 The backfill has its own 00:07 UTC schedule so a Free-plan D1 write-limit pause
 resumes just after Cloudflare resets daily usage at 00:00 UTC.
 
@@ -54,12 +55,13 @@ is not used to invent boundaries or skip evidence.
 
 ## Database setup
 
-New databases use `schema.sql`. For an existing database, apply the additive,
-idempotent migration before deploying the new API:
+New databases use `schema.sql`. For an existing database, apply the migrations
+in order before deploying the new API:
 
 ```sh
 npx wrangler d1 execute <database-name> --remote --file migrations/0001_name_history.sql
 npx wrangler d1 execute <database-name> --remote --file migrations/0002_name_backfill.sql
+npx wrangler d1 execute <database-name> --remote --file migrations/0003_compact_name_evidence.sql
 ```
 
 The migration preserves each player's last stored name and observation date as
