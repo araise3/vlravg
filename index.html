@@ -1384,8 +1384,9 @@ function renderNameHistory(){
   const backfill=nameHistoryBackfill;
   const button=document.getElementById('name-backfill-button');
   button.hidden=!!backfill?.complete;button.disabled=nameBackfillBusy||!!backfill?.limited;
-  button.textContent=nameBackfillBusy?'Loading older names…':backfill?.next_start?'Continue backfill':'Load older names';
-  document.getElementById('name-backfill-status').textContent=nameBackfillError?'Could not finish this batch. Your progress is saved; try again.':backfill?.limited?'Scan limit reached; the available history may be incomplete.':backfill?.complete?`Backfill complete · ${backfill.next_start.toLocaleString()} ranked matches checked`:backfill?.next_start?`${backfill.next_start.toLocaleString()} ranked matches checked · the daily job continues unfinished scans`:'Older names can be recovered from available ranked matches across past acts.';
+  button.textContent=nameBackfillBusy?'Loading older names…':backfill?.next_start||backfill?.matchlist_complete?'Continue backfill':'Load older names';
+  const backfillCounts=backfill?`${backfill.next_start.toLocaleString()} full matches${backfill.matchlist_complete?` + ${(backfill.stored_scanned||0).toLocaleString()} stored records`:''} checked`:'';
+  document.getElementById('name-backfill-status').textContent=nameBackfillError?'Could not finish this batch. Your progress is saved; try again.':backfill?.limited?'Scan limit reached; the available history may be incomplete.':backfill?.complete?`Available-history scan complete · ${backfillCounts}`:backfill?.next_start||backfill?.matchlist_complete?`${backfillCounts} · the daily job continues unfinished scans`:'Older names can be recovered from available ranked matches across past acts.';
   card.hidden=!hasRows;empty.hidden=hasRows;
   container.replaceChildren();
   if(!hasRows){
