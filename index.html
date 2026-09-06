@@ -502,10 +502,12 @@ h1 span{color:var(--accent);}
 #name-history-table .table-sort-btn{justify-content:flex-start;padding-left:20px;padding-right:20px;}
 #name-history-table .rank-table tbody th,#name-history-table .rank-table tbody td{height:62px;padding:13px 20px;}
 .name-history-period{font-size:13px;}
-.name-history-date-range{display:flex;align-items:center;gap:9px;min-width:max-content;color:#f4f4f5;font-variant-numeric:tabular-nums;}
-.name-history-date{font-weight:600;}
-.name-history-dash{color:#71717a;font-weight:400;}
+.name-history-date-range{display:grid;grid-template-columns:108px 20px 108px;align-items:center;min-width:max-content;color:#f4f4f5;font-variant-numeric:tabular-nums;}
+.name-history-date{font-weight:600;white-space:nowrap;}
+.name-history-dash{color:#71717a;font-weight:400;text-align:center;}
 .name-history-act{font-size:12px;font-weight:650;letter-spacing:.025em;color:#b9c9db;font-variant-numeric:tabular-nums;}
+.name-history-act-range{display:grid;grid-template-columns:48px 18px minmax(0,max-content);align-items:center;min-width:max-content;}
+.name-history-act-start,.name-history-act-end{white-space:nowrap;}
 .name-history-note{font-size:12px;color:#a1a1aa;line-height:1.6;margin-top:14px;}
 .name-history-retry{color:var(--brand);text-decoration:underline;text-underline-offset:3px;margin-left:8px;}
 .name-backfill-controls{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:16px;font-size:12px;color:#a1a1aa;}
@@ -1415,13 +1417,14 @@ function nameHistoryActAt(stamp){
 }
 function nameHistoryActRange(first,last){
   const start=nameHistoryActAt(first),end=nameHistoryActAt(last);
-  if(!start||!end)return {label:'—',sort:null,title:'Episode and act unavailable'};
-  if(start.ordinal===end.ordinal)return {label:start.label,sort:start.ordinal,title:start.description};
+  if(!start||!end)return {label:'—',start:'—',end:null,sort:null,title:'Episode and act unavailable'};
+  if(start.ordinal===end.ordinal)return {label:start.label,start:start.label,end:null,sort:start.ordinal,title:start.description};
   if(start.series===end.series)return {
-    label:`${start.series}A${start.act}–A${end.act}`,
+    label:`${start.series}A${start.act} — A${end.act}`,
+    start:start.label,end:`A${end.act}`,
     sort:start.ordinal,title:`${start.description} through ${end.description}`,
   };
-  return {label:`${start.label} — ${end.label}`,sort:start.ordinal,
+  return {label:`${start.label} — ${end.label}`,start:start.label,end:end.label,sort:start.ordinal,
     title:`${start.description} through ${end.description}`};
 }
 function renderNameHistory(){
@@ -1462,12 +1465,17 @@ function renderNameHistory(){
       range.setAttribute('aria-label',`From ${dateFormat.format(first)} to ${dateFormat.format(last)}`);
       [first,last].forEach((date,index)=>{
         if(index){const dash=document.createElement('span');dash.className='name-history-dash';dash.textContent='—';dash.setAttribute('aria-hidden','true');range.appendChild(dash);}
-        const time=document.createElement('time');time.className='name-history-date';time.dateTime=date.toISOString();time.textContent=dateFormat.format(date);time.title=date.toUTCString();range.appendChild(time);
+        const time=document.createElement('time');time.className='name-history-date '+(index?'name-history-date-end':'name-history-date-start');time.dateTime=date.toISOString();time.textContent=dateFormat.format(date);time.title=date.toUTCString();range.appendChild(time);
       });
       period.appendChild(range);
     }
     const actRange=nameHistoryActRange(h.first_seen,h.last_seen);
-    const act=row.insertCell();act.className='name-history-act';act.textContent=actRange.label;act.title=actRange.title;
+    const act=row.insertCell();act.className='name-history-act';act.title=actRange.title;
+    const acts=document.createElement('span');acts.className='name-history-act-range';acts.setAttribute('aria-label',actRange.label);
+    const actStart=document.createElement('span');actStart.className='name-history-act-start';actStart.textContent=actRange.start;acts.appendChild(actStart);
+    const actDash=document.createElement('span');actDash.className='name-history-dash';actDash.textContent='—';actDash.setAttribute('aria-hidden','true');actDash.hidden=!actRange.end;acts.appendChild(actDash);
+    if(actRange.end){const actEnd=document.createElement('span');actEnd.className='name-history-act-end';actEnd.textContent=actRange.end;acts.appendChild(actEnd);}
+    act.appendChild(acts);
     values.push([h.name+'#'+h.tag,Number.isFinite(first.getTime())?first.getTime():null,actRange.sort]);
   });
   container.appendChild(table);initTableSorting(container,values);
