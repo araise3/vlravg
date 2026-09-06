@@ -493,7 +493,19 @@ h1 span{color:var(--accent);}
 /* Shared table surface across the detailed statistic pages. */
 #sg-rank-card,#party-size-section,#teammates-section,#name-history-card,.rr-table-card,.servers-table-card{padding:0;overflow:hidden;border:1px solid var(--surface-border);border-radius:10px;background:#141416;box-shadow:none;}
 #name-history-card[hidden]{display:none;}
-.name-history-current{font-size:10px;font-weight:600;padding:3px 6px;border:1px solid #3c4655;border-radius:4px;color:var(--brand);}
+#name-history-table .rank-table{min-width:640px;table-layout:fixed;text-align:left;}
+#name-history-table .rank-table th,#name-history-table .rank-table td{text-align:left;}
+#name-history-table .rank-table th:not(:last-child),#name-history-table .rank-table td:not(:last-child){border-right:0;}
+#name-history-table .rank-table th:first-child{width:34%;}
+#name-history-table .rank-table th:nth-child(2){width:43%;}
+#name-history-table .rank-table th:nth-child(3){width:23%;}
+#name-history-table .table-sort-btn{justify-content:flex-start;padding-left:20px;padding-right:20px;}
+#name-history-table .rank-table tbody th,#name-history-table .rank-table tbody td{height:62px;padding:13px 20px;}
+.name-history-period{font-size:13px;}
+.name-history-date-range{display:flex;align-items:center;gap:9px;min-width:max-content;color:#f4f4f5;font-variant-numeric:tabular-nums;}
+.name-history-date{font-weight:600;}
+.name-history-dash{color:#71717a;font-weight:400;}
+.name-history-act{font-size:12px;font-weight:650;letter-spacing:.025em;color:#b9c9db;font-variant-numeric:tabular-nums;}
 .name-history-note{font-size:12px;color:#a1a1aa;line-height:1.6;margin-top:14px;}
 .name-history-retry{color:var(--brand);text-decoration:underline;text-underline-offset:3px;margin-left:8px;}
 .name-backfill-controls{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:16px;font-size:12px;color:#a1a1aa;}
@@ -683,7 +695,7 @@ h1 span{color:var(--accent);}
   <main id="names-page" class="detail-page" hidden aria-labelledby="names-title">
     <div class="page-heading">
       <h1 id="names-title" tabindex="-1">Name History</h1>
-      <p>Riot IDs seen on this account, across all acts. Names and tags are checked daily.</p>
+      <p>Riot IDs observed across this account’s competitive history.</p>
     </div>
     <div id="names-empty" class="page-empty" role="status">Search for a player above to see their name history.</div>
     <div id="name-history-card" class="s-card" hidden>
@@ -693,7 +705,7 @@ h1 span{color:var(--accent);}
       <button id="name-backfill-button" class="name-backfill-button" type="button">Load older names</button>
       <span id="name-backfill-status" role="status" aria-live="polite"></span>
     </div>
-    <p class="name-history-note">From and To are the first and last dates found in available ranked matches or account checks (UTC). Exact rename dates may fall between observations; missing matches can leave gaps in the history.</p>
+    <p class="name-history-note">Dates are the first and last observations in UTC. Episode/Act labels mark the acts containing those observations; a gap can contain unobserved rename activity.</p>
   </main>
   <main id="duos-page" class="detail-page" hidden aria-labelledby="duos-title">
     <div class="page-heading">
@@ -1375,6 +1387,43 @@ async function loadOlderNames(){
   }
 }
 document.getElementById('name-backfill-button').addEventListener('click',loadOlderNames);
+// Name history has dates rather than a season UUID. Map each observation onto
+// the act timeline so a rename spanning several acts still reads naturally.
+// This uses the immutable act-start snapshot (rather than a player’s selected
+// act) because name history deliberately covers the entire account lifetime.
+function nameHistoryActAt(stamp){
+  const time=Date.parse(stamp);
+  if(!Number.isFinite(time))return null;
+  const starts=Object.values(HARDCODED_ACT_META).map(info=>info?.start)
+    .filter(Number.isFinite).sort((a,b)=>a-b);
+  let ordinal=-1;
+  for(let i=0;i<starts.length;i++){
+    if(starts[i]>time)break;
+    ordinal=i;
+  }
+  if(ordinal<0)return null;
+  // Episodes 1–9 had three acts. Riot's later yearly format has six acts;
+  // retain the same V25/V26 shorthand used elsewhere in this interface.
+  if(ordinal<27){
+    const episode=Math.floor(ordinal/3)+1,act=ordinal%3+1;
+    return {ordinal,series:`E${episode}`,act,label:`E${episode}A${act}`,
+      description:`Episode ${episode}, Act ${act}`};
+  }
+  const offset=ordinal-27,year=25+Math.floor(offset/6),act=offset%6+1;
+  return {ordinal,series:`V${year}`,act,label:`V${year}A${act}`,
+    description:`V${year}, Act ${act}`};
+}
+function nameHistoryActRange(first,last){
+  const start=nameHistoryActAt(first),end=nameHistoryActAt(last);
+  if(!start||!end)return {label:'—',sort:null,title:'Episode and act unavailable'};
+  if(start.ordinal===end.ordinal)return {label:start.label,sort:start.ordinal,title:start.description};
+  if(start.series===end.series)return {
+    label:`${start.series}A${start.act}–A${end.act}`,
+    sort:start.ordinal,title:`${start.description} through ${end.description}`,
+  };
+  return {label:`${start.label} — ${end.label}`,sort:start.ordinal,
+    title:`${start.description} through ${end.description}`};
+}
 function renderNameHistory(){
   const empty=document.getElementById('names-empty');
   const card=document.getElementById('name-history-card');
@@ -1398,22 +1447,28 @@ function renderNameHistory(){
     return;
   }
   const table=document.createElement('table');table.className='rank-table';
-  table.innerHTML='<caption class="rank-sr-only">Observed Riot ID date ranges in UTC</caption><thead><tr><th scope="col">Riot ID</th><th scope="col">From</th><th scope="col">To</th><th scope="col">Source</th><th scope="col">Status</th></tr></thead><tbody></tbody>';
+  table.innerHTML='<caption class="rank-sr-only">Observed Riot ID date ranges and Episode or Act in UTC</caption><thead><tr><th scope="col">Riot ID</th><th scope="col">From — To</th><th scope="col">Episode / Act</th></tr></thead><tbody></tbody>';
   const dateFormat=new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
   const values=[];
   nameHistoryRows.forEach(h=>{
     const row=table.tBodies[0].insertRow();
     const name=document.createElement('th');name.scope='row';name.textContent=h.name+'#'+h.tag;row.appendChild(name);
-    [h.first_seen,h.last_seen].forEach(stamp=>{
-      const cell=row.insertCell();const date=new Date(stamp);
-      if(!Number.isFinite(date.getTime())){cell.textContent='—';return;}
-      const time=document.createElement('time');time.dateTime=date.toISOString();time.textContent=dateFormat.format(date);time.title=date.toUTCString();cell.appendChild(time);
-    });
-    row.insertCell().textContent=h.source||'Checks';
-    const status=row.insertCell();
-    if(h.ended_at==null){const badge=document.createElement('span');badge.className='name-history-current';badge.textContent='Current';status.appendChild(badge);}
-    else status.textContent='Previous';
-    values.push([h.name+'#'+h.tag,Date.parse(h.first_seen),Date.parse(h.last_seen),h.source||'Checks',h.ended_at==null?'Current':'Previous']);
+    const first=new Date(h.first_seen),last=new Date(h.last_seen);
+    const period=row.insertCell();period.className='name-history-period';
+    if(!Number.isFinite(first.getTime())||!Number.isFinite(last.getTime())){
+      period.textContent='—';
+    }else{
+      const range=document.createElement('span');range.className='name-history-date-range';
+      range.setAttribute('aria-label',`From ${dateFormat.format(first)} to ${dateFormat.format(last)}`);
+      [first,last].forEach((date,index)=>{
+        if(index){const dash=document.createElement('span');dash.className='name-history-dash';dash.textContent='—';dash.setAttribute('aria-hidden','true');range.appendChild(dash);}
+        const time=document.createElement('time');time.className='name-history-date';time.dateTime=date.toISOString();time.textContent=dateFormat.format(date);time.title=date.toUTCString();range.appendChild(time);
+      });
+      period.appendChild(range);
+    }
+    const actRange=nameHistoryActRange(h.first_seen,h.last_seen);
+    const act=row.insertCell();act.className='name-history-act';act.textContent=actRange.label;act.title=actRange.title;
+    values.push([h.name+'#'+h.tag,Number.isFinite(first.getTime())?first.getTime():null,actRange.sort]);
   });
   container.appendChild(table);initTableSorting(container,values);
 }
