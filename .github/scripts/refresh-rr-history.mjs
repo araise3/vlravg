@@ -74,7 +74,12 @@ export async function listPlayers(env) {
       method: 'POST', signal: AbortSignal.timeout(30000),
       headers: { Authorization: `Bearer ${env.CF_API_TOKEN}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ sql: `SELECT p.puuid,p.region,p.platform,p.name,p.tag,
-        COALESCE(b.complete,0) AS backfill_complete,COALESCE(b.next_start,0) AS next_start,
+        COALESCE(b.complete,0) AS matchlist_complete,
+        CASE WHEN COALESCE(b.complete,0)=1 AND COALESCE(b.stored_complete,0)=1
+          AND COALESCE(b.stored_pending,'[]')='[]' THEN 1 ELSE 0 END AS backfill_complete,
+        COALESCE(b.next_start,0) AS next_start,COALESCE(b.stored_page,1) AS stored_page,
+        COALESCE(b.stored_scanned,0) AS stored_scanned,COALESCE(b.stored_complete,0) AS stored_complete,
+        CASE WHEN COALESCE(b.stored_pending,'[]')='[]' THEN 0 ELSE 1 END AS stored_pending_count,
         b.updated_at AS backfill_updated_at FROM rr_players p LEFT JOIN player_name_backfill b
         ON b.puuid=p.puuid AND b.region=p.region AND b.platform=p.platform
         WHERE p.puuid>?1 ORDER BY p.puuid LIMIT 500`, params: [cursor] }),
@@ -121,7 +126,7 @@ export async function main(env = process.env) {
     await sleep(DELAY_MS);
     const result=await backfillPlayer(player,{origin,pages,fetchImpl});
     if(!result.ok)failed++;
-    console.log(`[backfill ${i+1}/${players.length}] ${player.puuid}: ${!result.ok?'FAILED: '+result.reason:!result.available?'no ranked platform yet':result.complete?'complete ('+result.next_start+' matches scanned)':'continuing from match '+result.next_start}`);
+    console.log(`[backfill ${i+1}/${players.length}] ${player.puuid}: ${!result.ok?'FAILED: '+result.reason:!result.available?'no ranked platform yet':result.complete?'complete ('+result.next_start+' full matches + '+(result.stored_scanned||0)+' stored records scanned)':result.phase==='stored-detail'?'resolving '+result.stored_pending_count+' archived match details':result.phase==='stored'?'continuing stored archive from page '+result.stored_page:'continuing full matches from '+result.next_start}`);
   }
   if (failed) process.exitCode = 1;
 }

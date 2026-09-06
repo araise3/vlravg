@@ -21,8 +21,14 @@ queue. This overlaps network latency without multiplying the request ceiling.
 There are no fixed 2.5-second pauses and no per-player daily page cap.
 Each page contains up to ten full
 match records, identified by PUUID; no act filter is applied. The compact stored
-matches endpoint was tested but returned blank name/tag fields for the sample
-account, while full match rosters preserved an earlier name from July 2025.
+matches endpoint is scanned afterward in pages of 100. HenrikDev only began
+including name/tag there for new records in v4.6.0 and is gradually filling old
+records. Usable archived identities extend the timeline immediately. Blank archive
+rows older than the earliest known identity are queued
+and resolved through the full match-by-ID endpoint; unavailable match IDs are
+skipped. Both the archive page and pending-detail queue are persisted, so every
+upstream call remains resumable and goes through the shared quota gate. The
+full-match and stored-archive phases have separate cursors.
 
 Progress and match evidence are saved atomically in one per-player cursor row.
 Subsequent jobs resume the cursor, and completed players are skipped before any API request. Pages rotate
@@ -37,11 +43,17 @@ are retained. This preserves displayed date ranges and one-match name changes
 without writing indexed evidence rows for every page. Evidence saved before
 this optimization remains readable and is merged with the compact periods. RR
 rows are also left untouched when a refresh returns byte-for-byte unchanged data.
+An isolated historical identity sandwiched between the same Riot ID less than
+48 hours apart is discarded as a stale roster observation; slower or sustained
+name reuse remains separate. This correction is applied while reading existing
+compact evidence too, so a completed backfill does not need to run again.
 The backfill has its own 00:07 UTC schedule so a Free-plan D1 write-limit pause
 resumes just after Cloudflare resets daily usage at 00:00 UTC.
 
-An empty page ends the scan; short
-pages do not. A 10,000-match safety limit is explicitly reported as incomplete.
+An empty full-match page advances to the stored archive; a short full-match page
+does not. The archive ends when HenrikDev reports no records after the current
+page (or returns an empty page). Each phase has a 10,000-record safety limit that
+is explicitly reported as incomplete.
 The Name History tab's Load older names button processes up to 20 pages, and
 can be used again to continue. The daily refresh workflow still accepts
 `target_puuid` and `backfill_pages` (up to 1000) to complete a player's scan.
@@ -62,7 +74,12 @@ in order before deploying the new API:
 npx wrangler d1 execute <database-name> --remote --file migrations/0001_name_history.sql
 npx wrangler d1 execute <database-name> --remote --file migrations/0002_name_backfill.sql
 npx wrangler d1 execute <database-name> --remote --file migrations/0003_compact_name_evidence.sql
+npx wrangler d1 execute <database-name> --remote --file migrations/0004_stored_name_backfill.sql
 ```
+
+Migration 0004 marks the stored-archive phase unfinished for every existing
+cursor. The scheduled backfill therefore supplements players whose full-match
+scan had already completed; it does not repeat their full-match pages.
 
 The migration preserves each player's last stored name and observation date as
 the initial period. It does not infer earlier dates from their match history.

@@ -58,3 +58,14 @@ test('permanent errors or stalled cursors cannot create an endless chain without
   const result=await drainBackfill([player('a'),player('b')],{log:()=>{},runPage:async p=>p.puuid==='a'?{ok:false,reason:'http 404'}:{ok:true,available:true,next_start:0,complete:false}});
   assert.equal(result.continue,false);assert.equal(result.remaining,2);assert.equal(result.errors.length,2);
 });
+
+test('completed full scans continue through stored archive pages',async()=>{
+  let calls=0;
+  const archived=player('archive',{next_start:2564,matchlist_complete:1,stored_page:1,stored_scanned:0,stored_complete:0});
+  const result=await drainBackfill([archived],{concurrency:1,log:()=>{},runPage:async()=>{
+    calls++;
+    return {ok:true,available:true,next_start:2564,matchlist_complete:true,phase:'stored',
+      stored_page:calls+1,stored_scanned:100,stored_complete:calls===2,complete:calls===2};
+  }});
+  assert.equal(calls,2);assert.equal(result.matches,100);assert.equal(result.completed,1);assert.equal(result.remaining,0);
+});

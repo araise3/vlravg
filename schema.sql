@@ -136,6 +136,10 @@ CREATE TABLE IF NOT EXISTS player_name_backfill (
   platform TEXT NOT NULL,
   next_start INTEGER NOT NULL DEFAULT 0,
   complete INTEGER NOT NULL DEFAULT 0,
+  stored_page INTEGER NOT NULL DEFAULT 1,
+  stored_scanned INTEGER NOT NULL DEFAULT 0,
+  stored_complete INTEGER NOT NULL DEFAULT 0,
+  stored_pending TEXT NOT NULL DEFAULT '[]',
   updated_at TEXT NOT NULL,
   evidence TEXT NOT NULL DEFAULT '[]',
   PRIMARY KEY (puuid,region,platform)

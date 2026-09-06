@@ -93,7 +93,7 @@
  */
 
 import { observeName, readNameHistory } from "../../lib/name-history.mjs";
-import { backfillState, saveBackfillPage } from "../../lib/name-backfill.mjs";
+import { backfillState, saveBackfillPage, saveStoredBackfillPage, saveStoredMatchDetail, skipStoredMatchDetail } from "../../lib/name-backfill.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
 const PREFIX = "/api";
@@ -553,7 +553,11 @@ const GLIDE_CAP_MS = 4000;    // don't glide if the resulting spacing would be a
 const ROUTES = [
   {
     match: /^\/name-backfill\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,
-    upstream: (m) => `/valorant/v4/by-puuid/matches/${m.state.region}/${m.state.platform}/${m[1]}?mode=competitive&size=10&start=${m.state.next_start}`,
+    upstream: (m) => m.state.phase==='stored-detail'
+      ? `/valorant/v4/match/${m.state.region}/${encodeURIComponent(m.state.stored_match.match_id)}`
+      : m.state.phase==='stored'
+        ? `/valorant/v1/by-puuid/stored-matches/${m.state.region}/${m[1]}?mode=competitive&size=100&page=${m.state.stored_page}`
+        : `/valorant/v4/by-puuid/matches/${m.state.region}/${m.state.platform}/${m[1]}?mode=competitive&size=10&start=${m.state.next_start}`,
     nameBackfill: true,
   },
   {
@@ -841,7 +845,7 @@ export async function onRequestGet(context) {
   }
   if (route.nameBackfill) {
     try {
-      match.state = await backfillState(env.APP_DB,match[1]);
+      match.state = await backfillState(env.APP_DB,match[1],true);
       if (!match.state.available || match.state.complete || match.state.limited) {
         const res=json({data:{puuid:match[1],backfill:match.state,history:await readNameHistory(env.APP_DB,match[1])}},200);
         res.headers.set('Cache-Control','no-store');return res;
@@ -930,12 +934,31 @@ export async function onRequestGet(context) {
     return savedNameHistoryResponse(storedNameHistory, 'SAVED-REFRESH-DEFERRED', true);
   }
 
-  if (upstream.status === 200 && route.nameBackfill) {
-    let matches;
-    try { matches=JSON.parse(bodyText).data; } catch {}
-    if (!Array.isArray(matches)) return json({error:'Invalid match history response'},502);
+  if (upstream.status === 404 && route.nameBackfill && match.state.phase!=='matches') {
     try {
-      const backfill=await saveBackfillPage(env.APP_DB,match[1],match.state,matches);
+      const backfill=match.state.phase==='stored-detail'
+        ?await skipStoredMatchDetail(env.APP_DB,match[1],match.state)
+        :await saveStoredBackfillPage(env.APP_DB,match[1],match.state,{data:[],results:{after:0}});
+      const history=await readNameHistory(env.APP_DB,match[1]);
+      const res=json({data:{puuid:match[1],backfill,history}},200);
+      res.headers.set('Cache-Control','no-store');return res;
+    } catch {
+      console.error('Unavailable stored history could not be completed');
+      return json({error:'Name backfill page unavailable'},503);
+    }
+  }
+
+  if (upstream.status === 200 && route.nameBackfill) {
+    let payload;
+    try { payload=JSON.parse(bodyText); } catch {}
+    if (match.state.phase==='stored-detail'?!payload?.data||Array.isArray(payload.data):!Array.isArray(payload?.data))
+      return json({error:'Invalid match history response'},502);
+    try {
+      const backfill=match.state.phase==='stored-detail'
+        ?await saveStoredMatchDetail(env.APP_DB,match[1],match.state,payload.data)
+        :match.state.phase==='stored'
+          ?await saveStoredBackfillPage(env.APP_DB,match[1],match.state,payload)
+          :await saveBackfillPage(env.APP_DB,match[1],match.state,payload.data);
       const history=await readNameHistory(env.APP_DB,match[1]);
       const res=json({data:{puuid:match[1],backfill,history}},200);
       res.headers.set('Cache-Control','no-store');return res;

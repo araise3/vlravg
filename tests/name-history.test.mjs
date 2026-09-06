@@ -4,7 +4,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { observeName, readNameHistory } from '../lib/name-history.mjs';
 import { refreshPlayer, requestJSON, backfillPlayer } from '../.github/scripts/refresh-rr-history.mjs';
-import { backfillState, saveBackfillPage, matchNameEvidence, compactMatchEvidence, mergeNameTimeline } from '../lib/name-backfill.mjs';
+import { backfillState, saveBackfillPage, saveStoredBackfillPage, saveStoredMatchDetail, matchNameEvidence, storedNameEvidence, compactMatchEvidence, mergeNameTimeline } from '../lib/name-backfill.mjs';
 import { onRequestGet } from '../functions/api/[[path]].js';
 
 const puuid = '11111111-1111-4111-8111-111111111111';
@@ -12,6 +12,7 @@ const account = (name='Alpha',tag='EU') => ({puuid,name,tag,region:'eu'});
 const day = n => `2026-09-${String(n).padStart(2,'0')}T05:17:00.000Z`;
 const migration = readFileSync(new URL('../migrations/0001_name_history.sql',import.meta.url),'utf8');
 const compactMigration = readFileSync(new URL('../migrations/0003_compact_name_evidence.sql',import.meta.url),'utf8');
+const storedMigration = readFileSync(new URL('../migrations/0004_stored_name_backfill.sql',import.meta.url),'utf8');
 function database(t) {
   const sql = new DatabaseSync(':memory:');t.after(()=>sql.close());
   sql.exec(readFileSync(new URL('../schema.sql',import.meta.url),'utf8'));
@@ -61,6 +62,18 @@ test('compact evidence migration preserves existing backfill cursors',t=>{
   const row=sql.prepare('SELECT next_start,evidence FROM player_name_backfill').get();
   assert.equal(row.next_start,420);assert.equal(row.evidence,'[]');
 });
+test('stored archive migration enrolls already completed cursors without repeating full matches',t=>{
+  const sql=new DatabaseSync(':memory:');t.after(()=>sql.close());
+  sql.exec(`CREATE TABLE player_name_backfill(puuid TEXT NOT NULL,region TEXT NOT NULL,platform TEXT NOT NULL,
+    next_start INTEGER NOT NULL DEFAULT 0,complete INTEGER NOT NULL DEFAULT 0,updated_at TEXT NOT NULL,
+    evidence TEXT NOT NULL DEFAULT '[]',PRIMARY KEY(puuid,region,platform));
+    INSERT INTO player_name_backfill(puuid,region,platform,next_start,complete,updated_at)
+    VALUES('${puuid}','eu','pc',2564,1,'${day(1)}');`);
+  sql.exec(storedMigration);
+  const row=sql.prepare('SELECT next_start,complete,stored_page,stored_scanned,stored_complete,stored_pending FROM player_name_backfill').get();
+  assert.equal(row.next_start,2564);assert.equal(row.complete,1);assert.equal(row.stored_page,1);
+  assert.equal(row.stored_scanned,0);assert.equal(row.stored_complete,0);assert.equal(row.stored_pending,'[]');
+});
 test('invalid observations do not write history',async t=>{
   const {db}=database(t);await assert.rejects(observeName(db,account(''),day(1)));
   assert.equal((await readNameHistory(db,puuid)).length,0);
@@ -98,6 +111,7 @@ test('proxy forces a fresh account check, canonicalizes cache keys, persists, an
 });
 
 const historicalMatch=(id,name,tag,stamp)=>({metadata:{match_id:id,started_at:stamp},players:[{puuid,name,tag}]});
+const storedMatch=(id,name,tag,stamp)=>({meta:{id,started_at:stamp},stats:{puuid,name,tag}});
 async function trackedDatabase(t){
   const data=database(t);
   await observeName(data.db,account('Current'),day(4));
@@ -143,6 +157,9 @@ test('backfill retries deduplicate evidence and concurrent old pages cannot adva
   const next=await backfillState(db,puuid);
   await saveBackfillPage(db,puuid,next,[]);
   await saveBackfillPage(db,puuid,initial,page);
+  let state=await backfillState(db,puuid);
+  assert.equal(state.matchlist_complete,true);assert.equal(state.complete,false);assert.equal(state.phase,'stored');
+  await saveStoredBackfillPage(db,puuid,state,{data:[],results:{after:0}});
   assert.equal((await backfillState(db,puuid)).complete,true);
   assert.equal((await db.prepare('SELECT COUNT(*) AS n FROM player_name_matches').first()).n,0);
   const saved=await db.prepare('SELECT evidence FROM player_name_backfill WHERE puuid=?1').bind(puuid).first();
@@ -155,6 +172,20 @@ test('malformed pages do not advance the cursor and blank names are skipped',asy
   assert.equal((await backfillState(db,puuid)).next_start,0);
   assert.equal(matchNameEvidence([historicalMatch('1','','',day(1))],puuid).length,0);
   assert.throws(()=>matchNameEvidence([historicalMatch('2','A','EU','2099-01-01')],puuid));
+});
+
+test('stored pages add named identities and queue older blank records for match details',async t=>{
+  const {db}=await trackedDatabase(t);
+  let state=await backfillState(db,puuid);
+  await saveBackfillPage(db,puuid,state,[]);state=await backfillState(db,puuid);
+  const page=[storedMatch('blank',null,null,day(1)),storedMatch('named','Cereal Killer','007',day(2))];
+  assert.deepEqual(storedNameEvidence(page,puuid).map(row=>row.name),['Cereal Killer']);
+  state=await saveStoredBackfillPage(db,puuid,state,{data:page,results:{after:0}});
+  assert.equal(state.complete,false);assert.equal(state.phase,'stored-detail');assert.equal(state.stored_pending_count,1);
+  state=await backfillState(db,puuid,true);
+  state=await saveStoredMatchDetail(db,puuid,state,historicalMatch('blank','Earlier','EU',day(1)));
+  assert.equal(state.complete,true);assert.equal(state.stored_scanned,2);
+  assert.deepEqual((await readNameHistory(db,puuid)).map(row=>row.name),['Current','Cereal Killer','Earlier']);
 });
 
 test('unchanged match pages retain range endpoints instead of every redundant row',()=>{
@@ -183,6 +214,51 @@ test('compact evidence merges page boundaries while preserving reused names',()=
   ]);
 });
 
+test('compact evidence removes a one-match rapid name bounce',()=>{
+  const rows=compactMatchEvidence([
+    {name:'smoking opps',tag:'Von',played_at:'2025-09-16T20:00:00.000Z'},
+    {name:'Kurdistan peek',tag:'musun',played_at:'2025-09-17T01:00:00.000Z'},
+    {name:'smoking opps',tag:'Von',played_at:'2025-09-17T06:00:00.000Z'},
+    {name:'smoking opps',tag:'Von',played_at:'2025-12-13T20:00:00.000Z'},
+  ]);
+  assert.deepEqual(rows,[
+    {name:'smoking opps',tag:'Von',played_at:'2025-09-16T20:00:00.000Z'},
+    {name:'smoking opps',tag:'Von',played_at:'2025-12-13T20:00:00.000Z'},
+  ]);
+});
+
+test('completed backfill evidence is corrected when the timeline is read',async t=>{
+  const {db}=database(t);
+  await observeName(db,account('Kurdistan peek','musun'),'2026-04-28T05:17:00.000Z');
+  await db.prepare('UPDATE rr_players SET platform=?1 WHERE puuid=?2').bind('pc',puuid).run();
+  const evidence=[
+    {name:'smoking opps',tag:'Von',played_at:'2025-08-12T20:00:00.000Z'},
+    {name:'smoking opps',tag:'Von',played_at:'2025-09-16T20:00:00.000Z'},
+    {name:'Kurdistan peek',tag:'musun',played_at:'2025-09-17T01:00:00.000Z'},
+    {name:'smoking opps',tag:'Von',played_at:'2025-09-17T06:00:00.000Z'},
+    {name:'smoking opps',tag:'Von',played_at:'2025-12-13T20:00:00.000Z'},
+  ];
+  await db.prepare(`INSERT INTO player_name_backfill
+    (puuid,region,platform,next_start,complete,updated_at,evidence)
+    VALUES(?1,?2,?3,?4,1,?5,?6)`).bind(puuid,'eu','pc',2564,day(6),JSON.stringify(evidence)).run();
+  const rows=await readNameHistory(db,puuid);
+  assert.deepEqual(rows.map(row=>row.name+'#'+row.tag),[
+    'Kurdistan peek#musun','smoking opps#Von',
+  ]);
+  assert.equal(rows[1].first_seen,'2025-08-12T20:00:00.000Z');
+  assert.equal(rows[1].last_seen,'2025-12-13T20:00:00.000Z');
+});
+
+test('compact evidence keeps a one-match name reuse outside the rapid-bounce window',()=>{
+  const rows=compactMatchEvidence([
+    {name:'A',tag:'EU',played_at:'2026-01-01T00:00:00.000Z'},
+    {name:'B',tag:'EU',played_at:'2026-02-01T00:00:00.000Z'},
+    {name:'A',tag:'EU',played_at:'2026-04-15T00:00:00.000Z'},
+  ]);
+  assert.equal(rows.length,3);
+  assert.equal(rows[1].name,'B');
+});
+
 test('scheduled backfill stops when complete and reports failed pages for a later retry',async()=>{
   let calls=0;
   const result=await backfillPlayer({puuid},{origin:'https://example.test',pages:20,sleepImpl:async()=>{},fetchImpl:async()=>{
@@ -206,4 +282,83 @@ test('proxy backfill uses the saved cursor, omits roster data, and cached name h
   assert.ok(urls[1].endsWith('?mode=competitive&size=10&start=0'));
   const fresh=await request('name-history/'+puuid);
   assert.equal((await fresh.json()).data.history.at(-1).name,'Old');assert.equal(calls,2);
+});
+
+test('proxy supplements a completed full scan from stored matches',async t=>{
+  const {db}=await trackedDatabase(t);
+  await saveBackfillPage(db,puuid,await backfillState(db,puuid),[]);
+  const urls=[];const oldCaches=globalThis.caches,oldFetch=globalThis.fetch;
+  globalThis.caches={default:{async match(){return null;},async put(){}}};
+  globalThis.fetch=async url=>{
+    urls.push(url);
+    return Response.json({data:[storedMatch('archive','Cereal Killer','007',day(1))],results:{after:0}});
+  };
+  t.after(()=>{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;});
+  const jobs=[];
+  const response=await onRequestGet({request:new Request(`https://example.test/api/name-backfill/${puuid}`),
+    env:{APP_DB:db,HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});
+  await Promise.all(jobs);
+  assert.equal(response.status,200);
+  assert.ok(urls[0].includes(`/valorant/v1/by-puuid/stored-matches/eu/${puuid}?mode=competitive&size=100&page=1`));
+  const body=await response.json();
+  assert.equal(body.data.backfill.complete,true);
+  assert.equal(body.data.backfill.next_start,0);
+  assert.equal(body.data.backfill.stored_scanned,1);
+  assert.equal(body.data.history.at(-1).name,'Cereal Killer');
+});
+
+test('proxy resolves blank old archive records through full match details',async t=>{
+  const {db}=await trackedDatabase(t);
+  await saveBackfillPage(db,puuid,await backfillState(db,puuid),[]);
+  const urls=[];const oldCaches=globalThis.caches,oldFetch=globalThis.fetch;
+  globalThis.caches={default:{async match(){return null;},async put(){}}};
+  globalThis.fetch=async url=>{
+    urls.push(url);
+    return url.includes('/stored-matches/')
+      ?Response.json({data:[storedMatch('archive',null,null,day(1))],results:{after:0}})
+      :Response.json({data:historicalMatch('archive','Cereal Killer','007',day(1))});
+  };
+  t.after(()=>{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;});
+  async function request(){
+    const jobs=[];const response=await onRequestGet({request:new Request(`https://example.test/api/name-backfill/${puuid}`),
+      env:{APP_DB:db,HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});await Promise.all(jobs);return response;
+  }
+  let body=await (await request()).json();
+  assert.equal(body.data.backfill.phase,'stored-detail');assert.equal(body.data.backfill.stored_match,undefined);
+  body=await (await request()).json();
+  assert.ok(urls[1].endsWith('/valorant/v4/match/eu/archive'));
+  assert.equal(body.data.backfill.complete,true);
+  assert.equal(body.data.history.at(-1).name,'Cereal Killer');
+});
+
+test('an unavailable archived match detail is skipped without stalling the player',async t=>{
+  const {db}=await trackedDatabase(t);
+  await saveBackfillPage(db,puuid,await backfillState(db,puuid),[]);
+  const oldCaches=globalThis.caches,oldFetch=globalThis.fetch;let calls=0;
+  globalThis.caches={default:{async match(){return null;},async put(){}}};
+  globalThis.fetch=async()=>++calls===1
+    ?Response.json({data:[storedMatch('gone',null,null,day(1))],results:{after:0}})
+    :Response.json({errors:[{message:'Match not found'}]},{status:404});
+  t.after(()=>{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;});
+  async function request(){
+    const jobs=[];const response=await onRequestGet({request:new Request(`https://example.test/api/name-backfill/${puuid}`),
+      env:{APP_DB:db,HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});await Promise.all(jobs);return response;
+  }
+  await request();const response=await request();const body=await response.json();
+  assert.equal(response.status,200);assert.equal(body.data.backfill.complete,true);
+  assert.equal(body.data.backfill.stored_pending_count,0);
+});
+
+test('a player with no stored archive completes when Henrik returns 404',async t=>{
+  const {db}=await trackedDatabase(t);
+  await saveBackfillPage(db,puuid,await backfillState(db,puuid),[]);
+  const oldCaches=globalThis.caches,oldFetch=globalThis.fetch;
+  globalThis.caches={default:{async match(){return null;},async put(){}}};
+  globalThis.fetch=async()=>Response.json({errors:[{message:'No stored matches'}]},{status:404});
+  t.after(()=>{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;});
+  const jobs=[];const response=await onRequestGet({request:new Request(`https://example.test/api/name-backfill/${puuid}`),
+    env:{APP_DB:db,HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});await Promise.all(jobs);
+  const body=await response.json();
+  assert.equal(response.status,200);assert.equal(body.data.backfill.complete,true);
+  assert.equal(body.data.backfill.stored_scanned,0);
 });
