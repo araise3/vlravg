@@ -7,26 +7,32 @@ const DELAY_MS = 0; // Request starts are paced centrally; no extra per-player p
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function requestJSON(url, fetchImpl = fetch, sleepImpl = sleep) {
-  for (let attempt = 0; attempt < 3; attempt++) {
+  let transientAttempts = 0, rateLimitAttempts = 0;
+  for (;;) {
     try {
       const res = await fetchImpl(url, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(30000) });
       const body = await res.json().catch(() => null);
-      if (res.status === 429 || res.status >= 500) {
-        if (attempt < 2) {
-          const retry = res.status === 429 ? body?.retryAfterMs : 2500 * 2 ** attempt;
-          await sleepImpl(Number.isFinite(retry) ? Math.max(1000, Math.min(retry, 120000)) : 30000);
+      if (res.status === 429) {
+        if (++rateLimitAttempts >= 5) return { ok: false, reason: 'http 429', retryable: true };
+        const retry = body?.retryAfterMs;
+        await sleepImpl(Number.isFinite(retry) ? Math.max(1000, Math.min(retry, 120000)) : 60000);
+        continue;
+      }
+      if (res.status >= 500) {
+        if (++transientAttempts < 3) {
+          await sleepImpl(2500 * 2 ** (transientAttempts - 1));
           continue;
         }
+        return { ok: false, reason: `http ${res.status}`, retryable: true };
       }
       if (!res.ok) return { ok: false, reason: `http ${res.status}` };
       if (!body?.data) return { ok: false, reason: 'invalid JSON response' };
       return { ok: true, data: body.data };
     } catch {
-      if (attempt === 2) return { ok: false, reason: 'network error or timeout' };
-      await sleepImpl(2500 * 2 ** attempt);
+      if (++transientAttempts >= 3) return { ok: false, reason: 'network error or timeout', retryable: true };
+      await sleepImpl(2500 * 2 ** (transientAttempts - 1));
     }
   }
-  return { ok: false, reason: 'retries exhausted' };
 }
 
 export async function refreshPlayer(player, { origin, fetchImpl = fetch, sleepImpl = sleep }) {
@@ -93,6 +99,31 @@ export async function listPlayers(env) {
   }
 }
 
+export async function refreshTrackedPlayers(players, { origin, fetchImpl, sleepImpl = sleep, log = console.log }) {
+  let failed = 0;
+  const deferred = [];
+  for (const [i, player] of players.entries()) {
+    const result = await refreshPlayer(player, { origin, fetchImpl, sleepImpl });
+    if (!result.ok) {
+      if (result.name.retryable || result.rr.retryable) deferred.push(player);
+      else failed++;
+    }
+    const current = result.name.ok ? result.name.data.history.find(h => h.ended_at == null) : null;
+    const renamed = current && (current.name !== player.name || current.tag !== player.tag);
+    log(`[${i + 1}/${players.length}] ${player.puuid}: name ${result.name.ok ? renamed ? 'changed' : 'checked' : 'FAILED: ' + result.name.reason}; RR ${result.rr.ok ? result.rr.skipped ? 'not tracked yet' : result.rr.data.history.length + ' matches' : 'FAILED: ' + result.rr.reason}${!result.ok && (result.name.retryable || result.rr.retryable) ? ' (retry queued)' : ''}`);
+    if (i < players.length - 1) await sleepImpl(DELAY_MS);
+  }
+  // A 429 can persist across several quota windows while site visitors share
+  // the key. Retry those few players after the rest of the daily pass rather
+  // than declaring the whole workflow failed and skipping their refresh.
+  for (const [i, player] of deferred.entries()) {
+    const result = await refreshPlayer(player, { origin, fetchImpl, sleepImpl });
+    if (!result.ok) failed++;
+    log(`[retry ${i + 1}/${deferred.length}] ${player.puuid}: name ${result.name.ok ? 'checked' : 'FAILED: ' + result.name.reason}; RR ${result.rr.ok ? result.rr.skipped ? 'not tracked yet' : result.rr.data.history.length + ' matches' : 'FAILED: ' + result.rr.reason}`);
+  }
+  return { failed, deferred: deferred.length };
+}
+
 export async function main(env = process.env) {
   for (const key of ['CF_API_TOKEN', 'CF_ACCOUNT_ID', 'CF_D1_DATABASE_ID']) {
     if (!env[key]) throw new Error(`Missing required secret: ${key}`);
@@ -109,16 +140,11 @@ export async function main(env = process.env) {
   if(target && !selected.length)throw new Error('Target player is not tracked');
   const players = maxPlayers ? selected.slice(0, maxPlayers) : selected;
   console.log(`Checking names and RR for ${players.length} tracked player(s).`);
-  const fetchImpl=createRequestScheduler();
-  let failed = 0;
-  for (const [i, player] of players.entries()) {
-    const result = await refreshPlayer(player, { origin,fetchImpl });
-    if (!result.ok) failed++;
-    const current = result.name.ok ? result.name.data.history.find(h => h.ended_at == null) : null;
-    const renamed = current && (current.name !== player.name || current.tag !== player.tag);
-    console.log(`[${i + 1}/${players.length}] ${player.puuid}: name ${result.name.ok ? renamed ? 'changed' : 'checked' : 'FAILED: ' + result.name.reason}; RR ${result.rr.ok ? result.rr.skipped ? 'not tracked yet' : result.rr.data.history.length + ' matches' : 'FAILED: ' + result.rr.reason}`);
-    if (i < players.length - 1) await sleep(DELAY_MS);
-  }
+  // The public site shares this Henrik key. Leave headroom below its nominal
+  // 60 requests/minute ceiling instead of consuming the entire budget here.
+  const fetchImpl = createRequestScheduler({ intervalMs: 1500 });
+  const refresh = await refreshTrackedPlayers(players, { origin, fetchImpl });
+  let failed = refresh.failed;
   console.log(`Done: ${players.length - failed} succeeded, ${failed} failed.`);
   // Finish the time-sensitive daily checks for everyone before spending quota
   // on the one-time historical scan. Cursors persist across scheduled runs.
