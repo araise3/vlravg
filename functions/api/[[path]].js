@@ -9,8 +9,8 @@
  *   APP_DB     (D1 database)  create a D1 database, run schema.sql against
  *                             it, bind it to APP_DB. Holds every piece of
  *                             persistent state this Function keeps: rate-
- *                             limit quota, RR-history persistence, and
- *                             Hidden-MMR live calibration — see schema.sql.
+ *                             limit quota, RR-history persistence, match
+ *                             archive, and live calibration — see schema.sql.
  *                             Nothing here uses KV; there is no KV binding.
  *
  * Because the page and this function share one origin, no CORS or Origin
@@ -97,6 +97,68 @@ import { backfillState, saveBackfillPage, saveStoredBackfillPage, saveStoredMatc
 
 const UPSTREAM = "https://api.henrikdev.xyz";
 const PREFIX = "/api";
+const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+const MATCH_ARCHIVE_ROUTE = new RegExp(`^/match-archive/(${UUID})/(${UUID})$`, 'i');
+const MATCH_ARCHIVE_PAGE_SIZE = 10;
+
+async function gzipMatch(match) {
+  const source = new Blob([JSON.stringify(match)]).stream();
+  return new Uint8Array(await new Response(source.pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
+}
+
+async function gunzipMatch(payload) {
+  const bytes = new Uint8Array(payload);
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return JSON.parse(await new Response(stream).text());
+}
+
+async function saveMatchArchivePage(env, bodyText, puuid) {
+  if (!env.APP_DB || !puuid) return;
+  let rows;
+  try { rows = JSON.parse(bodyText)?.data; } catch { return; }
+  if (!Array.isArray(rows)) return;
+  const eligible = rows.filter(row => row?.metadata?.match_id
+    && (row.metadata.season?.id || row.metadata.season_id)
+    && row?.players?.some(p => p.puuid?.toLowerCase() === puuid));
+  if (!eligible.length) return;
+  const ids = [...new Set(eligible.map(row => row.metadata.match_id))];
+  const placeholders = ids.map(() => '?').join(',');
+  const { results: existing } = await env.APP_DB.prepare(
+    `SELECT match_id FROM match_archive WHERE puuid=? AND match_id IN (${placeholders})`
+  ).bind(puuid, ...ids).all();
+  const known = new Set((existing || []).map(row => row.match_id));
+  const statements = [];
+  for (const row of eligible) {
+    const meta = row?.metadata;
+    const matchId = meta?.match_id;
+    const seasonId = meta?.season?.id || meta?.season_id;
+    if (known.has(matchId)) continue;
+    known.add(matchId);
+    const payload = await gzipMatch(row);
+    // D1 caps a row at 2 MB. An oversized match still reaches the caller.
+    if (payload.byteLength >= 1900000) continue;
+    statements.push(env.APP_DB.prepare(
+      'INSERT OR IGNORE INTO match_archive (puuid,season_id,match_id,started_at,payload) VALUES (?1,?2,?3,?4,?5)'
+    ).bind(puuid, seasonId.toLowerCase(), matchId, meta.started_at || null, payload));
+  }
+  if (statements.length) await env.APP_DB.batch(statements);
+}
+
+async function readMatchArchive(env, puuid, seasonId, start) {
+  if (!env.APP_DB) return json({ error: 'Match archive unavailable' }, 503);
+  try {
+    const { results } = await env.APP_DB.prepare(
+      'SELECT payload FROM match_archive WHERE puuid=?1 AND season_id=?2 '
+      + 'ORDER BY started_at DESC, match_id DESC LIMIT ?3 OFFSET ?4'
+    ).bind(puuid, seasonId, MATCH_ARCHIVE_PAGE_SIZE, start).all();
+    const matches = await Promise.all((results || []).map(row => gunzipMatch(row.payload)));
+    const res = json({ data: matches }, 200);
+    res.headers.set('Cache-Control', 'no-store');
+    return res;
+  } catch {
+    return json({ error: 'Match archive unavailable' }, 503);
+  }
+}
 
 // mmr-history's upstream only ever returns the most recent ~20 games. Every
 // live (cache-miss) fetch is merged into per-match rows in APP_DB (table
@@ -832,12 +894,28 @@ export async function onRequestGet(context) {
   // back to the frozen constants, which is a perfectly good response.
   if (requestPath === "/calib-model") return handleCalibModel(env);
 
+  const archiveMatch = requestPath.match(MATCH_ARCHIVE_ROUTE);
+  if (archiveMatch) {
+    const startText = url.searchParams.get('start') || '0';
+    const start = Number(startText);
+    if (!/^\d+$/.test(startText) || !Number.isSafeInteger(start) || start > 5000 || start % MATCH_ARCHIVE_PAGE_SIZE) {
+      return json({ error: 'Invalid archive offset' }, 400);
+    }
+    return readMatchArchive(env, archiveMatch[1].toLowerCase(), archiveMatch[2].toLowerCase(), start);
+  }
+
   let route = null, match = null;
   for (const r of ROUTES) {
     const m = requestPath.match(r.match);
     if (m) { route = r; match = m; break; }
   }
   if (!route) return json({ error: "Unknown route" }, 404);
+  // The player ID selects trusted match rows for shared storage. It is never
+  // sent to HenrikDev and never lets a caller supply match contents.
+  const archivePuuid = route.foldCalibration && url.searchParams.get('mode') === 'competitive'
+    && new RegExp(`^${UUID}$`, 'i').test(url.searchParams.get('puuid') || '')
+    ? url.searchParams.get('puuid').toLowerCase() : null;
+  if (route.foldCalibration) url.searchParams.delete('puuid');
   if (route.storedMatches) {
     const pageText = url.searchParams.get('page') || '1';
     const page = Number(pageText);
@@ -905,6 +983,9 @@ export async function onRequestGet(context) {
         body.data.backfill = storedNameHistory.backfill;
         const res = json(body,200); res.headers.set('X-Proxy-Cache','HIT');res.headers.set('Cache-Control','no-store');return res;
       } catch { return json({error:'Name history storage unavailable'},503); }
+    }
+    if (route.foldCalibration && archivePuuid) {
+      context.waitUntil(cached.clone().text().then(body => saveMatchArchivePage(env, body, archivePuuid)).catch(() => {}));
     }
     const res = new Response(cached.body, cached);
     res.headers.set("X-Proxy-Cache", "HIT");
@@ -1019,6 +1100,7 @@ export async function onRequestGet(context) {
   }
 
   if (upstream.status === 200 && route.foldCalibration) {
+    if (archivePuuid) context.waitUntil(saveMatchArchivePage(env, bodyText, archivePuuid).catch(() => {}));
     // Fire-and-forget: never touches bodyText/the response, so this adds
     // zero latency to the user-facing request either way.
     context.waitUntil(
