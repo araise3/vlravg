@@ -493,45 +493,27 @@ h1 span{color:var(--accent);}
 /* Shared table surface across the detailed statistic pages. */
 #sg-rank-card,#party-size-section,#teammates-section,#name-history-card,.rr-table-card,.servers-table-card{padding:0;overflow:hidden;border:1px solid var(--surface-border);border-radius:10px;background:#141416;box-shadow:none;}
 #name-history-card[hidden]{display:none;}
-.name-history-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 22px;border-bottom:1px solid var(--surface-border);background:#1a1a1d;}
-.name-history-toolbar-title{display:block;color:#f4f4f5;font-size:14px;font-weight:700;}
-.name-history-toolbar-count{display:block;margin-top:3px;color:#a1a1aa;font-size:12px;}
+.name-history-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 20px;border-bottom:1px solid var(--surface-border);background:#1a1a1d;}
+.name-history-toolbar-title{display:block;color:#c4c4cc;font-size:13px;font-weight:600;}
 .name-history-sort{display:flex;align-items:center;gap:9px;color:#a1a1aa;font-size:12px;white-space:nowrap;}
 .name-history-sort select{min-height:38px;padding:0 28px 0 11px;border:1px solid var(--surface-border);border-radius:var(--radius-sm);background:#111113;color:var(--text);font:inherit;cursor:pointer;}
 .name-history-sort select:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
-.name-history-list{list-style:none;counter-reset:name-period;}
-.name-history-item{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.95fr) minmax(0,1.1fr);gap:20px;align-items:center;position:relative;padding:22px 24px 22px 44px;border-bottom:1px solid #29292d;counter-increment:name-period;}
+.name-history-list{list-style:none;}
+.name-history-item{display:flex;align-items:center;justify-content:space-between;gap:12px 24px;padding:16px 20px;border-bottom:1px solid #29292d;}
 .name-history-item:last-child{border-bottom:0;}
-.name-history-item:nth-child(even){background:#18181b;}
-.name-history-item:hover{background:#202024;}
-.name-history-item::before{content:'';position:absolute;top:29px;left:21px;width:7px;height:7px;border:2px solid #81818b;border-radius:50%;background:#141416;z-index:1;}
-.name-history-item::after{content:'';position:absolute;top:38px;bottom:-29px;left:25px;width:1px;background:#37373e;}
-.name-history-item:last-child::after{display:none;}
-.name-history-list.is-alpha .name-history-item::after{display:none;}
-.name-history-item.is-current::before{border-color:var(--brand);box-shadow:0 0 0 4px rgba(var(--brand-rgb),.12);}
+.name-history-item:hover{background:#1a1a1d;}
 .name-history-identity{min-width:0;}
-.name-history-id{display:flex;align-items:baseline;flex-wrap:wrap;gap:0;font-size:16px;line-height:1.4;overflow-wrap:anywhere;}
+.name-history-id{display:flex;align-items:baseline;flex-wrap:wrap;gap:0;font-size:15px;line-height:1.4;overflow-wrap:anywhere;}
 .name-history-id strong{font-weight:700;color:#f4f4f5;}
 .name-history-id span{color:#a1a1aa;font-weight:500;}
-.name-history-current{display:inline-block;margin-top:7px;padding:3px 7px;border:1px solid rgba(var(--brand-rgb),.35);border-radius:var(--radius-xs);background:rgba(var(--brand-rgb),.1);color:#a9d0ff;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
-.name-history-field{min-width:0;}
-.name-history-label{display:block;margin-bottom:8px;color:#a1a1aa;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;}
-.name-history-dates{display:flex;align-items:center;flex-wrap:wrap;gap:6px;color:#e4e4e7;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.4;}
-.name-history-dates time{white-space:nowrap;}
-.name-history-connector{color:#71717a;font-size:12px;flex-shrink:0;}
-.name-history-eras{display:flex;align-items:center;flex-wrap:wrap;gap:7px;}
-.name-history-era{display:inline-flex;align-items:baseline;gap:5px;padding:6px 8px;border:1px solid #383840;border-radius:var(--radius-sm);background:#222227;color:#d4d4d8;white-space:nowrap;font-size:11px;line-height:1.2;}
-.name-history-era strong{color:#f4f4f5;font-size:12px;font-weight:700;}
-@media(max-width:760px){
-  .name-history-item{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;padding-right:18px;}
-  .name-history-identity{grid-column:1/-1;}
-}
+.name-history-id .name-history-current{display:inline-block;margin-left:9px;color:var(--brand);font-size:11px;font-weight:700;}
+.name-history-meta{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px 10px;color:#a1a1aa;font-size:12px;font-variant-numeric:tabular-nums;line-height:1.5;}
+.name-history-meta time{white-space:nowrap;}
+.name-history-meta-separator{color:#62626b;}
 @media(max-width:520px){
-  .name-history-toolbar{align-items:flex-start;flex-direction:column;gap:12px;padding:16px 18px;}
-  .name-history-item{grid-template-columns:minmax(0,1fr);gap:14px;padding:18px 18px 18px 40px;}
-  .name-history-identity{grid-column:auto;}
-  .name-history-item::before{left:17px;top:25px;}
-  .name-history-item::after{left:21px;top:34px;}
+  .name-history-toolbar{padding:12px 16px;}
+  .name-history-item{align-items:flex-start;flex-direction:column;gap:5px;padding:14px 16px;}
+  .name-history-meta{justify-content:flex-start;}
 }
 .name-history-note{font-size:12px;color:#a1a1aa;line-height:1.6;margin-top:14px;}
 .name-history-retry{color:var(--brand);text-decoration:underline;text-underline-offset:3px;margin-left:8px;}
@@ -542,6 +524,7 @@ h1 span{color:var(--accent);}
 #name-backfill-progress{flex-basis:100%;width:100%;height:6px;accent-color:var(--brand);}
 #name-backfill-progress[hidden]{display:none;}
 #sg-rank-overview,.table-scroll{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
+#sg-rank-overview .rank-table{min-width:940px;}
 #sg-rank-overview:focus-visible,.table-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:-2px;}
 .duo-player-name{display:flex;align-items:baseline;gap:3px;max-width:240px;}
 .duo-player-name .duo-name{overflow:hidden;text-overflow:ellipsis;}
@@ -581,7 +564,7 @@ h1 span{color:var(--accent);}
 .rank-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 #party-size-section{margin-bottom:24px;}
 .rr-table-card{padding:0;overflow:hidden;margin-bottom:24px;}
-.rr-summary-stats{display:grid;grid-template-columns:1fr 1fr 1.4fr 1fr;gap:10px;margin:0 0 24px;}
+.rr-summary-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 24px;}
 .rr-summary-stat{min-width:0;padding:14px;background:#1c1c1c;border:1px solid var(--surface-border);border-radius:7px;}
 .rr-summary-stat dt{font-size:11px;font-weight:700;text-transform:uppercase;color:#c4c4cc;margin-bottom:5px;}
 .rr-summary-stat dd{margin:0;font-size:24px;font-weight:750;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;}
@@ -599,6 +582,7 @@ h1 span{color:var(--accent);}
 .party-size-options{display:inline-flex;max-width:100%;padding:2px;border:1px solid #36363b;border-radius:8px;background:#161618;overflow-x:auto;scrollbar-width:none;}
 .party-size-options::-webkit-scrollbar{display:none;}
 .party-size-options label{position:relative;cursor:pointer;}
+.party-size-options label[hidden]{display:none;}
 .party-size-options input{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
 .party-size-options span{display:flex;align-items:center;justify-content:center;min-height:28px;padding:0 10px;border-radius:5px;color:#a1a1aa;font-size:12px;font-weight:650;letter-spacing:0;transition:background-color .15s,color .15s,box-shadow .15s;}
 .party-size-options label:hover span{color:var(--text);background:#222226;}
@@ -756,6 +740,7 @@ h1 span{color:var(--accent);}
   <main id="lobby-rank-page" class="detail-page" hidden aria-labelledby="lobby-rank-title">
     <div class="page-heading">
       <h1 id="lobby-rank-title" tabindex="-1">Lobby Rank</h1>
+      <p>Compare your team’s and the enemy team’s average rank in each lobby rank group. Team ranks use rated players only.</p>
     </div>
     <div id="lobby-rank-filter-host" class="detail-filter-row">
       <div class="party-size-filter" role="radiogroup" aria-labelledby="lobby-rank-party-size-label">
@@ -809,9 +794,9 @@ h1 span{color:var(--accent);}
       <section id="rr-movement-section" class="rr-movement-section" hidden aria-labelledby="rr-movement-title">
         <div class="rr-movement-card">
           <div class="rr-movement-head"><h2 id="rr-movement-title">RR movement by starting rank</h2><span id="rr-movement-count" class="rr-movement-count"></span></div>
-          <p class="rr-movement-note">Each dot is a match’s actual RR change at its reconstructed starting rank + RR. The line combines the typical RR gain and typical RR loss nearby, weighting both equally regardless of how many wins or losses there were. Draws and Rank Shield-protected losses are hidden. Double-click a rank area to zoom; double-click again to reset. Refunds are added, and recorded payouts already include party penalties. Covered penalized five-stacks remain here; aggregate tables retain their ordinary-RR eligibility rules.</p>
+          <p class="rr-movement-note">Each dot is a match’s RR payout at its reconstructed starting rank + RR. The line smooths nearby match payouts. Draws, Rank Shield-protected losses, and five-stacks are excluded. Refunds are not added to payouts. Double-click a rank area to zoom; double-click again to reset.</p>
           <div class="rr-movement-legend" aria-label="Chart legend">
-            <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span><span><i class="rr-legend-mark trend"></i>Balanced RR trend</span>
+            <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span><span><i class="rr-legend-mark trend"></i>RR trend</span>
           </div>
           <div id="rr-movement-chart" class="rr-movement-scroll" role="region" aria-label="RR movement chart" tabindex="0"></div>
         </div>
@@ -1387,7 +1372,7 @@ let nameHistorySort='newest';
 async function loadNameHistory(puuid,generation=_analysisGen){
   nameHistoryState='loading';renderNameHistory();
   try{
-    const {j}=await apiGet(`${API_BASE}/name-history/${encodeURIComponent(puuid)}`,{quiet:true,cache:'no-store'});
+    const {j}=await apiGet(`${API_BASE}/name-history/${encodeURIComponent(puuid)}?platform=${encodeURIComponent(PLATFORM)}`,{quiet:true,cache:'no-store'});
     if(generation!==_analysisGen||puuid!==PUUID)return;
     if(!Array.isArray(j.data?.history))throw new Error('Invalid name history');
     nameHistoryRows=j.data.history;nameHistoryBackfill=j.data.backfill;nameHistoryState='ready';
@@ -1493,11 +1478,8 @@ function renderNameHistory(){
     return;
   }
   const toolbar=document.createElement('div');toolbar.className='name-history-toolbar';
-  const heading=document.createElement('div');
-  const title=document.createElement('span');title.className='name-history-toolbar-title';title.textContent='Recorded Riot IDs';
-  const count=document.createElement('span');count.className='name-history-toolbar-count';
-  count.textContent=`${nameHistoryRows.length} observed period${nameHistoryRows.length===1?'':'s'}`;
-  heading.append(title,count);
+  const title=document.createElement('span');title.className='name-history-toolbar-title';
+  title.textContent=`${nameHistoryRows.length} observed period${nameHistoryRows.length===1?'':'s'}`;
   const sortLabel=document.createElement('label');sortLabel.className='name-history-sort';sortLabel.textContent='Sort by';
   const sort=document.createElement('select');sort.setAttribute('aria-label','Sort name history');
   for(const [value,label] of [['newest','Newest first'],['oldest','Oldest first'],['name','Riot ID A–Z']]){
@@ -1505,8 +1487,8 @@ function renderNameHistory(){
   }
   sort.value=nameHistorySort;
   sort.addEventListener('change',()=>{nameHistorySort=sort.value;renderNameHistory();});
-  sortLabel.appendChild(sort);toolbar.append(heading,sortLabel);
-  const list=document.createElement('ol');list.className='name-history-list'+(nameHistorySort==='name'?' is-alpha':'');
+  sortLabel.appendChild(sort);toolbar.append(title,sortLabel);
+  const list=document.createElement('ol');list.className='name-history-list';
   const dateFormat=new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
   const rows=[...nameHistoryRows].sort((a,b)=>{
     if(nameHistorySort==='name')return (a.name+'#'+a.tag).localeCompare(b.name+'#'+b.tag,undefined,{sensitivity:'base'})||Date.parse(b.first_seen)-Date.parse(a.first_seen);
@@ -1515,48 +1497,37 @@ function renderNameHistory(){
   });
   rows.forEach(h=>{
     const item=document.createElement('li');item.className='name-history-item';
-    if(h.ended_at==null)item.classList.add('is-current');
     const identity=document.createElement('div');identity.className='name-history-identity';
     const id=document.createElement('div');id.className='name-history-id';
     const name=document.createElement('strong');name.textContent=h.name;
     const tag=document.createElement('span');tag.textContent='#'+h.tag;
-    id.append(name,tag);identity.appendChild(id);
+    id.append(name,tag);
     if(h.ended_at==null){
-      const current=document.createElement('span');current.className='name-history-current';current.textContent='Current';identity.appendChild(current);
+      const current=document.createElement('span');current.className='name-history-current';current.textContent='Current';id.appendChild(current);
     }
+    identity.appendChild(id);
     item.appendChild(identity);
     const first=new Date(h.first_seen),last=new Date(h.last_seen);
-    const observed=document.createElement('div');observed.className='name-history-field';
-    const observedLabel=document.createElement('span');observedLabel.className='name-history-label';
-    observedLabel.textContent=first.getTime()===last.getTime()?'Observed':'First — last seen';
-    const dates=document.createElement('div');dates.className='name-history-dates';
+    const meta=document.createElement('div');meta.className='name-history-meta';
+    let dateLabel='Date unavailable';
     if(!Number.isFinite(first.getTime())||!Number.isFinite(last.getTime())){
-      dates.textContent='—';
+      meta.textContent='Date unavailable';
     }else{
-      const sameDay=first.getTime()===last.getTime();
-      dates.setAttribute('aria-label',sameDay?`Observed ${dateFormat.format(first)}`:`First observed ${dateFormat.format(first)}; last observed ${dateFormat.format(last)}`);
+      const sameDay=dateFormat.format(first)===dateFormat.format(last);
+      dateLabel=sameDay?`Observed ${dateFormat.format(first)}`:`First observed ${dateFormat.format(first)}; last observed ${dateFormat.format(last)}`;
       (sameDay?[first]:[first,last]).forEach((date,index)=>{
-        if(index){const arrow=document.createElement('span');arrow.className='name-history-connector';arrow.textContent='→';arrow.setAttribute('aria-hidden','true');dates.appendChild(arrow);}
-        const time=document.createElement('time');time.dateTime=date.toISOString();time.textContent=dateFormat.format(date);time.title=date.toUTCString();dates.appendChild(time);
+        if(index){const dash=document.createElement('span');dash.textContent='–';dash.setAttribute('aria-hidden','true');meta.appendChild(dash);}
+        const time=document.createElement('time');time.dateTime=date.toISOString();time.textContent=dateFormat.format(date);meta.appendChild(time);
       });
     }
-    observed.append(observedLabel,dates);item.appendChild(observed);
     const actRange=nameHistoryActRange(h.first_seen,h.last_seen);
-    const era=document.createElement('div');era.className='name-history-field';
-    const eraLabel=document.createElement('span');eraLabel.className='name-history-label';eraLabel.textContent='Episode / act';
-    const eras=document.createElement('div');eras.className='name-history-eras';eras.setAttribute('aria-label',actRange.title);
-    const startAct=nameHistoryActAt(h.first_seen),endAct=nameHistoryActAt(h.last_seen);
-    if(!startAct||!endAct){eras.textContent='—';}
-    else{
-      for(const [index,act] of (startAct.ordinal===endAct.ordinal?[startAct]:[startAct,endAct]).entries()){
-        if(index){const arrow=document.createElement('span');arrow.className='name-history-connector';arrow.textContent='→';arrow.setAttribute('aria-hidden','true');eras.appendChild(arrow);}
-        const chip=document.createElement('span');chip.className='name-history-era';chip.title=act.description;
-        const series=document.createElement('span');series.textContent=act.series.startsWith('E')?'Episode '+act.series.slice(1):act.series;
-        const actName=document.createElement('strong');actName.textContent='Act '+act.act;
-        chip.append(series,actName);eras.appendChild(chip);
-      }
+    if(actRange.sort!=null){
+      const separator=document.createElement('span');separator.className='name-history-meta-separator';separator.textContent='·';separator.setAttribute('aria-hidden','true');
+      const act=document.createElement('span');act.textContent=actRange.label;act.title=actRange.title;
+      meta.append(separator,act);
     }
-    era.append(eraLabel,eras);item.appendChild(era);list.appendChild(item);
+    meta.setAttribute('aria-label',actRange.sort!=null?`${dateLabel}; ${actRange.title}`:dateLabel);
+    item.appendChild(meta);list.appendChild(item);
   });
   container.append(toolbar,list);
 }
@@ -1574,7 +1545,7 @@ function updateDetailPages(){
   document.getElementById('party-size-section').style.display=ready&&allMatches.length>0&&partySizeData.length>0?'block':'none';
   document.getElementById('duos-filter-host').hidden=!ready;
   document.getElementById('matches-filter-host').hidden=!ready||!allMatches.length;
-  document.getElementById('lobby-rank-filter-host').hidden=!ready||!allMatches.length;
+  document.getElementById('lobby-rank-filter-host').hidden=!ready||!statMatches.some(m=>m.myStats&&m.avgRank!=null&&Math.round(m.avgRank)>=3);
   const hasRanks=ready&&allMatches.length>0&&lobbyRankData.length>0;
   document.getElementById('sg-rank-card').style.display=hasRanks?'block':'none';
   const rankEmpty=document.getElementById('lobby-rank-empty');
@@ -1584,7 +1555,7 @@ function updateDetailPages(){
       ?`No ${PARTY_LABELS[lobbyRankPartySize]||lobbyRankPartySize+'-Stack'} matches found for these filters.`
       :allMatches.length?'No rank breakdown available for these filters. Try another act or include placements.':'No matches found for this season. Try another act.')
     :'Search for a player above to explore their rank breakdown.';
-  document.getElementById('servers-filter-host').hidden=!ready||!allMatches.length;
+  document.getElementById('servers-filter-host').hidden=!ready||!statMatches.some(m=>m.serverName);
   const hasServers=ready&&serverData.length>0;
   document.getElementById('servers-content').hidden=!hasServers;
   const serversEmpty=document.getElementById('servers-empty');
@@ -2638,6 +2609,13 @@ function classifyClutchOutcome({won,deathMs}){
 }
 
 /* ── PROCESS MATCH ──────────────────────────────────────── */
+function ratedTeamRank(players,myTeamId,ownTeam){
+  if(!myTeamId)return null;
+  const ranks=players.filter(p=>p.team_id&&
+    (ownTeam?p.team_id===myTeamId:p.team_id!==myTeamId)&&p._tier>=3).map(p=>p._tier);
+  return ranks.length?ranks.reduce((sum,tier)=>sum+tier,0)/ranks.length:null;
+}
+
 function processMatch(m){
   const meta=m.metadata||{};
   const players=m.players||[];
@@ -2822,6 +2800,8 @@ function processMatch(m){
       _clutchAll:clutchAllByPuuid.get(p.puuid)||null,
     };
   });
+  const avgTeamRank=ratedTeamRank(playersOut,myTeamId,true);
+  const avgEnemyRank=ratedTeamRank(playersOut,myTeamId,false);
 
   // MVP: highest ACS in the match; team MVP: highest ACS per team
   const acsPlayers=playersOut.filter(p=>p._acs!=null);
@@ -2870,7 +2850,7 @@ function processMatch(m){
   // Whether Rank Shield absorbed this match's loss (badge didn't drop even
   // though myRR above still carries the normal negative payout).
   const myDerankProtected=_derankProtectedByMatchId[matchId]??false;
-  return{mapName,serverName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,myPreRR,myPreTierId,myRefundedRR,myDerankProtected,myPartyPenalty,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
+  return{mapName,serverName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,avgTeamRank,avgEnemyRank,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,myPreRR,myPreTierId,myRefundedRR,myDerankProtected,myPartyPenalty,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
 }
 
 function extractStats(p,fallbackRounds=null){
@@ -3657,7 +3637,20 @@ function renderAll(){
 }
 
 /* ── SERVERS ────────────────────────────────────────────── */
+function syncPartySizeOptions(name,available,selected){
+  const options=document.querySelectorAll(`input[name="${name}"]`);
+  options.forEach(input=>{
+    input.closest('label').hidden=input.value!=='0'&&!available.has(Number(input.value));
+  });
+  const next=selected&&available.has(selected)?selected:0;
+  const active=[...options].find(input=>Number(input.value)===next);
+  if(active)active.checked=true;
+  return next;
+}
+
 function renderServers(matches){
+  const available=new Set(matches.filter(m=>m.serverName).map(m=>m.partySize||1));
+  serverPartySize=syncPartySizeOptions('servers-party-size',available,serverPartySize);
   const selectedMatches=serverPartySize
     ?matches.filter(m=>(m.partySize||1)===serverPartySize)
     :matches;
@@ -4010,9 +4003,11 @@ function buildKdRankBuckets(bucketFn,{includeLobby,matches=statMatches}={}){
     const info=bucketFn(m);
     if(!info)return;
     const t=info.tier;
-    if(!rb[t])rb[t]={totalKills:0,totalDeaths:0,wins:0,total:0,label:info.label,icon:info.icon,acsSum:0,acsCount:0,lobbySum:0,lobbyCount:0};
+    if(!rb[t])rb[t]={totalKills:0,totalDeaths:0,wins:0,total:0,label:info.label,icon:info.icon,acsSum:0,acsCount:0,lobbySum:0,lobbyCount:0,teamRankSum:0,teamRankCount:0,enemyRankSum:0,enemyRankCount:0};
     rb[t].total++;
     if(includeLobby&&m.avgRank!=null){rb[t].lobbySum+=m.avgRank;rb[t].lobbyCount++;}
+    if(m.avgTeamRank!=null){rb[t].teamRankSum+=m.avgTeamRank;rb[t].teamRankCount++;}
+    if(m.avgEnemyRank!=null){rb[t].enemyRankSum+=m.avgEnemyRank;rb[t].enemyRankCount++;}
     if(m.won===true)rb[t].wins++;
     if(m.myStats.kills!=null)rb[t].totalKills+=m.myStats.kills;
     if(m.myStats.deaths!=null)rb[t].totalDeaths+=m.myStats.deaths;
@@ -4134,19 +4129,14 @@ function rrPositionFromElo(elo,tierHint=null){
   return{tier,rr,label:`${avgLabelShort(tier)} · ${rr} RR`};
 }
 
-// Give local gains and losses one vote each. A weighted average across every
-// match would lean toward whichever outcome happened more often, even if its
-// RR payout stayed exactly the same.
-function balancedRRMovementAt(rows,value,bandwidth){
-  let gainTotal=0,gainWeight=0,lossTotal=0,lossWeight=0;
+function smoothedRRMovementAt(rows,value,bandwidth){
+  let total=0,totalWeight=0;
   rows.forEach(row=>{
-    if(row.net===0)return;
     const distance=(row.axisRR-value)/bandwidth;
     const weight=Math.exp(-.5*distance*distance);
-    if(row.net>0){gainTotal+=row.net*weight;gainWeight+=weight;}
-    else{lossTotal+=row.net*weight;lossWeight+=weight;}
+    total+=row.net*weight;totalWeight+=weight;
   });
-  return(gainWeight?gainTotal/gainWeight:0)+(lossWeight?lossTotal/lossWeight:0);
+  return totalWeight?total/totalWeight:null;
 }
 
 function rrMovementXAxis(rows,zoomTier){
@@ -4164,20 +4154,21 @@ function rrMovementXAxis(rows,zoomTier){
   return{positions,observedMin,observedMax,min:Math.max(0,observedMin-pad),max:observedMax+pad};
 }
 
+function rrMovementRows(matches){
+  // Use the same five-stack eligibility rule as the RR summary. Draws and
+  // Rank Shield-protected losses do not contribute chart points or trends.
+  return matches.filter(m=>
+    isRREligible(m)&&m.myPreRR!=null&&
+    (m.won===true||m.won===false)&&!(m.myDerankProtected&&m.myRR<0)
+  ).map(m=>{
+    return{m,net:m.myRR,penalty:m.myPartyPenalty||0};
+  });
+}
+
 function renderRRMovement(matches){
   const section=document.getElementById('rr-movement-section');
   const container=document.getElementById('rr-movement-chart');
-  // The movement chart describes ordinary wins and losses only. Draws and
-  // Rank Shield-protected losses remain in the surrounding RR summaries, but
-  // do not contribute points, domains, counts, or the fitted trend here.
-  const allRows=matches.filter(m=>
-    m.myRR!=null&&m.myPreRR!=null&&m.myTierId>=3&&!m.actPlacement&&
-    (m.won===true||m.won===false)&&!(m.myDerankProtected&&m.myRR<0)
-  ).map(m=>{
-    const payout=m.myRR;
-    const refund=Number.isFinite(m.myRefundedRR)?m.myRefundedRR:0;
-    return{m,payout,refund,net:payout+refund,penalty:m.myPartyPenalty||0};
-  });
+  const allRows=rrMovementRows(matches);
   const rowTier=row=>rrPositionFromElo(row.m.myPreRR,row.m.myPreTierId??row.m.myTierId).tier;
   let rows=rrMovementZoomTier==null?allRows:allRows.filter(row=>rowTier(row)===rrMovementZoomTier);
   if(rrMovementZoomTier!=null&&!rows.length){rrMovementZoomTier=null;rows=allRows;}
@@ -4188,7 +4179,6 @@ function renderRRMovement(matches){
   const axis=rrMovementXAxis(rows,rrMovementZoomTier);
   rows=rows.map((row,index)=>({...row,axisRR:axis.positions[index]}));
 
-  const refunds=rows.filter(row=>row.refund!==0).length;
   const penalties=rows.filter(row=>row.penalty>0).length;
   const rawMin=axis.observedMin;
   const rawMax=axis.observedMax;
@@ -4196,7 +4186,6 @@ function renderRRMovement(matches){
   document.getElementById('rr-movement-count').textContent=[
     rrMovementZoomTier!=null?`${avgLabel(rrMovementZoomTier)} only`:null,
     `${rows.length} covered ${rows.length===1?'match':'matches'}`,
-    refunds?`${refunds} ${refunds===1?'refund':'refunds'}`:null,
     penalties?`${penalties} penalized`:null,
     rrMovementZoomTier!=null?'double-click to reset':null,
   ].filter(Boolean).join(' · ');
@@ -4223,7 +4212,7 @@ function renderRRMovement(matches){
   const svg=node('svg',{class:`rr-movement-svg${rrMovementZoomTier!=null?' zoomed':''}`,viewBox:`0 0 ${width} ${height}`,role:'img','aria-labelledby':'rr-movement-svg-title rr-movement-svg-desc'});
   svg.append(
     node('title',{id:'rr-movement-svg-title'},'RR movement by starting rank and RR'),
-    node('desc',{id:'rr-movement-svg-desc'},'Dots show individual RR changes. The line combines nearby average gains and average losses with equal weight, regardless of match counts. Draws and Rank Shield-protected losses are excluded.'),
+    node('desc',{id:'rr-movement-svg-desc'},'Dots show individual RR payouts. The line smooths nearby match payouts. Draws, Rank Shield-protected losses, and five-stacks are excluded; refunds are not added.'),
   );
   const defs=node('defs');
   const gradient=node('linearGradient',{id:'rr-movement-gradient',x1:'0',x2:'0',y1:top,y2:plotBottom,gradientUnits:'userSpaceOnUse'});
@@ -4296,7 +4285,7 @@ function renderRRMovement(matches){
     svg.appendChild(node('line',{x1:left,y1:py,x2:plotRight,y2:py,class:value===0?'zero':'grid'}));
     svg.appendChild(node('text',{x:left-10,y:py+4,'text-anchor':'end',class:'tick-label'},value>0?`+${value}`:String(value)));
   });
-  const yTitle=node('text',{x:15,y:(top+plotBottom)/2,'text-anchor':'middle',class:'axis-label',transform:`rotate(-90 15 ${(top+plotBottom)/2})`},'Balanced RR movement');
+  const yTitle=node('text',{x:15,y:(top+plotBottom)/2,'text-anchor':'middle',class:'axis-label',transform:`rotate(-90 15 ${(top+plotBottom)/2})`},'RR change');
   svg.appendChild(yTitle);
   if(rrMovementZoomTier!=null){
     const range=xMax-xMin;
@@ -4332,8 +4321,7 @@ function renderRRMovement(matches){
   const trendSampleCount=rawMax===rawMin||rows.length===1?1:Math.min(100,Math.max(40,rows.length));
   const trendPoints=Array.from({length:trendSampleCount},(_,index)=>{
     const value=trendSampleCount===1?rawMin:rawMin+rawSpan*index/(trendSampleCount-1);
-    const net=balancedRRMovementAt(rows,value,bandwidth);
-    return{px:x(value),py:y(net)};
+    return{px:x(value),py:y(smoothedRRMovementAt(rows,value,bandwidth))};
   });
   if(trendPoints.length>1){
     const curve=smoothPath(trendPoints);
@@ -4539,6 +4527,9 @@ function renderClutchCard(matches){
 
 
 function renderRankByRankCard(){
+  const available=new Set(statMatches.filter(m=>m.myStats&&m.avgRank!=null&&Math.round(m.avgRank)>=3)
+    .map(m=>m.partySize||1));
+  lobbyRankPartySize=syncPartySizeOptions('lobby-rank-party-size',available,lobbyRankPartySize);
   const lobbyMatches=lobbyRankPartySize
     ?statMatches.filter(m=>(m.partySize||1)===lobbyRankPartySize)
     :statMatches;
@@ -4572,7 +4563,7 @@ function renderPerformanceTable(containerId,rows,party){
   const table=document.createElement('table');
   table.className='rank-table'+(party?' duos-table':'');
   table.innerHTML=`<caption class="rank-sr-only">Your performance grouped by ${party?'party size':'average lobby rank'}</caption>
-    <thead><tr><th scope="col">${party?'Party size':'Lobby rank'}</th><th scope="col">Matches</th>${party?'<th scope="col">Avg Lobby</th>':''}<th scope="col">K/D</th><th scope="col">Avg ACS</th><th scope="col">Win rate</th></tr></thead><tbody></tbody>`;
+    <thead><tr><th scope="col">${party?'Party size':'Lobby rank'}</th><th scope="col">Matches</th>${party?'<th scope="col">Avg Lobby</th>':'<th scope="col" title="Average rank of rated players on your team, including you">Avg team rank</th><th scope="col" title="Average rank of rated players on the enemy team">Avg enemy rank</th>'}<th scope="col">K/D</th><th scope="col">Avg ACS</th><th scope="col">Win rate</th></tr></thead><tbody></tbody>`;
   const tbody=table.querySelector('tbody');
   rows.forEach(b=>{
     const kd=b.totalDeaths>0?b.totalKills/b.totalDeaths:b.totalKills>0?b.totalKills:null;
@@ -4580,7 +4571,7 @@ function renderPerformanceTable(containerId,rows,party){
     const row=document.createElement('tr');
     row.innerHTML=`<th scope="row"><div class="rank-row-identity">${party?b.icon:rankIcon(b.tier,24)}<span class="rank-row-name"></span></div></th>
       <td>${b.total}</td>
-      ${party?`<td>${tableLobbyValue(b.lobbySum,b.lobbyCount)}</td>`:''}
+      ${party?`<td>${tableLobbyValue(b.lobbySum,b.lobbyCount)}</td>`:`<td>${tableLobbyValue(b.teamRankSum,b.teamRankCount)}</td><td>${tableLobbyValue(b.enemyRankSum,b.enemyRankCount)}</td>`}
       <td class="${kd==null||kd===1?'':kd>1?'rank-positive':'rank-negative'}" title="${b.totalKills} kills / ${b.totalDeaths} deaths">${kd==null?'—':kd.toFixed(2)}</td>
       <td>${b.acsCount?Math.round(b.acsSum/b.acsCount):'—'}</td>
       <td class="${wr===50?'':wr>50?'rank-positive':'rank-negative'}">${wr}%</td>`;
@@ -4588,7 +4579,10 @@ function renderPerformanceTable(containerId,rows,party){
     tbody.appendChild(row);
   });
   const values=rows.map(b=>[
-    b.tier,b.total,...(party?[b.lobbyCount?b.lobbySum/b.lobbyCount:null]:[]),
+    b.tier,b.total,...(party?[b.lobbyCount?b.lobbySum/b.lobbyCount:null]:[
+      b.teamRankCount?b.teamRankSum/b.teamRankCount:null,
+      b.enemyRankCount?b.enemyRankSum/b.enemyRankCount:null,
+    ]),
     b.totalDeaths>0?b.totalKills/b.totalDeaths:b.totalKills>0?b.totalKills:null,
     b.acsCount?b.acsSum/b.acsCount:null,
     b.wins/b.total*100,
@@ -4597,8 +4591,8 @@ function renderPerformanceTable(containerId,rows,party){
     {column:1,label:'matches'},{column:2,label:'average lobby rank'},{column:3,label:'K/D'},
     {column:4,label:'average ACS'},{column:5,label:'win rate'},
   ]:[
-    {column:1,label:'matches'},{column:2,label:'K/D'},{column:3,label:'average ACS'},
-    {column:4,label:'win rate'},
+    {column:1,label:'matches'},{column:4,label:'K/D'},{column:5,label:'average ACS'},
+    {column:6,label:'win rate'},
   ]);
   container.appendChild(table);
   initTableSorting(container,values);

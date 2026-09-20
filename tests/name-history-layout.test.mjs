@@ -21,7 +21,7 @@ class Element {
 const findAll=(root,className)=>[root,...root.children.flatMap(child=>findAll(child,className))]
   .filter(node=>node.className.split(' ').includes(className));
 
-test('name records show readable act endpoints, current identity, and re-sort without a wide table',()=>{
+test('name records show compact dates and acts, current identity, and re-sort',()=>{
   const elements=new Map();
   const document={createElement:tag=>new Element(tag),getElementById:id=>{
     if(!elements.has(id))elements.set(id,new Element('div'));
@@ -43,10 +43,10 @@ test('name records show readable act endpoints, current identity, and re-sort wi
   assert.equal(list.children.length,2);
   assert.match(list.children[0].textContent,/Current#NOW/);
   assert.equal(findAll(list.children[0],'name-history-current').length,1);
-  assert.equal(findAll(list.children[0],'name-history-era').length,1);
-  assert.match(list.children[0].textContent,/Episode 2Act 1/);
-  assert.equal(findAll(list.children[1],'name-history-era').length,2);
-  assert.match(list.children[1].textContent,/Episode 1Act 1.*Episode 1Act 2/);
+  assert.match(list.children[0].textContent,/10 Jul 2021.*E2A1/);
+  assert.equal((list.children[0].textContent.match(/10 Jul 2021/g)||[]).length,1);
+  assert.match(list.children[1].textContent,/10 Jan 2021.*10 Mar 2021.*E1A1 — A2/);
+  assert.equal(findAll(list.children[0],'name-history-meta').length,1);
   assert.equal(findAll(root,'rank-table').length,0);
 
   const sort=findAll(root,'name-history-sort')[0].children[0];

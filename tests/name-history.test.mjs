@@ -129,6 +129,22 @@ test('proxy forces a fresh account check, canonicalizes cache keys, persists, an
   await request('?other=123');assert.equal(upstreamCalls,1);
 });
 
+test('first name-history lookup enrolls a new account for ranked backfill',async t=>{
+  const {db}=database(t);const oldCaches=globalThis.caches,oldFetch=globalThis.fetch;
+  globalThis.caches={default:{async match(){return null;},async put(){}}};
+  globalThis.fetch=async()=>Response.json({data:account()});
+  t.after(()=>{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;});
+  const jobs=[];
+  const response=await onRequestGet({request:new Request(`https://example.test/api/name-history/${puuid}?platform=pc`),
+    env:{APP_DB:db,HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});
+  await Promise.all(jobs);
+  const body=await response.json();
+  assert.equal(response.status,200);
+  assert.equal(body.data.backfill.available,true);
+  assert.equal(body.data.backfill.platform,'pc');
+  assert.equal((await db.prepare('SELECT platform FROM rr_players WHERE puuid=?1').bind(puuid).first()).platform,'pc');
+});
+
 const historicalMatch=(id,name,tag,stamp)=>({metadata:{match_id:id,started_at:stamp},players:[{puuid,name,tag}]});
 const storedMatch=(id,name,tag,stamp)=>({meta:{id,started_at:stamp},stats:{puuid,name,tag}});
 async function trackedDatabase(t){
@@ -243,6 +259,21 @@ test('compact evidence removes a one-match rapid name bounce',()=>{
   assert.deepEqual(rows,[
     {name:'smoking opps',tag:'Von',played_at:'2025-09-16T20:00:00.000Z'},
     {name:'smoking opps',tag:'Von',played_at:'2025-12-13T20:00:00.000Z'},
+  ]);
+});
+
+test('compact evidence removes a short repeated-name blip between longer matching runs',()=>{
+  const rows=compactMatchEvidence([
+    {name:'fuji666',tag:'ryoma',played_at:'2025-08-23T18:00:00.000Z'},
+    {name:'fuji666',tag:'ryoma',played_at:'2025-09-15T18:00:00.000Z'},
+    {name:'one eyed k1ng',tag:'wykes',played_at:'2025-09-16T12:00:00.000Z'},
+    {name:'one eyed k1ng',tag:'wykes',played_at:'2025-09-16T22:00:00.000Z'},
+    {name:'fuji666',tag:'ryoma',played_at:'2025-09-18T09:00:00.000Z'},
+    {name:'fuji666',tag:'ryoma',played_at:'2026-02-15T09:00:00.000Z'},
+  ]);
+  assert.deepEqual(rows,[
+    {name:'fuji666',tag:'ryoma',played_at:'2025-08-23T18:00:00.000Z'},
+    {name:'fuji666',tag:'ryoma',played_at:'2026-02-15T09:00:00.000Z'},
   ]);
 });
 
