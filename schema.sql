@@ -1,6 +1,6 @@
--- All persistent app state (D1) — replaces RATE_LIMIT_KV entirely: rate-limit
--- quota, RR-history persistence, and Hidden-MMR live calibration. Run once
--- against a new D1 database:
+-- All persistent app state (D1): rate-limit quota, RR history, match archive,
+-- and live calibration. Safe to rerun against the existing database when
+-- deploying a schema addition:
 --   npx wrangler d1 execute vlravg-calib --remote --file=schema.sql
 -- (drop --remote for local dev only). See functions/api/[[path]].js's header
 -- comment for the APP_DB binding this expects.
@@ -28,6 +28,20 @@ CREATE TABLE IF NOT EXISTS rr_history (
   PRIMARY KEY (puuid, match_id)
 );
 CREATE INDEX IF NOT EXISTS idx_rr_history_puuid_date ON rr_history(puuid, date);
+
+-- Shared match archive. Only trusted HenrikDev match payloads are stored;
+-- gzip keeps kill feeds small enough for D1's per-row limit. Re-run schema.sql
+-- on the existing APP_DB before deploying the archive-enabled frontend.
+CREATE TABLE IF NOT EXISTS match_archive (
+  puuid TEXT NOT NULL,
+  season_id TEXT NOT NULL,
+  match_id TEXT NOT NULL,
+  started_at TEXT,
+  payload BLOB NOT NULL,
+  PRIMARY KEY (puuid, match_id)
+);
+CREATE INDEX IF NOT EXISTS idx_match_archive_player_season
+  ON match_archive(puuid, season_id, started_at DESC, match_id DESC);
 
 -- Player identity, so the 24h refresh job (refresh-rr-history.mjs) can list
 -- who to re-ping without scanning rr_history — replaces the KV-metadata
