@@ -610,6 +610,23 @@ const ROUTES = [
     cacheTtl: 150, // individual matches are immutable, but the list grows as new ones finish
     foldCalibration: true,
   },
+  {
+    // Compact stored records provide IDs and season IDs for games missing
+    // from the live v4 match list. Page and size are fixed below so callers
+    // cannot turn this into an unbounded upstream query.
+    match: /^\/stored-matches\/([^/]+)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,
+    upstream: (m) => `/valorant/v1/by-puuid/stored-matches/${m[1]}/${m[2]}`,
+    cacheTtl: 3600,
+    storedMatches: true,
+  },
+  {
+    // A stored record is only a summary. The existing stats UI needs the
+    // full match payload, fetched only for archived IDs absent from v4.
+    match: /^\/match-detail\/([^/]+)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,
+    upstream: (m) => `/valorant/v4/match/${m[1]}/${m[2]}`,
+    cacheTtl: 86400,
+    matchDetail: true,
+  },
 ];
 
 function sleep(ms) {
@@ -821,6 +838,16 @@ export async function onRequestGet(context) {
     if (m) { route = r; match = m; break; }
   }
   if (!route) return json({ error: "Unknown route" }, 404);
+  if (route.storedMatches) {
+    const pageText = url.searchParams.get('page') || '1';
+    const page = Number(pageText);
+    if (!/^\d+$/.test(pageText) || !Number.isInteger(page) || page < 1 || page > 100) {
+      return json({ error: "Invalid stored match page" }, 400);
+    }
+    url.search = `?mode=competitive&size=100&page=${page}`;
+  } else if (route.matchDetail) {
+    url.search = '';
+  }
   // One cache key per PUUID: arbitrary query strings must not bypass the
   // hourly refresh or supply their own force/name/timestamp parameters.
   let storedNameHistory = null;

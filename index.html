@@ -3057,6 +3057,58 @@ function tagActPlacements(matches){
 }
 
 /* ── LOAD ─────────────────────────────────────────────────── */
+// Henrik's stored-matches endpoint is a compact archive, not a v4 match
+// payload. Use its 100-record pages to locate missing IDs for an older act,
+// then fetch full details only for those IDs so every existing stat keeps its
+// normal full-match meaning. This is best-effort: an incomplete archive must
+// never discard the live matches already found.
+async function recoverStoredSeasonMatches(collected,myGen){
+  if(!PUUID||!TARGET_SEASON)return;
+  const known=new Set(collected.map(m=>m.metadata?.match_id||m.match_id).filter(Boolean));
+  const missing=[];
+  const wanted=TARGET_SEASON.toLowerCase();
+  const region=encodeURIComponent(REGION);
+  const puuid=encodeURIComponent(PUUID);
+  for(let page=1;page<=100;page++){
+    if(myGen!==_analysisGen)return;
+    setStatus(`Checking stored matches · page ${page}…`,true);
+    let payload;
+    try{
+      ({j:payload}=await apiGet(`${API_BASE}/stored-matches/${region}/${puuid}?page=${page}`));
+    }catch(_){break;} // no stored archive, or temporarily unavailable
+    const rows=Array.isArray(payload?.data)?payload.data:[];
+    if(!rows.length)break;
+    rows.forEach(row=>{
+      const id=row?.meta?.id;
+      if(!id||row?.meta?.season?.id?.toLowerCase()!==wanted||
+         row?.stats?.puuid?.toLowerCase()!==PUUID.toLowerCase()||known.has(id))return;
+      known.add(id);
+      missing.push(id);
+    });
+    if(payload?.results?.after===0)break;
+  }
+  let failures=0;
+  for(let i=0;i<missing.length;i++){
+    if(myGen!==_analysisGen)return;
+    setStatus(`Recovering stored match ${i+1}/${missing.length}…`,true);
+    setProgress(Math.min(85+(i+1)/missing.length*10,95));
+    try{
+      const {j}=await apiGet(`${API_BASE}/match-detail/${region}/${encodeURIComponent(missing[i])}`);
+      const match=j?.data||j;
+      if(match?.metadata?.match_id!==missing[i]||!isSeason(match)||
+         !match?.players?.some(p=>p.puuid?.toLowerCase()===PUUID.toLowerCase()))continue;
+      collected.push(match);
+      failures=0;
+    }catch(e){
+      // A missing old detail is specific to that ID. Other repeated failures
+      // suggest the endpoint is unavailable, so stop instead of issuing
+      // hundreds of requests that cannot succeed.
+      if(/^API 404\b/.test(e?.message||''))continue;
+      if(++failures>=3)break;
+    }
+  }
+}
+
 async function loadAll(prefetchSnapshot=null){
   const myGen=++_analysisGen; // supersede any in-flight analysis
   loadSeasonDates(); // fire off act-start dates now; awaited before we filter matches
@@ -3176,6 +3228,7 @@ async function loadAll(prefetchSnapshot=null){
     // Cache failures never affect the normal API path.
     await loadSeasonDates();
     const liveCurrentActId=currentActId();
+    const targetActStart=getActInfoByUuid(TARGET_SEASON)?.start??null;
     if(liveCurrentActId){
       try{await purgeMatchCacheExceptAct(liveCurrentActId);}catch(_){/* IndexedDB unavailable: fetch normally. */}
       useCurrentActCache=!!(PUUID&&TARGET_SEASON&&targetCount!=null&&TARGET_SEASON.toLowerCase()===liveCurrentActId);
@@ -3258,6 +3311,7 @@ async function loadAll(prefetchSnapshot=null){
     // finite and this is far beyond any real account's game count.
     const MAX_OFFSET=5000;
     let guardPages=0, MAX_PAGES=600; // ~ MAX_OFFSET/min-page-size, belt-and-braces
+    let liveHistoryError=null;
 
     if(cacheSatisfies){
       setStatus(`Loading ${cachedMatches.length} cached matches…`,true);
@@ -3274,13 +3328,29 @@ async function loadAll(prefetchSnapshot=null){
         :Math.min(10+start/4,85));
 
       const url=`${API_BASE}/history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}?mode=competitive&size=${BATCH}&start=${start}`;
-      const{j}=await fetchWithRetry(url);
+      let j;
+      try{
+        ({j}=await fetchWithRetry(url));
+      }catch(e){
+        // A failed live lookup for an older act should still get a chance to
+        // recover from the PUUID-keyed stored archive below.
+        if(TARGET_SEASON&&TARGET_SEASON.toLowerCase()!==liveCurrentActId){liveHistoryError=e;break;}
+        throw e;
+      }
       if(myGen!==_analysisGen)return; // superseded by a newer act selection
       const data=j.data||[];
       // TRUE end of history: the API returned nothing at this offset.
       if(!data.length)break;
 
       const onPage=TARGET_SEASON?data.filter(m=>isSeason(m)):data;
+      // If the skip offset landed beyond an act that v4 no longer lists,
+      // stop spending live-list requests once the page is entirely older.
+      // The stored index below can still recover that act by season ID.
+      if(TARGET_SEASON&&!onPage.length&&targetActStart!=null&&
+         data.every(m=>{
+           const date=Date.parse(m.metadata?.started_at);
+           return Number.isFinite(date)&&date<targetActStart;
+         }))break;
       let reachedCache=false;
       onPage.forEach(m=>{
         const id=m.metadata?.match_id||m.match_id||'';
@@ -3307,6 +3377,16 @@ async function loadAll(prefetchSnapshot=null){
       if(myGen!==_analysisGen)return;
     }
 
+    // Check the stored index when the live v4 list left a historical act
+    // incomplete (or MMR provided no count). Full details are requested only
+    // for IDs missing from the live result.
+    if(TARGET_SEASON&&TARGET_SEASON.toLowerCase()!==liveCurrentActId&&
+       (targetCount==null||collected.length<targetCount)){
+      try{await recoverStoredSeasonMatches(collected,myGen);}catch(_){/* Keep live rows. */}
+      if(myGen!==_analysisGen)return;
+    }
+    if(!collected.length&&liveHistoryError)throw liveHistoryError;
+
     // Deduplicate by match_id
     const seen=new Set();
     const deduped=collected.filter(m=>{
@@ -3314,7 +3394,8 @@ async function loadAll(prefetchSnapshot=null){
       if(!id||seen.has(id))return false;
       seen.add(id);return true;
     });
-    const freshMatches=deduped.map(processMatch);
+    const freshMatches=deduped.map(processMatch)
+      .sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0));
     let processed=freshMatches;
     if(useCurrentActCache&&cachedMatches.length){
       const merged=new Map(cachedMatches.map(m=>[m.matchId,m]));
