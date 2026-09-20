@@ -491,7 +491,7 @@ h1 span{color:var(--accent);}
 .page-empty[hidden]{display:none;}
 .detail-view #results-section > :not(#error-container){display:none!important;}
 /* Shared table surface across the detailed statistic pages. */
-#sg-rank-card,#party-size-section,#teammates-section,#name-history-card,.rr-table-card,.servers-table-card{padding:0;overflow:hidden;border:1px solid var(--surface-border);border-radius:10px;background:#141416;box-shadow:none;}
+#sg-rank-card,#lobby-teams-card,#party-size-section,#teammates-section,#name-history-card,.rr-table-card,.servers-table-card{padding:0;overflow:hidden;border:1px solid var(--surface-border);border-radius:10px;background:#141416;box-shadow:none;}
 #name-history-card[hidden]{display:none;}
 .name-history-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 20px;border-bottom:1px solid var(--surface-border);background:#1a1a1d;}
 .name-history-toolbar-title{display:block;color:#c4c4cc;font-size:13px;font-weight:600;}
@@ -526,7 +526,8 @@ h1 span{color:var(--accent);}
 #name-backfill-progress{flex-basis:100%;width:100%;height:6px;accent-color:var(--brand);}
 #name-backfill-progress[hidden]{display:none;}
 #sg-rank-overview,.table-scroll{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
-#sg-rank-overview .rank-table{min-width:940px;}
+#sg-rank-overview .rank-table{min-width:650px;}
+#lobby-teams-table .rank-table{min-width:640px;}
 #sg-rank-overview:focus-visible,.table-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:-2px;}
 .duo-player-name{display:flex;align-items:baseline;gap:3px;max-width:240px;}
 .duo-player-name .duo-name{overflow:hidden;text-overflow:ellipsis;}
@@ -607,10 +608,11 @@ h1 span{color:var(--accent);}
 .rr-movement-count{color:#a1a1aa;font-size:12px;font-variant-numeric:tabular-nums;}
 .rr-movement-note{max-width:780px;margin:8px 0 14px;color:#a1a1aa;font-size:12px;line-height:1.6;}
 .rr-movement-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px;color:#b4b4bd;font-size:11px;}
+.rr-movement-insight{margin:0 0 10px;color:#d4d4d8;font-size:12px;line-height:1.5;}
 .rr-movement-legend span{display:inline-flex;align-items:center;gap:6px;}
 .rr-legend-mark{display:inline-block;width:10px;height:10px;border-radius:50%;background:#71717a;}
 .rr-legend-mark.win{background:#4ade80;}.rr-legend-mark.loss{background:#f87171;}
-.rr-legend-mark.trend{width:18px;height:3px;border-radius:999px;background:linear-gradient(90deg,#4ade80,#f87171);}
+.rr-legend-mark.trend{width:18px;height:3px;border-radius:999px;background:linear-gradient(90deg,#4ade80,#a1a1aa,#f87171);}
 .rr-movement-scroll{position:relative;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
 .rr-movement-scroll:focus-visible{outline:2px solid #4ade80;outline-offset:3px;}
 .rr-movement-svg{display:block;width:100%;min-width:720px;height:auto;font-family:var(--font-body);}
@@ -743,7 +745,7 @@ h1 span{color:var(--accent);}
   <main id="lobby-rank-page" class="detail-page" hidden aria-labelledby="lobby-rank-title">
     <div class="page-heading">
       <h1 id="lobby-rank-title" tabindex="-1">Lobby Rank</h1>
-      <p>Compare your team’s and the enemy team’s average rank in each lobby rank group. Team ranks use rated players only.</p>
+      <p>Compare your performance by lobby rank, then see the average rank of your team and the enemy team in each group.</p>
     </div>
     <div id="lobby-rank-filter-host" class="detail-filter-row">
       <div class="party-size-filter" role="radiogroup" aria-labelledby="lobby-rank-party-size-label">
@@ -761,6 +763,11 @@ h1 span{color:var(--accent);}
         <div class="s-card" id="sg-rank-card" style="display:none">
           <div class="rank-overview" id="sg-rank-overview" role="region" aria-label="Rank comparison table" tabindex="0"></div>
         </div>
+        <section id="lobby-teams-section" hidden aria-labelledby="lobby-teams-title">
+          <h2 id="lobby-teams-title" class="rr-score-heading">Team and enemy ranks</h2>
+          <p class="rr-score-note">Average rank of rated players on each side, grouped by lobby rank. Your team includes you.</p>
+          <div class="s-card" id="lobby-teams-card"><div id="lobby-teams-table" class="table-scroll" role="region" aria-label="Average team and enemy rank by lobby" tabindex="0"></div></div>
+        </section>
     </div>
     <div id="lobby-rank-empty" class="page-empty" role="status">Search for a player above to explore their rank breakdown.</div>
   </main>
@@ -797,10 +804,11 @@ h1 span{color:var(--accent);}
       <section id="rr-movement-section" class="rr-movement-section" hidden aria-labelledby="rr-movement-title">
         <div class="rr-movement-card">
           <div class="rr-movement-head"><h2 id="rr-movement-title">RR payout balance by starting rank</h2><span id="rr-movement-count" class="rr-movement-count"></span></div>
-          <p class="rr-movement-note">Each dot is a match’s RR payout at its reconstructed starting rank + RR. The line is average RR per win minus average RR lost per loss near that rank. Above zero suggests the visible rank was below the player’s MMR; below zero suggests it was above. A zero crossing estimates where rank and MMR aligned during this act, but MMR can change over time. At least two nearby wins and losses are needed. Draws and five-stacks are excluded; Rank Shield losses use their recorded payout. Refunds are not added. Double-click a rank area to zoom; double-click again to reset.</p>
+          <p class="rr-movement-note">Each dot is a match’s RR payout at its reconstructed starting rank + RR. The line is average RR per win minus average RR lost per loss near that rank. Above zero suggests the visible rank was below the player’s MMR; below zero suggests it was above. Grey marks a difference within 2 RR. A clear zero crossing estimates where rank and MMR aligned during this act, but MMR can change over time. At least two nearby wins and losses are needed. Draws and five-stacks are excluded; Rank Shield losses use their recorded payout. Refunds are not added. Double-click a rank area to zoom; double-click again to reset.</p>
           <div class="rr-movement-legend" aria-label="Chart legend">
             <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span><span><i class="rr-legend-mark trend"></i>Win payout − loss payout</span>
           </div>
+          <p id="rr-movement-insight" class="rr-movement-insight" role="status"></p>
           <div id="rr-movement-chart" class="rr-movement-scroll" role="region" aria-label="RR movement chart" tabindex="0"></div>
         </div>
       </section>
@@ -1544,6 +1552,7 @@ function updateDetailPages(){
   document.getElementById('lobby-rank-filter-host').hidden=!ready||!statMatches.some(m=>m.myStats&&m.avgRank!=null&&Math.round(m.avgRank)>=3);
   const hasRanks=ready&&allMatches.length>0&&lobbyRankData.length>0;
   document.getElementById('sg-rank-card').style.display=hasRanks?'block':'none';
+  document.getElementById('lobby-teams-section').hidden=!hasRanks;
   const rankEmpty=document.getElementById('lobby-rank-empty');
   rankEmpty.hidden=hasRanks||analysisState==='error';
   rankEmpty.textContent=analysisState==='loading'?'Loading this player’s matches…':ready
@@ -4210,7 +4219,8 @@ function renderRRMovement(matches){
   const xMin=axis.min,xMax=axis.max;
   const movementMax=Math.max(...rows.map(row=>Math.abs(row.net)),10);
   const yMax=Math.ceil(movementMax/5)*5;
-  const x=value=>left+(value-xMin)/(xMax-xMin)*plotWidth;
+  const xInset=rrMovementZoomTier!=null?12:0;
+  const x=value=>left+xInset+(value-xMin)/(xMax-xMin)*(plotWidth-2*xInset);
   const y=value=>top+(yMax-value)/(yMax*2)*plotHeight;
   const svg=node('svg',{class:`rr-movement-svg${rrMovementZoomTier!=null?' zoomed':''}`,viewBox:`0 0 ${width} ${height}`,role:'img','aria-labelledby':'rr-movement-svg-title rr-movement-svg-desc'});
   svg.append(
@@ -4219,11 +4229,13 @@ function renderRRMovement(matches){
   );
   const defs=node('defs');
   const gradient=node('linearGradient',{id:'rr-movement-gradient',x1:'0',x2:'0',y1:top,y2:plotBottom,gradientUnits:'userSpaceOnUse'});
-  const zeroOffset=(y(0)-top)/plotHeight*100;
+  const offset=value=>(y(value)-top)/plotHeight*100;
   gradient.append(
     node('stop',{offset:'0%','stop-color':'#4ade80'}),
-    node('stop',{offset:`${Math.max(0,zeroOffset-.5)}%`,'stop-color':'#4ade80'}),
-    node('stop',{offset:`${Math.min(100,zeroOffset+.5)}%`,'stop-color':'#f87171'}),
+    node('stop',{offset:`${Math.max(0,offset(2)-.5)}%`,'stop-color':'#4ade80'}),
+    node('stop',{offset:`${Math.min(100,offset(2)+.5)}%`,'stop-color':'#a1a1aa'}),
+    node('stop',{offset:`${Math.max(0,offset(-2)-.5)}%`,'stop-color':'#a1a1aa'}),
+    node('stop',{offset:`${Math.min(100,offset(-2)+.5)}%`,'stop-color':'#f87171'}),
     node('stop',{offset:'100%','stop-color':'#f87171'}),
   );
   defs.appendChild(gradient);
@@ -4243,17 +4255,25 @@ function renderRRMovement(matches){
     return{tier,min:Math.min(...values),max:Math.max(...values)};
   });
   const visibleGroups=rrMovementZoomTier==null?tierGroups:tierGroups.filter(group=>group.tier===rrMovementZoomTier);
+  const rankBoundary=(previous,next)=>{
+    const midpoint=(previous.max+next.min)/2;
+    // Align a visual rank band with an exact 100-RR grid line when the
+    // observed groups leave that line between them. Regional Immortal rank
+    // thresholds can differ, so otherwise keep the observed midpoint.
+    const snapped=Math.round(midpoint/100)*100;
+    return snapped>=previous.max&&snapped<=next.min?snapped:midpoint;
+  };
   const rankBands=visibleGroups.map((group,index)=>{
     const previous=visibleGroups[index-1],next=visibleGroups[index+1];
     return{
       tier:group.tier,
-      start:previous?(previous.max+group.min)/2:xMin,
-      end:next?(group.max+next.min)/2:xMax,
+      start:previous?rankBoundary(previous,group):xMin,
+      end:next?rankBoundary(group,next):xMax,
     };
   });
   rankBands.forEach(({tier,start,end},index)=>{
-    const bandLeft=Math.max(left,x(start));
-    const bandRight=Math.min(plotRight,x(end));
+    const bandLeft=index===0?left:Math.max(left,x(start));
+    const bandRight=index===rankBands.length-1?plotRight:Math.min(plotRight,x(end));
     if(bandRight<=bandLeft)return;
     const interactive=availableTiers.has(tier);
     const band=node('rect',{x:bandLeft,y:top,width:bandRight-bandLeft,height:plotHeight,fill:index%2?'rgba(255,255,255,.018)':'rgba(255,255,255,.035)',class:interactive?'rank-band':'','aria-hidden':interactive?'false':'true'});
@@ -4356,6 +4376,8 @@ function renderRRMovement(matches){
       trendSegments[trendSegments.length-1].push(point);
     }
   });
+  const validTrend=trendPoints.filter(Boolean);
+  const nearParity=validTrend.length>1&&validTrend.every(point=>Math.abs(point.balance)<=2);
   const balanceRanks=[];
   trendSegments.filter(segment=>segment.length>1).forEach(segment=>{
     const curve=smoothPath(segment);
@@ -4363,7 +4385,7 @@ function renderRRMovement(matches){
     svg.appendChild(node('path',{d:curve,class:'trend-line','aria-hidden':'true'}));
     for(let index=1;index<segment.length;index++){
       const before=segment[index-1],after=segment[index];
-      if(before.balance*after.balance>0||before.balance===after.balance)continue;
+      if(nearParity||before.balance*after.balance>0||before.balance===after.balance)continue;
       const fraction=before.balance/(before.balance-after.balance);
       const value=before.value+(after.value-before.value)*fraction;
       const nearest=rows.reduce((best,row)=>Math.abs(row.m.myPreRR-value)<Math.abs(best.m.myPreRR-value)?row:best);
@@ -4377,7 +4399,14 @@ function renderRRMovement(matches){
       balanceRanks.push(`${avgLabelShort(position.tier)} · ${position.rr} RR`);
     }
   });
-  if(balanceRanks.length===1)document.getElementById('rr-movement-count').textContent+=` · estimated MMR-aligned rank: ${balanceRanks[0]}`;
+  const insight=document.getElementById('rr-movement-insight');
+  if(validTrend.length<2)insight.textContent='There are not enough nearby wins and losses to estimate a payout balance at these ranks.';
+  else if(nearParity)insight.textContent='Win and loss payouts stay within about 2 RR of each other across the covered ranks. This sample does not identify one distinct MMR-aligned rank.';
+  else if(balanceRanks.length===1)insight.textContent=`Estimated payout balance near ${balanceRanks[0]}. This is where observed win gains and loss costs were roughly equal.`;
+  else if(balanceRanks.length>1)insight.textContent='The payout trend crosses zero more than once, so this sample does not identify one distinct MMR-aligned rank.';
+  else if(validTrend.every(point=>point.balance>0))insight.textContent='Win gains exceed loss costs across the covered ranks; the balance point is outside this observed range.';
+  else if(validTrend.every(point=>point.balance<0))insight.textContent='Loss costs exceed win gains across the covered ranks; the balance point is outside this observed range.';
+  else insight.textContent='The observed payouts do not identify a clear balance point at these ranks.';
 
   const sortedRows=rows.slice().sort((a,b)=>a.axisRR-b.axisRR||(a.m.startedAtMs||0)-(b.m.startedAtMs||0));
   const overlapTotals=new Map();
@@ -4595,8 +4624,10 @@ function renderRankByRankCard(){
     return{tier:size,label:PARTY_LABELS[size]||size+'-Stack',icon:partyIcon(size)};
   },{includeLobby:true});
   renderPerformanceTable('sg-rank-overview',lobbyRankData,false);
+  renderLobbyTeamsTable(lobbyRankData);
   renderPerformanceTable('party-size-list',partySizeData,true);
   document.getElementById('sg-rank-card').style.display=lobbyRankData.length?'block':'none';
+  document.getElementById('lobby-teams-section').hidden=!lobbyRankData.length;
 }
 
 function setLobbyRankPartySize(value){
@@ -4613,7 +4644,7 @@ function renderPerformanceTable(containerId,rows,party){
   const table=document.createElement('table');
   table.className='rank-table'+(party?' duos-table':'');
   table.innerHTML=`<caption class="rank-sr-only">Your performance grouped by ${party?'party size':'average lobby rank'}</caption>
-    <thead><tr><th scope="col">${party?'Party size':'Lobby rank'}</th><th scope="col">Matches</th>${party?'<th scope="col">Avg Lobby</th>':'<th scope="col" title="Average rank of rated players on your team, including you">Avg team rank</th><th scope="col" title="Average rank of rated players on the enemy team">Avg enemy rank</th>'}<th scope="col">K/D</th><th scope="col">Avg ACS</th><th scope="col">Win rate</th></tr></thead><tbody></tbody>`;
+    <thead><tr><th scope="col">${party?'Party size':'Lobby rank'}</th><th scope="col">Matches</th>${party?'<th scope="col">Avg Lobby</th>':''}<th scope="col">K/D</th><th scope="col">Avg ACS</th><th scope="col">Win rate</th></tr></thead><tbody></tbody>`;
   const tbody=table.querySelector('tbody');
   rows.forEach(b=>{
     const kd=b.totalDeaths>0?b.totalKills/b.totalDeaths:b.totalKills>0?b.totalKills:null;
@@ -4621,7 +4652,7 @@ function renderPerformanceTable(containerId,rows,party){
     const row=document.createElement('tr');
     row.innerHTML=`<th scope="row"><div class="rank-row-identity">${party?b.icon:rankIcon(b.tier,24)}<span class="rank-row-name"></span></div></th>
       <td>${b.total}</td>
-      ${party?`<td>${tableLobbyValue(b.lobbySum,b.lobbyCount)}</td>`:`<td>${tableLobbyValue(b.teamRankSum,b.teamRankCount)}</td><td>${tableLobbyValue(b.enemyRankSum,b.enemyRankCount)}</td>`}
+      ${party?`<td>${tableLobbyValue(b.lobbySum,b.lobbyCount)}</td>`:''}
       <td class="${kd==null||kd===1?'':kd>1?'rank-positive':'rank-negative'}" title="${b.totalKills} kills / ${b.totalDeaths} deaths">${kd==null?'—':kd.toFixed(2)}</td>
       <td>${b.acsCount?Math.round(b.acsSum/b.acsCount):'—'}</td>
       <td class="${wr===50?'':wr>50?'rank-positive':'rank-negative'}">${wr}%</td>`;
@@ -4629,10 +4660,7 @@ function renderPerformanceTable(containerId,rows,party){
     tbody.appendChild(row);
   });
   const values=rows.map(b=>[
-    b.tier,b.total,...(party?[b.lobbyCount?b.lobbySum/b.lobbyCount:null]:[
-      b.teamRankCount?b.teamRankSum/b.teamRankCount:null,
-      b.enemyRankCount?b.enemyRankSum/b.enemyRankCount:null,
-    ]),
+    b.tier,b.total,...(party?[b.lobbyCount?b.lobbySum/b.lobbyCount:null]:[]),
     b.totalDeaths>0?b.totalKills/b.totalDeaths:b.totalKills>0?b.totalKills:null,
     b.acsCount?b.acsSum/b.acsCount:null,
     b.wins/b.total*100,
@@ -4641,9 +4669,28 @@ function renderPerformanceTable(containerId,rows,party){
     {column:1,label:'matches'},{column:2,label:'average lobby rank'},{column:3,label:'K/D'},
     {column:4,label:'average ACS'},{column:5,label:'win rate'},
   ]:[
-    {column:1,label:'matches'},{column:4,label:'K/D'},{column:5,label:'average ACS'},
-    {column:6,label:'win rate'},
+    {column:1,label:'matches'},{column:2,label:'K/D'},{column:3,label:'average ACS'},
+    {column:4,label:'win rate'},
   ]);
+  container.appendChild(table);
+  initTableSorting(container,values);
+}
+
+function renderLobbyTeamsTable(rows){
+  const container=document.getElementById('lobby-teams-table');
+  container.replaceChildren();
+  if(!rows.length)return;
+  const table=document.createElement('table');table.className='rank-table';
+  table.innerHTML='<caption class="rank-sr-only">Average team and enemy rank for each lobby rank group, using rated players only</caption><thead><tr><th scope="col">Lobby rank</th><th scope="col">Matches</th><th scope="col">Avg team rank</th><th scope="col">Avg enemy rank</th></tr></thead><tbody></tbody>';
+  const body=table.querySelector('tbody');
+  rows.forEach(b=>{
+    const row=document.createElement('tr');
+    row.innerHTML=`<th scope="row"><div class="rank-row-identity">${rankIcon(b.tier,24)}<span>${avgLabel(b.tier)}</span></div></th><td>${b.total}</td><td>${tableLobbyValue(b.teamRankSum,b.teamRankCount)}</td><td>${tableLobbyValue(b.enemyRankSum,b.enemyRankCount)}</td>`;
+    body.appendChild(row);
+  });
+  const values=rows.map(b=>[b.tier,b.total,
+    b.teamRankCount?b.teamRankSum/b.teamRankCount:null,
+    b.enemyRankCount?b.enemyRankSum/b.enemyRankCount:null]);
   container.appendChild(table);
   initTableSorting(container,values);
 }
