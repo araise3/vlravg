@@ -498,22 +498,24 @@ h1 span{color:var(--accent);}
 .name-history-sort{display:flex;align-items:center;gap:9px;color:#a1a1aa;font-size:12px;white-space:nowrap;}
 .name-history-sort select{min-height:38px;padding:0 28px 0 11px;border:1px solid var(--surface-border);border-radius:var(--radius-sm);background:#111113;color:var(--text);font:inherit;cursor:pointer;}
 .name-history-sort select:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
-.name-history-list{list-style:none;}
-.name-history-item{display:flex;align-items:center;justify-content:space-between;gap:12px 24px;padding:16px 20px;border-bottom:1px solid #29292d;}
-.name-history-item:last-child{border-bottom:0;}
-.name-history-item:hover{background:#1a1a1d;}
+.name-history-table-scroll{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
+.name-history-table{width:100%;min-width:680px;border-collapse:collapse;table-layout:fixed;text-align:left;}
+.name-history-table th:first-child{width:34%;}
+.name-history-table th:nth-child(2),.name-history-table th:nth-child(3){width:21%;}
+.name-history-table th,.name-history-table td{padding:15px 20px;border-bottom:1px solid #29292d;text-align:left;vertical-align:middle;}
+.name-history-table thead th{background:#18181b;color:#a1a1aa;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;}
+.name-history-table tbody tr:last-child th,.name-history-table tbody tr:last-child td{border-bottom:0;}
+.name-history-table tbody tr:hover{background:#1a1a1d;}
+.name-history-table .name-history-date,.name-history-table .name-history-act{color:#c4c4cc;font-size:12px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.name-history-table .name-history-act{color:#a1a1aa;}
 .name-history-identity{min-width:0;}
 .name-history-id{display:flex;align-items:baseline;flex-wrap:wrap;gap:0;font-size:15px;line-height:1.4;overflow-wrap:anywhere;}
 .name-history-id strong{font-weight:700;color:#f4f4f5;}
 .name-history-id span{color:#a1a1aa;font-weight:500;}
 .name-history-id .name-history-current{display:inline-block;margin-left:9px;color:var(--brand);font-size:11px;font-weight:700;}
-.name-history-meta{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px 10px;color:#a1a1aa;font-size:12px;font-variant-numeric:tabular-nums;line-height:1.5;}
-.name-history-meta time{white-space:nowrap;}
-.name-history-meta-separator{color:#62626b;}
 @media(max-width:520px){
   .name-history-toolbar{padding:12px 16px;}
-  .name-history-item{align-items:flex-start;flex-direction:column;gap:5px;padding:14px 16px;}
-  .name-history-meta{justify-content:flex-start;}
+  .name-history-table th,.name-history-table td{padding:13px 16px;}
 }
 .name-history-note{font-size:12px;color:#a1a1aa;line-height:1.6;margin-top:14px;}
 .name-history-retry{color:var(--brand);text-decoration:underline;text-underline-offset:3px;margin-left:8px;}
@@ -610,16 +612,17 @@ h1 span{color:var(--accent);}
 .rr-legend-mark.win{background:#4ade80;}.rr-legend-mark.loss{background:#f87171;}
 .rr-legend-mark.trend{width:18px;height:3px;border-radius:999px;background:linear-gradient(90deg,#4ade80,#f87171);}
 .rr-movement-scroll{position:relative;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
-.rr-movement-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:3px;}
+.rr-movement-scroll:focus-visible{outline:2px solid #4ade80;outline-offset:3px;}
 .rr-movement-svg{display:block;width:100%;min-width:720px;height:auto;font-family:var(--font-body);}
 .rr-movement-svg .rank-band{cursor:pointer;}
-.rr-movement-svg .rank-band:focus{outline:none;stroke:var(--brand);stroke-width:2;}
+.rr-movement-svg .rank-band:focus{outline:none;fill:rgba(74,222,128,.07);stroke:#4ade80;stroke-opacity:.7;stroke-width:1.5;}
 .rr-movement-svg .grid{stroke:#303034;stroke-width:1;}.rr-movement-svg .zero{stroke:#71717a;stroke-width:1.5;}
 .rr-movement-svg .x-grid{stroke:#29292e;stroke-width:1;}
 .rr-movement-svg .axis-label,.rr-movement-svg .tick-label{fill:#a1a1aa;font-size:11px;}
 .rr-movement-svg .rank-band-label{fill:#c4c4cc;font-size:10px;font-weight:600;}
 .rr-movement-svg .trend-area{fill:rgba(96,165,250,.08);}
 .rr-movement-svg .trend-line{fill:none;stroke:url(#rr-movement-gradient);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
+.rr-movement-svg .balance-point{fill:#f4f4f5;stroke:#141416;stroke-width:2;}
 .rr-movement-svg .trend-point{opacity:.42;stroke:#141416;stroke-width:1.5;}
 .rr-movement-svg .trend-point.positive{fill:#4ade80;}.rr-movement-svg .trend-point.negative{fill:#f87171;}.rr-movement-svg .trend-point.neutral{fill:#a1a1aa;}
 .rr-movement-svg g[tabindex]:hover .trend-point,.rr-movement-svg g[tabindex]:focus .trend-point{opacity:1;stroke:#fff;stroke-width:2.5;}
@@ -793,10 +796,10 @@ h1 span{color:var(--accent);}
       <dl id="rr-summary-stats" class="rr-summary-stats" aria-label="RR summary"></dl>
       <section id="rr-movement-section" class="rr-movement-section" hidden aria-labelledby="rr-movement-title">
         <div class="rr-movement-card">
-          <div class="rr-movement-head"><h2 id="rr-movement-title">RR movement by starting rank</h2><span id="rr-movement-count" class="rr-movement-count"></span></div>
-          <p class="rr-movement-note">Each dot is a match’s RR payout at its reconstructed starting rank + RR. The line smooths nearby match payouts. Draws, Rank Shield-protected losses, and five-stacks are excluded. Refunds are not added to payouts. Double-click a rank area to zoom; double-click again to reset.</p>
+          <div class="rr-movement-head"><h2 id="rr-movement-title">RR payout balance by starting rank</h2><span id="rr-movement-count" class="rr-movement-count"></span></div>
+          <p class="rr-movement-note">Each dot is a match’s RR payout at its reconstructed starting rank + RR. The line is average RR per win minus average RR lost per loss near that rank. Above zero suggests the visible rank was below the player’s MMR; below zero suggests it was above. A zero crossing estimates where rank and MMR aligned during this act, but MMR can change over time. At least two nearby wins and losses are needed. Draws and five-stacks are excluded; Rank Shield losses use their recorded payout. Refunds are not added. Double-click a rank area to zoom; double-click again to reset.</p>
           <div class="rr-movement-legend" aria-label="Chart legend">
-            <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span><span><i class="rr-legend-mark trend"></i>RR trend</span>
+            <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span><span><i class="rr-legend-mark trend"></i>Win payout − loss payout</span>
           </div>
           <div id="rr-movement-chart" class="rr-movement-scroll" role="region" aria-label="RR movement chart" tabindex="0"></div>
         </div>
@@ -1488,7 +1491,10 @@ function renderNameHistory(){
   sort.value=nameHistorySort;
   sort.addEventListener('change',()=>{nameHistorySort=sort.value;renderNameHistory();});
   sortLabel.appendChild(sort);toolbar.append(title,sortLabel);
-  const list=document.createElement('ol');list.className='name-history-list';
+  const scroll=document.createElement('div');scroll.className='name-history-table-scroll';scroll.tabIndex=0;scroll.setAttribute('role','region');scroll.setAttribute('aria-label','Name history table');
+  const table=document.createElement('table');table.className='name-history-table';
+  table.innerHTML='<caption class="rank-sr-only">Observed Riot IDs, first and last observation dates, and acts</caption><thead><tr><th scope="col">Riot ID</th><th scope="col">First observed</th><th scope="col">Last observed</th><th scope="col">Act</th></tr></thead><tbody></tbody>';
+  const body=table.querySelector('tbody');
   const dateFormat=new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
   const rows=[...nameHistoryRows].sort((a,b)=>{
     if(nameHistorySort==='name')return (a.name+'#'+a.tag).localeCompare(b.name+'#'+b.tag,undefined,{sensitivity:'base'})||Date.parse(b.first_seen)-Date.parse(a.first_seen);
@@ -1496,8 +1502,8 @@ function renderNameHistory(){
     return nameHistorySort==='oldest'?-difference:difference;
   });
   rows.forEach(h=>{
-    const item=document.createElement('li');item.className='name-history-item';
-    const identity=document.createElement('div');identity.className='name-history-identity';
+    const item=document.createElement('tr');
+    const identity=document.createElement('th');identity.scope='row';identity.className='name-history-identity';
     const id=document.createElement('div');id.className='name-history-id';
     const name=document.createElement('strong');name.textContent=h.name;
     const tag=document.createElement('span');tag.textContent='#'+h.tag;
@@ -1508,28 +1514,18 @@ function renderNameHistory(){
     identity.appendChild(id);
     item.appendChild(identity);
     const first=new Date(h.first_seen),last=new Date(h.last_seen);
-    const meta=document.createElement('div');meta.className='name-history-meta';
-    let dateLabel='Date unavailable';
-    if(!Number.isFinite(first.getTime())||!Number.isFinite(last.getTime())){
-      meta.textContent='Date unavailable';
-    }else{
-      const sameDay=dateFormat.format(first)===dateFormat.format(last);
-      dateLabel=sameDay?`Observed ${dateFormat.format(first)}`:`First observed ${dateFormat.format(first)}; last observed ${dateFormat.format(last)}`;
-      (sameDay?[first]:[first,last]).forEach((date,index)=>{
-        if(index){const dash=document.createElement('span');dash.textContent='–';dash.setAttribute('aria-hidden','true');meta.appendChild(dash);}
-        const time=document.createElement('time');time.dateTime=date.toISOString();time.textContent=dateFormat.format(date);meta.appendChild(time);
-      });
+    for(const date of [first,last]){
+      const cell=document.createElement('td');cell.className='name-history-date';
+      if(Number.isFinite(date.getTime())){
+        const time=document.createElement('time');time.dateTime=date.toISOString();time.textContent=dateFormat.format(date);cell.appendChild(time);
+      }else cell.textContent='—';
+      item.appendChild(cell);
     }
     const actRange=nameHistoryActRange(h.first_seen,h.last_seen);
-    if(actRange.sort!=null){
-      const separator=document.createElement('span');separator.className='name-history-meta-separator';separator.textContent='·';separator.setAttribute('aria-hidden','true');
-      const act=document.createElement('span');act.textContent=actRange.label;act.title=actRange.title;
-      meta.append(separator,act);
-    }
-    meta.setAttribute('aria-label',actRange.sort!=null?`${dateLabel}; ${actRange.title}`:dateLabel);
-    item.appendChild(meta);list.appendChild(item);
+    const act=document.createElement('td');act.className='name-history-act';act.textContent=actRange.label;act.title=actRange.title;
+    item.appendChild(act);body.appendChild(item);
   });
-  container.append(toolbar,list);
+  scroll.appendChild(table);container.append(toolbar,scroll);
 }
 function updateDetailPages(){
   const ready=analysisState==='ready';
@@ -4129,14 +4125,18 @@ function rrPositionFromElo(elo,tierHint=null){
   return{tier,rr,label:`${avgLabelShort(tier)} · ${rr} RR`};
 }
 
-function smoothedRRMovementAt(rows,value,bandwidth){
-  let total=0,totalWeight=0;
+function rrPayoutBalanceAt(rows,value,bandwidth){
+  let winTotal=0,winWeight=0,lossTotal=0,lossWeight=0,wins=0,losses=0;
   rows.forEach(row=>{
     const distance=(row.axisRR-value)/bandwidth;
+    // A distant result must not create an apparent balance point where one
+    // outcome was never observed near this rank.
+    if(Math.abs(distance)>2)return;
     const weight=Math.exp(-.5*distance*distance);
-    total+=row.net*weight;totalWeight+=weight;
+    if(row.m.won===true){winTotal+=row.net*weight;winWeight+=weight;wins++;}
+    else{lossTotal+=-row.net*weight;lossWeight+=weight;losses++;}
   });
-  return totalWeight?total/totalWeight:null;
+  return wins>=2&&losses>=2?winTotal/winWeight-lossTotal/lossWeight:null;
 }
 
 function rrMovementXAxis(rows,zoomTier){
@@ -4144,10 +4144,12 @@ function rrMovementXAxis(rows,zoomTier){
     rrPositionFromElo(row.m.myPreRR,row.m.myPreTierId??row.m.myTierId).rr);
   const observedMin=Math.min(...positions),observedMax=Math.max(...positions);
   if(zoomTier!=null){
-    // A zoomed rank uses the displayed RR scale, not the observed minimum.
-    // Immortal+ can exceed 100 RR, so extend the domain rather than hide dots.
-    return{positions,observedMin,observedMax,min:Math.min(0,Math.floor(observedMin/25)*25),
-      max:Math.max(100,Math.ceil(observedMax/25)*25)};
+    // Keep ordinary ranks on 0–100 RR. At Immortal+, RR is cumulative;
+    // show only the hundred-RR intervals containing this tier's matches.
+    // This centers 150 in a 100–200 view instead of leaving an empty 0–100.
+    const min=zoomTier<24?0:Math.floor(observedMin/100)*100;
+    const max=zoomTier<24?100:Math.max(min+100,Math.ceil(observedMax/100)*100);
+    return{positions,observedMin,observedMax,min,max};
   }
   const span=Math.max(1,observedMax-observedMin);
   const pad=Math.max(25,span*.06);
@@ -4155,11 +4157,12 @@ function rrMovementXAxis(rows,zoomTier){
 }
 
 function rrMovementRows(matches){
-  // Use the same five-stack eligibility rule as the RR summary. Draws and
-  // Rank Shield-protected losses do not contribute chart points or trends.
+  // Use the same five-stack eligibility rule as the RR summary. Draws do not
+  // contribute to win/loss payout comparison. Rank Shield losses still carry
+  // their normal last_change, so keep them as evidence for this estimate.
   return matches.filter(m=>
     isRREligible(m)&&m.myPreRR!=null&&
-    (m.won===true||m.won===false)&&!(m.myDerankProtected&&m.myRR<0)
+    (m.won===true||m.won===false)
   ).map(m=>{
     return{m,net:m.myRR,penalty:m.myPartyPenalty||0};
   });
@@ -4211,8 +4214,8 @@ function renderRRMovement(matches){
   const y=value=>top+(yMax-value)/(yMax*2)*plotHeight;
   const svg=node('svg',{class:`rr-movement-svg${rrMovementZoomTier!=null?' zoomed':''}`,viewBox:`0 0 ${width} ${height}`,role:'img','aria-labelledby':'rr-movement-svg-title rr-movement-svg-desc'});
   svg.append(
-    node('title',{id:'rr-movement-svg-title'},'RR movement by starting rank and RR'),
-    node('desc',{id:'rr-movement-svg-desc'},'Dots show individual RR payouts. The line smooths nearby match payouts. Draws, Rank Shield-protected losses, and five-stacks are excluded; refunds are not added.'),
+    node('title',{id:'rr-movement-svg-title'},'RR payout balance by starting rank and RR'),
+    node('desc',{id:'rr-movement-svg-desc'},'Dots show individual RR payouts. The line shows the difference between nearby average win and loss payouts; a zero crossing estimates where visible rank aligned with MMR during this act. Draws and five-stacks are excluded; Rank Shield losses use recorded payouts and refunds are not added.'),
   );
   const defs=node('defs');
   const gradient=node('linearGradient',{id:'rr-movement-gradient',x1:'0',x2:'0',y1:top,y2:plotBottom,gradientUnits:'userSpaceOnUse'});
@@ -4285,7 +4288,7 @@ function renderRRMovement(matches){
     svg.appendChild(node('line',{x1:left,y1:py,x2:plotRight,y2:py,class:value===0?'zero':'grid'}));
     svg.appendChild(node('text',{x:left-10,y:py+4,'text-anchor':'end',class:'tick-label'},value>0?`+${value}`:String(value)));
   });
-  const yTitle=node('text',{x:15,y:(top+plotBottom)/2,'text-anchor':'middle',class:'axis-label',transform:`rotate(-90 15 ${(top+plotBottom)/2})`},'RR change');
+  const yTitle=node('text',{x:15,y:(top+plotBottom)/2,'text-anchor':'middle',class:'axis-label',transform:`rotate(-90 15 ${(top+plotBottom)/2})`},'RR payout / difference');
   svg.appendChild(yTitle);
   if(rrMovementZoomTier!=null){
     const range=xMax-xMin;
@@ -4295,6 +4298,28 @@ function renderRRMovement(matches){
       svg.appendChild(node('line',{x1:px,y1:top,x2:px,y2:plotBottom,class:'x-grid','aria-hidden':'true'}));
       svg.appendChild(node('text',{x:px,y:plotBottom+20,'text-anchor':'middle',class:'tick-label'},String(rr)));
     }
+  }else{
+    // The full chart uses a continuous Elo coordinate, but readers need the
+    // familiar RR number below each rank band as well as the rank name above.
+    const tickStep=xMax-xMin<=500?50:100;
+    let lastTickX=-Infinity;
+    rankBands.forEach(({tier,start,end},index)=>{
+      const base=tier>=24?2100:(tier-3)*100;
+      const first=Math.ceil((Math.max(start,xMin)-base)/tickStep)*tickStep;
+      const last=Math.min(end,xMax)-base;
+      for(let rr=first;rr<=last;rr+=tickStep){
+        if(tier<24&&(rr<0||rr>100))continue;
+        const value=base+rr;
+        // A boundary shared by two bands gets one label, and very narrow
+        // bands do not pile numbers on top of their neighbours.
+        if(index<rankBands.length-1&&value===end)continue;
+        const px=x(value);
+        if(px-lastTickX<32)continue;
+        svg.appendChild(node('line',{x1:px,y1:top,x2:px,y2:plotBottom,class:'x-grid','aria-hidden':'true'}));
+        svg.appendChild(node('text',{x:px,y:plotBottom+20,'text-anchor':'middle',class:'tick-label'},String(rr)));
+        lastTickX=px;
+      }
+    });
   }
   svg.appendChild(node('text',{x:(left+plotRight)/2,y:height-9,'text-anchor':'middle',class:'axis-label'},
     rrMovementZoomTier==null?'Starting rank + RR':'Starting RR'));
@@ -4317,17 +4342,42 @@ function renderRRMovement(matches){
     }
     return path;
   };
-  const bandwidth=Math.max(30,rawSpan*.12);
+  const bandwidth=Math.max(50,rawSpan*.18);
   const trendSampleCount=rawMax===rawMin||rows.length===1?1:Math.min(100,Math.max(40,rows.length));
   const trendPoints=Array.from({length:trendSampleCount},(_,index)=>{
     const value=trendSampleCount===1?rawMin:rawMin+rawSpan*index/(trendSampleCount-1);
-    return{px:x(value),py:y(smoothedRRMovementAt(rows,value,bandwidth))};
+    const balance=rrPayoutBalanceAt(rows,value,bandwidth);
+    return balance==null?null:{value,balance,px:x(value),py:y(balance)};
   });
-  if(trendPoints.length>1){
-    const curve=smoothPath(trendPoints);
-    svg.appendChild(node('path',{d:`${curve} L ${trendPoints[trendPoints.length-1].px} ${y(0)} L ${trendPoints[0].px} ${y(0)} Z`,class:'trend-area','aria-hidden':'true'}));
+  const trendSegments=[];
+  trendPoints.forEach((point,index)=>{
+    if(point){
+      if(index===0||trendPoints[index-1]==null)trendSegments.push([]);
+      trendSegments[trendSegments.length-1].push(point);
+    }
+  });
+  const balanceRanks=[];
+  trendSegments.filter(segment=>segment.length>1).forEach(segment=>{
+    const curve=smoothPath(segment);
+    svg.appendChild(node('path',{d:`${curve} L ${segment[segment.length-1].px} ${y(0)} L ${segment[0].px} ${y(0)} Z`,class:'trend-area','aria-hidden':'true'}));
     svg.appendChild(node('path',{d:curve,class:'trend-line','aria-hidden':'true'}));
-  }
+    for(let index=1;index<segment.length;index++){
+      const before=segment[index-1],after=segment[index];
+      if(before.balance*after.balance>0||before.balance===after.balance)continue;
+      const fraction=before.balance/(before.balance-after.balance);
+      const value=before.value+(after.value-before.value)*fraction;
+      const nearest=rows.reduce((best,row)=>Math.abs(row.m.myPreRR-value)<Math.abs(best.m.myPreRR-value)?row:best);
+      const position=rrMovementZoomTier==null
+        ?rrPositionFromElo(value,nearest.m.myPreTierId??nearest.m.myTierId)
+        :{tier:rrMovementZoomTier,rr:Math.round(value)};
+      const label=`Estimated MMR-aligned rank near ${avgLabel(position.tier)} · ${position.rr} RR`;
+      const marker=node('circle',{cx:x(value),cy:y(0),r:5,class:'balance-point','aria-label':label});
+      marker.appendChild(node('title',{},label));
+      svg.appendChild(marker);
+      balanceRanks.push(`${avgLabelShort(position.tier)} · ${position.rr} RR`);
+    }
+  });
+  if(balanceRanks.length===1)document.getElementById('rr-movement-count').textContent+=` · estimated MMR-aligned rank: ${balanceRanks[0]}`;
 
   const sortedRows=rows.slice().sort((a,b)=>a.axisRR-b.axisRR||(a.m.startedAtMs||0)-(b.m.startedAtMs||0));
   const overlapTotals=new Map();
