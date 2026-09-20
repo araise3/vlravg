@@ -808,9 +808,9 @@ h1 span{color:var(--accent);}
       <section id="rr-movement-section" class="rr-movement-section" hidden aria-labelledby="rr-movement-title">
         <div class="rr-movement-card">
           <div class="rr-movement-head"><h2 id="rr-movement-title">RR movement by starting rank</h2><span id="rr-movement-count" class="rr-movement-count"></span></div>
-          <p class="rr-movement-note">Every covered win or loss is shown at its reconstructed starting rank + RR. Draws and Rank Shield-protected losses are hidden from this chart. Double-click a rank area to zoom into only that rank; double-click again to reset. Refunds are added, and recorded payouts already include party penalties. Covered penalized five-stacks remain in this chart; the aggregate tables retain their ordinary-RR eligibility rules.</p>
+          <p class="rr-movement-note">Each dot is a match’s actual RR change at its reconstructed starting rank + RR. The line combines the typical RR gain and typical RR loss nearby, weighting both equally regardless of how many wins or losses there were. Draws and Rank Shield-protected losses are hidden. Double-click a rank area to zoom; double-click again to reset. Refunds are added, and recorded payouts already include party penalties. Covered penalized five-stacks remain here; aggregate tables retain their ordinary-RR eligibility rules.</p>
           <div class="rr-movement-legend" aria-label="Chart legend">
-            <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span><span><i class="rr-legend-mark trend"></i>Trend</span>
+            <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span><span><i class="rr-legend-mark trend"></i>Balanced RR trend</span>
           </div>
           <div id="rr-movement-chart" class="rr-movement-scroll" role="region" aria-label="RR movement chart" tabindex="0"></div>
         </div>
@@ -4052,6 +4052,21 @@ function rrPositionFromElo(elo,tierHint=null){
   return{tier,rr,label:`${avgLabelShort(tier)} · ${rr} RR`};
 }
 
+// Give local gains and losses one vote each. A weighted average across every
+// match would lean toward whichever outcome happened more often, even if its
+// RR payout stayed exactly the same.
+function balancedRRMovementAt(rows,value,bandwidth){
+  let gainTotal=0,gainWeight=0,lossTotal=0,lossWeight=0;
+  rows.forEach(row=>{
+    if(row.net===0)return;
+    const distance=(row.m.myPreRR-value)/bandwidth;
+    const weight=Math.exp(-.5*distance*distance);
+    if(row.net>0){gainTotal+=row.net*weight;gainWeight+=weight;}
+    else{lossTotal+=row.net*weight;lossWeight+=weight;}
+  });
+  return(gainWeight?gainTotal/gainWeight:0)+(lossWeight?lossTotal/lossWeight:0);
+}
+
 function renderRRMovement(matches){
   const section=document.getElementById('rr-movement-section');
   const container=document.getElementById('rr-movement-chart');
@@ -4112,7 +4127,7 @@ function renderRRMovement(matches){
   const svg=node('svg',{class:`rr-movement-svg${rrMovementZoomTier!=null?' zoomed':''}`,viewBox:`0 0 ${width} ${height}`,role:'img','aria-labelledby':'rr-movement-svg-title rr-movement-svg-desc'});
   svg.append(
     node('title',{id:'rr-movement-svg-title'},'RR movement by starting rank and RR'),
-    node('desc',{id:'rr-movement-svg-desc'},'Every covered win or loss appears at its reconstructed starting rank and RR. Draws and Rank Shield-protected losses are excluded.'),
+    node('desc',{id:'rr-movement-svg-desc'},'Dots show individual RR changes. The line combines nearby average gains and average losses with equal weight, regardless of match counts. Draws and Rank Shield-protected losses are excluded.'),
   );
   const defs=node('defs');
   const gradient=node('linearGradient',{id:'rr-movement-gradient',x1:'0',x2:'0',y1:top,y2:plotBottom,gradientUnits:'userSpaceOnUse'});
@@ -4185,7 +4200,7 @@ function renderRRMovement(matches){
     svg.appendChild(node('line',{x1:left,y1:py,x2:plotRight,y2:py,class:value===0?'zero':'grid'}));
     svg.appendChild(node('text',{x:left-10,y:py+4,'text-anchor':'end',class:'tick-label'},value>0?`+${value}`:String(value)));
   });
-  const yTitle=node('text',{x:15,y:(top+plotBottom)/2,'text-anchor':'middle',class:'axis-label',transform:`rotate(-90 15 ${(top+plotBottom)/2})`},'Applied RR movement');
+  const yTitle=node('text',{x:15,y:(top+plotBottom)/2,'text-anchor':'middle',class:'axis-label',transform:`rotate(-90 15 ${(top+plotBottom)/2})`},'Balanced RR movement');
   svg.appendChild(yTitle);
 
   const smoothPath=curvePoints=>{
@@ -4210,14 +4225,7 @@ function renderRRMovement(matches){
   const trendSampleCount=rawMax===rawMin||rows.length===1?1:Math.min(100,Math.max(40,rows.length));
   const trendPoints=Array.from({length:trendSampleCount},(_,index)=>{
     const value=trendSampleCount===1?rawMin:rawMin+rawSpan*index/(trendSampleCount-1);
-    let weightedTotal=0,weightTotal=0;
-    rows.forEach(row=>{
-      const distance=(row.m.myPreRR-value)/bandwidth;
-      const weight=Math.exp(-.5*distance*distance);
-      weightedTotal+=row.net*weight;
-      weightTotal+=weight;
-    });
-    const net=weightTotal?weightedTotal/weightTotal:0;
+    const net=balancedRRMovementAt(rows,value,bandwidth);
     return{px:x(value),py:y(net)};
   });
   if(trendPoints.length>1){
