@@ -852,6 +852,8 @@ export async function onRequestGet(context) {
   // hourly refresh or supply their own force/name/timestamp parameters.
   let storedNameHistory = null;
   if (route.nameHistory || route.nameBackfill) {
+    if (route.nameHistory) match.platform = ['pc','console'].includes(url.searchParams.get('platform'))
+      ? url.searchParams.get('platform') : null;
     match[1] = match[1].toLowerCase();
     url.pathname = PREFIX + (route.nameBackfill ? '/name-backfill/' : '/name-history/') + match[1];
     url.search = '';
@@ -859,6 +861,9 @@ export async function onRequestGet(context) {
   }
   if (route.nameHistory) {
     try {
+      if (match.platform) await env.APP_DB.prepare(
+        'UPDATE rr_players SET platform=?2 WHERE puuid=?1 AND platform IS NULL'
+      ).bind(match[1],match.platform).run();
       storedNameHistory = await savedNameHistory(env, match[1]);
       // D1 is the display source. A current identity observed within the last
       // day needs no upstream refresh, so never hold its saved timeline behind
@@ -888,11 +893,12 @@ export async function onRequestGet(context) {
 
   const cache = caches.default;
   const cacheKey = new Request(url.toString(), request);
-  const cached = route.nameBackfill ? null : await cache.match(cacheKey);
+  const cached = route.nameBackfill || (route.nameHistory && !storedNameHistory.history.length)
+    ? null : await cache.match(cacheKey);
   if (cached) {
     // The upstream account check can stay cached, but newly backfilled names
     // and progress must be visible immediately rather than an hour later.
-    if (route.nameHistory) {
+    if (route.nameHistory && storedNameHistory.history.length) {
       try {
         const body = await cached.json();
         body.data.history = storedNameHistory.history;
@@ -1002,7 +1008,7 @@ export async function onRequestGet(context) {
       return json({ error: "Invalid account response" }, 502);
     }
     try {
-      const history = await observeName(env.APP_DB, { ...account, puuid: match[1] }, observedAt);
+      const history = await observeName(env.APP_DB, { ...account, puuid: match[1], platform: match.platform }, observedAt);
       const backfill = await backfillState(env.APP_DB,match[1]);
       bodyText = JSON.stringify({ data: { puuid: match[1], region: account.region, history, backfill } });
     } catch {
