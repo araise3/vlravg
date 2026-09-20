@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import { observeName, readNameHistory } from '../lib/name-history.mjs';
-import { refreshPlayer, requestJSON, backfillPlayer } from '../.github/scripts/refresh-rr-history.mjs';
+import { refreshPlayer, refreshTrackedPlayers, requestJSON, backfillPlayer } from '../.github/scripts/refresh-rr-history.mjs';
 import { backfillState, saveBackfillPage, saveStoredBackfillPage, saveStoredMatchDetail, matchNameEvidence, storedNameEvidence, compactMatchEvidence, mergeNameTimeline } from '../lib/name-backfill.mjs';
 import { onRequestGet } from '../functions/api/[[path]].js';
 
@@ -96,6 +96,25 @@ test('429 retries use the proxy wait; malformed successes are failures',async()=
   const result=await requestJSON('https://example.test',async()=>++calls===1?Response.json({retryAfterMs:4500},{status:429}):Response.json({data:{}}),async ms=>waits.push(ms));
   assert.equal(result.ok,true);assert.deepEqual(waits,[4500]);
   assert.equal((await requestJSON('https://example.test',async()=>new Response('bad json'),async()=>{})).ok,false);
+});
+test('rate limits survive more than three attempts and remaining failures are deferred',async()=>{
+  let calls=0;const waits=[];
+  const recovered=await requestJSON('https://example.test',async()=>++calls<5
+    ?Response.json({retryAfterMs:1000},{status:429}):Response.json({data:{history:[]}}),async ms=>waits.push(ms));
+  assert.equal(recovered.ok,true);assert.equal(calls,5);assert.deepEqual(waits,[1000,1000,1000,1000]);
+  const exhausted=await requestJSON('https://example.test',async()=>Response.json({retryAfterMs:1000},{status:429}),async()=>{});
+  assert.deepEqual(exhausted,{ok:false,reason:'http 429',retryable:true});
+
+  let rrCalls=0;const logs=[];
+  const result=await refreshTrackedPlayers([{...account(),platform:'pc'}],{
+    origin:'https://example.test',sleepImpl:async()=>{},log:message=>logs.push(message),
+    fetchImpl:async url=>url.includes('/name-history/')
+      ?Response.json({data:{puuid,region:'eu',history:[{name:'Alpha',tag:'EU',ended_at:null}]}})
+      :++rrCalls<=5?Response.json({retryAfterMs:1000},{status:429})
+        :Response.json({data:{account:{puuid},history:[]}}),
+  });
+  assert.deepEqual(result,{failed:0,deferred:1});
+  assert.equal(rrCalls,6);assert.match(logs[0],/retry queued/);assert.match(logs[1],/RR 0 matches/);
 });
 test('proxy forces a fresh account check, canonicalizes cache keys, persists, and hides quota headers',async t=>{
   const {db}=database(t);let upstreamCalls=0;let upstreamURL;

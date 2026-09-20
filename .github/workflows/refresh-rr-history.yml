@@ -69,6 +69,8 @@ jobs:
         run: node .github/scripts/refresh-rr-history.mjs
   continue-backfill:
     needs: refresh
+    # Historical backfill can proceed even if one daily player check still fails.
+    if: ${{ always() && (needs.refresh.result == 'success' || needs.refresh.result == 'failure') }}
     runs-on: ubuntu-latest
     permissions:
       actions: write
