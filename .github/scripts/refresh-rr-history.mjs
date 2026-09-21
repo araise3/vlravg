@@ -1,10 +1,43 @@
 // Both calls go through the site's proxy: no HenrikDev key is needed here,
 // and daily checks share the live site's quota pacing and persistence.
 import { pathToFileURL } from 'node:url';
+import { readFile } from 'node:fs/promises';
 import { createRequestScheduler } from './request-scheduler.mjs';
 
 const DELAY_MS = 0; // Request starts are paced centrally; no extra per-player pause.
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+const PUUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function proPlayersFromLibrary(data) {
+  const players = new Map();
+  for (const pro of data?.players || []) {
+    for (const account of pro?.accounts || []) {
+      const puuid = String(account?.puuid || '').toLowerCase();
+      if (!PUUID_RE.test(puuid) || players.has(puuid)) continue;
+      players.set(puuid, {
+        puuid,
+        platform: 'pc',
+        pro_handle: pro.handle || '',
+        riot_id: account.riotId || '',
+      });
+    }
+  }
+  return [...players.values()];
+}
+
+export async function loadProPlayers(url = new URL('../../pro-players.json', import.meta.url)) {
+  return proPlayersFromLibrary(JSON.parse(await readFile(url, 'utf8')));
+}
+
+export function mergeTrackedPlayers(tracked, pros) {
+  const players = new Map();
+  for (const player of [...pros, ...tracked]) {
+    const puuid = String(player?.puuid || '').toLowerCase();
+    if (!PUUID_RE.test(puuid)) continue;
+    players.set(puuid, { ...players.get(puuid), ...player, puuid });
+  }
+  return [...players.values()];
+}
 
 export async function requestJSON(url, fetchImpl = fetch, sleepImpl = sleep) {
   let transientAttempts = 0, rateLimitAttempts = 0;
@@ -134,12 +167,13 @@ export async function main(env = process.env) {
   const pages=Number(env.BACKFILL_PAGES ?? 0);
   if(!Number.isSafeInteger(pages)||pages<0||pages>1000)throw new Error('BACKFILL_PAGES must be between 0 and 1000');
   const target=(env.TARGET_PUUID || '').trim().toLowerCase();
-  if(target && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(target))throw new Error('Invalid TARGET_PUUID');
-  const allPlayers = await listPlayers(env);
+  if(target && !PUUID_RE.test(target))throw new Error('Invalid TARGET_PUUID');
+  const [trackedPlayers,proPlayers]=await Promise.all([listPlayers(env),loadProPlayers()]);
+  const allPlayers=mergeTrackedPlayers(trackedPlayers,proPlayers);
   const selected=target?allPlayers.filter(p=>p.puuid.toLowerCase()===target):allPlayers;
-  if(target && !selected.length)throw new Error('Target player is not tracked');
+  if(target && !selected.length)throw new Error('Target player is not tracked or in the pro library');
   const players = maxPlayers ? selected.slice(0, maxPlayers) : selected;
-  console.log(`Checking names and RR for ${players.length} tracked player(s).`);
+  console.log(`Checking names and RR for ${players.length} account(s): ${trackedPlayers.length} already tracked, ${proPlayers.length} resolved pro-library accounts merged by PUUID.`);
   // The public site shares this Henrik key. Leave headroom below its nominal
   // 60 requests/minute ceiling instead of consuming the entire budget here.
   const fetchImpl = createRequestScheduler({ intervalMs: 1500 });
