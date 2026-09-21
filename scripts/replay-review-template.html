@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Replay round review</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,sans-serif;background:#090b10;color:#f2f4f8}
+*{box-sizing:border-box}body{margin:0}.wrap{max-width:1100px;margin:auto;padding:22px}
+header{display:flex;justify-content:space-between;gap:12px;align-items:end;flex-wrap:wrap;margin-bottom:18px}
+h1{font-size:clamp(24px,4vw,36px);letter-spacing:-.035em;margin:0}.sub{color:#9ca3af;font-size:13px;margin:5px 0 0}
+.score{font-size:23px;font-weight:700;white-space:nowrap;text-align:right}.score-label{font-size:11px;font-weight:500;color:#9ca3af}.blue{color:#6db7ff}.red{color:#ff7d83}
+.layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(230px,.8fr);gap:18px;align-items:start}
+.map{position:relative;aspect-ratio:1;background:linear-gradient(135deg,#121923,#0c1017);border:1px solid #384050;border-radius:10px;overflow:hidden}
+.map img,.map canvas{position:absolute;inset:0;width:100%;height:100%}.map img{object-fit:contain}.map canvas{pointer-events:none}
+.controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px}
+button,select{font:inherit;color:#f2f4f8;background:#18202b;border:1px solid #42506a;border-radius:7px;padding:9px 12px}
+button{cursor:pointer}button:hover{background:#253347}button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid #e6aa72;outline-offset:2px}
+select{flex:1;min-width:170px}input[type=range]{width:100%;accent-color:#e6aa72;margin:16px 0 3px}
+.time{display:flex;justify-content:space-between;color:#b9c2d0;font-size:13px;font-variant-numeric:tabular-nums}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:13px;color:#b9c2d0;font-size:12px}.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}.dot.blue{background:#6db7ff}.dot.red{background:#ff7d83}
+.events{border:1px solid #384050;border-radius:10px;background:#11161f;padding:16px;max-height:700px;overflow:auto}
+.events h2{font-size:16px;margin:0 0 5px}.events p{font-size:12px;color:#aeb7c5;margin:0 0 12px}
+.review{display:none;margin:12px 0 14px;padding:12px;border:1px solid #a76d28;border-radius:8px;background:#21180e}
+.review.visible{display:block}.review strong{display:block;color:#ffc477;font-size:13px;margin-bottom:5px}.review p{margin:0 0 9px;line-height:1.45}
+.review button{width:100%;padding:7px 9px;border-color:#825824;background:#34230f;color:#ffd8a6;text-align:left}
+.events ul{list-style:none;margin:0;padding:0}.events li{border-top:1px solid #293240}.events li:first-child{border:0}
+.events button{width:100%;border:0;border-radius:0;background:transparent;text-align:left;display:flex;gap:10px;padding:9px 2px;font-size:13px;line-height:1.3}
+.events button:hover,.events button[aria-current=true]{background:#1d2a3b}
+.events button.review-event{color:#ffc477}.events button.review-event::after{content:'Review';margin-left:auto;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#ffc477}
+.event-time{min-width:42px;color:#adb8c8;font-variant-numeric:tabular-nums}
+.note{font-size:12px;color:#8f9baa;margin:14px 0 0;line-height:1.4}
+@media(max-width:730px){.layout{grid-template-columns:1fr}.events{max-height:260px}}
+</style>
+</head>
+<body><div class="wrap">
+  <header>
+    <div><h1>Replay round review</h1><p class="sub" id="subtitle"></p></div>
+    <div class="score"><div class="score-label">Score after round</div><span class="blue" id="blue-score">0</span> <span aria-hidden="true">:</span> <span class="red" id="red-score">0</span></div>
+  </header>
+  <div class="layout">
+    <section aria-label="Animated player positions on the map">
+      <div class="map" id="map"><img id="map-image" alt="Abyss minimap" referrerpolicy="no-referrer"><canvas id="positions" aria-label="Player positions"></canvas></div>
+      <div class="controls"><label for="round">Round</label><select id="round"></select><button id="play" type="button">Play</button></div>
+      <label for="timeline" class="sub">Time in round, including buy phase</label>
+      <input id="timeline" type="range" min="0" max="1000" value="0" step="10" aria-label="Replay time">
+      <div class="time"><span id="elapsed">0:00</span><span id="duration">0:00</span></div>
+      <div class="legend"><span><i class="dot blue"></i>Blue team</span><span><i class="dot red"></i>Red team</span><span style="color:#ffd166">◆ Planted spike</span><span style="color:#ffad42">Orange ring: review player</span><span>Labels P1–P10 are anonymous player numbers</span></div>
+    </section>
+    <section class="events" aria-labelledby="events-title"><h2 id="events-title">Round events</h2><p id="round-result"></p><div id="review-panel" class="review" aria-live="polite"></div><ul id="event-list"></ul></section>
+  </div>
+  <p class="note">Positions are sampled every 0.5 seconds from the replay. Recent trails show the last three seconds. A possible exit play is a review prompt based on movement and timing, not a claim about intent. Distances shown are normalized map distances, not navigable route lengths.</p>
+</div>
+<script>
+const data=__REPLAY_DATA__;
+const byId=new Map(data.players.map(p=>[p.id,p]));
+const select=document.getElementById('round');
+const slider=document.getElementById('timeline');
+const canvas=document.getElementById('positions');
+const context=canvas.getContext('2d');
+const eventList=document.getElementById('event-list');
+const reviewPanel=document.getElementById('review-panel');
+const playButton=document.getElementById('play');
+let roundIndex=0,now=data.rounds[0].start,playing=false,lastFrame=0;
+document.getElementById('subtitle').textContent=`${data.map.name} · ${data.rounds.length} rounds · Original replay parsed locally`;
+document.getElementById('map-image').src=data.map.image;
+for(let i=0;i<data.rounds.length;i++){
+  const r=data.rounds[i],o=document.createElement('option');
+  o.value=String(i);o.textContent=`${r.number} · ${r.winner} · ${r.blueScore}:${r.redScore}${r.exitReviews?.length?' · review':''}`;select.append(o);
+}
+const color={Blue:'#6db7ff',Red:'#ff7d83'};
+function clock(ms){const s=Math.max(0,Math.floor(ms/1000));return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;}
+function nearest(track,time){
+  let low=0,high=track.length;
+  while(low<high){const mid=(low+high)>>1;if(track[mid][0]<=time)low=mid+1;else high=mid;}
+  return low-1;
+}
+function resize(){
+  const rect=canvas.getBoundingClientRect(),dpr=devicePixelRatio||1;
+  canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);
+  context.setTransform(dpr,0,0,dpr,0,0);draw();
+}
+new ResizeObserver(resize).observe(canvas);
+function draw(){
+  const w=canvas.clientWidth,h=canvas.clientHeight;
+  context.clearRect(0,0,w,h);
+  const round=data.rounds[roundIndex],reviewPlayers=new Set((round.exitReviews??[]).filter(r=>now>=r.from&&now<=r.to).map(r=>r.player));
+  if(round.spike&&now>=round.spike.plant&&now<=round.spike.terminal+1000){
+    const x=round.spike.x*w/1000,y=round.spike.y*h/1000,pulse=12+Math.sin(now/180)*2;
+    context.save();context.translate(x,y);context.rotate(Math.PI/4);
+    context.shadowColor='#ffd166';context.shadowBlur=14;context.fillStyle='#ffd166';context.fillRect(-7,-7,14,14);
+    context.shadowBlur=0;context.strokeStyle='#fff1bd';context.lineWidth=2;context.strokeRect(-pulse/2,-pulse/2,pulse,pulse);context.restore();
+  }
+  for(const player of data.players){
+    const track=data.tracks[String(player.id)],index=nearest(track,now);
+    if(index<0||now-track[index][0]>1200)continue;
+    const start=Math.max(0,index-8);
+    context.beginPath();let moved=false;
+    for(let j=start;j<=index;j++){
+      const point=track[j];if(point[0]<now-3000)continue;
+      const x=point[1]*w/1000,y=point[2]*h/1000;
+      if(!moved){context.moveTo(x,y);moved=true;}else context.lineTo(x,y);
+    }
+    context.strokeStyle=reviewPlayers.has(player.id)?'#ffad42':color[player.team];context.globalAlpha=reviewPlayers.has(player.id)?.9:.5;context.lineWidth=reviewPlayers.has(player.id)?4:2;context.stroke();context.globalAlpha=1;
+    const point=track[index],x=point[1]*w/1000,y=point[2]*h/1000;
+    context.beginPath();context.arc(x,y,10,0,Math.PI*2);context.fillStyle=color[player.team];context.fill();
+    context.lineWidth=2;context.strokeStyle='#10151e';context.stroke();
+    if(reviewPlayers.has(player.id)){context.beginPath();context.arc(x,y,15,0,Math.PI*2);context.lineWidth=3;context.strokeStyle='#ffad42';context.stroke();}
+    context.fillStyle='#10151e';context.font='bold 10px system-ui';context.textAlign='center';context.textBaseline='middle';context.fillText(String(player.id),x,y+.5);
+  }
+}
+function eventText(e){
+  if(e.type==='kill')return `${byId.get(e.killer).team} P${e.killer} eliminated ${byId.get(e.victim).team} P${e.victim}`;
+  if(e.type==='plant')return 'Spike planted';
+  if(e.type==='defuse')return 'Spike defused';
+  if(e.type==='defuseStart')return 'Defuse attempt started';
+  if(e.type==='defuseStop')return 'Defuse attempt stopped';
+  if(e.type==='detonation')return 'Spike detonated';
+  return e.type;
+}
+function renderEvents(){
+  const r=data.rounds[roundIndex];eventList.replaceChildren();
+  document.getElementById('round-result').textContent=`${r.winner} won by ${r.reason || 'round result'}`;
+  reviewPanel.replaceChildren();reviewPanel.classList.toggle('visible',Boolean(r.exitReviews?.length));
+  if(r.exitReviews?.length){
+    const title=document.createElement('strong');title.textContent='Possible exit play — review required';reviewPanel.append(title);
+    for(const review of r.exitReviews){
+      const explanation=document.createElement('p');
+      explanation.textContent=`P${review.player} moved farther from the spike (${review.distanceBefore} → ${review.distanceAfter} map units) and got a kill ${review.secondsToExplosion}s before detonation.${review.defuseAttempted?' A teammate also attempted a defuse.':''}`;
+      const jump=document.createElement('button');jump.type='button';jump.textContent=`Watch P${review.player} from ${clock(review.from-r.start)}`;
+      jump.addEventListener('click',()=>{now=review.from;playing=true;playButton.textContent='Pause';lastFrame=0;update();requestAnimationFrame(tick);});
+      reviewPanel.append(explanation,jump);
+    }
+  }
+  for(const e of r.events){
+    const li=document.createElement('li'),button=document.createElement('button');button.type='button';
+    const time=document.createElement('span'),description=document.createElement('span');
+    time.className='event-time';time.textContent=clock(e.time-r.start);description.textContent=eventText(e);
+    if(e.review==='possibleExit')button.classList.add('review-event');
+    button.append(time,description);button.addEventListener('click',()=>{now=e.time;playing=false;playButton.textContent='Play';update();});
+    li.append(button);eventList.append(li);
+  }
+}
+function update(){
+  const r=data.rounds[roundIndex];
+  slider.value=String(now-r.start);
+  document.getElementById('elapsed').textContent=clock(now-r.start);
+  document.getElementById('duration').textContent=clock(r.end-r.start);
+  document.getElementById('blue-score').textContent=String(r.blueScore);
+  document.getElementById('red-score').textContent=String(r.redScore);
+  draw();
+}
+function chooseRound(index){
+  roundIndex=index;const r=data.rounds[index];now=r.previewTime??r.start;playing=false;playButton.textContent='Play';
+  slider.max=String(r.end-r.start);select.value=String(index);renderEvents();update();
+}
+select.addEventListener('change',()=>chooseRound(Number(select.value)));
+slider.addEventListener('input',()=>{now=data.rounds[roundIndex].start+Number(slider.value);playing=false;playButton.textContent='Play';update();});
+playButton.addEventListener('click',()=>{playing=!playing;playButton.textContent=playing?'Pause':'Play';lastFrame=0;if(playing)requestAnimationFrame(tick);});
+function tick(stamp){
+  if(!playing)return;
+  if(lastFrame)now+=stamp-lastFrame;
+  lastFrame=stamp;
+  const end=data.rounds[roundIndex].end;
+  if(now>=end){now=end;playing=false;playButton.textContent='Play';}
+  update();if(playing)requestAnimationFrame(tick);
+}
+chooseRound(0);
+</script>
+</body></html>
