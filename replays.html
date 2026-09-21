@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Replay archive — vlravg</title>
+  <style>
+    :root{color-scheme:dark;font-family:Inter,system-ui,sans-serif;background:#09090b;color:#f4f4f5}
+    *{box-sizing:border-box}body{margin:0}main{max-width:790px;margin:0 auto;padding:36px 20px 80px}
+    a{color:#e3b58a}h1{font-size:clamp(30px,5vw,44px);letter-spacing:-.04em;margin:36px 0 8px}
+    p{color:#aaaab1;line-height:1.5}.back{text-decoration:none;font-size:14px}
+    .card{border:1px solid #303036;border-radius:14px;padding:24px;background:#131316;margin:24px 0}
+    label{display:block;font-size:13px;font-weight:650;margin:17px 0 7px}
+    input{width:100%;border:1px solid #484850;border-radius:8px;background:#0b0b0d;color:#fff;padding:12px;font:inherit}
+    input:focus-visible,button:focus-visible{outline:2px solid #f0aa6e;outline-offset:2px}
+    button{background:#ec8a4b;color:#17110d;border:0;border-radius:8px;padding:12px 17px;font:inherit;font-weight:700;cursor:pointer;margin-top:17px}
+    button:disabled{opacity:.5;cursor:wait}.small{font-size:13px}.notice{min-height:24px}ul{list-style:none;padding:0;margin:12px 0 0}
+    li{padding:14px 0;border-top:1px solid #303036;display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+    li:first-child{border-top:0}.id{font-family:ui-monospace,monospace;overflow-wrap:anywhere}.meta{color:#aaaab1;font-size:13px}
+    .download{margin:0;background:#27272b;color:#f4f4f5;font-size:13px;padding:8px 12px}
+    progress{width:100%;margin-top:16px;accent-color:#ec8a4b}
+  </style>
+</head>
+<body><main>
+  <a class="back" href="/">← Back to player stats</a>
+  <h1>Replay archive</h1>
+  <p>Keep your original VALORANT replay files for later gameplay analysis. The archive currently verifies and stores each file; movement, round and ability analysis will appear after a parser is connected.</p>
+  <section class="card" aria-labelledby="upload-title">
+    <h2 id="upload-title">Add a replay</h2>
+    <p class="small">Private test access. Choose a match already loaded by vlravg, then upload its original <span class="id">match-id.vrf</span> file from VALORANT/Saved/Demos. The selected ID must agree with the ID embedded inside the replay header and with verified match history.</p>
+    <form id="upload-form">
+      <label for="code">Upload code</label><input id="code" type="password" required autocomplete="off">
+      <label for="match-id">Match ID</label><input id="match-id" class="id" type="text" required autocomplete="off" spellcheck="false" placeholder="00000000-0000-0000-0000-000000000000">
+      <label for="replay">Replay file</label><input id="replay" type="file" accept=".vrf" required>
+      <button id="upload-button" type="submit">Save replay</button>
+      <progress id="progress" hidden></progress>
+    </form>
+    <p id="message" class="notice" role="status"></p>
+  </section>
+  <section class="card" aria-labelledby="saved-title">
+    <h2 id="saved-title">Saved replays</h2>
+    <p class="small">Enter your test code, then load the archive. Replays are retained until an administrator removes them.</p>
+    <button type="button" id="load-button">Load replays</button>
+    <ul id="saved-list" aria-live="polite"></ul>
+  </section>
+</main>
+<script>
+const form=document.getElementById('upload-form');
+const code=document.getElementById('code');
+const matchIdInput=document.getElementById('match-id');
+const fileInput=document.getElementById('replay');
+const message=document.getElementById('message');
+const uploadButton=document.getElementById('upload-button');
+const loadButton=document.getElementById('load-button');
+const list=document.getElementById('saved-list');
+const progress=document.getElementById('progress');
+const maxBytes=95_000_000,headerBytes=2048,replayMagic=0x43f4efdd;
+const pattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.vrf$/i;
+const matchPattern=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const requestedMatch=new URLSearchParams(location.search).get('match');
+if(requestedMatch&&matchPattern.test(requestedMatch))matchIdInput.value=requestedMatch.toLowerCase();
+function errorText(data,res){return data?.error||`Request failed (${res.status})`;}
+function replayMatchIdFromHeader(bytes,totalSize){
+  if(totalSize<48||bytes.byteLength<48)return null;
+  const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+  if(view.getUint32(0,true)!==replayMagic||view.getInt32(32,true)<=0)return null;
+  const nameUnits=view.getInt32(44,true);
+  if(nameUnits>=0)return null;
+  const nameEnd=48-nameUnits*2;
+  if(!Number.isSafeInteger(nameEnd)||nameEnd>totalSize||nameEnd>bytes.byteLength)return null;
+  try{
+    const embedded=new TextDecoder('utf-16le',{fatal:true}).decode(bytes.subarray(48,nameEnd)).replace(/\0+$/,'').trim();
+    return matchPattern.test(embedded)?embedded.toLowerCase():null;
+  }catch(_){return null;}
+}
+async function loadReplays(){
+  if(!code.value){message.textContent='Enter your upload code first.';code.focus();return;}
+  loadButton.disabled=true;
+  try{
+    const res=await fetch('/api/replays',{headers:{'X-Replay-Code':code.value},cache:'no-store'});
+    const data=await res.json();
+    if(!res.ok)throw Error(errorText(data,res));
+    list.replaceChildren();
+    if(!data.data.length){const item=document.createElement('li');item.textContent='No replays saved yet.';list.append(item);}
+    for(const replay of data.data){
+      const item=document.createElement('li');
+      const details=document.createElement('div');
+      const id=document.createElement('div');id.className='id';id.textContent=replay.match_id;
+      const meta=document.createElement('div');meta.className='meta';
+      const status=replay.status==='awaiting_parser'?'Header verified · Awaiting gameplay parser':replay.status;
+      meta.textContent=`${(replay.size_bytes/1e6).toFixed(1)} MB · ${new Date(replay.uploaded_at).toLocaleString()} · ${status}`;
+      details.append(id,meta);
+      const button=document.createElement('button');button.type='button';button.className='download';button.textContent='Download original';
+      button.addEventListener('click',()=>downloadReplay(replay.match_id,button));
+      item.append(details,button);list.append(item);
+    }
+    message.textContent='Archive loaded.';
+  }catch(error){message.textContent=error.message;}
+  finally{loadButton.disabled=false;}
+}
+async function downloadReplay(id,button){
+  button.disabled=true;
+  try{
+    const res=await fetch(`/api/replays/${id}`,{headers:{'X-Replay-Code':code.value},cache:'no-store'});
+    if(!res.ok){const data=await res.json();throw Error(errorText(data,res));}
+    const blob=await res.blob();
+    const url=URL.createObjectURL(blob);const link=document.createElement('a');
+    link.href=url;link.download=`${id}.vrf`;document.body.append(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }catch(error){message.textContent=error.message;}
+  finally{button.disabled=false;}
+}
+form.addEventListener('submit',async event=>{
+  event.preventDefault();
+  const file=fileInput.files[0];
+  const targetMatchId=matchIdInput.value.trim().toLowerCase();
+  if(!matchPattern.test(targetMatchId)){message.textContent='Enter the match UUID this replay belongs to.';matchIdInput.focus();return;}
+  if(!file||!pattern.test(file.name)){message.textContent='Choose an original match UUID .vrf file.';return;}
+  if(file.name.slice(0,-4).toLowerCase()!==targetMatchId){message.textContent='The replay filename must match the selected match ID.';return;}
+  if(file.size<48||file.size>maxBytes){message.textContent='File must be between 48 bytes and 95 MB.';return;}
+  const header=new Uint8Array(await file.slice(0,headerBytes).arrayBuffer());
+  const embeddedMatchId=replayMatchIdFromHeader(header,file.size);
+  if(!embeddedMatchId){message.textContent='That file does not contain a valid VALORANT replay match ID.';return;}
+  if(embeddedMatchId!==targetMatchId){message.textContent='The replay contents belong to a different match ID.';return;}
+  uploadButton.disabled=true;progress.hidden=false;progress.removeAttribute('value');
+  message.textContent='Uploading replay…';
+  try{
+    const res=await fetch(`/api/replays/${targetMatchId}`,{method:'POST',headers:{
+      'X-Replay-Code':code.value,'X-Replay-Name':file.name,'X-Replay-Size':String(file.size),
+      'Content-Type':'application/octet-stream',
+    },body:file});
+    const data=await res.json();
+    if(!res.ok)throw Error(errorText(data,res));
+    message.textContent='Replay saved. Embedded match ID verified; gameplay analysis is awaiting a parser.';
+    fileInput.value='';await loadReplays();
+  }catch(error){message.textContent=error.message;}
+  finally{uploadButton.disabled=false;progress.hidden=true;}
+});
+fileInput.addEventListener('change',()=>{
+  const file=fileInput.files[0];
+  if(file&&pattern.test(file.name)&&!matchIdInput.value.trim())matchIdInput.value=file.name.slice(0,-4).toLowerCase();
+});
+loadButton.addEventListener('click',loadReplays);
+</script>
+</body></html>

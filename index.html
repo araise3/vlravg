@@ -80,7 +80,7 @@ h1 span{color:var(--accent);}
 }
 .search-bar:focus-within{border-color:var(--brand);}
 .search-bar .manual-select{background:var(--bg);border:none;border-left:.5px solid var(--border2);border-radius:0;padding:0 20px 0 14px;font-size:12px;color:var(--muted);cursor:pointer;font-family:var(--font-body);}
-.search-btn{display:flex;align-items:center;justify-content:center;padding:0 12px;flex-shrink:0;border-radius:var(--radius-md);background:var(--brand);border:none;color:#fff;cursor:pointer;transition:background .15s,box-shadow .15s,transform .1s;}
+.search-btn{display:flex;align-items:center;justify-content:center;padding:0 14px;flex-shrink:0;border-radius:var(--radius-md);background:var(--brand);border:none;color:#fff;cursor:pointer;font:600 12px var(--font-body);white-space:nowrap;transition:background .15s,box-shadow .15s,transform .1s;}
 .search-btn:hover{background:color-mix(in srgb, var(--brand) 85%, #111111);}
 .search-btn:active{transform:scale(.95);}
 .search-btn:focus-visible{outline:2px solid var(--brand);outline-offset:3px;}
@@ -122,8 +122,8 @@ h1 span{color:var(--accent);}
 .manual-select.island:focus-visible{outline:none;border-color:var(--brand);}
 .manual-select.island:disabled{opacity:.45;cursor:default;}
 .season-placeholder{color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;height:100%;}
-.season-placeholder.loading{color:var(--muted);opacity:.7;}
-.season-placeholder.loading::before{content:'';display:inline-block;width:10px;height:10px;border:1.5px solid #3c3c3c;border-top-color:#949494;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+.season-placeholder.loading{color:#fff;opacity:.8;}
+.season-placeholder.loading::before{content:'';display:inline-block;width:10px;height:10px;border:1.5px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
 .season-dropdown{position:relative;display:flex;align-items:stretch;}
 .season-trigger{display:flex;align-items:center;justify-content:space-between;gap:8px;width:92px;}
 .season-trigger-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -136,12 +136,10 @@ h1 span{color:var(--accent);}
 .season-option{padding:7px 10px;font-size:12px;font-family:var(--font-body);color:var(--text);border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap;transition:background .12s,color .12s;}
 .season-option:hover,.season-option.highlighted{background:#242424;}
 .season-option.selected{color:var(--brand);background:color-mix(in srgb, var(--brand) 12%, #111111);font-weight:600;}
-#season-wrap{border-left:1px solid var(--surface-border);}
-#season-placeholder-btn,#season-trigger{background:transparent;border:0;border-radius:0;color:#a5abb4;font-weight:600;transition:background .15s,color .15s,opacity .15s;}
-#season-placeholder-btn:not(:disabled):hover,#season-trigger:hover{background:#17191c;color:#fff;}
-#season-placeholder-btn:not(:disabled):active,#season-trigger:active{transform:scale(.95);}
-#season-placeholder-btn:disabled{background:#1b1b1b;border-color:var(--surface-border);color:var(--muted);}
-#season-placeholder-btn:focus-visible,#season-trigger:focus-visible{outline:2px solid var(--brand);outline-offset:3px;}
+#season-trigger{background:transparent;border:0;border-left:1px solid var(--surface-border);border-radius:0;color:#a5abb4;font-weight:600;transition:background .15s,color .15s,opacity .15s;}
+#season-trigger:hover{background:#17191c;color:#fff;}
+#season-trigger:active{transform:scale(.95);}
+#season-trigger:focus-visible{outline:2px solid var(--brand);outline-offset:3px;}
 .season-dropdown.open #season-trigger{outline:1px solid color-mix(in srgb,var(--brand) 55%,transparent);outline-offset:2px;}
 .result-panel{flex:0 0 0;min-width:0;opacity:0;overflow:hidden;white-space:nowrap;display:flex;align-items:center;justify-content:flex-end;transition:opacity .4s ease;}
 .result-panel.shown{flex:0 0 auto;opacity:1;padding:0 4px;}
@@ -434,7 +432,7 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 
 /* Solid focus indicators replace the former glow rings. */
 .search-btn:focus-visible{outline-color:#fff;outline-offset:2px;}
-#season-placeholder-btn:focus-visible,#season-trigger:focus-visible{outline-color:var(--brand);outline-offset:3px;}
+#season-trigger:focus-visible{outline-color:var(--brand);outline-offset:3px;}
 .search-bar:focus-within{border-color:var(--brand);}
 
 /* Keep the visibility treatment local to the Duos and K/D By rows. */
@@ -755,7 +753,6 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
             autocomplete="off" spellcheck="false" oninput="onManualInput()" onkeydown="handleSearchKeydown(event)"/>
         </div>
         <div id="season-wrap" style="display:flex;align-items:stretch;flex-shrink:0;position:relative;">
-          <button class="manual-select island season-placeholder" id="season-placeholder-btn" onclick="prefetchPlayerActs()" style="width:78px" title="Load available acts">Acts</button>
           <select id="m-season" onchange="onManualInput()" style="display:none" aria-hidden="true" tabindex="-1">
             <option value="">All</option>
           </select>
@@ -767,9 +764,7 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
             <div class="season-popup" id="season-popup" role="listbox" tabindex="-1" onkeydown="seasonPopupKeydown(event)"></div>
           </div>
         </div>
-        <button type="button" class="search-btn" id="search-btn" onclick="submitSearch()" aria-label="Search">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        </button>
+        <button type="button" class="search-btn season-placeholder" id="season-placeholder-btn" onclick="prefetchPlayerActs()" title="Load available acts">Load Acts</button>
       </div>
       <div id="result-season-group">
         <div class="result-panel" id="result-panel"><span class="player-card-byline" id="header-rank-badge"></span></div>
@@ -800,6 +795,7 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
     <a href="/rr" data-page="rr">RR Breakdown</a>
     <a href="/matches" data-page="matches">Match History</a>
     <a href="/names" data-page="names">Name History</a>
+    <a href="/replays.html">Replays</a>
   </nav>
   <main id="names-page" class="detail-page" hidden aria-labelledby="names-title">
     <div class="page-heading">
@@ -1815,15 +1811,15 @@ function showSeasonLoading(){
   closeSeasonDropdown();
   document.getElementById('season-dropdown').style.display='none';
   btn.style.display='';
-  btn.className='manual-select island season-placeholder loading';
+  btn.className='search-btn season-placeholder loading';
   btn.textContent='';
 }
-function showSeasonIdle(label='Acts'){
+function showSeasonIdle(label='Load Acts'){
   const btn=document.getElementById('season-placeholder-btn');
   closeSeasonDropdown();
   document.getElementById('season-dropdown').style.display='none';
   btn.style.display='';
-  btn.className='manual-select island season-placeholder';
+  btn.className='search-btn season-placeholder';
   btn.textContent=label;
 }
 function showSeasonSelect(){
@@ -1961,7 +1957,7 @@ function renderProPlayerResults(){
     main.type='button';main.className='pro-result-main';main.id=`pro-option-${index}`;
     main.setAttribute('role','option');
     main.setAttribute('aria-selected',index===proLibraryHighlight?'true':'false');
-    main.setAttribute('aria-label',`Analyze ${row.handle}, ${row.riotId}`);
+    main.setAttribute('aria-label',`${row.handle}, ${row.riotId}`);
     const copy=document.createElement('span');copy.className='pro-result-copy';
     const name=document.createElement('span');name.className='pro-result-name';
     const handle=document.createElement('span');handle.className='pro-result-handle';handle.textContent=row.handle;
@@ -1974,8 +1970,7 @@ function renderProPlayerResults(){
     const meta=document.createElement('span');meta.className='pro-result-meta';
     meta.textContent=row.riotId;
     copy.append(name,meta);
-    const action=document.createElement('span');action.className='pro-result-action';action.textContent='Analyze';
-    main.append(copy,action);
+    main.append(copy);
     main.addEventListener('mouseenter',()=>setProLibraryHighlight(index));
     main.addEventListener('click',()=>analyzeProAccount(row));
     const tracker=document.createElement('a');
