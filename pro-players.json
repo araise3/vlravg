@@ -1,0 +1,3473 @@
+{
+  "source": "vct-2026-data-analysis/src/lib/trackerLinks.json",
+  "playerCount": 265,
+  "accountCount": 269,
+  "resolvedPuuidCount": 268,
+  "players": [
+    {
+      "handle": "aaaay",
+      "team": "FunPlus Phoenix",
+      "region": "China",
+      "countryCode": "cn",
+      "accounts": [
+        {
+          "puuid": "ddbe127c-4c9f-5349-a1eb-449d59ccc286",
+          "riotId": "金刀驸马爷#叶赫那拉卿",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/%E9%87%91%E5%88%80%E9%A9%B8%E9%A9%AC%E7%88%B7%23%E5%8F%B6%E8%B5%AB%E9%82%A3%E6%8B%89%E5%8D%BF"
+        }
+      ]
+    },
+    {
+      "handle": "absol",
+      "team": "ZETA DIVISION",
+      "region": "Pacific",
+      "countryCode": "jp",
+      "accounts": [
+        {
+          "puuid": "4af4b440-0ad0-5489-a875-72da885956a7",
+          "riotId": "Absol#1321",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Absol%231321"
+        }
+      ]
+    },
+    {
+      "handle": "al0rante",
+      "team": "PCIFIC Esports",
+      "region": "EMEA",
+      "countryCode": "de",
+      "accounts": [
+        {
+          "puuid": "cc8894e2-3f2e-5d7c-b087-c7ec8f7631ff",
+          "riotId": "PCF al0rante#al0",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/PCF%20al0rante%23al0"
+        }
+      ]
+    },
+    {
+      "handle": "alert",
+      "team": "Xipto Esports",
+      "region": "Pacific",
+      "countryCode": "th",
+      "accounts": [
+        {
+          "puuid": "9b84d474-ce7c-5e8d-9360-aab9aee8e4c5",
+          "riotId": "aLerT ma leaw ja#666",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/aLerT%20ma%20leaw%20ja%23666"
+        }
+      ]
+    },
+    {
+      "handle": "alexiiik",
+      "team": "Natus Vincere",
+      "region": "EMEA",
+      "countryCode": "cz",
+      "accounts": [
+        {
+          "puuid": "b7399d66-9dd8-5e1d-a753-c31de9d3beb9",
+          "riotId": "alexiiik#EKRED",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/alexiiik%23EKRED"
+        }
+      ]
+    },
+    {
+      "handle": "alfajer",
+      "team": "FNATIC",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "607de45b-964e-571a-a7f8-edf438074d23",
+          "riotId": "Alfajer#nmbr1",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Alfajer%23nmbr1"
+        }
+      ]
+    },
+    {
+      "handle": "alvinboy",
+      "team": "M80",
+      "region": "Americas",
+      "countryCode": "cn",
+      "accounts": [
+        {
+          "puuid": "1d44e4fc-751f-57d0-89f6-2d3f026f67df",
+          "riotId": "M80 alvin#NO1",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/M80%20alvin%23NO1"
+        }
+      ]
+    },
+    {
+      "handle": "ange1",
+      "team": "Natus Vincere",
+      "region": "EMEA",
+      "countryCode": "ua",
+      "accounts": [
+        {
+          "puuid": "1c8ab2a0-c329-58aa-be17-d784aef0bf5b",
+          "riotId": "ANGE1#A11",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/ANGE1%23A11"
+        }
+      ]
+    },
+    {
+      "handle": "ara",
+      "team": "GIANTX",
+      "region": "EMEA",
+      "countryCode": "ro",
+      "accounts": [
+        {
+          "puuid": "f57c3ac7-a0f4-5e41-9489-c17cd6870b4e",
+          "riotId": "GX ara#nvm",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/GX%20ara%23nvm"
+        }
+      ]
+    },
+    {
+      "handle": "ardiis",
+      "team": "Natus Vincere",
+      "region": "EMEA",
+      "countryCode": "lv",
+      "accounts": [
+        {
+          "puuid": "36017e13-e248-559d-8661-095dbd4d6a83",
+          "riotId": "haze der yeno#daa",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/haze%20der%20yeno%23daa"
+        }
+      ]
+    },
+    {
+      "handle": "ash",
+      "team": "Gen.G",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "94c091f7-9b80-54a1-930c-85cd3604c837",
+          "riotId": "GEN Ash#7777",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/GEN%20Ash%237777"
+        }
+      ]
+    },
+    {
+      "handle": "askia",
+      "team": "2Game Esports",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "ecbdff99-1579-5289-8afd-86f44f2dc319",
+          "riotId": "askia999#hnnh",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/askia999%23hnnh"
+        }
+      ]
+    },
+    {
+      "handle": "aslanm4shadow",
+      "team": "BBL Esports",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "44c6073c-523d-5ae8-80ca-0a2521ee632b",
+          "riotId": "AsLanMashadWW#AsLan",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/AsLanMashadWW%23AsLan"
+        }
+      ]
+    },
+    {
+      "handle": "aspas",
+      "team": "MIBR",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": null,
+          "riotId": "MIBR aspas#naхy",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/MIBR%20aspas%23na%D1%85y"
+        }
+      ]
+    },
+    {
+      "handle": "asuna",
+      "team": "100 Thieves",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "f6581378-8d2c-59e3-b383-85a5f4401819",
+          "riotId": "100T Asuna#1111",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/100T%20Asuna%231111"
+        }
+      ]
+    },
+    {
+      "handle": "athan",
+      "team": null,
+      "region": null,
+      "countryCode": null,
+      "accounts": [
+        {
+          "puuid": "8780832e-4b63-5eb5-a049-7a80ea962280",
+          "riotId": "KRX Athan#V S",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/KRX%20Athan%23V%20S"
+        }
+      ]
+    },
+    {
+      "handle": "audaz",
+      "team": "Eternal Fire",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "624ead1c-2b85-518c-a462-f3a81b0a65d0",
+          "riotId": "EF audaz#Why",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/EF%20audaz%23Why"
+        }
+      ]
+    },
+    {
+      "handle": "avez",
+      "team": "Karmine Corp",
+      "region": "EMEA",
+      "countryCode": "eg",
+      "accounts": [
+        {
+          "puuid": "53277fcb-e9b7-50aa-a7bb-cdea5982a2b5",
+          "riotId": "KC avez#nunu",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/KC%20avez%23nunu"
+        }
+      ]
+    },
+    {
+      "handle": "avova",
+      "team": "Apeks",
+      "region": "EMEA",
+      "countryCode": "dk",
+      "accounts": [
+        {
+          "puuid": "099f5947-9874-5300-994d-1ee209c33ac0",
+          "riotId": "AvovA#1337",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/AvovA%231337"
+        }
+      ]
+    },
+    {
+      "handle": "azury",
+      "team": "Eintracht Frankfurt",
+      "region": "EMEA",
+      "countryCode": "de",
+      "accounts": [
+        {
+          "puuid": "bc94d0b0-e698-5fde-846a-6bd2f58f71a4",
+          "riotId": "SGE azury#000",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/SGE%20azury%23000"
+        }
+      ]
+    },
+    {
+      "handle": "babybay",
+      "team": "G2 Esports",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "b2e1dd05-9c92-5027-9f61-fc1a5c324eb3",
+          "riotId": "G2 BABYBAY#SMEAG",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/G2%20BABYBAY%23SMEAG"
+        }
+      ]
+    },
+    {
+      "handle": "baha",
+      "team": "FUT Esports",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "309605f5-d47c-5514-82f8-bdf0a0aa1aab",
+          "riotId": "bahalas#sss",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/bahalas%23sss"
+        }
+      ]
+    },
+    {
+      "handle": "bang",
+      "team": "100 Thieves",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "a60e35e7-314b-5345-b83f-b813620be5cd",
+          "riotId": "100T bang#1111",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/100T%20bang%231111"
+        }
+      ]
+    },
+    {
+      "handle": "bao",
+      "team": "Evil Geniuses",
+      "region": "Americas",
+      "countryCode": "vn",
+      "accounts": [
+        {
+          "puuid": "653c4a22-8ab3-53bc-b561-537a04127649",
+          "riotId": "victini#broke",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/victini%23broke"
+        }
+      ]
+    },
+    {
+      "handle": "basic",
+      "team": "FURIA",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "a9d9b499-34ce-59dc-8b3d-acea3d6aabb2",
+          "riotId": "FURIA basic#mint",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/FURIA%20basic%23mint"
+        }
+      ]
+    },
+    {
+      "handle": "batujnax",
+      "team": "Fire Flux Esports",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "3dc599dc-cd2f-5feb-8801-af53ffe05317",
+          "riotId": "FF batujnax#duygu",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/FF%20batujnax%23duygu"
+        }
+      ]
+    },
+    {
+      "handle": "bcj",
+      "team": "Evil Geniuses",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "4ae9ac7a-9ea0-55ef-b4c5-930ba3bfe808",
+          "riotId": "SR BcJ#amy",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/SR%20BcJ%23amy"
+        }
+      ]
+    },
+    {
+      "handle": "bdog",
+      "team": "FURIA",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "96a40e7c-975b-5d35-b60e-ff046061301e",
+          "riotId": "EG bdog#2916",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/EG%20bdog%232916"
+        }
+      ]
+    },
+    {
+      "handle": "benjyfishy",
+      "team": "Team Heretics",
+      "region": "EMEA",
+      "countryCode": "gb",
+      "accounts": [
+        {
+          "puuid": "f74162df-6e66-51b6-81a9-e37dc2d793cb",
+          "riotId": "TH benjyfishy#111",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/TH%20benjyfishy%23111"
+        }
+      ]
+    },
+    {
+      "handle": "beyn",
+      "team": "KIWOOM DRX",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "a5cecee8-316c-54b0-9a71-fba36554b029",
+          "riotId": "DRX BeYN#V S",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/DRX%20BeYN%23V%20S"
+        }
+      ]
+    },
+    {
+      "handle": "blowz",
+      "team": "LEVIATÁN",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "712421ec-81ec-5654-a2eb-c6a130d1e8bd",
+          "riotId": "LEV blowz#1111",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/LEV%20blowz%231111"
+        }
+      ]
+    },
+    {
+      "handle": "boo",
+      "team": "Team Heretics",
+      "region": "EMEA",
+      "countryCode": "lt",
+      "accounts": [
+        {
+          "puuid": "fe0fc6c8-7e90-55d1-aca2-c5a356d9d627",
+          "riotId": "TH Boo#16556",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/TH%20Boo%2316556"
+        }
+      ]
+    },
+    {
+      "handle": "brave",
+      "team": "BBL Esports",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "9bebb783-6dff-5d1c-9cda-ed053e7a2ce1",
+          "riotId": "MISA BRAVEPATRON#BBB",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/MISA%20BRAVEPATRON%23BBB"
+        }
+      ]
+    },
+    {
+      "handle": "brawk",
+      "team": "NRG",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "ba4d7928-7d21-5e46-9730-e6c292d6c404",
+          "riotId": "NRG brawk#kelsy",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/NRG%20brawk%23kelsy"
+        }
+      ]
+    },
+    {
+      "handle": "brinks",
+      "team": "2Game Esports",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "742b9641-c312-54c4-899a-cc2e157dd0ab",
+          "riotId": "2G BRKSS3#2000",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/2G%20BRKSS3%232000"
+        }
+      ]
+    },
+    {
+      "handle": "bud",
+      "team": "Bilibili Gaming",
+      "region": "China",
+      "countryCode": "cn",
+      "accounts": [
+        {
+          "puuid": "03b46aaa-8836-5824-848a-d47f05c05e53",
+          "riotId": "BLG bud#yryy",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/BLG%20bud%23yryy"
+        }
+      ]
+    },
+    {
+      "handle": "c0m",
+      "team": "FURIA",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "705363e0-8f4d-5c2d-95eb-a0e282ce903f",
+          "riotId": "C0M#512",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/C0M%23512"
+        }
+      ]
+    },
+    {
+      "handle": "c1nder",
+      "team": "VARREL",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "0a8418c5-7de4-5b35-a4bf-b13bda9ff814",
+          "riotId": "비루한 재능#CndeR",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/%EB%B9%84%EB%A3%A8%ED%95%9C%20%EC%9E%AC%EB%8A%A5%23CndeR"
+        }
+      ]
+    },
+    {
+      "handle": "canady",
+      "team": "Xipto Esports",
+      "region": "Pacific",
+      "countryCode": "th",
+      "accounts": [
+        {
+          "puuid": "6868423a-cf4b-5f4c-b635-426ea50e18d9",
+          "riotId": "nt kid#cny",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/nt%20kid%23cny"
+        }
+      ]
+    },
+    {
+      "handle": "chichoo",
+      "team": "EDward Gaming",
+      "region": "China",
+      "countryCode": "cn",
+      "accounts": [
+        {
+          "puuid": "5a2b6b69-b252-50c8-b9ca-95613a72d55e",
+          "riotId": "happy birthday#ggboy",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/happy%20birthday%23ggboy"
+        }
+      ]
+    },
+    {
+      "handle": "chloric",
+      "team": "Natus Vincere",
+      "region": "EMEA",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "9c7c4e0f-7144-5acc-8573-2e8b455fe2ea",
+          "riotId": "chloric#sadie",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/chloric%23sadie"
+        }
+      ]
+    },
+    {
+      "handle": "chronicle",
+      "team": "Team Vitality",
+      "region": "EMEA",
+      "countryCode": "ru",
+      "accounts": [
+        {
+          "puuid": "5359f395-c7e8-523d-9e93-0d8528c21371",
+          "riotId": "Chronicle#1337",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Chronicle%231337"
+        }
+      ]
+    },
+    {
+      "handle": "chubizin",
+      "team": "BESTIA",
+      "region": "Americas",
+      "countryCode": "cl",
+      "accounts": [
+        {
+          "puuid": "487f3cb0-644c-5c4e-a013-0bab8c22a288",
+          "riotId": "BST chbzn#zzz",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/BST%20chbzn%23zzz"
+        }
+      ]
+    },
+    {
+      "handle": "cloud",
+      "team": "FNATIC",
+      "region": "EMEA",
+      "countryCode": "ru",
+      "accounts": [
+        {
+          "puuid": "c3937c89-3c03-55c3-9a4e-59b282fef85f",
+          "riotId": "FNC Cloud#001",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/FNC%20Cloud%23001"
+        }
+      ]
+    },
+    {
+      "handle": "coconut",
+      "team": "FunPlus Phoenix",
+      "region": "China",
+      "countryCode": "hk",
+      "accounts": [
+        {
+          "puuid": "137337c1-028e-52f4-9282-1d4f216caff5",
+          "riotId": "爷爷已经63岁了让一下呗#刚退休",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/%E7%88%B7%E7%88%B7%E5%B7%B2%E7%BB%8F63%E5%B2%81%E4%BA%86%E8%AE%A9%E4%B8%80%E4%B8%8B%E5%91%97%23%E5%88%9A%E9%80%80%E4%BC%91"
+        }
+      ]
+    },
+    {
+      "handle": "comeback",
+      "team": "Natus Vincere",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "3ffabd3e-e63c-5ec2-a6ab-2faa00038669",
+          "riotId": "CB10#Aegon",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/CB10%23Aegon"
+        }
+      ]
+    },
+    {
+      "handle": "cortezia",
+      "team": "Sentinels",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "64960e8d-620f-5f8d-8c9a-e53b9c74ec8f",
+          "riotId": "cortezia bty#YHWH",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/cortezia%20bty%23YHWH"
+        }
+      ]
+    },
+    {
+      "handle": "crashies",
+      "team": "FNATIC",
+      "region": "EMEA",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "6720c913-88a9-51c7-ad12-9bc230af0bd1",
+          "riotId": "FNATIC crashies#999",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/FNATIC%20crashies%23999"
+        }
+      ]
+    },
+    {
+      "handle": "crewen",
+      "team": "BBL Esports",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "20f0f0cc-4d4e-58cc-939c-abcb29d6ec19",
+          "riotId": "BBL Crewen#bait",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/BBL%20Crewen%23bait"
+        }
+      ]
+    },
+    {
+      "handle": "crownfisher",
+      "team": "JDG Esports",
+      "region": "China",
+      "countryCode": "cn",
+      "accounts": [
+        {
+          "puuid": "c0331a2e-26ce-5c30-9086-c6ebc837a76b",
+          "riotId": "伊莉雅斯菲尔 冯 爱因兹贝伦#JDG",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/%E4%BC%8A%E8%8E%89%E9%9B%85%E6%96%AF%E8%8F%B2%E5%B0%94%20%E5%86%AF%20%E7%88%B1%E5%9B%A0%E5%85%B9%E8%B4%9D%E4%BC%A6%23JDG"
+        }
+      ]
+    },
+    {
+      "handle": "cryocells",
+      "team": "100 Thieves",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "01efd229-d4f2-523e-8ffe-9fd7af153223",
+          "riotId": "100T Cryo#0001",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/100T%20Cryo%230001"
+        }
+      ]
+    },
+    {
+      "handle": "cyvoph",
+      "team": "Natus Vincere",
+      "region": "EMEA",
+      "countryCode": "fr",
+      "accounts": [
+        {
+          "puuid": "c2e75ad6-ad25-553d-b7f9-0a2f775abd04",
+          "riotId": "NAVI CyvOph#2004",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/NAVI%20CyvOph%232004"
+        }
+      ]
+    },
+    {
+      "handle": "d4v41",
+      "team": "Paper Rex",
+      "region": "Pacific",
+      "countryCode": "my",
+      "accounts": [
+        {
+          "puuid": "0b623576-b272-5fd1-bc6a-088a9fbdbb7f",
+          "riotId": "PRX d4v41#556",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/PRX%20d4v41%23556"
+        }
+      ]
+    },
+    {
+      "handle": "dambi",
+      "team": "Nongshim RedForce",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "558fe545-214b-5fcd-9de1-de078c0c722f",
+          "riotId": "NS Dambi#1117",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/NS%20Dambi%231117"
+        }
+      ]
+    },
+    {
+      "handle": "dantedeu5",
+      "team": "KRÜ Esports",
+      "region": "Americas",
+      "countryCode": "ar",
+      "accounts": [
+        {
+          "puuid": "05341389-d239-5e8b-8ae7-f371b627bdfc",
+          "riotId": "KRÜ dante#arima",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/KR%C3%9C%20dante%23arima"
+        }
+      ]
+    },
+    {
+      "handle": "darker",
+      "team": "LOUD",
+      "region": "Americas",
+      "countryCode": "co",
+      "accounts": [
+        {
+          "puuid": "2073a9da-10f9-570c-b677-7f2e6aac72b2",
+          "riotId": "Darker#NIUR",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Darker%23NIUR"
+        }
+      ]
+    },
+    {
+      "handle": "david",
+      "team": "BESTIA",
+      "region": "Americas",
+      "countryCode": "cl",
+      "accounts": [
+        {
+          "puuid": "6dfeab9a-5de2-57ef-97dd-ec87eb3177f3",
+          "riotId": "BESTIA david#isi",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/BESTIA%20david%23isi"
+        }
+      ]
+    },
+    {
+      "handle": "davih",
+      "team": "LOUD",
+      "region": "Americas",
+      "countryCode": "pt",
+      "accounts": [
+        {
+          "puuid": "c1ae1db9-7871-5509-87c0-f73d67bc86dc",
+          "riotId": "DAviH#420",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/DAviH%23420"
+        }
+      ]
+    },
+    {
+      "handle": "deadink",
+      "team": "Fire Flux Esports",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "77f08768-b9dd-5c88-99d7-e36a60af0fcb",
+          "riotId": "FF Deadink#77777",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/FF%20Deadink%2377777"
+        }
+      ]
+    },
+    {
+      "handle": "demon1",
+      "team": "ENVY",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "0216b54e-4e90-5249-969c-8ceb080da060",
+          "riotId": "ENVY Demon1#kat",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/ENVY%20Demon1%23kat"
+        }
+      ]
+    },
+    {
+      "handle": "derke",
+      "team": "Team Vitality",
+      "region": "EMEA",
+      "countryCode": "fi",
+      "accounts": [
+        {
+          "puuid": "2e64011a-3030-5657-a7c6-8c7dffa04cc9",
+          "riotId": "Derke#BZZ",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Derke%23BZZ"
+        }
+      ]
+    },
+    {
+      "handle": "deryeon",
+      "team": "Wolves Esports",
+      "region": "China",
+      "countryCode": "sg",
+      "accounts": [
+        {
+          "puuid": "7e35b39e-5dc3-51fe-b926-daca632703e2",
+          "riotId": "WOL Deryeon#BBMMR",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/WOL%20Deryeon%23BBMMR"
+        }
+      ]
+    },
+    {
+      "handle": "dgzin",
+      "team": "Evil Geniuses",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "630c6bde-0c23-5bb7-9243-946ae60a09cd",
+          "riotId": "u cant stop me#DG2WC",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/u%20cant%20stop%20me%23DG2WC"
+        }
+      ]
+    },
+    {
+      "handle": "doffy",
+      "team": "Xipto Esports",
+      "region": "Pacific",
+      "countryCode": "th",
+      "accounts": [
+        {
+          "puuid": "f6c6f167-f1f6-5230-a4b1-a23c4c153443",
+          "riotId": "doffy妖怪#gale",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/doffy%E5%A6%96%E6%80%AA%23gale"
+        }
+      ]
+    },
+    {
+      "handle": "doma",
+      "team": "Joblife",
+      "region": "EMEA",
+      "countryCode": "hr",
+      "accounts": [
+        {
+          "puuid": "235a2073-aa23-52c2-9d14-4040167c70db",
+          "riotId": "JL Doma#sumn",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/JL%20Doma%23sumn"
+        }
+      ]
+    },
+    {
+      "handle": "dos9",
+      "team": "Karmine Corp",
+      "region": "EMEA",
+      "countryCode": "kz",
+      "accounts": [
+        {
+          "puuid": "2fedf2ef-1e5b-5dca-bfe8-bfe2ba6456a8",
+          "riotId": "thekidszn#1717",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/thekidszn%231717"
+        }
+      ]
+    },
+    {
+      "handle": "echo",
+      "team": "Eternal Fire",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "6856f7ce-6ca1-524a-bed5-369f6831a219",
+          "riotId": "EF echo2m#cumho",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/EF%20echo2m%23cumho"
+        }
+      ]
+    },
+    {
+      "handle": "eeiu",
+      "team": "FURIA",
+      "region": "Americas",
+      "countryCode": "ca",
+      "accounts": [
+        {
+          "puuid": "b0c5e027-6292-5f3f-972e-a4cb97d6eb80",
+          "riotId": "eeiu#1da",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/eeiu%231da"
+        }
+      ]
+    },
+    {
+      "handle": "efina",
+      "team": "Gen.G",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "a499d364-4bd1-57a0-a01f-c410eb41a8f2",
+          "riotId": "GEN Efina#0527",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/GEN%20Efina%230527"
+        }
+      ]
+    },
+    {
+      "handle": "eggsterr",
+      "team": "ENVY",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "baf09be5-92bd-5ad0-9985-66d635e65f1a",
+          "riotId": "ENVY Eggsterr#NJLTC",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/ENVY%20Eggsterr%23NJLTC"
+        }
+      ]
+    },
+    {
+      "handle": "eko",
+      "team": "ZETA DIVISION",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "f9a2940b-cda2-5ba8-b4d3-10f26136adb7",
+          "riotId": "ZETA eKo#twoSu",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/ZETA%20eKo%23twoSu"
+        }
+      ]
+    },
+    {
+      "handle": "elite",
+      "team": "Karmine Corp",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "6034b6c4-9235-5a7a-b09d-71c737bf00f4",
+          "riotId": "Pesadelo#ELITE",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Pesadelo%23ELITE"
+        }
+      ]
+    },
+    {
+      "handle": "endoist",
+      "team": "Xipto Esports",
+      "region": "Pacific",
+      "countryCode": "th",
+      "accounts": [
+        {
+          "puuid": "9bd9e5f2-8b1c-5e04-b34c-e5cecc24dbdf",
+          "riotId": "kaka#enist",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/kaka%23enist"
+        }
+      ]
+    },
+    {
+      "handle": "erde",
+      "team": "LOUD",
+      "region": "Americas",
+      "countryCode": "cl",
+      "accounts": [
+        {
+          "puuid": "158a3073-7294-5563-9602-c119cd9fff1d",
+          "riotId": "erde#zzz",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/erde%23zzz"
+        }
+      ]
+    },
+    {
+      "handle": "ethan",
+      "team": "NRG",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "7ff76597-4864-54df-8939-bd0ba081099e",
+          "riotId": "Ethan#FARM",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Ethan%23FARM"
+        }
+      ]
+    },
+    {
+      "handle": "exit",
+      "team": "Natus Vincere",
+      "region": "EMEA",
+      "countryCode": "sa",
+      "accounts": [
+        {
+          "puuid": "fa0d6afb-dcd5-5af6-b38f-5f09758f4b8f",
+          "riotId": "ExiT#028",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/ExiT%23028"
+        }
+      ]
+    },
+    {
+      "handle": "f0rsaken",
+      "team": "Paper Rex",
+      "region": "Pacific",
+      "countryCode": "id",
+      "accounts": [
+        {
+          "puuid": "9f245fd0-1813-546a-be01-08c2145c7dd2",
+          "riotId": "PRX f0rsakeN#bibii",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/PRX%20f0rsakeN%23bibii"
+        }
+      ]
+    },
+    {
+      "handle": "f4ngeer",
+      "team": "All Gamers",
+      "region": "China",
+      "countryCode": "ru",
+      "accounts": [
+        {
+          "puuid": "1c4c7dea-9a1b-5de5-91e9-4698ed33a721",
+          "riotId": "AG f4ngeer#kem",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/AG%20f4ngeer%23kem"
+        }
+      ]
+    },
+    {
+      "handle": "famsii",
+      "team": "GIANTX",
+      "region": "EMEA",
+      "countryCode": "fi",
+      "accounts": [
+        {
+          "puuid": "14a7fab3-a70f-5277-afcb-9ef38c293501",
+          "riotId": "UCAM Famsii#alich",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/UCAM%20Famsii%23alich"
+        }
+      ]
+    },
+    {
+      "handle": "fengf",
+      "team": "Trace Esports",
+      "region": "China",
+      "countryCode": "cn",
+      "accounts": [
+        {
+          "puuid": "fa2d1bd9-1ce9-5fd6-b785-ec0687950c53",
+          "riotId": "天灵灵地灵灵我婆娘乖的像李冰冰#1109",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/%E5%A4%A9%E7%81%B5%E7%81%B5%E5%9C%B0%E7%81%B5%E7%81%B5%E6%88%91%E5%A9%86%E5%A8%98%E4%B9%96%E7%9A%84%E5%83%8F%E6%9D%8E%E5%86%B0%E5%86%B0%231109"
+        }
+      ]
+    },
+    {
+      "handle": "filu",
+      "team": "Natus Vincere",
+      "region": "EMEA",
+      "countryCode": "pl",
+      "accounts": [
+        {
+          "puuid": "84467f01-99ac-537e-b234-8770fc925e87",
+          "riotId": "Filu#KING",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Filu%23KING"
+        }
+      ]
+    },
+    {
+      "handle": "fireballops",
+      "team": "Cloud9",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "df35a39f-b920-5dff-aabd-5b05a2df2648",
+          "riotId": "C9 fireballops#lucky",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/C9%20fireballops%23lucky"
+        }
+      ]
+    },
+    {
+      "handle": "fizzy",
+      "team": "Eintracht Frankfurt",
+      "region": "EMEA",
+      "countryCode": "pt",
+      "accounts": [
+        {
+          "puuid": "1497ff7b-c371-5dbf-b49f-f5ff5d64cf5e",
+          "riotId": "SGE Fizzy#pstor",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/SGE%20Fizzy%23pstor"
+        }
+      ]
+    },
+    {
+      "handle": "flickless",
+      "team": "GIANTX",
+      "region": "EMEA",
+      "countryCode": "be",
+      "accounts": [
+        {
+          "puuid": "02ac429f-aad2-5a30-b85c-1f03d6889793",
+          "riotId": "GX Flickless#0001",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/GX%20Flickless%230001"
+        }
+      ]
+    },
+    {
+      "handle": "florescent",
+      "team": "Apeks",
+      "region": "EMEA",
+      "countryCode": "vn",
+      "accounts": [
+        {
+          "puuid": "3127905e-a0e4-52c7-a8f1-09a12f66037c",
+          "riotId": "florescent444#angel",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/florescent444%23angel"
+        }
+      ]
+    },
+    {
+      "handle": "fns",
+      "team": null,
+      "region": null,
+      "countryCode": null,
+      "accounts": [
+        {
+          "puuid": "bf89a8da-3efb-5b58-b2ee-6fb2e288fdc6",
+          "riotId": "FNS#rtird",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/FNS%23rtird"
+        }
+      ]
+    },
+    {
+      "handle": "foxy9",
+      "team": "VARREL",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "3c81230a-7c13-5d4f-813f-3f2e94283b07",
+          "riotId": "안녕 난 고양이 죠#Foxy9",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/%EC%95%88%EB%85%95%20%EB%82%9C%20%EA%B3%A0%EC%96%91%EC%9D%B4%20%EC%A3%A0%23Foxy9"
+        }
+      ]
+    },
+    {
+      "handle": "foxz",
+      "team": "FULL SENSE",
+      "region": "Pacific",
+      "countryCode": "th",
+      "accounts": [
+        {
+          "puuid": "327a34e4-7bee-51f4-9a45-e6d4a1323193",
+          "riotId": "foxu#foxz",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/foxu%23foxz"
+        }
+      ]
+    },
+    {
+      "handle": "free1ng",
+      "team": "KIWOOM DRX",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "97f28b25-5058-5706-a415-9771df82b393",
+          "riotId": "DRX free1ng#KJS",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/DRX%20free1ng%23KJS"
+        }
+      ]
+    },
+    {
+      "handle": "frz",
+      "team": "2Game Esports",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "189b68f5-1cef-5db6-a767-74873563ebcc",
+          "riotId": "2G frzgod#2000",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/2G%20frzgod%232000"
+        }
+      ]
+    },
+    {
+      "handle": "glacier",
+      "team": "Wolves Esports",
+      "region": "China",
+      "countryCode": "tw",
+      "accounts": [
+        {
+          "puuid": "1634a55b-8d42-5100-9159-9242ca38cf2d",
+          "riotId": "glacier#Ayana",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/glacier%23Ayana"
+        }
+      ]
+    },
+    {
+      "handle": "glyph",
+      "team": "ENVY",
+      "region": "Americas",
+      "countryCode": "ph",
+      "accounts": [
+        {
+          "puuid": "d038a355-0969-5958-b0cc-d55f6033615d",
+          "riotId": "june#XLVII",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/june%23XLVII"
+        }
+      ]
+    },
+    {
+      "handle": "gobera",
+      "team": "2Game Esports",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "92de828f-4c03-5b11-b015-b9768c1dbc86",
+          "riotId": "gobera#Isho",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/gobera%23Isho"
+        }
+      ]
+    },
+    {
+      "handle": "grubinho",
+      "team": "GIANTX",
+      "region": "EMEA",
+      "countryCode": "pl",
+      "accounts": [
+        {
+          "puuid": "7eb58955-76f4-54e7-ba55-23573ed0b83b",
+          "riotId": "grubinho#123",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/grubinho%23123"
+        }
+      ]
+    },
+    {
+      "handle": "gsr",
+      "team": null,
+      "region": null,
+      "countryCode": null,
+      "accounts": [
+        {
+          "puuid": "1f610d3a-2ad5-5a91-bba4-3b8d26606e96",
+          "riotId": "Liquid GSR#2323",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Liquid%20GSR%232323"
+        }
+      ]
+    },
+    {
+      "handle": "h1ber",
+      "team": "Gentle Mates",
+      "region": "EMEA",
+      "countryCode": "fi",
+      "accounts": [
+        {
+          "puuid": "b5b74b7d-2465-5f48-b2e3-123250a07269",
+          "riotId": "H1ber#dog",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/H1ber%23dog"
+        }
+      ]
+    },
+    {
+      "handle": "happywei",
+      "team": "Xi Lai Gaming",
+      "region": "China",
+      "countryCode": "tw",
+      "accounts": [
+        {
+          "puuid": "39036584-1d3e-5053-bf83-c513a8845529",
+          "riotId": "XLG happywei#yst",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/XLG%20happywei%23yst"
+        }
+      ]
+    },
+    {
+      "handle": "heat",
+      "team": "KRÜ Esports",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "9c7ac45c-9d36-5775-89e8-80cca52457f4",
+          "riotId": "heat#LNWLF",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/heat%23LNWLF"
+        }
+      ]
+    },
+    {
+      "handle": "hezacoil",
+      "team": "Fire Flux Esports",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "e38498c2-d8c7-5d65-9a65-d40007333111",
+          "riotId": "FF hezacoil#1337",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/FF%20hezacoil%231337"
+        }
+      ]
+    },
+    {
+      "handle": "hiro",
+      "team": "Natus Vincere",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "fa9c52b9-ebe6-5ea8-93c0-efbdee85c6b7",
+          "riotId": "hiro#luna",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/hiro%23luna"
+        }
+      ]
+    },
+    {
+      "handle": "hype",
+      "team": "Apeks",
+      "region": "EMEA",
+      "countryCode": "lt",
+      "accounts": [
+        {
+          "puuid": "75230306-a6e5-5f32-8068-b1b9ec777433",
+          "riotId": "hype#8124",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/hype%238124"
+        }
+      ]
+    },
+    {
+      "handle": "hyunmin",
+      "team": "KIWOOM DRX",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "38ee87b4-4313-5e70-bc8c-1f5a7d3d161c",
+          "riotId": "DRX HYUNMIN#V S",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/DRX%20HYUNMIN%23V%20S"
+        }
+      ]
+    },
+    {
+      "handle": "iamgrq",
+      "team": "All Gamers",
+      "region": "China",
+      "countryCode": "cn",
+      "accounts": [
+        {
+          "puuid": "4311c44a-ea00-56d8-bc4b-8b31f0a9fa72",
+          "riotId": "AG iamgrq#riki",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/AG%20iamgrq%23riki"
+        }
+      ]
+    },
+    {
+      "handle": "icy",
+      "team": "Evil Geniuses",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "f2d4da4c-1e57-582b-8a94-5d48a8086488",
+          "riotId": "icy#madi",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/icy%23madi"
+        }
+      ]
+    },
+    {
+      "handle": "iluri",
+      "team": "Enterprise Esports",
+      "region": "EMEA",
+      "countryCode": "fi",
+      "accounts": [
+        {
+          "puuid": "79fb2175-5b71-598c-91de-adc991fdbb57",
+          "riotId": "EP iluri#koso",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/EP%20iluri%23koso"
+        }
+      ]
+    },
+    {
+      "handle": "infiltrator",
+      "team": "KRÜ Esports",
+      "region": "Americas",
+      "countryCode": "vn",
+      "accounts": [
+        {
+          "puuid": "3b5eeecf-a41c-5717-9ced-359299c00863",
+          "riotId": "WU infiltrator#kay",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/WU%20infiltrator%23kay"
+        }
+      ]
+    },
+    {
+      "handle": "inspire",
+      "team": "ENVY",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "e31babdd-edf1-5b3b-af39-43d9b2dbf094",
+          "riotId": "inspire#Julia",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/inspire%23Julia"
+        }
+      ]
+    },
+    {
+      "handle": "invy",
+      "team": "Paper Rex",
+      "region": "Pacific",
+      "countryCode": "ph",
+      "accounts": [
+        {
+          "puuid": "1a9d2a8b-2860-5106-9789-e584f83684a2",
+          "riotId": "PRX invy#jia",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/PRX%20invy%23jia"
+        }
+      ]
+    },
+    {
+      "handle": "ivy",
+      "team": "Nongshim RedForce",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "996cc6b6-4e8e-5bfe-a6b3-38c74ff3d47a",
+          "riotId": "NS Ivy#0520",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/NS%20Ivy%230520"
+        }
+      ]
+    },
+    {
+      "handle": "jakee",
+      "team": "FURIA",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "67ededf7-cd6f-574a-b619-5f0b66359a35",
+          "riotId": "EG big bean#jakee",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/EG%20big%20bean%23jakee"
+        }
+      ]
+    },
+    {
+      "handle": "jamelinho",
+      "team": null,
+      "region": null,
+      "countryCode": null,
+      "accounts": [
+        {
+          "puuid": "ef505d70-cd68-5dd5-9adb-6aa6068397ad",
+          "riotId": "SGE Jamelinho#213",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/SGE%20Jamelinho%23213"
+        }
+      ]
+    },
+    {
+      "handle": "jamppi",
+      "team": "Team Vitality",
+      "region": "EMEA",
+      "countryCode": "fi",
+      "accounts": [
+        {
+          "puuid": "372508e5-8f86-54d7-8470-1372a5eeb669",
+          "riotId": "Jamb0nese#1964",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Jamb0nese%231964"
+        }
+      ]
+    },
+    {
+      "handle": "jawgemo",
+      "team": "G2 Esports",
+      "region": "Americas",
+      "countryCode": "kh",
+      "accounts": [
+        {
+          "puuid": "8789814a-3843-594b-8d20-a5cf8d1100f3",
+          "riotId": "JAWGEMO#MANGO",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/JAWGEMO%23MANGO"
+        }
+      ]
+    },
+    {
+      "handle": "jerrwin",
+      "team": "Sentinels",
+      "region": "Americas",
+      "countryCode": "in",
+      "accounts": [
+        {
+          "puuid": "00ff6bac-025f-5296-9a1f-3d7c18ee81ff",
+          "riotId": "SEN Jerrwin#ysl",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/SEN%20Jerrwin%23ysl"
+        }
+      ]
+    },
+    {
+      "handle": "jieni7",
+      "team": "EDward Gaming",
+      "region": "China",
+      "countryCode": "cn",
+      "accounts": [
+        {
+          "puuid": "04b4c4d3-06be-54a6-9651-c34f82ef39b9",
+          "riotId": "EDG 世界上最高高高高高高的山#Jieni",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/EDG%20%E4%B8%96%E7%95%8C%E4%B8%8A%E6%9C%80%E9%AB%98%E9%AB%98%E9%AB%98%E9%AB%98%E9%AB%98%E9%AB%98%E7%9A%84%E5%B1%B1%23Jieni"
+        }
+      ]
+    },
+    {
+      "handle": "jinggg",
+      "team": "Paper Rex",
+      "region": "Pacific",
+      "countryCode": "sg",
+      "accounts": [
+        {
+          "puuid": "9ac13b84-e393-5327-8b8b-d30998fba73d",
+          "riotId": "PRX Jinggg#Jing",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/PRX%20Jinggg%23Jing"
+        }
+      ]
+    },
+    {
+      "handle": "johnqt",
+      "team": "Sentinels",
+      "region": "Americas",
+      "countryCode": "ma",
+      "accounts": [
+        {
+          "puuid": "43c9ac3f-1e8f-5a48-89cc-c4a8f4b2280d",
+          "riotId": "SEN johnqt#21MA",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/SEN%20johnqt%2321MA"
+        }
+      ]
+    },
+    {
+      "handle": "jonahp",
+      "team": "Sentinels",
+      "region": "Americas",
+      "countryCode": "ca",
+      "accounts": [
+        {
+          "puuid": "53235d9b-8299-5b02-b51e-5b03fa68f5dc",
+          "riotId": "SEN JonahP#0004",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/SEN%20JonahP%230004"
+        }
+      ]
+    },
+    {
+      "handle": "juicy",
+      "team": "Wolves Esports",
+      "region": "China",
+      "countryCode": "sg",
+      "accounts": [
+        {
+          "puuid": "740b1317-bfa8-5e15-a8e0-46666245124b",
+          "riotId": "Lebron张姆斯#juicy",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Lebron%E5%BC%A0%E5%A7%86%E6%96%AF%23juicy"
+        }
+      ]
+    },
+    {
+      "handle": "jzz",
+      "team": "Fluxo W7M",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "1025e1ab-dbed-5877-99e1-4ac31faae77f",
+          "riotId": "FX jzz#astro",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/FX%20jzz%23astro"
+        }
+      ]
+    },
+    {
+      "handle": "k1ra",
+      "team": "All Gamers",
+      "region": "China",
+      "countryCode": "cn",
+      "accounts": [
+        {
+          "puuid": "27e6b452-f00f-50be-82fd-6e35629c1b72",
+          "riotId": "AG L#K1ra",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/AG%20L%23K1ra"
+        }
+      ]
+    },
+    {
+      "handle": "kaajak",
+      "team": "FNATIC",
+      "region": "EMEA",
+      "countryCode": "pl",
+      "accounts": [
+        {
+          "puuid": "14828c40-e32d-528f-9075-7ffda668dc92",
+          "riotId": "FNATIC#mommy",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/FNATIC%23mommy"
+        }
+      ]
+    },
+    {
+      "handle": "kachoww",
+      "team": "Fire Flux Esports",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "644bd383-520b-517b-8d36-83366792c7f9",
+          "riotId": "FF redpanda#kchow",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/FF%20redpanda%23kchow"
+        }
+      ]
+    },
+    {
+      "handle": "kadoom",
+      "team": "Sharper Esports",
+      "region": "Pacific",
+      "countryCode": "th",
+      "accounts": [
+        {
+          "puuid": "237a1aaf-dd60-5e33-bb65-63325432996f",
+          "riotId": "SP Kadoom#0312",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/SP%20Kadoom%230312"
+        }
+      ]
+    },
+    {
+      "handle": "kamo",
+      "team": "Team Liquid",
+      "region": "EMEA",
+      "countryCode": "pl",
+      "accounts": [
+        {
+          "puuid": "9f4cd319-20c2-58e4-aed2-5086baed65c8",
+          "riotId": "kamo#jasmi",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/kamo%23jasmi"
+        }
+      ]
+    },
+    {
+      "handle": "keiko",
+      "team": "NRG",
+      "region": "Americas",
+      "countryCode": "gb",
+      "accounts": [
+        {
+          "puuid": "75dda691-0e1d-5fdc-9dbe-0275eb6b918f",
+          "riotId": "NRG keiko#lili",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/NRG%20keiko%23lili"
+        }
+      ]
+    },
+    {
+      "handle": "kellys",
+      "team": "Team Secret",
+      "region": "Pacific",
+      "countryCode": "ph",
+      "accounts": [
+        {
+          "puuid": "b727dbbe-98a5-5f47-a67a-e4a251bfecaa",
+          "riotId": "Secret kellyS#MJC",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Secret%20kellyS%23MJC"
+        }
+      ]
+    },
+    {
+      "handle": "kess",
+      "team": "100 Thieves",
+      "region": "Americas",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "efae5cf5-cf8b-5820-b28d-45035c86fb2f",
+          "riotId": "LYON SUPERKESS#Bear",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/LYON%20SUPERKESS%23Bear"
+        }
+      ]
+    },
+    {
+      "handle": "keznit",
+      "team": "ENVY",
+      "region": "Americas",
+      "countryCode": "cl",
+      "accounts": [
+        {
+          "puuid": "3d09f31b-c940-529c-8677-f46b55212477",
+          "riotId": "keznitdeuS#isi",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/keznitdeuS%23isi"
+        }
+      ]
+    },
+    {
+      "handle": "kicks",
+      "team": "Team Liquid",
+      "region": "EMEA",
+      "countryCode": "ee",
+      "accounts": [
+        {
+          "puuid": "60645f1a-5c7c-5efe-aff0-f437faeebbe9",
+          "riotId": "Liquid Kicks#BONK",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Liquid%20Kicks%23BONK"
+        }
+      ]
+    },
+    {
+      "handle": "killua",
+      "team": "FULL SENSE",
+      "region": "Pacific",
+      "countryCode": "th",
+      "accounts": [
+        {
+          "puuid": "dbab053d-77ec-50d4-b47e-54b27f866bf4",
+          "riotId": "ivyfoxy9primmie#zxzxz",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/ivyfoxy9primmie%23zxzxz"
+        }
+      ]
+    },
+    {
+      "handle": "kippei",
+      "team": "QT DIG∞",
+      "region": "Pacific",
+      "countryCode": "jp",
+      "accounts": [
+        {
+          "puuid": "cfef8957-ab1f-5c82-9385-aad4e7c46b07",
+          "riotId": "QTD Kippei#USA",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/QTD%20Kippei%23USA"
+        }
+      ]
+    },
+    {
+      "handle": "kitae",
+      "team": "Gen.G",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "bcb31a19-9438-5997-942d-9d3e54fd0f08",
+          "riotId": "GGA KiTae#1029",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/GGA%20KiTae%231029"
+        }
+      ]
+    },
+    {
+      "handle": "kolosha",
+      "team": "Natus Vincere",
+      "region": "EMEA",
+      "countryCode": "ua",
+      "accounts": [
+        {
+          "puuid": "91edbd24-95c3-5138-8d89-23ebfdec3cfc",
+          "riotId": "Kolosha#7697",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Kolosha%237697"
+        }
+      ]
+    },
+    {
+      "handle": "koshmaras",
+      "team": "Team Heretics",
+      "region": "EMEA",
+      "countryCode": "lt",
+      "accounts": [
+        {
+          "puuid": "760a3a64-d1a3-5c5a-914d-697e496fd0b8",
+          "riotId": "TH koshmaras#006",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/TH%20koshmaras%23006"
+        }
+      ]
+    },
+    {
+      "handle": "kovaq",
+      "team": "FunPlus Phoenix",
+      "region": "China",
+      "countryCode": "ch",
+      "accounts": [
+        {
+          "puuid": "a6a07b33-da0a-5867-9c2a-11cf0f86912d",
+          "riotId": "FPX kovaQ#ellie",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/FPX%20kovaQ%23ellie"
+        }
+      ]
+    },
+    {
+      "handle": "kozzy",
+      "team": "Enterprise Esports",
+      "region": "EMEA",
+      "countryCode": "ro",
+      "accounts": [
+        {
+          "puuid": "087373dc-6f8b-59dc-8068-17bbf0565d1e",
+          "riotId": "EP kozzy#1of1",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/EP%20kozzy%231of1"
+        }
+      ]
+    },
+    {
+      "handle": "krostaly",
+      "team": "FUT Esports",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "231bed44-cd22-50a3-8886-bc23be885d1a",
+          "riotId": "KROS#5OKAN",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/KROS%235OKAN"
+        }
+      ]
+    },
+    {
+      "handle": "lar0k",
+      "team": "BBL Esports",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "8bcfed82-0f50-51a1-ac1f-146ea2c0859f",
+          "riotId": "BBL Lar0k#nlyki",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/BBL%20Lar0k%23nlyki"
+        }
+      ]
+    },
+    {
+      "handle": "leaf",
+      "team": "G2 Esports",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "1b76d5d4-b444-5b8d-90d3-9ddd49f79c30",
+          "riotId": "lllllll#X1TER",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/lllllll%23X1TER"
+        }
+      ]
+    },
+    {
+      "handle": "leo",
+      "team": "FNATIC",
+      "region": "EMEA",
+      "countryCode": "se",
+      "accounts": [
+        {
+          "puuid": "071bf090-cbc0-5496-850b-1b5ae7a79f25",
+          "riotId": "Leo#janne",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Leo%23janne"
+        }
+      ]
+    },
+    {
+      "handle": "less",
+      "team": "KRÜ Esports",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "905b3128-6c8e-5897-855e-8653b08150d2",
+          "riotId": "less#vrau",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/less%23vrau"
+        }
+      ]
+    },
+    {
+      "handle": "lewn",
+      "team": "Karmine Corp",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "1e4b67f2-08a5-5298-87a4-4c4f9724aaba",
+          "riotId": "KC LewN#mamba",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/KC%20LewN%23mamba"
+        }
+      ]
+    },
+    {
+      "handle": "life",
+      "team": "Dragon Ranger Gaming",
+      "region": "China",
+      "countryCode": "cn",
+      "accounts": [
+        {
+          "puuid": "ddf0996e-dc6b-5004-a9cf-b70071aba180",
+          "riotId": "DRG Life抖音#FanrK",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/DRG%20Life%E6%8A%96%E9%9F%B3%23FanrK"
+        }
+      ]
+    },
+    {
+      "handle": "loita",
+      "team": "BBL Esports",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "2c94bfc8-48ae-5ee3-b8cf-81c4711e1977",
+          "riotId": "BBL Loita#tolo",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/BBL%20Loita%23tolo"
+        }
+      ]
+    },
+    {
+      "handle": "loss",
+      "team": "BESTIA",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "33c683cb-c184-5b85-973b-7862ab331548",
+          "riotId": "BESTIA Loss#MVP",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/BESTIA%20Loss%23MVP"
+        }
+      ]
+    },
+    {
+      "handle": "lovers rock",
+      "team": "BBL Esports",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "e244540d-08f9-5ac3-bdac-09c98483af99",
+          "riotId": "BBL lovers rock#sel",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/BBL%20lovers%20rock%23sel"
+        }
+      ]
+    },
+    {
+      "handle": "lucas",
+      "team": "Titan Esports Club",
+      "region": "China",
+      "countryCode": "cn",
+      "accounts": [
+        {
+          "puuid": "697012f9-8084-5d97-9294-3f47aae4d7aa",
+          "riotId": "lucas#fonem",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/lucas%23fonem"
+        }
+      ]
+    },
+    {
+      "handle": "lukxo",
+      "team": "LOUD",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "61f455a3-80a4-5641-87e6-e6d400dffb97",
+          "riotId": "luk xo#gii",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/luk%20xo%23gii"
+        }
+      ]
+    },
+    {
+      "handle": "luok1ng",
+      "team": "Trace Esports",
+      "region": "China",
+      "countryCode": "cn",
+      "accounts": [
+        {
+          "puuid": "b189a367-aeb4-5989-af05-e283bb6ed9bf",
+          "riotId": "转身时你说那迟来的爱情冷的像冰#TELuo",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/%E8%BD%AC%E8%BA%AB%E6%97%B6%E4%BD%A0%E8%AF%B4%E9%82%A3%E8%BF%9F%E6%9D%A5%E7%9A%84%E7%88%B1%E6%83%85%E5%86%B7%E7%9A%84%E5%83%8F%E5%86%B0%23TELuo"
+        }
+      ]
+    },
+    {
+      "handle": "lysoar",
+      "team": "Xi Lai Gaming",
+      "region": "China",
+      "countryCode": "cn",
+      "accounts": [
+        {
+          "puuid": "27fd9338-d96f-5f62-b7a3-b4246768fb17",
+          "riotId": "LYSOAR#XLG",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/LYSOAR%23XLG"
+        }
+      ]
+    },
+    {
+      "handle": "lz",
+      "team": "2Game Esports",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "a19a08e7-6889-51aa-bb0d-1af620636392",
+          "riotId": "Lz99#2003",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Lz99%232003"
+        }
+      ]
+    },
+    {
+      "handle": "mada",
+      "team": "NRG",
+      "region": "Americas",
+      "countryCode": "ca",
+      "accounts": [
+        {
+          "puuid": "1fd6fe52-7fbf-52b6-9b43-9885bd162498",
+          "riotId": "mada#444x",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/mada%23444x"
+        }
+      ]
+    },
+    {
+      "handle": "magnum",
+      "team": "Enterprise Esports",
+      "region": "EMEA",
+      "countryCode": "cz",
+      "accounts": [
+        {
+          "puuid": "fccb105e-4b01-5d1a-957a-d5315adee655",
+          "riotId": "EP MAGNUM#rawr",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/EP%20MAGNUM%23rawr"
+        }
+      ]
+    },
+    {
+      "handle": "mako",
+      "team": "KIWOOM DRX",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "84ee1311-4c39-5d40-8440-717461bbf29f",
+          "riotId": "DRX MaKo#V S",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/DRX%20MaKo%23V%20S"
+        }
+      ]
+    },
+    {
+      "handle": "margaret",
+      "team": "QT DIG∞",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "55ab27c9-b5a6-5bcb-9b63-f39aac212cfd",
+          "riotId": "QTD margaret#1118",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/QTD%20margaret%231118"
+        }
+      ]
+    },
+    {
+      "handle": "marteen",
+      "team": "Gentle Mates",
+      "region": "EMEA",
+      "countryCode": "cz",
+      "accounts": [
+        {
+          "puuid": "4516c9bc-7cda-5b01-915f-23fce7a49ed9",
+          "riotId": "i miss him#yoruu",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/i%20miss%20him%23yoruu"
+        },
+        {
+          "puuid": "1af4daa7-97b9-5e6d-99b7-4ace50db0af8",
+          "riotId": "m8rteen#amure",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/m8rteen%23amure"
+        }
+      ]
+    },
+    {
+      "handle": "marved",
+      "team": "Sentinels",
+      "region": "Americas",
+      "countryCode": "ca",
+      "accounts": [
+        {
+          "puuid": "e73db076-bb91-5671-bdb3-4016a4fd637d",
+          "riotId": "Marved#ICE6",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Marved%23ICE6"
+        }
+      ]
+    },
+    {
+      "handle": "mazin",
+      "team": "Fluxo W7M",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "1de63afc-86c6-58e8-b2da-65f33c264664",
+          "riotId": "FX mazin#2WC",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/FX%20mazin%232WC"
+        }
+      ]
+    },
+    {
+      "handle": "mazino",
+      "team": "MIBR",
+      "region": "Americas",
+      "countryCode": "cl",
+      "accounts": [
+        {
+          "puuid": "b59bdf43-d0dc-5425-8316-812e5df3a8da",
+          "riotId": "MIBR Mazino#nicol",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/MIBR%20Mazino%23nicol"
+        }
+      ]
+    },
+    {
+      "handle": "meiy",
+      "team": "DetonatioN FocusMe",
+      "region": "Pacific",
+      "countryCode": "jp",
+      "accounts": [
+        {
+          "puuid": "b8c0de16-869c-58a1-b542-a51987b013ab",
+          "riotId": "KENvlrt#Korea",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/KENvlrt%23Korea"
+        }
+      ]
+    },
+    {
+      "handle": "miniboo",
+      "team": "Team Liquid",
+      "region": "EMEA",
+      "countryCode": "lt",
+      "accounts": [
+        {
+          "puuid": "2ba57713-c550-5861-b8c2-97ade4f06e62",
+          "riotId": "MiniBoo#2440",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/MiniBoo%232440"
+        }
+      ]
+    },
+    {
+      "handle": "minny",
+      "team": "Gentle Mates",
+      "region": "EMEA",
+      "countryCode": "cz",
+      "accounts": [
+        {
+          "puuid": "4606b82c-b4b5-5c3c-bbf0-088885577db5",
+          "riotId": "M8 Minny#M8M8",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/M8%20Minny%23M8M8"
+        },
+        {
+          "puuid": "7c93ae8e-6acb-5d55-a91c-83c5d6f255df",
+          "riotId": "Cypher#Omens",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Cypher%23Omens"
+        }
+      ]
+    },
+    {
+      "handle": "mistic",
+      "team": "Team Liquid",
+      "region": "EMEA",
+      "countryCode": "gb",
+      "accounts": [
+        {
+          "puuid": "b5863339-3d96-5ee8-9945-a127f97d9050",
+          "riotId": "Mistic#SUMN",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Mistic%23SUMN"
+        }
+      ]
+    },
+    {
+      "handle": "molsi",
+      "team": "Apeks",
+      "region": "EMEA",
+      "countryCode": "pl",
+      "accounts": [
+        {
+          "puuid": "7ec07d46-27d8-5af2-8779-a3f80b88e47b",
+          "riotId": "MOLSI#187",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/MOLSI%23187"
+        }
+      ]
+    },
+    {
+      "handle": "monsteerr",
+      "team": "Eintracht Frankfurt",
+      "region": "EMEA",
+      "countryCode": "cz",
+      "accounts": [
+        {
+          "puuid": "68f2da33-c326-5da9-b500-3db82fa1a410",
+          "riotId": "SGE MONSTEERR#Inori",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/SGE%20MONSTEERR%23Inori"
+        }
+      ]
+    },
+    {
+      "handle": "moose",
+      "team": "Cloud9",
+      "region": "Americas",
+      "countryCode": "ca",
+      "accounts": [
+        {
+          "puuid": "751f2cea-d520-517b-bfdc-3f63b1829c44",
+          "riotId": "lobster fisher#alxis",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/lobster%20fisher%23alxis"
+        }
+      ]
+    },
+    {
+      "handle": "musashi",
+      "team": "Eintracht Frankfurt",
+      "region": "EMEA",
+      "countryCode": "de",
+      "accounts": [
+        {
+          "puuid": "f300f147-4712-5ce8-8617-92d0eecb7b7a",
+          "riotId": "SGE musashi#000",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/SGE%20musashi%23000"
+        }
+      ]
+    },
+    {
+      "handle": "mwzera",
+      "team": "KRÜ Esports",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "0ab8ff3c-7bee-593a-9f27-12a1c557c73b",
+          "riotId": "mwzera#6666",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/mwzera%236666"
+        }
+      ]
+    },
+    {
+      "handle": "nats",
+      "team": "Team Liquid",
+      "region": "EMEA",
+      "countryCode": "ru",
+      "accounts": [
+        {
+          "puuid": "816b2f6e-daa6-5edb-bae1-21dd5ea8f6fa",
+          "riotId": "Liquid nAts#TATAR",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Liquid%20nAts%23TATAR"
+        }
+      ]
+    },
+    {
+      "handle": "nature",
+      "team": "Evil Geniuses",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "bb17d870-62d9-5411-963c-90129358178c",
+          "riotId": "SR NaturE#RAT",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/SR%20NaturE%23RAT"
+        }
+      ]
+    },
+    {
+      "handle": "nekky",
+      "team": "Eternal Fire",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "faa1c5ba-5870-5c05-b317-caea79494f3f",
+          "riotId": "nekky Fe Rosario#rumi",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/nekky%20Fe%20Rosario%23rumi"
+        }
+      ]
+    },
+    {
+      "handle": "neon",
+      "team": "LEVIATÁN",
+      "region": "Americas",
+      "countryCode": "ar",
+      "accounts": [
+        {
+          "puuid": "68ae99f4-552a-5b0f-a361-2662019e42a1",
+          "riotId": "LEV Neon#1111",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/LEV%20Neon%231111"
+        }
+      ]
+    },
+    {
+      "handle": "nerve",
+      "team": "FURIA",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "7665bea0-a601-5de2-b4fc-a20e7942a76b",
+          "riotId": "nerve#meg",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/nerve%23meg"
+        }
+      ]
+    },
+    {
+      "handle": "net",
+      "team": "GIANTX",
+      "region": "EMEA",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "25a06846-198b-5d43-a6fa-90c004bd6762",
+          "riotId": "GX neT#jess",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/GX%20neT%23jess"
+        }
+      ]
+    },
+    {
+      "handle": "nicc",
+      "team": "Dragon Ranger Gaming",
+      "region": "China",
+      "countryCode": "tw",
+      "accounts": [
+        {
+          "puuid": "f6132ff0-e059-5c41-9b46-b0fc87408b1e",
+          "riotId": "DRG Nicc#0816",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/DRG%20Nicc%230816"
+        }
+      ]
+    },
+    {
+      "handle": "nightz",
+      "team": "ENVY",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "3fac8da3-1ca7-5abe-be63-10eb0e985a3b",
+          "riotId": "nightz#vamp",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/nightz%23vamp"
+        }
+      ]
+    },
+    {
+      "handle": "ninja",
+      "team": "PCIFIC Esports",
+      "region": "EMEA",
+      "countryCode": "pl",
+      "accounts": [
+        {
+          "puuid": "c7bf2fbd-9342-56c9-a59b-9fe442df7e77",
+          "riotId": "PCF NINJA#LOW9",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/PCF%20NINJA%23LOW9"
+        }
+      ]
+    },
+    {
+      "handle": "notexxd",
+      "team": "Cloud9",
+      "region": "Americas",
+      "countryCode": "bm",
+      "accounts": [
+        {
+          "puuid": "251e24e0-e2fc-5d05-a814-0387e145bc54",
+          "riotId": "Notexxd#amru",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Notexxd%23amru"
+        }
+      ]
+    },
+    {
+      "handle": "oderus",
+      "team": "Apeks",
+      "region": "EMEA",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "cafdc043-720c-57cb-97b6-5886a16d7678",
+          "riotId": "SR odeRrRrR99#nsic",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/SR%20odeRrRrR99%23nsic"
+        }
+      ]
+    },
+    {
+      "handle": "okeanos",
+      "team": "Evil Geniuses",
+      "region": "Americas",
+      "countryCode": "vn",
+      "accounts": [
+        {
+          "puuid": "d40f304b-d801-56af-8315-79cdb9d289aa",
+          "riotId": "okeanos#hana",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/okeanos%23hana"
+        }
+      ]
+    },
+    {
+      "handle": "olizera",
+      "team": "Apeks",
+      "region": "EMEA",
+      "countryCode": "pt",
+      "accounts": [
+        {
+          "puuid": "d1272690-d61c-564b-8153-fc32ea58f44e",
+          "riotId": "UCAM OLIZERA#1337",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/UCAM%20OLIZERA%231337"
+        }
+      ]
+    },
+    {
+      "handle": "oxy",
+      "team": "Cloud9",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "ec7185b3-1e4b-5c61-ad68-139a0445e757",
+          "riotId": "ABG Sniffer#Smell",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/ABG%20Sniffer%23Smell"
+        }
+      ]
+    },
+    {
+      "handle": "p0ppin",
+      "team": "ENVY",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "58090855-1228-53b8-9bae-d44357b4f189",
+          "riotId": "poppinsguide com#BBUYY",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/poppinsguide%20com%23BBUYY"
+        }
+      ]
+    },
+    {
+      "handle": "pa1ze",
+      "team": "Joblife",
+      "region": "EMEA",
+      "countryCode": "dk",
+      "accounts": [
+        {
+          "puuid": "05798cdc-0df9-544f-8732-831a1ab129c7",
+          "riotId": "JL Pa1ze#TTV",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/JL%20Pa1ze%23TTV"
+        }
+      ]
+    },
+    {
+      "handle": "paincakes",
+      "team": "Evil Geniuses",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "e77bf61e-7649-55e1-9f94-fd9a5ab9563b",
+          "riotId": "pANquequeziNdgz#1738",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/pANquequeziNdgz%231738"
+        },
+        {
+          "puuid": "1a569d89-a683-5765-b049-204b580680dd",
+          "riotId": "Whiteboyotheyear#MADA",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Whiteboyotheyear%23MADA"
+        }
+      ]
+    },
+    {
+      "handle": "patitek",
+      "team": "Enterprise Esports",
+      "region": "EMEA",
+      "countryCode": "pl",
+      "accounts": [
+        {
+          "puuid": "e223bf43-3c9a-5b94-b069-860ae32b2c0e",
+          "riotId": "EP PATITEK#1108",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/EP%20PATITEK%231108"
+        }
+      ]
+    },
+    {
+      "handle": "paura",
+      "team": "BBL Esports",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "a89a9322-7cbf-5980-99b6-7f2a05f7d3ae",
+          "riotId": "pAura#KEK",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/pAura%23KEK"
+        }
+      ]
+    },
+    {
+      "handle": "penny",
+      "team": "Cloud9",
+      "region": "Americas",
+      "countryCode": "ca",
+      "accounts": [
+        {
+          "puuid": "488b558e-b6e8-5099-8900-60bbbdf5c5f7",
+          "riotId": "C9 penny#9o9o",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/C9%20penny%239o9o"
+        }
+      ]
+    },
+    {
+      "handle": "primmie",
+      "team": "FULL SENSE",
+      "region": "Pacific",
+      "countryCode": "th",
+      "accounts": [
+        {
+          "puuid": "ff90a205-5ac9-55dd-9f3f-0d3e7f44fbb3",
+          "riotId": "loopy#bibi",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/loopy%23bibi"
+        },
+        {
+          "puuid": "412fdc87-f6f2-5664-b0a7-59bacc1bb9e0",
+          "riotId": "killq#hehe",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/killq%23hehe"
+        }
+      ]
+    },
+    {
+      "handle": "profek",
+      "team": "Team Vitality",
+      "region": "EMEA",
+      "countryCode": "pl",
+      "accounts": [
+        {
+          "puuid": "756f891a-e91b-552e-9c5a-e1b772326c49",
+          "riotId": "PROFEK#TOFIK",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/PROFEK%23TOFIK"
+        }
+      ]
+    },
+    {
+      "handle": "proxh",
+      "team": "Gentle Mates",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "7409614f-2055-5dff-a249-c9060dabc58d",
+          "riotId": "M8 Proxh#cold",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/M8%20Proxh%23cold"
+        }
+      ]
+    },
+    {
+      "handle": "pryze",
+      "team": "2Game Esports",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "e0f70503-7efa-5b74-9c5f-acc64a335bfd",
+          "riotId": "pryze#budy",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/pryze%23budy"
+        }
+      ]
+    },
+    {
+      "handle": "purp0",
+      "team": "Team Liquid",
+      "region": "EMEA",
+      "countryCode": "ru",
+      "accounts": [
+        {
+          "puuid": "6ce455ab-cc9f-5262-80a0-fffe51856c07",
+          "riotId": "Liquid purp0#yane0",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Liquid%20purp0%23yane0"
+        }
+      ]
+    },
+    {
+      "handle": "pxs",
+      "team": "LEVIATÁN",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "e3dada8e-0c04-5c7f-a7f4-9f5b25ca0909",
+          "riotId": "INTZ pxs#2001",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/INTZ%20pxs%232001"
+        }
+      ]
+    },
+    {
+      "handle": "qck",
+      "team": "2Game Esports",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "5d65f3be-4c01-585b-907b-07aa9f9517b2",
+          "riotId": "netzach#god",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/netzach%23god"
+        }
+      ]
+    },
+    {
+      "handle": "ray",
+      "team": "ONSIDE GAMING",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "bebf7b4f-cdc5-52b7-986f-bcf957abb7a7",
+          "riotId": "ONG Ray#Ray",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/ONG%20Ray%23Ray"
+        }
+      ]
+    },
+    {
+      "handle": "reazy",
+      "team": "Fire Flux Esports",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "b24c394f-8967-528d-a870-e15bb5dda30f",
+          "riotId": "FF rzz#nathz",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/FF%20rzz%23nathz"
+        }
+      ]
+    },
+    {
+      "handle": "redgar",
+      "team": "GIANTX",
+      "region": "EMEA",
+      "countryCode": "ru",
+      "accounts": [
+        {
+          "puuid": "9b6e9c5a-7675-5ebb-a5bc-888aa542c3dd",
+          "riotId": "Redgar#3D2Y",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Redgar%233D2Y"
+        }
+      ]
+    },
+    {
+      "handle": "reduxx",
+      "team": "Sentinels",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "577adbec-b4db-5f2c-b2fc-6613c6e3d882",
+          "riotId": "reduxx#0528",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/reduxx%230528"
+        }
+      ]
+    },
+    {
+      "handle": "riens",
+      "team": "Team Heretics",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "0c22deed-51bb-5345-aae3-f35dbf8654b7",
+          "riotId": "TH rienszin#TURK",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/TH%20rienszin%23TURK"
+        }
+      ]
+    },
+    {
+      "handle": "robbiebk",
+      "team": "LOUD",
+      "region": "Americas",
+      "countryCode": "nl",
+      "accounts": [
+        {
+          "puuid": "fd12dc82-472a-551c-9708-ba46b640e99d",
+          "riotId": "RobbieBk#Carmn",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/RobbieBk%23Carmn"
+        }
+      ]
+    },
+    {
+      "handle": "rosé",
+      "team": "BBL Esports",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "8f45aab5-8fac-5c50-b04e-1e9da65b4726",
+          "riotId": "BBL Rosé#James",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/BBL%20Ros%C3%A9%23James"
+        }
+      ]
+    },
+    {
+      "handle": "rossy",
+      "team": "ENVY",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "e6d93620-14a8-5983-86c4-93ceb5d1452c",
+          "riotId": "Sosuke Aizen#Rossy",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Sosuke%20Aizen%23Rossy"
+        }
+      ]
+    },
+    {
+      "handle": "runner",
+      "team": "Joblife",
+      "region": "EMEA",
+      "countryCode": "mk",
+      "accounts": [
+        {
+          "puuid": "e6f502d1-c3a6-509d-af5d-fe358c66fc37",
+          "riotId": "JL runneR#003",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/JL%20runneR%23003"
+        }
+      ]
+    },
+    {
+      "handle": "ruxic",
+      "team": "Natus Vincere",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "081dd4bc-db08-5645-8d21-7559db3bebd6",
+          "riotId": "Ruxic#AIM",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Ruxic%23AIM"
+        }
+      ]
+    },
+    {
+      "handle": "s0pp",
+      "team": "FUT Esports",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "b1106ce0-cef1-5b36-ac0b-5160444fb129",
+          "riotId": "FUT s0pp#00001",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/FUT%20s0pp%2300001"
+        }
+      ]
+    },
+    {
+      "handle": "s1mon",
+      "team": "EDward Gaming",
+      "region": "China",
+      "countryCode": "tw",
+      "accounts": [
+        {
+          "puuid": "cc1f403d-d997-50fc-8546-7e6d03f47b88",
+          "riotId": "S1Mon#625",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/S1Mon%23625"
+        }
+      ]
+    },
+    {
+      "handle": "saadhak",
+      "team": "KRÜ Esports",
+      "region": "Americas",
+      "countryCode": "ar",
+      "accounts": [
+        {
+          "puuid": "5fcb9a26-3ce5-56a2-8d97-8d94cb38b8d1",
+          "riotId": "KRÜ Saadhak#ianca",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/KR%C3%9C%20Saadhak%23ianca"
+        }
+      ]
+    },
+    {
+      "handle": "sato",
+      "team": "LEVIATÁN",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "2549cb4b-2722-5f8f-9cef-382e34293985",
+          "riotId": "LEV Sato#paz",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/LEV%20Sato%23paz"
+        }
+      ]
+    },
+    {
+      "handle": "sayf",
+      "team": "Team Vitality",
+      "region": "EMEA",
+      "countryCode": "se",
+      "accounts": [
+        {
+          "puuid": "9c2e87cb-c676-5918-92ee-1cb2ca9073ff",
+          "riotId": "llllllllllllllll#BONK",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/llllllllllllllll%23BONK"
+        }
+      ]
+    },
+    {
+      "handle": "sayonara",
+      "team": "Team Vitality",
+      "region": "EMEA",
+      "countryCode": "md",
+      "accounts": [
+        {
+          "puuid": "437827db-03b9-5c0d-9f9c-ee7b5265b98a",
+          "riotId": "VIT Sayonara#gud",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/VIT%20Sayonara%23gud"
+        }
+      ]
+    },
+    {
+      "handle": "seoldam",
+      "team": "DetonatioN FocusMe",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "cbccc3e2-805a-5837-888f-53618335bca7",
+          "riotId": "R S#397",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/R%20S%23397"
+        }
+      ]
+    },
+    {
+      "handle": "seph1roth",
+      "team": "FULL SENSE",
+      "region": "Pacific",
+      "countryCode": "th",
+      "accounts": [
+        {
+          "puuid": "df2df4e4-34d1-56aa-acdd-0b40f70b0a6b",
+          "riotId": "Anakin Skywalker#Mkfer",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Anakin%20Skywalker%23Mkfer"
+        }
+      ]
+    },
+    {
+      "handle": "serial",
+      "team": "Team Liquid",
+      "region": "EMEA",
+      "countryCode": "lv",
+      "accounts": [
+        {
+          "puuid": "9eb28a55-3969-5296-88e9-9bd6f56b912f",
+          "riotId": "SerialKiller#yukii",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/SerialKiller%23yukii"
+        }
+      ]
+    },
+    {
+      "handle": "setrod",
+      "team": "FunPlus Phoenix",
+      "region": "China",
+      "countryCode": "tw",
+      "accounts": [
+        {
+          "puuid": "c7659c0d-ea49-5c2a-99f6-848533a99c1e",
+          "riotId": "Setrod#0717",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Setrod%230717"
+        }
+      ]
+    },
+    {
+      "handle": "shr1mp",
+      "team": "All Gamers",
+      "region": "China",
+      "countryCode": "cn",
+      "accounts": [
+        {
+          "puuid": "e4920cf2-ab9b-541d-af5b-32936c3b2e4b",
+          "riotId": "AG Shr1mp#xia",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/AG%20Shr1mp%23xia"
+        }
+      ]
+    },
+    {
+      "handle": "shyy",
+      "team": "FURIA",
+      "region": "Americas",
+      "countryCode": "cl",
+      "accounts": [
+        {
+          "puuid": "8668ac79-7cf6-5e35-910c-c0121e9897e3",
+          "riotId": "TulaShyydeuS#Flo",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/TulaShyydeuS%23Flo"
+        }
+      ]
+    },
+    {
+      "handle": "signed",
+      "team": "Royal Never Give Up",
+      "region": "China",
+      "countryCode": "nz",
+      "accounts": [
+        {
+          "puuid": "03eb78d3-2aab-5a42-b4d8-a7bce12f1a51",
+          "riotId": "EDG signed#Gonbe",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/EDG%20signed%23Gonbe"
+        }
+      ]
+    },
+    {
+      "handle": "skuba",
+      "team": "NRG",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "df454dbd-5312-5c69-9466-43ec666e8088",
+          "riotId": "sss#skuba",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/sss%23skuba"
+        }
+      ]
+    },
+    {
+      "handle": "sociablee",
+      "team": "FUT Esports",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "2b614024-431b-58d8-8096-983e2c96f3a8",
+          "riotId": "FUT sociablEE#k4t1l",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/FUT%20sociablEE%23k4t1l"
+        }
+      ]
+    },
+    {
+      "handle": "something",
+      "team": "Paper Rex",
+      "region": "Pacific",
+      "countryCode": "ru",
+      "accounts": [
+        {
+          "puuid": "28bccc07-1105-5f75-9fae-3992a8661be0",
+          "riotId": "PRX something#112",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/PRX%20something%23112"
+        }
+      ]
+    },
+    {
+      "handle": "soulcas",
+      "team": "KOI",
+      "region": "EMEA",
+      "countryCode": "gb",
+      "accounts": [
+        {
+          "puuid": "5a7eadb3-a8d1-51e4-9b74-accd775391e3",
+          "riotId": "soulcas#123",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/soulcas%23123"
+        }
+      ]
+    },
+    {
+      "handle": "spike",
+      "team": "LEVIATÁN",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "6cb5f959-0729-5e88-87a8-c27144902186",
+          "riotId": "LEV spikezin#ayra",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/LEV%20spikezin%23ayra"
+        }
+      ]
+    },
+    {
+      "handle": "spring",
+      "team": "Wolves Esports",
+      "region": "China",
+      "countryCode": "tw",
+      "accounts": [
+        {
+          "puuid": "a82da05f-cb61-5083-9f1b-a63c772b27d5",
+          "riotId": "WOL Spring#91528",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/WOL%20Spring%2391528"
+        }
+      ]
+    },
+    {
+      "handle": "sugarz3ro",
+      "team": "ZETA DIVISION",
+      "region": "Pacific",
+      "countryCode": "jp",
+      "accounts": [
+        {
+          "puuid": "8e799465-6290-5c0a-b67b-15c32ed0083b",
+          "riotId": "SugarZ3ro#397",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/SugarZ3ro%23397"
+        }
+      ]
+    },
+    {
+      "handle": "supamen",
+      "team": "Evil Geniuses",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "9793a4e2-c3ab-5479-a4a3-6f323bde3671",
+          "riotId": "supamen#612",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/supamen%23612"
+        }
+      ]
+    },
+    {
+      "handle": "surf",
+      "team": "Xipto Esports",
+      "region": "Pacific",
+      "countryCode": "th",
+      "accounts": [
+        {
+          "puuid": "2e93c529-e678-5069-82b4-ac05ab1325d8",
+          "riotId": "surf ma laew ja#UWU",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/surf%20ma%20laew%20ja%23UWU"
+        }
+      ]
+    },
+    {
+      "handle": "sylvan",
+      "team": "Team Secret",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "41457026-d60b-5f8f-9a96-d0d39782cdd2",
+          "riotId": "Secret Sylvan#1004",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Secret%20Sylvan%231004"
+        }
+      ]
+    },
+    {
+      "handle": "syouta",
+      "team": "ZETA DIVISION",
+      "region": "Pacific",
+      "countryCode": "jp",
+      "accounts": [
+        {
+          "puuid": "3c8214a1-b8d7-5faa-bb5a-6f5fb6afa479",
+          "riotId": "下   忍#手裏剣",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/%E4%B8%8B%20%20%20%E5%BF%8D%23%E6%89%8B%E8%A3%8F%E5%89%A3"
+        }
+      ]
+    },
+    {
+      "handle": "tacolilla",
+      "team": "BESTIA",
+      "region": "Americas",
+      "countryCode": "cl",
+      "accounts": [
+        {
+          "puuid": "0f7712b5-bda4-5538-8c50-cef34175239e",
+          "riotId": "BESTIA tacolilla#lila",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/BESTIA%20tacolilla%23lila"
+        }
+      ]
+    },
+    {
+      "handle": "tex",
+      "team": "MIBR",
+      "region": "Americas",
+      "countryCode": "de",
+      "accounts": [
+        {
+          "puuid": "58cc434f-3b75-5546-845d-c97fd5104b65",
+          "riotId": "MIBR tex#sofia",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/MIBR%20tex%23sofia"
+        }
+      ]
+    },
+    {
+      "handle": "timotino",
+      "team": "100 Thieves",
+      "region": "Americas",
+      "countryCode": "ca",
+      "accounts": [
+        {
+          "puuid": "548830cb-5c73-5140-8846-e51eda21bb66",
+          "riotId": "100T Timotino#2007",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/100T%20Timotino%232007"
+        }
+      ]
+    },
+    {
+      "handle": "trent",
+      "team": "G2 Esports",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "54d1c735-ddd5-5cad-b1bf-f226506d4603",
+          "riotId": "G2 trent#habib",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/G2%20trent%23habib"
+        }
+      ]
+    },
+    {
+      "handle": "tuyz",
+      "team": "Fluxo W7M",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "ef4fe5c9-41d7-5b1c-aef9-2f69e38c4cfd",
+          "riotId": "FX tuyz#2003",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/FX%20tuyz%232003"
+        }
+      ]
+    },
+    {
+      "handle": "udotan",
+      "team": "Global Esports",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "763976bf-3b63-5335-bf31-cb6f3c89011d",
+          "riotId": "GE UdoTan#GOOSE",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/GE%20UdoTan%23GOOSE"
+        }
+      ]
+    },
+    {
+      "handle": "v1nny",
+      "team": "LOUD",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "517ad1ae-8edd-5bf8-8dc1-e4f98716ac65",
+          "riotId": "v1nNy#3D2Y",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/v1nNy%233D2Y"
+        }
+      ]
+    },
+    {
+      "handle": "valyn",
+      "team": "G2 Esports",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "62c3f894-f1b4-54ea-8b79-d788674a09bc",
+          "riotId": "G2 valyn#B2TB",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/G2%20valyn%23B2TB"
+        }
+      ]
+    },
+    {
+      "handle": "veqaj",
+      "team": "FNATIC",
+      "region": "EMEA",
+      "countryCode": "fr",
+      "accounts": [
+        {
+          "puuid": "d3b511ab-1678-54db-909f-6e68e0ff85ea",
+          "riotId": "Veqaj#111",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Veqaj%23111"
+        }
+      ]
+    },
+    {
+      "handle": "verno",
+      "team": "MIBR",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "4019f15a-a10c-5c70-93d9-f2b2370aa334",
+          "riotId": "MIBR Verno#333",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/MIBR%20Verno%23333"
+        }
+      ]
+    },
+    {
+      "handle": "verse",
+      "team": "Dragon Ranger Gaming",
+      "region": "China",
+      "countryCode": "cn",
+      "accounts": [
+        {
+          "puuid": "5bf19d71-f4c9-58ed-9ac9-2facde72c68e",
+          "riotId": "DRG Verse#VVV",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/DRG%20Verse%23VVV"
+        }
+      ]
+    },
+    {
+      "handle": "vora",
+      "team": "100 Thieves",
+      "region": "Americas",
+      "countryCode": "ca",
+      "accounts": [
+        {
+          "puuid": "e8cddaf0-2328-5c06-bd22-1abddd4587dc",
+          "riotId": "kadeem alford 1#1111",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/kadeem%20alford%201%231111"
+        }
+      ]
+    },
+    {
+      "handle": "wayne",
+      "team": "Team Liquid",
+      "region": "EMEA",
+      "countryCode": "sg",
+      "accounts": [
+        {
+          "puuid": "defd8635-5638-5a42-b50a-39bf7c9013de",
+          "riotId": "Liquid WAYNE#1410",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Liquid%20WAYNE%231410"
+        }
+      ]
+    },
+    {
+      "handle": "westside",
+      "team": "GIANTX",
+      "region": "EMEA",
+      "countryCode": "pl",
+      "accounts": [
+        {
+          "puuid": "f79a2ba9-77dd-5137-9bb4-513a48d88c9b",
+          "riotId": "GX westside#uwu",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/GX%20westside%23uwu"
+        }
+      ]
+    },
+    {
+      "handle": "will",
+      "team": null,
+      "region": null,
+      "countryCode": null,
+      "accounts": [
+        {
+          "puuid": "963e249f-8f93-5fc5-b167-ea668e614b5f",
+          "riotId": "CHUD MAXXING#Will",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/CHUD%20MAXXING%23Will"
+        }
+      ]
+    },
+    {
+      "handle": "wo0t",
+      "team": "Team Heretics",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "b48f11cc-6264-5ac1-bc59-70f46620f7a5",
+          "riotId": "TH Wo0t#Limon",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/TH%20Wo0t%23Limon"
+        }
+      ]
+    },
+    {
+      "handle": "wolverine",
+      "team": "ONSIDE GAMING",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "2dfb8ea9-5c59-57ef-a1a7-6ffa0a8ee9a5",
+          "riotId": "ONG Wolverine#715",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/ONG%20Wolverine%23715"
+        }
+      ]
+    },
+    {
+      "handle": "xdll",
+      "team": "ZETA DIVISION",
+      "region": "Pacific",
+      "countryCode": "jp",
+      "accounts": [
+        {
+          "puuid": "75565677-b76c-5476-abaa-9927faad5bfa",
+          "riotId": "ZETA Xdll#mizo",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/ZETA%20Xdll%23mizo"
+        }
+      ]
+    },
+    {
+      "handle": "xenom",
+      "team": "2Game Esports",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "0b13e26a-4355-5e86-aa5a-2ce7c71facaa",
+          "riotId": "2G xenom#777",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/2G%20xenom%23777"
+        }
+      ]
+    },
+    {
+      "handle": "xeus",
+      "team": "FUT Esports",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "e65397f2-6a22-56c8-a060-e2ca5b7803df",
+          "riotId": "xeus#reta",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/xeus%23reta"
+        }
+      ]
+    },
+    {
+      "handle": "xiesta",
+      "team": "ONSIDE GAMING",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "8d421507-3511-5901-aa1e-af38b06bb0ba",
+          "riotId": "ONG Xiesta#0324",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/ONG%20Xiesta%230324"
+        }
+      ]
+    },
+    {
+      "handle": "xlele",
+      "team": "FunPlus Phoenix",
+      "region": "China",
+      "countryCode": "cn",
+      "accounts": [
+        {
+          "puuid": "9f2464d6-807b-5cd8-a9b2-68667544a07f",
+          "riotId": "Xlele#xll",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Xlele%23xll"
+        }
+      ]
+    },
+    {
+      "handle": "xuna",
+      "team": "VARREL",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "ac4cc93e-e8b1-5949-8fd6-051242f229e9",
+          "riotId": "VARREL XuNa#2007",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/VARREL%20XuNa%232007"
+        }
+      ]
+    },
+    {
+      "handle": "yetujey",
+      "team": "FUT Esports",
+      "region": "EMEA",
+      "countryCode": "tr",
+      "accounts": [
+        {
+          "puuid": "14c0198e-ebf1-54e6-ab4c-cfd1f0e0cbfb",
+          "riotId": "FUT yetujey#star",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/FUT%20yetujey%23star"
+        }
+      ]
+    },
+    {
+      "handle": "yong",
+      "team": "KIWOOM DRX",
+      "region": "Pacific",
+      "countryCode": "kr",
+      "accounts": [
+        {
+          "puuid": "97f17224-12f6-5a67-a565-91e2265786d9",
+          "riotId": "DRX Yong#V S",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/DRX%20Yong%23V%20S"
+        }
+      ]
+    },
+    {
+      "handle": "yuicaw",
+      "team": "JDG Esports",
+      "region": "China",
+      "countryCode": "tw",
+      "accounts": [
+        {
+          "puuid": "5b4a5dba-ba25-55d1-9c02-59dd41a9fe75",
+          "riotId": "JDG Yuicaw#220",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/JDG%20Yuicaw%23220"
+        }
+      ]
+    },
+    {
+      "handle": "zanatsu",
+      "team": "Fluxo W7M",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "e4f3a25f-c803-5023-a696-b051010d5dd7",
+          "riotId": "FX Zanatsu#remi",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/FX%20Zanatsu%23remi"
+        }
+      ]
+    },
+    {
+      "handle": "zander",
+      "team": "100 Thieves",
+      "region": "Americas",
+      "countryCode": "ca",
+      "accounts": [
+        {
+          "puuid": "46831b96-eec3-528b-85b2-7c18cfce1fbe",
+          "riotId": "SR Zander#swag",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/SR%20Zander%23swag"
+        }
+      ]
+    },
+    {
+      "handle": "zap",
+      "team": "2Game Esports",
+      "region": "Americas",
+      "countryCode": "br",
+      "accounts": [
+        {
+          "puuid": "087a4885-e157-5ad7-949b-2502e7c3938d",
+          "riotId": "ELV zap666#blu",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/ELV%20zap666%23blu"
+        }
+      ]
+    },
+    {
+      "handle": "zekken",
+      "team": "MIBR",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "57bf3aff-d0e2-5ef3-a446-1fcfe199853d",
+          "riotId": "MIBR zekken#1515",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/MIBR%20zekken%231515"
+        }
+      ]
+    },
+    {
+      "handle": "zellsis",
+      "team": "Cloud9",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "954b99e3-6f09-5e12-86c1-59a701ddc09c",
+          "riotId": "C9 Zellsis#1240",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/C9%20Zellsis%231240"
+        }
+      ]
+    },
+    {
+      "handle": "zerona",
+      "team": "Evil Geniuses",
+      "region": "Americas",
+      "countryCode": "us",
+      "accounts": [
+        {
+          "puuid": "bd85bce2-88e1-5ef6-bad9-4a562eb7e7cd",
+          "riotId": "zerona#harpr",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/zerona%23harpr"
+        }
+      ]
+    },
+    {
+      "handle": "zeus",
+      "team": "Team Secret",
+      "region": "Pacific",
+      "countryCode": "ph",
+      "accounts": [
+        {
+          "puuid": "57101dd8-4766-52e9-b560-c024de07ee43",
+          "riotId": "Secret Zeus#ela",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/Secret%20Zeus%23ela"
+        }
+      ]
+    },
+    {
+      "handle": "zmjjkk",
+      "team": "EDward Gaming",
+      "region": "China",
+      "countryCode": "cn",
+      "accounts": [
+        {
+          "puuid": "911f7b7f-5b97-558c-9b89-0f17d1650aaa",
+          "riotId": "ZmjjKK 屹#G不辣",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/ZmjjKK%20%E5%B1%B9%23G%E4%B8%8D%E8%BE%A3"
+        }
+      ]
+    },
+    {
+      "handle": "zyppan",
+      "team": "Gentle Mates",
+      "region": "EMEA",
+      "countryCode": "se",
+      "accounts": [
+        {
+          "puuid": "a823fe45-e374-57e8-80a8-a5aea2018a22",
+          "riotId": "CGN Zyppan#Liza",
+          "trackerUrl": "https://tracker.gg/valorant/profile/riot/CGN%20Zyppan%23Liza"
+        }
+      ]
+    }
+  ]
+}

@@ -37,10 +37,13 @@ html{scrollbar-gutter:stable;}
 @supports not (scrollbar-gutter:stable){html{overflow-y:scroll;}}
 button{font:inherit;color:inherit;background:none;border:none;appearance:none;-webkit-appearance:none;cursor:pointer;}
 body{
-  background:var(--bg);
+  background:
+    radial-gradient(circle at 50% -18%,rgba(59,130,246,.11),transparent 34rem),
+    var(--bg);
   color:var(--text);font-family:var(--font-body);font-size:16px;min-height:100vh;
   position:relative;isolation:isolate;
 }
+body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.22;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:48px 48px;mask-image:linear-gradient(to bottom,black,transparent 70%);}
 .wrap{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:2.5rem 1.5rem 5rem;}
 
 /* header */
@@ -50,13 +53,36 @@ h1 span{color:var(--accent);}
 .sub{font-size:14px;color:var(--muted);margin-top:6px;font-family:var(--font-body);}
 
 /* input section */
-.input-section{background:var(--surface);border:.5px solid var(--surface-border);border-radius:var(--radius-lg);padding:1.75rem;margin-bottom:2rem;display:flex;flex-direction:column;gap:1.5rem;}
+.input-section{background:rgba(23,23,23,.92);border:1px solid var(--surface-border);border-radius:var(--radius-lg);padding:1.25rem;margin-bottom:2rem;display:flex;flex-direction:column;gap:1rem;box-shadow:0 16px 50px rgba(0,0,0,.18);transition:background .2s,border-color .2s,box-shadow .2s,padding .2s;}
+.search-intro{text-align:center;margin:0 auto 28px;max-width:660px;}
+.search-wordmark{display:inline-flex;align-items:center;gap:6px;margin-bottom:22px;color:#f4f5f7;font-size:15px;font-weight:650;letter-spacing:-.035em;}
+.search-wordmark-mark{display:inline-grid;place-items:center;width:25px;height:25px;margin-right:3px;border:1px solid #3b4149;border-radius:7px;background:#15171a;box-shadow:inset 0 1px 0 rgba(255,255,255,.04);}
+.search-wordmark-mark svg{width:14px;height:14px;color:var(--brand);}
+.search-wordmark-slash{color:#5f6670;font-weight:400;}
+.search-intro h1{font-size:clamp(2rem,5vw,3.5rem);line-height:1.02;letter-spacing:-.052em;text-wrap:balance;}
+.search-intro p{max-width:590px;margin:16px auto 0;color:#8e949e;font-size:15px;line-height:1.65;text-wrap:balance;}
+.search-prefix{display:flex;align-items:center;justify-content:center;padding-left:18px;color:#717985;flex-shrink:0;}
+.search-prefix svg{display:block;width:17px;height:17px;}
+.search-shortcut{align-self:center;margin-right:5px;padding:4px 7px;border:1px solid #343940;border-radius:6px;background:#17191c;color:#777e88;font:500 10px/1 var(--font-mono);white-space:nowrap;}
+.search-footer{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:40px;margin-top:10px;color:#7e858e;font-size:11px;}
+.search-examples{display:flex;align-items:center;gap:7px;min-width:0;}
+.search-examples-label{margin-right:2px;color:#666d76;white-space:nowrap;}
+.search-example{min-height:36px;padding:0 11px;border:1px solid #2c3036;border-radius:9px;background:#121416;color:#979da5;font-size:11px;transition:color .15s,border-color .15s,background .15s;}
+.search-example:hover{color:#eef0f3;border-color:#444a52;background:#191b1f;}
+.search-example:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
+.search-secondary{display:flex;align-items:center;gap:15px;white-space:nowrap;}
+.pro-library-summary{display:flex;align-items:center;gap:7px;}
+.pro-library-summary::before{content:'';width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 0 3px rgba(74,222,128,.1);}
+.search-replay-link{display:flex;align-items:center;gap:6px;min-height:36px;color:#8e949e;text-decoration:none;transition:color .15s;}
+.search-replay-link:hover{color:#fff;}
+.search-replay-link:focus-visible{outline:2px solid var(--brand);outline-offset:3px;border-radius:4px;}
+.search-replay-link svg{width:12px;height:12px;}
 .input-panel{display:none;}.manual-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
 .manual-input{background:var(--bg);border:.5px solid var(--border2);border-radius:6px;padding:10px 14px;font-family:var(--font-body);font-size:13px;color:var(--text);outline:none;transition:border-color .15s;}
 .manual-input:focus{border-color:var(--brand);}
 .manual-input.combined{flex:1;background:transparent;border:none;padding:10px 14px;min-width:0;color:var(--text);font-size:14px;}
 .manual-input.combined:focus{border:none;outline:none;}
-.search-bar{display:flex;align-items:stretch;background:#0b0b0b;border:.5px solid var(--surface-border);border-radius:var(--radius-md);flex:1 1 auto;min-width:0;transition:border-color .2s,box-shadow .2s,flex-grow .45s cubic-bezier(.22,1,.36,1),flex-basis .45s cubic-bezier(.22,1,.36,1);overflow:hidden;}
+.search-bar{display:flex;align-items:stretch;min-height:54px;background:#111315;border:1px solid #353a41;border-radius:14px;flex:1 1 auto;min-width:0;transition:border-color .2s,box-shadow .2s,flex-grow .45s cubic-bezier(.22,1,.36,1),flex-basis .45s cubic-bezier(.22,1,.36,1);overflow:hidden;box-shadow:inset 0 1px 0 rgba(255,255,255,.025);}
 .search-bar-shake{display:flex;align-items:stretch;flex:1;min-width:0;}
 .search-bar.notransition{transition:none!important;}
 #search-row{display:flex;gap:4px;align-items:stretch;position:relative;}
@@ -68,13 +94,32 @@ h1 span{color:var(--accent);}
   30%,50%,70%{transform:translateX(-4px);}
   40%,60%{transform:translateX(4px);}
 }
-.search-bar:focus-within{border-color:color-mix(in srgb, var(--brand) 55%, #111111);}
+.search-bar:focus-within{border-color:#59616c;box-shadow:0 0 0 3px rgba(var(--brand-rgb),.08),0 16px 45px rgba(0,0,0,.22);}
 .search-bar .manual-select{background:var(--bg);border:none;border-left:.5px solid var(--border2);border-radius:0;padding:0 20px 0 14px;font-size:12px;color:var(--muted);cursor:pointer;font-family:var(--font-body);}
-.search-btn{display:flex;align-items:center;justify-content:center;padding:0 12px;flex-shrink:0;border-radius:var(--radius-md);background:var(--brand);border:none;color:#fff;cursor:pointer;transition:background .15s,box-shadow .15s,transform .1s;}
+.search-btn{display:flex;align-items:center;justify-content:center;width:44px;height:44px;margin:4px;flex-shrink:0;border-radius:11px;background:var(--brand);border:none;color:#07111f;cursor:pointer;transition:background .15s,box-shadow .15s,transform .1s;box-shadow:0 7px 20px rgba(var(--brand-rgb),.18);}
 .search-btn:hover{background:color-mix(in srgb, var(--brand) 85%, #111111);}
 .search-btn:active{transform:scale(.95);}
-.search-btn:focus-visible{outline:none;}
+.search-btn:focus-visible{outline:2px solid #fff;outline-offset:2px;}
 .search-btn svg{display:block;}
+.pro-library{position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:120;background:rgba(15,17,19,.98);border:1px solid #343940;border-radius:14px;padding:7px;box-shadow:0 24px 70px rgba(0,0,0,.58);max-height:430px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#353535 transparent;backdrop-filter:blur(16px);}
+.pro-library[hidden]{display:none;}
+.pro-library-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 9px 9px;color:var(--muted);font-size:10px;letter-spacing:.14em;text-transform:uppercase;}
+.pro-library-count{letter-spacing:0;text-transform:none;font-variant-numeric:tabular-nums;}
+.pro-result{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:stretch;border-top:1px solid #24282d;padding:6px 0;}
+.pro-result:first-of-type{border-top:0;}
+.pro-result-main{display:flex;align-items:center;justify-content:space-between;gap:14px;min-width:0;padding:10px 12px;border-radius:10px;text-align:left;transition:background .15s,color .15s;}
+.pro-result-main:hover,.pro-result.highlighted .pro-result-main{background:#202328;}
+.pro-result-main:focus-visible,.pro-result-tracker:focus-visible{outline:2px solid var(--brand);outline-offset:-2px;}
+.pro-result-copy{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.pro-result-name{display:flex;align-items:baseline;gap:7px;min-width:0;}
+.pro-result-handle{font-size:14px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pro-result-account{font-size:11px;color:var(--muted);white-space:nowrap;}
+.pro-result-meta{font-size:11px;color:#92929b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pro-result-action{flex-shrink:0;color:var(--brand);font-size:11px;font-weight:600;}
+.pro-result-tracker{display:flex;align-items:center;justify-content:center;gap:6px;min-width:92px;padding:0 12px;border:1px solid #30353c;border-radius:10px;color:#c7c7ce;text-decoration:none;font-size:11px;font-weight:600;transition:background .15s,border-color .15s,color .15s;}
+.pro-result-tracker:hover{background:#202328;border-color:#4b525c;color:#fff;}
+.pro-result-tracker svg{width:13px;height:13px;flex-shrink:0;}
+.pro-library-empty{padding:18px 12px;text-align:center;color:var(--muted);font-size:12px;}
 .manual-select.island{background:var(--bg2);border:.5px solid var(--border2);border-radius:var(--radius-md);padding:0 16px;font-size:12px;color:var(--text);cursor:pointer;font-family:var(--font-body);flex-shrink:0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:border-color .15s,color .15s;}
 .manual-select.island:focus-visible{outline:none;border-color:var(--brand);}
 .manual-select.island:disabled{opacity:.45;cursor:default;}
@@ -94,10 +139,12 @@ h1 span{color:var(--accent);}
 .season-option:hover,.season-option.highlighted{background:#242424;}
 .season-option.selected{color:var(--brand);background:color-mix(in srgb, var(--brand) 12%, #111111);font-weight:600;}
 #season-placeholder-btn,#season-trigger{background:var(--brand);border:.5px solid var(--brand);border-radius:var(--radius-md);color:#fff;font-weight:600;transition:background .15s,border-color .15s,box-shadow .15s,transform .1s,color .15s,opacity .15s;}
+#season-placeholder-btn,#season-trigger{min-height:54px;border-radius:14px;color:#07111f;box-shadow:0 7px 20px rgba(var(--brand-rgb),.14);}
 #season-placeholder-btn:not(:disabled):hover,#season-trigger:hover{background:color-mix(in srgb, var(--brand) 85%, #111111);}
 #season-placeholder-btn:not(:disabled):active,#season-trigger:active{transform:scale(.95);}
 #season-placeholder-btn:disabled{background:#1b1b1b;border-color:var(--surface-border);color:var(--muted);}
-#season-placeholder-btn:focus-visible,#season-trigger:focus-visible,.season-dropdown.open #season-trigger{outline:none;}
+#season-placeholder-btn:focus-visible,#season-trigger:focus-visible{outline:2px solid var(--brand);outline-offset:3px;}
+.season-dropdown.open #season-trigger{outline:1px solid color-mix(in srgb,var(--brand) 55%,transparent);outline-offset:2px;}
 .result-panel{flex:0 0 0;min-width:0;opacity:0;overflow:hidden;white-space:nowrap;display:flex;align-items:center;justify-content:flex-end;transition:opacity .4s ease;}
 .result-panel.shown{flex:0 0 auto;opacity:1;padding:0 4px;}
 .player-card-byline{display:flex;align-items:stretch;gap:4px;flex-wrap:wrap;font-family:var(--font-body);}
@@ -106,6 +153,23 @@ h1 span{color:var(--accent);}
 .stat-box .rr-sub{font-size:1em;color:var(--text);}
 .example-chip{display:inline-block;font-family:var(--font-body);font-size:11px;background:var(--bg3);border:.5px solid var(--border2);border-radius:var(--radius-xs);padding:3px 8px;color:var(--muted);cursor:pointer;margin-top:8px;transition:background .15s,border-color .15s,color .15s,box-shadow .15s,transform .15s;}
 .example-chip:hover{color:var(--accent);border-color:var(--accent);}
+
+/* VCT-data-inspired landing console. Once analysis begins the same controls
+   collapse back into the compact header used by the results pages. */
+body:not(.has-analysis):not(.detail-view) .wrap{max-width:1040px;min-height:100dvh;display:flex;flex-direction:column;justify-content:center;padding-top:48px;padding-bottom:48px;}
+body:not(.has-analysis):not(.detail-view) .input-section{width:min(900px,100%);margin:0 auto;transform:translateY(-4vh);padding:0;background:transparent;border:0;box-shadow:none;gap:0;}
+body:not(.has-analysis):not(.detail-view) #search-row{gap:10px;}
+body:not(.has-analysis):not(.detail-view) .search-bar{min-height:64px;border-radius:17px;background:#141619;box-shadow:0 18px 60px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.03);}
+body:not(.has-analysis):not(.detail-view) .manual-input.combined{font-size:16px;padding-left:12px;}
+body:not(.has-analysis):not(.detail-view) .search-btn{width:46px;height:46px;margin:8px;border-radius:12px;}
+body:not(.has-analysis):not(.detail-view) #season-placeholder-btn,
+body:not(.has-analysis):not(.detail-view) #season-trigger{min-height:64px;border-radius:17px;padding-inline:18px;background:#17191c;border-color:#363b42;color:#dfe2e7;box-shadow:0 18px 60px rgba(0,0,0,.18);}
+body:not(.has-analysis):not(.detail-view) #season-placeholder-btn:not(:disabled):hover,
+body:not(.has-analysis):not(.detail-view) #season-trigger:hover{background:#202328;border-color:#4b525c;}
+body:not(.has-analysis):not(.detail-view) #status-bar{margin-top:14px;}
+body:not(.has-analysis):not(.detail-view) .progress-wrap{margin-top:8px;}
+body.has-analysis .search-intro,body.detail-view .search-intro,
+body.has-analysis .search-footer,body.detail-view .search-footer{display:none;}
 
 /* status */
 #status-bar{display:flex;align-items:center;gap:10px;font-family:var(--font-body);font-size:13px;color:var(--muted);min-height:22px;}
@@ -379,7 +443,8 @@ h1 span{color:var(--accent);}
 .load-more-btn:hover{border-color:var(--accent);color:var(--fg);}
 
 /* Solid focus indicators replace the former glow rings. */
-.search-btn:focus-visible,#season-placeholder-btn:focus-visible,#season-trigger:focus-visible{outline:2px solid var(--brand);outline-offset:3px;}
+.search-btn:focus-visible{outline-color:#fff;outline-offset:2px;}
+#season-placeholder-btn:focus-visible,#season-trigger:focus-visible{outline-color:var(--brand);outline-offset:3px;}
 .search-bar:focus-within{border-color:var(--brand);}
 
 /* Keep the visibility treatment local to the Duos and K/D By rows. */
@@ -458,6 +523,11 @@ h1 span{color:var(--accent);}
   #result-panel.shown{padding:0;overflow:visible;}
   #header-rank-badge{gap:6px;}
   #header-rank-badge .stat-box{font-size:11px;padding:8px;gap:3px;}
+  .pro-library{top:calc(100% + 6px);}
+  .pro-result{grid-template-columns:minmax(0,1fr) 80px;}
+  .pro-result-main{padding:9px 8px;gap:8px;}
+  .pro-result-tracker{min-width:0;padding:0 8px;}
+  .pro-result-action{display:none;}
   .overview-hero{padding:22px 22px 0;}
   .overview-hero .rank-icon-wrap img{width:76px;height:76px;}
   .overview-hero #sg-avg-rank{gap:14px;}
@@ -467,6 +537,19 @@ h1 span{color:var(--accent);}
   .overview-basic-stats>div:nth-child(3){border-right:0;}
   .overview-basic-stats>div:nth-child(-n+3){border-bottom:1px solid var(--surface-border);}
   .overview-previews{gap:14px;}
+  body:not(.has-analysis):not(.detail-view) .wrap{justify-content:flex-start;padding:clamp(72px,15vh,128px) 20px 42px;}
+  body:not(.has-analysis):not(.detail-view) .input-section{transform:none;padding:0;}
+  body:not(.has-analysis):not(.detail-view) #search-row{grid-template-columns:minmax(0,1fr) 92px;}
+  body:not(.has-analysis):not(.detail-view) #search-bar,
+  body:not(.has-analysis):not(.detail-view) #season-wrap{min-height:60px;}
+  body:not(.has-analysis):not(.detail-view) #season-placeholder-btn,
+  body:not(.has-analysis):not(.detail-view) #season-trigger{min-height:60px;width:92px;padding-inline:10px;}
+  .search-intro{margin-bottom:24px;}
+  .search-intro h1{font-size:clamp(2.15rem,11vw,3rem);}
+  .search-intro p{font-size:14px;}
+  .search-shortcut{display:none;}
+  .search-footer{align-items:flex-start;flex-direction:column;gap:8px;margin-top:12px;}
+  .search-secondary{width:100%;justify-content:space-between;}
 }
 @media(max-width:520px){
   .overview-hero-top,.overview-hero-footer{align-items:flex-start;flex-direction:column;gap:10px;}
@@ -475,6 +558,10 @@ h1 span{color:var(--accent);}
   .overview-basic-stats dd{font-size:23px;}
   .overview-clutch-details #clutch-grid{flex-wrap:wrap;}
   .overview-clutch-details #clutch-grid>div{min-width:75px;}
+  .search-wordmark{margin-bottom:18px;}
+  .search-examples{width:100%;display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));}
+  .search-example{padding-inline:7px;overflow:hidden;text-overflow:ellipsis;}
+  .search-prefix{padding-left:14px;}
 }
 .page-nav{display:flex;flex-wrap:wrap;gap:8px;margin:-12px 0 24px;border-bottom:1px solid var(--surface-border);}
 .page-nav[hidden]{display:none;}
@@ -636,7 +723,7 @@ h1 span{color:var(--accent);}
   .rank-table th,.rank-table td,.rank-table.duos-table th,.rank-table.duos-table td{padding-left:14px;padding-right:14px;}
   .rr-movement-card{padding:14px;}
 }
-@media(prefers-reduced-motion:reduce){.rank-table tbody tr{transition:none;}}
+@media(prefers-reduced-motion:reduce){.rank-table tbody tr,.input-section,.search-bar,.search-btn,.search-example,.pro-result-main,.pro-result-tracker{transition:none;}}
 @media(max-width:700px){.rr-summary-stats,.server-summary-stats{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:440px){.rr-summary-stats{grid-template-columns:repeat(2,minmax(0,1fr));}.rr-summary-stat dd{font-size:22px;}.server-summary-stat dd{font-size:19px;}}
 @media(max-width:760px){
@@ -671,14 +758,29 @@ h1 span{color:var(--accent);}
 <body>
 <div class="wrap">
   <div class="input-section">
+    <header class="search-intro">
+      <div class="search-wordmark" aria-label="vlravg">
+        <span class="search-wordmark-mark" aria-hidden="true">
+          <svg viewBox="0 0 20 20" fill="none"><path d="M3 4.5 7.6 15h4.8L17 4.5h-3.6L10 12.2 6.6 4.5H3Z" stroke="currentColor" stroke-width="1.55" stroke-linejoin="round"/></svg>
+        </span>
+        <span>vlr</span><span class="search-wordmark-slash">/</span><span>avg</span>
+      </div>
+      <h1>Read the lobby,<br>not just the rank.</h1>
+      <p>Search any Valorant account—or pick a pro—to uncover lobby strength, RR movement, teammates, clutch performance, and match history.</p>
+    </header>
     <div id="search-row">
       <div class="search-bar" id="search-bar" style="flex:1 1 auto;">
         <div class="search-bar-shake" id="search-bar-shake">
-          <input class="manual-input combined" id="m-nametag" type="text" placeholder="name#tag" aria-label="Player name and tag or PUUID"
-            oninput="onManualInput()" onkeydown="if(event.key==='Enter')runAnalysis()"/>
+          <span class="search-prefix" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+          </span>
+          <input class="manual-input combined" id="m-nametag" type="text" placeholder="name#tag or pro player" aria-label="Player name and tag, pro player, or PUUID"
+            aria-haspopup="dialog" aria-controls="pro-library" aria-expanded="false"
+            oninput="onManualInput()" onfocus="renderProPlayerLibrary()" onkeydown="handleSearchKeydown(event)"/>
         </div>
+        <kbd class="search-shortcut" aria-hidden="true">Ctrl K</kbd>
         <button type="button" class="search-btn" id="search-btn" onclick="runAnalysis()" aria-label="Search">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13"></path><path d="m13 7 5 5-5 5"></path></svg>
         </button>
       </div>
       <div id="result-season-group">
@@ -697,9 +799,22 @@ h1 span{color:var(--accent);}
           </div>
         </div>
       </div>
+      <div class="pro-library" id="pro-library" role="dialog" aria-label="Pro player library" hidden></div>
     </div>
     <div id="status-bar" style="display:none;"><div class="spinner" id="spinner"></div><span id="status-text"></span></div>
     <div class="progress-wrap" style="display:none;"><div class="progress-fill" id="progress-fill"></div></div>
+    <div class="search-footer">
+      <div class="search-examples" aria-label="Example pro searches">
+        <span class="search-examples-label">Try</span>
+        <button type="button" class="search-example" onclick="setSearchExample('zekken')">zekken</button>
+        <button type="button" class="search-example" onclick="setSearchExample('aspas')">aspas</button>
+        <button type="button" class="search-example" onclick="setSearchExample('Boaster')">Boaster</button>
+      </div>
+      <div class="search-secondary">
+        <span class="pro-library-summary" id="pro-library-summary">Loading pro library</span>
+        <a class="search-replay-link" href="/replays.html">Replay archive <svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3h7v7M13 3 5 11M11 9v4H3V5h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+    </div>
   </div>
 
   <nav class="page-nav" aria-label="Main navigation" hidden>
@@ -1764,6 +1879,168 @@ function accountUrlFor(p){
     : `${API_BASE}/account/${encodeURIComponent(p.name)}/${p.tag}`;
 }
 
+// Static pro-account library generated from the vct-2026-data-analysis
+// project's curated Tracker mapping. Search stays entirely client-side; the
+// PUUID is used for analysis so Riot ID changes do not break a saved entry.
+const PRO_LIBRARY_LIMIT=8;
+let proLibraryRows=[];
+let proVisibleRows=[];
+let proLibraryHighlight=-1;
+function foldProSearch(value){
+  return (value||'').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('en');
+}
+async function loadProPlayerLibrary(){
+  try{
+    const response=await fetch('/pro-players.json');
+    if(!response.ok)throw new Error(`HTTP ${response.status}`);
+    const data=await response.json();
+    proLibraryRows=(data.players||[]).flatMap(player=>(player.accounts||[]).map((account,index)=>({
+      handle:player.handle,
+      team:player.team||'',
+      region:player.region||'',
+      accountIndex:index,
+      accountCount:player.accounts.length,
+      puuid:account.puuid||'',
+      riotId:account.riotId,
+      trackerUrl:account.trackerUrl,
+      searchText:foldProSearch([player.handle,player.team,player.region,account.riotId,account.puuid].filter(Boolean).join(' ')),
+    })));
+    const summary=document.getElementById('pro-library-summary');
+    if(summary)summary.textContent=`${data.playerCount||data.players?.length||0} pros · ${data.accountCount||proLibraryRows.length} accounts`;
+    renderProPlayerLibrary();
+  }catch(error){
+    console.warn('Pro player library unavailable:',error);
+    const summary=document.getElementById('pro-library-summary');
+    if(summary)summary.textContent='Pro library unavailable';
+  }
+}
+function closeProPlayerLibrary(){
+  const panel=document.getElementById('pro-library');
+  const input=document.getElementById('m-nametag');
+  panel.hidden=true;
+  panel.innerHTML='';
+  input.setAttribute('aria-expanded','false');
+  proVisibleRows=[];
+  proLibraryHighlight=-1;
+}
+function proMatchScore(row,query){
+  const handle=foldProSearch(row.handle),riotId=foldProSearch(row.riotId),team=foldProSearch(row.team);
+  if(handle===query)return 0;
+  if(handle.startsWith(query))return 1;
+  if(riotId.startsWith(query))return 2;
+  if(team.startsWith(query))return 3;
+  if(handle.includes(query))return 4;
+  if(riotId.includes(query))return 5;
+  return 6;
+}
+function renderProPlayerLibrary(){
+  const input=document.getElementById('m-nametag');
+  const panel=document.getElementById('pro-library');
+  if(document.activeElement!==input){closeProPlayerLibrary();return;}
+  const query=foldProSearch(input.value.trim());
+  if(!query||!proLibraryRows.length){closeProPlayerLibrary();return;}
+  const terms=query.split(/\s+/).filter(Boolean);
+  const matches=proLibraryRows
+    .filter(row=>terms.every(term=>row.searchText.includes(term)))
+    .sort((a,b)=>proMatchScore(a,query)-proMatchScore(b,query)||a.handle.localeCompare(b.handle,'en',{sensitivity:'base'}));
+  if(!matches.length){
+    closeProPlayerLibrary();
+    return;
+  }
+  proVisibleRows=matches.slice(0,PRO_LIBRARY_LIMIT);
+  proLibraryHighlight=Math.min(Math.max(proLibraryHighlight,0),proVisibleRows.length-1);
+  panel.innerHTML='';
+  const head=document.createElement('div');
+  head.className='pro-library-head';
+  const title=document.createElement('span');title.textContent='Pro player library';
+  const count=document.createElement('span');count.className='pro-library-count';
+  count.textContent=matches.length>PRO_LIBRARY_LIMIT?`${PRO_LIBRARY_LIMIT} of ${matches.length}`:`${matches.length} result${matches.length===1?'':'s'}`;
+  head.append(title,count);panel.appendChild(head);
+  proVisibleRows.forEach((row,index)=>{
+    const item=document.createElement('div');
+    item.className='pro-result'+(index===proLibraryHighlight?' highlighted':'');
+    const main=document.createElement('button');
+    main.type='button';main.className='pro-result-main';main.id=`pro-option-${index}`;
+    main.setAttribute('aria-label',`Analyze ${row.handle}, ${row.riotId}`);
+    const copy=document.createElement('span');copy.className='pro-result-copy';
+    const name=document.createElement('span');name.className='pro-result-name';
+    const handle=document.createElement('span');handle.className='pro-result-handle';handle.textContent=row.handle;
+    name.appendChild(handle);
+    if(row.accountCount>1){
+      const account=document.createElement('span');account.className='pro-result-account';
+      account.textContent=row.accountIndex===0?'Main':`Alt ${row.accountIndex}`;
+      name.appendChild(account);
+    }
+    const meta=document.createElement('span');meta.className='pro-result-meta';
+    meta.textContent=[row.riotId,row.team,row.region].filter(Boolean).join(' · ');
+    copy.append(name,meta);
+    const action=document.createElement('span');action.className='pro-result-action';action.textContent='Analyze';
+    main.append(copy,action);
+    main.addEventListener('mouseenter',()=>setProLibraryHighlight(index));
+    main.addEventListener('click',()=>analyzeProAccount(row));
+    const tracker=document.createElement('a');
+    tracker.className='pro-result-tracker';tracker.href=row.trackerUrl;tracker.target='_blank';tracker.rel='noopener noreferrer';
+    tracker.setAttribute('aria-label',`Open ${row.handle} on Tracker.gg`);
+    tracker.innerHTML='<span>Tracker</span><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6 3h7v7M13 3 5 11M11 9v4H3V5h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    tracker.addEventListener('click',closeProPlayerLibrary);
+    item.append(main,tracker);panel.appendChild(item);
+  });
+  panel.hidden=false;
+  input.setAttribute('aria-expanded','true');
+  setProLibraryHighlight(proLibraryHighlight);
+}
+function setProLibraryHighlight(index){
+  if(!proVisibleRows.length)return;
+  proLibraryHighlight=(index+proVisibleRows.length)%proVisibleRows.length;
+  document.querySelectorAll('#pro-library .pro-result').forEach((item,i)=>{
+    const selected=i===proLibraryHighlight;
+    item.classList.toggle('highlighted',selected);
+  });
+}
+function analyzeProAccount(row){
+  const input=document.getElementById('m-nametag');
+  input.value=row.riotId;
+  onManualInput();
+  closeProPlayerLibrary();
+  runAnalysis(row.puuid||row.riotId);
+}
+function setSearchExample(value){
+  const input=document.getElementById('m-nametag');
+  input.value=value;
+  input.focus();
+  onManualInput();
+}
+function handleSearchKeydown(event){
+  const panel=document.getElementById('pro-library');
+  if(event.key==='ArrowDown'||event.key==='ArrowUp'){
+    renderProPlayerLibrary();
+    if(!panel.hidden&&proVisibleRows.length){
+      event.preventDefault();
+      setProLibraryHighlight(proLibraryHighlight+(event.key==='ArrowDown'?1:-1));
+    }
+    return;
+  }
+  if(event.key==='Escape'&&!panel.hidden){event.preventDefault();closeProPlayerLibrary();return;}
+  if(event.key==='Enter'){
+    event.preventDefault();
+    if(!panel.hidden&&proVisibleRows[proLibraryHighlight])analyzeProAccount(proVisibleRows[proLibraryHighlight]);
+    else runAnalysis();
+  }
+}
+document.addEventListener('click',event=>{
+  if(!event.target.closest('#search-bar')&&!event.target.closest('#pro-library'))closeProPlayerLibrary();
+});
+document.addEventListener('keydown',event=>{
+  if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){
+    event.preventDefault();
+    const input=document.getElementById('m-nametag');
+    input.focus();
+    input.select();
+    renderProPlayerLibrary();
+  }
+});
+loadProPlayerLibrary();
+
 function onManualInput(){
   const raw=document.getElementById('m-nametag').value.trim();
   const parsed=parseSearchInput(raw);
@@ -1779,6 +2056,7 @@ function onManualInput(){
     _lastPrefetchKey='';
     _prefetchCache=null;
   }
+  renderProPlayerLibrary();
 }
 
 async function prefetchPlayerActs(){
@@ -1882,9 +2160,9 @@ settleSearchBarWidthInstant();
 
 
 
-function runAnalysis(){
+function runAnalysis(searchOverride){
   let playerName,playerTag,playerRegion,playerPlatform,playerSeason;
-  const rawNT=document.getElementById('m-nametag').value.trim();
+  const rawNT=typeof searchOverride==='string'?searchOverride.trim():document.getElementById('m-nametag').value.trim();
   const parsed=parseSearchInput(rawNT);
   if(!parsed){
     shakeSearchBar();
@@ -1898,6 +2176,7 @@ function runAnalysis(){
   // A PUUID search starts with the id already known and the name/tag blank;
   // loadAll's account step fills those in from the by-puuid lookup.
   PLAYER=playerName;TAG=playerTag;REGION=playerRegion;PLATFORM=playerPlatform;TARGET_SEASON=playerSeason;PUUID=parsed.puuid;
+  document.body.classList.add('has-analysis');
   analysisState='loading';
   nameHistoryRows=[];nameHistoryState='idle';nameHistoryBackfill=null;nameBackfillBusy=false;nameBackfillError=false;
   nameBackfillStopRequested=false;nameBackfillStopped=false;nameBackfillPages=0;renderNameHistory();
