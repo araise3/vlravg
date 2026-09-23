@@ -123,6 +123,8 @@ h1 span{color:var(--accent);}
 .season-popup::-webkit-scrollbar-thumb{background:#353535;border-radius:4px;}
 .season-popup.open{display:block;}
 .season-option{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:34px;padding:7px 10px;font-size:12px;font-family:var(--font-body);color:var(--text);border-radius:var(--radius-sm);cursor:pointer;transition:background .12s,color .12s;}
+.season-option-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.season-option-games{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;}
 .season-option:hover,.season-option.highlighted{background:#242424;}
 .season-option.selected{color:var(--brand);background:color-mix(in srgb,var(--brand) 12%,#111111);font-weight:600;}
 #season-trigger{padding:0 12px;background:var(--bg2);border:.5px solid var(--border2);border-radius:var(--radius-md);color:var(--text);font-size:12px;font-weight:600;transition:border-color .15s,color .15s;}
@@ -443,14 +445,16 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .overview-hero .rank-icon-wrap img{width:96px;height:96px;object-fit:contain;}
 .overview-hero .avg-rank-name{font-size:clamp(27px,3.5vw,40px);font-weight:750;white-space:normal;letter-spacing:-.035em;}
 .overview-hero .avg-rank-rr{display:block;margin:10px 0 0;font-size:16px;letter-spacing:0;font-weight:500;color:#b5b5bd;}
-.overview-party-lobbies{flex-shrink:0;min-width:280px;border:1px solid var(--surface-border);border-radius:8px;overflow:hidden;background:#141416;}
+.overview-party-lobbies{flex-shrink:0;min-width:280px;border:1px solid #303b4c;border-radius:10px;overflow:hidden;background:#111923;}
 .overview-party-lobbies[hidden]{display:none;}
 .overview-party-table{width:100%;border-collapse:collapse;font-size:12px;}
-.overview-party-table th,.overview-party-table td{padding:8px 10px;border-bottom:1px solid var(--surface-border);}
-.overview-party-table thead th{background:#1c1c1f;color:#a1a1aa;font-size:10px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;}
-.overview-party-table th:first-child{text-align:left;border-right:1px solid var(--surface-border);}
+.overview-party-table th,.overview-party-table td{padding:10px 13px;border-bottom:1px solid #273241;}
+.overview-party-table thead th{background:#1c2837;color:#b3c5db;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;}
+.overview-party-table th:first-child{text-align:left;}
 .overview-party-table th:last-child{text-align:right;}
-.overview-party-table tbody th{font-weight:500;color:#c6c6cc;}
+.overview-party-table tbody th{font-weight:650;color:#e8eef8;}
+.overview-party-table tbody tr:nth-child(even){background:#16212d;}
+.overview-party-table tbody tr:hover{background:#1c2b3d;}
 .overview-party-table tbody tr:last-child>*{border-bottom:0;}
 .overview-party-value{display:flex;align-items:center;justify-content:flex-end;gap:6px;white-space:nowrap;font-variant-numeric:tabular-nums;}
 .overview-party-rr{color:#a1a1aa;font-size:11px;}
@@ -549,21 +553,26 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .page-empty[hidden]{display:none;}
 .detail-view #results-section > :not(#error-container){display:none!important;}
 /* Shared table surface across the detailed statistic pages. */
-#sg-rank-card,#lobby-teams-card,#party-size-section,#teammates-section,#name-history-card,.rr-table-card,.servers-table-card{padding:0;overflow:hidden;border:1px solid var(--surface-border);border-radius:10px;background:#141416;box-shadow:none;}
+#sg-rank-card,#lobby-teams-card,#party-size-section,#teammates-section,#name-history-card,.rr-table-card,.servers-table-card{padding:0;overflow:hidden;border:1px solid #303b4c;border-radius:12px;background:#101721;box-shadow:0 12px 34px rgba(0,0,0,.16);}
 #name-history-card[hidden]{display:none;}
-.name-history-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 20px;border-bottom:1px solid var(--surface-border);background:#1a1a1d;}
+.name-history-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 20px;border-bottom:1px solid #303b4c;background:#172232;}
 .name-history-toolbar-title{display:block;color:#c4c4cc;font-size:13px;font-weight:600;}
 .name-history-sort{display:flex;align-items:center;gap:9px;color:#a1a1aa;font-size:12px;white-space:nowrap;}
 .name-history-sort select{min-height:38px;padding:0 28px 0 11px;border:1px solid var(--surface-border);border-radius:var(--radius-sm);background:#111113;color:var(--text);font:inherit;cursor:pointer;}
 .name-history-sort select:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
 .name-history-table-scroll{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
-.name-history-table{width:100%;min-width:680px;border-collapse:collapse;table-layout:fixed;text-align:left;}
+.name-history-table{width:100%;min-width:680px;border-collapse:separate;border-spacing:0;table-layout:fixed;text-align:left;}
 .name-history-table th:first-child{width:34%;}
 .name-history-table th:nth-child(2),.name-history-table th:nth-child(3){width:21%;}
-.name-history-table th,.name-history-table td{padding:15px 20px;border-bottom:1px solid #29292d;text-align:left;vertical-align:middle;}
-.name-history-table thead th{background:#18181b;color:#a1a1aa;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;}
+.name-history-table th,.name-history-table td{padding:16px 20px;border-bottom:1px solid #273241;text-align:left;vertical-align:middle;}
+.name-history-table thead th{background:#1c2837;color:#b3c5db;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;border-bottom-color:#394a60;}
 .name-history-table tbody tr:last-child th,.name-history-table tbody tr:last-child td{border-bottom:0;}
-.name-history-table tbody tr:hover{background:#1a1a1d;}
+.name-history-table tbody tr:nth-child(even){background:#151e2a;}
+.name-history-table tbody tr:hover{background:#1c2b3d;}
+.name-history-table thead th:first-child{position:sticky;left:0;z-index:2;box-shadow:1px 0 #394a60;}
+.name-history-table tbody th:first-child{position:sticky;left:0;z-index:1;background:#101721;box-shadow:1px 0 #303b4c;}
+.name-history-table tbody tr:nth-child(even) th:first-child{background:#151e2a;}
+.name-history-table tbody tr:hover th:first-child{background:#1c2b3d;}
 .name-history-table .name-history-date,.name-history-table .name-history-act{color:#c4c4cc;font-size:12px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .name-history-table .name-history-act{color:#a1a1aa;}
 .name-history-identity{min-width:0;}
@@ -591,7 +600,7 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .duo-player-name .duo-name{overflow:hidden;text-overflow:ellipsis;}
 .duo-player-name .duo-tag{color:#a1a1aa;font-size:12px;}
 .rank-table .table-lobby-value{justify-content:flex-end;font-size:13px;}
-.rank-table{width:100%;min-width:520px;border-collapse:collapse;text-align:right;font-variant-numeric:tabular-nums;}
+.rank-table{width:100%;min-width:620px;border-collapse:separate;border-spacing:0;text-align:right;font-variant-numeric:tabular-nums;}
 .rank-table.duos-table{min-width:680px;}
 .rank-table.duos-table th,.rank-table.duos-table td{padding-left:16px;padding-right:16px;}
 .duos-table th:first-child{width:25%;}
@@ -606,30 +615,34 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .encounters-empty{padding:20px;color:#a1a1aa;font-size:13px;}
 .party-icon{display:inline-flex;align-items:center;flex-shrink:0;gap:0;}
 .party-icon>span{line-height:0;}
-.rank-table th,.rank-table td{height:56px;padding:14px 20px;border-bottom:1px solid #29292d;white-space:nowrap;vertical-align:middle;line-height:1.4;}
-.rank-table thead th{height:44px;padding-top:12px;padding-bottom:12px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:#a1a1aa;background:#1c1c1f;border-bottom-color:#36363b;}
+.rank-table th,.rank-table td{height:58px;padding:13px 20px;border-bottom:1px solid #273241;white-space:nowrap;vertical-align:middle;line-height:1.4;}
+.rank-table thead th{height:48px;padding-top:12px;padding-bottom:12px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#b3c5db;background:#1c2837;border-bottom-color:#394a60;}
 .rank-table th:first-child{text-align:left;}
-.rank-table th:not(:last-child),.rank-table td:not(:last-child){border-right:1px solid #303034;}
+.rank-table tbody th:first-child{position:sticky;left:0;z-index:1;background:#101721;color:#f0f5fc;font-weight:650;box-shadow:1px 0 #303b4c;}
+.rank-table thead th:first-child{position:sticky;left:0;z-index:3;box-shadow:1px 0 #394a60;}
 .rank-table thead th{padding:0!important;}
-.table-sort-btn{display:flex;align-items:center;justify-content:flex-end;width:100%;min-height:44px;padding:12px 16px 12px 30px;font:inherit;letter-spacing:inherit;text-transform:inherit;text-align:inherit;white-space:nowrap;}
+.table-sort-btn{display:flex;align-items:center;justify-content:flex-end;width:100%;min-height:48px;padding:12px 16px 12px 30px;font:inherit;letter-spacing:inherit;text-transform:inherit;text-align:inherit;white-space:nowrap;transition:background-color .15s,color .15s;}
 .rank-table th:first-child .table-sort-btn{justify-content:flex-start;}
 .table-sort-label{position:relative;}
 .table-sort-label::before{position:absolute;right:calc(100% + 7px);top:50%;transform:translateY(-50%);font-size:12px;letter-spacing:0;color:var(--brand);}
-.table-sort-btn:hover{background:#27272c;color:var(--text);}
+.table-sort-btn:hover{background:#2a3a50;color:#fff;}
 .table-sort-btn:focus-visible{outline:2px solid var(--brand);outline-offset:-3px;}
 .rank-table th[aria-sort="ascending"] .table-sort-label::before{content:'↑';}
 .rank-table th[aria-sort="descending"] .table-sort-label::before{content:'↓';}
-.rank-table th[aria-sort="ascending"],.rank-table th[aria-sort="descending"]{color:var(--text);}
+.rank-table th[aria-sort="ascending"],.rank-table th[aria-sort="descending"]{color:#fff;background:#28415f;box-shadow:inset 0 -2px 0 var(--brand);}
+.rank-table thead th:first-child[aria-sort="ascending"],.rank-table thead th:first-child[aria-sort="descending"]{box-shadow:1px 0 #394a60,inset 0 -2px 0 var(--brand);}
 .rank-table tbody tr:last-child>*{border-bottom:0;}
 .rank-table tbody tr{transition:background-color .15s;}
-.rank-table tbody tr:nth-child(even){background:#18181b;}
-.rank-table tbody tr:hover,.rank-table tbody tr:focus-within{background:#232328;}
-.rank-table tbody th{font-weight:500;}
+.rank-table tbody tr:nth-child(even){background:#151e2a;}
+.rank-table tbody tr:nth-child(even) th:first-child{background:#151e2a;}
+.rank-table tbody tr:hover,.rank-table tbody tr:focus-within{background:#1c2b3d;}
+.rank-table tbody tr:hover th:first-child,.rank-table tbody tr:focus-within th:first-child{background:#1c2b3d;}
 .rank-row-identity{display:flex;align-items:center;gap:10px;font-size:14px;}
 .rank-row-identity img{width:24px;height:24px;object-fit:contain;}
-.rank-table td{font-size:14px;}
+.rank-table td{font:500 13px/1.4 var(--font-mono);color:#dce5f2;}
 .rank-positive{color:#4ade80;}.rank-negative{color:#f87171;}
-.rank-table td.table-best{position:relative;background:rgba(var(--accent-rgb),.13);box-shadow:inset 0 -2px 0 var(--accent);color:#f4f4f5;font-weight:750;}
+.rank-table td.rank-positive{color:#72e6a0;}.rank-table td.rank-negative{color:#ff9999;}
+.rank-table td.table-best{position:relative;background:rgba(var(--brand-rgb),.14);box-shadow:inset 0 -2px 0 var(--brand);color:#f6faff;font-weight:700;}
 .rank-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 #party-size-section{margin-bottom:24px;}
 .rr-table-card{padding:0;overflow:hidden;margin-bottom:24px;}
@@ -681,7 +694,8 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .rr-trend-svg .line{fill:none;stroke:#e4e4e7;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;}
 .rr-trend-svg .point{stroke:#141416;stroke-width:1.5;}
 .rr-trend-svg .point.positive{fill:#4ade80;}.rr-trend-svg .point.negative{fill:#f87171;}.rr-trend-svg .point.neutral{fill:#a1a1aa;}
-.rr-trend-svg g[tabindex]:hover .point,.rr-trend-svg g[tabindex]:focus .point{stroke:#fff;stroke-width:2.5;}
+.rr-trend-svg .point.sparse{opacity:0;}
+.rr-trend-svg g[tabindex]:hover .point,.rr-trend-svg g[tabindex]:focus .point{opacity:1;stroke:#fff;stroke-width:2.5;}
 .rr-trend-svg g[tabindex]:focus{outline:none;}
 .rr-trend-empty{padding:28px 0;color:#a1a1aa;font-size:13px;}
 .rr-movement-section{margin:0 0 24px;}
@@ -691,6 +705,8 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .rr-movement-count{color:#a1a1aa;font-size:12px;font-variant-numeric:tabular-nums;}
 .rr-movement-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:12px 0 10px;color:#b4b4bd;font-size:11px;}
 .rr-movement-legend span{display:inline-flex;align-items:center;gap:6px;}
+.rr-movement-legend .rr-movement-axis-note{margin-left:auto;color:#a1a1aa;}
+.rr-movement-legend .rr-movement-axis-note[hidden]{display:none;}
 .rr-legend-mark{display:inline-block;width:10px;height:10px;border-radius:50%;background:#71717a;}
 .rr-legend-mark.win{background:#4ade80;}.rr-legend-mark.loss{background:#f87171;}
 .rr-movement-scroll{position:relative;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
@@ -699,6 +715,7 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .rr-movement-svg .rank-band{cursor:pointer;}
 .rr-movement-svg .rank-band:focus{outline:none;fill:rgba(74,222,128,.07);stroke:#4ade80;stroke-opacity:.7;stroke-width:1.5;}
 .rr-movement-svg .grid{stroke:#303034;stroke-width:1;}.rr-movement-svg .zero{stroke:#71717a;stroke-width:1.5;}
+.rr-movement-svg .axis-break{fill:none;stroke:#a1a1aa;stroke-width:1.4;stroke-linecap:round;}
 .rr-movement-svg .x-grid{stroke:#29292e;stroke-width:1;}
 .rr-movement-svg .axis-label,.rr-movement-svg .tick-label{fill:#a1a1aa;font-size:11px;}
 .rr-movement-svg .rank-band-label{fill:#c4c4cc;font-size:10px;font-weight:600;}
@@ -908,6 +925,7 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
           <div class="rr-movement-head"><h2 id="rr-movement-title">RR payout balance by starting rank</h2><span id="rr-movement-count" class="rr-movement-count"></span></div>
           <div class="rr-movement-legend" aria-label="Chart legend">
             <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span>
+            <span id="rr-movement-axis-note" class="rr-movement-axis-note" hidden>Axis breaks compress the empty range near 0</span>
           </div>
           <div id="rr-movement-chart" class="rr-movement-scroll" role="region" aria-label="RR movement chart" tabindex="0"></div>
         </div>
@@ -1670,11 +1688,7 @@ window.addEventListener('popstate',()=>{applyPage();loadPlayerFromRoute();});
 
 
 function actOptionLabel(uuid,stats){
-  const games=Number(stats?.games);
-  const label=getActLabel(uuid,stats?.short);
-  return Number.isFinite(games)&&games>0
-    ?`${label} · ${games.toLocaleString()} ${games===1?'game':'games'}`
-    :label;
+  return getActLabel(uuid,stats?.short);
 }
 function updateSeasonDropdown(seasonStats,seasonOrder){
   const sel=document.getElementById('m-season');
@@ -1692,6 +1706,7 @@ function updateSeasonDropdown(seasonStats,seasonOrder){
     const opt=document.createElement('option');
     opt.value=uuid;
     opt.textContent=actOptionLabel(uuid,stats);
+    opt.dataset.games=String(games);
     sel.appendChild(opt);
   });
   // Restore previous selection if it's still in the list
@@ -1715,7 +1730,18 @@ function renderSeasonOptions(){
   [...sel.options].forEach((o,i)=>{
     const row=document.createElement('div');
     row.className='season-option'+(o.value===sel.value?' selected':'');
-    row.textContent=o.value?o.textContent:'Most recent act';
+    const act=document.createElement('span');
+    act.className='season-option-label';
+    act.textContent=o.value?o.textContent:'Most recent act';
+    row.appendChild(act);
+    const games=Number(o.dataset.games);
+    if(o.value&&Number.isFinite(games)&&games>0){
+      const count=document.createElement('span');
+      count.className='season-option-games';
+      count.textContent=`${games.toLocaleString()} ${games===1?'game':'games'}`;
+      row.appendChild(count);
+      row.setAttribute('aria-label',`${act.textContent}, ${count.textContent}`);
+    }
     row.setAttribute('role','option');
     row.id=`season-option-${i}`;
     row.setAttribute('aria-selected',o.value===sel.value?'true':'false');
@@ -3441,6 +3467,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
           selected=document.createElement('option');
           selected.value=TARGET_SEASON;
           selected.textContent=actOptionLabel(TARGET_SEASON,seasonStats[TARGET_SEASON.toLowerCase()]);
+          if(seasonStats[TARGET_SEASON.toLowerCase()]?.games>0)selected.dataset.games=String(seasonStats[TARGET_SEASON.toLowerCase()].games);
           sel.appendChild(selected);
           renderSeasonOptions();
         }
@@ -4537,15 +4564,35 @@ function renderRRMovement(matches){
   const width=900,height=340,left=68,right=20,top=34,bottom=58;
   const plotRight=width-right,plotBottom=height-bottom,plotWidth=plotRight-left,plotHeight=plotBottom-top;
   const xMin=axis.min,xMax=axis.max;
-  const movementMax=Math.max(...rows.map(row=>Math.abs(row.net)),10);
-  const yMax=Math.ceil(movementMax/5)*5;
+  const payouts=rows.map(row=>row.net);
+  const gains=payouts.filter(value=>value>0),losses=payouts.filter(value=>value<0);
+  const positiveTop=gains.length?Math.ceil(Math.max(...gains)/5)*5:0;
+  const positiveFloor=gains.length?Math.max(0,Math.floor((Math.min(...gains)-.001)/5)*5):0;
+  const negativeBottom=losses.length?Math.floor(Math.min(...losses)/5)*5:0;
+  const negativeCeiling=losses.length?Math.min(0,Math.ceil((Math.max(...losses)+.001)/5)*5):0;
+  // An empty payout band around zero wastes most of the chart. Compress it
+  // only when both outcomes are well clear of zero, and mark the breaks.
+  const breakAroundZero=positiveFloor>=10&&negativeCeiling<=-10;
+  document.getElementById('rr-movement-axis-note').hidden=!breakAroundZero;
+  const zeroY=(top+plotBottom)/2,breakGap=25;
+  const oneSided=gains.length&&!losses.length?'gain':losses.length&&!gains.length?'loss':null;
+  const yMin=oneSided==='gain'?Math.max(0,Math.floor(Math.min(...gains)/5)*5-5)
+    :Math.floor(Math.min(0,...payouts)/5)*5-(oneSided==='loss'?5:0);
+  const yMax=Math.max(yMin+5,oneSided==='loss'
+    ?Math.min(0,Math.ceil(Math.max(...losses)/5)*5+5)
+    :Math.ceil(Math.max(0,...payouts)/5)*5+(oneSided==='gain'?5:0));
   const xInset=rrMovementZoomTier!=null?12:0;
   const x=value=>left+xInset+(value-xMin)/(xMax-xMin)*(plotWidth-2*xInset);
-  const y=value=>top+(yMax-value)/(yMax*2)*plotHeight;
+  const y=value=>{
+    if(!breakAroundZero)return top+(yMax-value)/(yMax-yMin)*plotHeight;
+    if(value>0)return top+(positiveTop-value)/(positiveTop-positiveFloor)*(zeroY-breakGap-top);
+    if(value<0)return zeroY+breakGap+(negativeCeiling-value)/(negativeCeiling-negativeBottom)*(plotBottom-zeroY-breakGap);
+    return zeroY;
+  };
   const svg=node('svg',{class:`rr-movement-svg${rrMovementZoomTier!=null?' zoomed':''}`,viewBox:`0 0 ${width} ${height}`,role:'img','aria-labelledby':'rr-movement-svg-title rr-movement-svg-desc'});
   svg.append(
     node('title',{id:'rr-movement-svg-title'},'RR payout balance by starting rank and RR'),
-    node('desc',{id:'rr-movement-svg-desc'},'Dots show individual RR payouts by starting rank. Green dots are gains and red dots are losses.'),
+    node('desc',{id:'rr-movement-svg-desc'},`Dots show individual RR payouts by starting rank. Green dots are gains and red dots are losses.${breakAroundZero?' Empty ranges around zero are compressed and marked with axis breaks.':''}`),
   );
 
   const availableTiers=new Set(allRows.map(rowTier));
@@ -4610,11 +4657,20 @@ function renderRRMovement(matches){
     const target=rankBands.find(band=>value>=band.start&&value<=band.end);
     if(target)toggleRankZoom(target.tier);
   });
-  [-yMax,-yMax/2,0,yMax/2,yMax].forEach(value=>{
+  const yTicks=breakAroundZero
+    ?[positiveTop,positiveFloor,0,negativeCeiling,negativeBottom]
+    :Array.from({length:5},(_,i)=>yMax-(yMax-yMin)*i/4);
+  yTicks.forEach(value=>{
     const py=y(value);
     svg.appendChild(node('line',{x1:left,y1:py,x2:plotRight,y2:py,class:value===0?'zero':'grid'}));
-    svg.appendChild(node('text',{x:left-10,y:py+4,'text-anchor':'end',class:'tick-label'},value>0?`+${value}`:String(value)));
+    const label=Number.isInteger(value)?String(value):value.toFixed(1);
+    svg.appendChild(node('text',{x:left-10,y:py+4,'text-anchor':'end',class:'tick-label'},value>0?`+${label}`:label));
   });
+  if(breakAroundZero){
+    [zeroY-breakGap/2,zeroY+breakGap/2].forEach(py=>{
+      svg.appendChild(node('path',{d:`M${left-4} ${py+4}l7 -8m2 8l7 -8`,class:'axis-break','aria-hidden':'true'}));
+    });
+  }
   const yTitle=node('text',{x:15,y:(top+plotBottom)/2,'text-anchor':'middle',class:'axis-label',transform:`rotate(-90 15 ${(top+plotBottom)/2})`},'RR payout');
   svg.appendChild(yTitle);
   if(rrMovementZoomTier!=null){
@@ -4740,8 +4796,8 @@ function renderRRTrend(matches){
     const rank=rrPositionFromElo(Math.round(value),tierHint??nearest.match.myPostTierId);
     return `${avgLabelShort(rank.tier)} · ${rank.rr} RR`;
   };
-  for(let i=0;i<=3;i++){
-    const value=min+(max-min)*i/3;
+  for(let i=0;i<=4;i++){
+    const value=min+(max-min)*i/4;
     const yy=y(value);
     svg.appendChild(el('line',{class:'grid',x1:left,y1:yy,x2:width-right,y2:yy}));
     svg.appendChild(el('text',{class:'axis-label',x:left-8,y:yy+4,'text-anchor':'end'},rankAt(value)));
@@ -4753,12 +4809,14 @@ function renderRRTrend(matches){
   }
   const dateLabel=m=>Number.isFinite(m.startedAtMs)?new Date(m.startedAtMs).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'Date unavailable';
   const spacing=points.length>1?(width-left-right)/(points.length-1):width-left-right;
+  const markerStep=spacing<8?Math.ceil(24/spacing):1;
   points.forEach(({match,value},i)=>{
     const change=rrSigned(match.myRR,0);
     const label=`Match ${i+1} of ${points.length}, ${dateLabel(match)}: ${rankAt(value,match.myPostTierId)} after ${change} RR change`;
     const group=el('g',{tabindex:'0','aria-label':label});
     group.appendChild(el('title',{},label));
-    group.appendChild(el('circle',{class:`point ${match.myRR>0?'positive':match.myRR<0?'negative':'neutral'}`,cx:x(i),cy:y(value),r:Math.min(3.5,Math.max(1.5,spacing*.22))}));
+    const sparse=markerStep>1&&i!==0&&i!==points.length-1&&i%markerStep!==0;
+    group.appendChild(el('circle',{class:`point ${match.myRR>0?'positive':match.myRR<0?'negative':'neutral'}${sparse?' sparse':''}`,cx:x(i),cy:y(value),r:Math.min(3.5,Math.max(1.5,spacing*.22))}));
     group.appendChild(el('circle',{cx:x(i),cy:y(value),r:Math.min(11,Math.max(3,spacing/2)),fill:'transparent'}));
     const show=()=>{detail.textContent=label;};
     const reset=()=>{if(document.activeElement!==group)detail.textContent='Focus or hover a point to see that match’s RR change.';};
