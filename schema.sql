@@ -43,18 +43,6 @@ CREATE TABLE IF NOT EXISTS match_archive (
 CREATE INDEX IF NOT EXISTS idx_match_archive_player_season
   ON match_archive(puuid, season_id, started_at DESC, match_id DESC);
 
--- Raw VALORANT replays live in private R2 storage. D1 only stores the index;
--- replay blobs far exceed D1's 2 MB row limit. Parser output can be attached
--- in a later migration without changing the original object key.
-CREATE TABLE IF NOT EXISTS replay_uploads (
-  match_id TEXT PRIMARY KEY,
-  object_key TEXT NOT NULL UNIQUE,
-  size_bytes INTEGER NOT NULL,
-  uploaded_at TEXT NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('awaiting_parser', 'parsed', 'failed'))
-);
-CREATE INDEX IF NOT EXISTS idx_replay_uploads_uploaded_at ON replay_uploads(uploaded_at DESC);
-
 -- Player identity, so the 24h refresh job (refresh-rr-history.mjs) can list
 -- who to re-ping without scanning rr_history — replaces the KV-metadata
 -- trick the old cheap-listing relied on.
