@@ -12,4 +12,5 @@
 /servers/ /servers 301
 /names / 200
 /names/ /names 301
+/player/* /index.html 200
 /replays.html / 301
