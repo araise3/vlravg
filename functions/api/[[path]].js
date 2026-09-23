@@ -94,7 +94,6 @@
 
 import { observeName, readNameHistory } from "../../lib/name-history.mjs";
 import { backfillState, saveBackfillPage, saveStoredBackfillPage, saveStoredMatchDetail, skipStoredMatchDetail } from "../../lib/name-backfill.mjs";
-import { handleReplayRequest } from "../../lib/replays.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
 const PREFIX = "/api";
@@ -888,10 +887,6 @@ export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
   const requestPath = url.pathname.slice(PREFIX.length);
-  if (requestPath.startsWith('/replays')) {
-    return await handleReplayRequest(context, requestPath) || json({ error: 'Unknown route' }, 404);
-  }
-
   // No HenrikDev counterpart — a pure local D1 read, so it's handled before
   // the upstream ROUTES matching below rather than shoehorned into it. No
   // hard-fail on a missing CALIB_DB binding: getCalibModel() already falls
@@ -1151,10 +1146,4 @@ function json(obj, status) {
     status,
     headers: { "Content-Type": "application/json" },
   });
-}
-
-export async function onRequestPost(context) {
-  const path = new URL(context.request.url).pathname.slice(PREFIX.length);
-  const response = await handleReplayRequest(context, path);
-  return response || json({ error: 'Unknown route' }, 404);
 }
