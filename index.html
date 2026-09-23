@@ -80,14 +80,6 @@ h1 span{color:var(--accent);}
   40%,60%{transform:translateX(4px);}
 }
 .search-bar:focus-within{border-color:var(--brand);}
-.search-btn{display:flex;align-items:center;justify-content:center;padding:0 14px;flex-shrink:0;border-radius:var(--radius-md);background:var(--brand);border:none;color:#fff;cursor:pointer;font:600 12px var(--font-body);white-space:nowrap;transition:background .15s,box-shadow .15s,transform .1s;}
-.search-btn:hover{background:color-mix(in srgb, var(--brand) 85%, #111111);}
-.search-btn:active{transform:scale(.95);}
-.search-btn:focus-visible{outline:2px solid var(--brand);outline-offset:3px;}
-.search-btn svg{display:block;}
-.profile-route-label{display:flex;align-items:center;gap:8px;margin:14px 0 10px;color:#a1a1aa;font-size:12px;}
-.profile-route-label strong{color:var(--text);font-size:14px;font-weight:700;overflow-wrap:anywhere;}
-.profile-route-label[hidden]{display:none;}
 .pro-library{position:absolute;top:calc(100% + 8px);left:0;right:0;z-index:120;display:flex;flex-direction:column;background:rgba(15,17,19,.98);border:1px solid #343940;border-radius:14px;padding:7px;box-shadow:0 24px 70px rgba(0,0,0,.58);overflow:hidden;backdrop-filter:blur(16px);}
 .pro-library[hidden]{display:none;}
 .pro-library-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 9px 9px;color:var(--muted);font-size:10px;letter-spacing:.14em;text-transform:uppercase;}
@@ -97,7 +89,7 @@ h1 span{color:var(--accent);}
 .pro-library-search svg{width:15px;height:15px;flex-shrink:0;}
 .pro-library-search input{width:100%;min-width:0;height:40px;border:0;outline:0;background:transparent;color:var(--text);font:12px var(--font-body);}
 .pro-library-search input::placeholder{color:#9aa3af;}
-.pro-library-trigger{display:flex;align-items:center;justify-content:center;gap:7px;min-width:112px;padding:0 13px;border:.5px solid var(--surface-border);border-radius:var(--radius-md);background:#0b0b0b;color:#b4b8bf;font:600 12px var(--font-body);white-space:nowrap;transition:color .15s,border-color .15s,background .15s;}
+.pro-library-trigger{display:flex;align-items:center;justify-content:center;gap:7px;min-width:112px;padding:0 13px;border:.5px solid var(--surface-border);border-radius:var(--radius-md);background:#0b0b0b;color:var(--text);font:600 12px var(--font-body);white-space:nowrap;transition:color .15s,border-color .15s,background .15s;}
 .pro-library-trigger:hover,.pro-library-trigger[aria-expanded="true"]{color:#fff;border-color:#474d55;background:#15171a;}
 .pro-library-trigger:focus-visible{outline:2px solid var(--brand);outline-offset:3px;}
 .pro-library-trigger svg{width:14px;height:14px;flex-shrink:0;}
@@ -141,9 +133,9 @@ h1 span{color:var(--accent);}
 .season-dropdown.open #season-trigger{border-color:var(--brand);}
 #season-trigger.loading::before{content:'';width:15px;height:15px;border:2px solid #657185;border-top-color:var(--brand);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;}
 .result-panel{min-width:0;display:none;align-items:center;justify-content:flex-end;}
-.result-panel.shown{display:flex;padding:0 4px;}
+.result-panel.shown{display:flex;}
 .player-card-byline{display:flex;align-items:stretch;gap:4px;flex-wrap:wrap;font-family:var(--font-body);}
-.stat-box{display:inline-flex;align-items:center;gap:6px;background:#0b0b0b;border:.5px solid var(--surface-border);border-radius:var(--radius-md);padding:10px 14px;font-size:14px;color:var(--text);white-space:nowrap;flex-shrink:0;line-height:1;}
+.stat-box{display:inline-flex;align-items:center;gap:6px;min-height:44px;box-sizing:border-box;background:#0b0b0b;border:.5px solid var(--surface-border);border-radius:var(--radius-md);padding:0 14px;font-size:14px;color:var(--text);white-space:nowrap;flex-shrink:0;line-height:1;}
 .stat-box .rank-word{font-weight:400;}
 .stat-box .rr-sub{font-size:1em;color:var(--text);}
 .example-chip{display:inline-block;font-family:var(--font-body);font-size:11px;background:var(--bg3);border:.5px solid var(--border2);border-radius:var(--radius-xs);padding:3px 8px;color:var(--muted);cursor:pointer;margin-top:8px;transition:background .15s,border-color .15s,color .15s,box-shadow .15s,transform .15s;}
@@ -429,7 +421,6 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .load-more-btn:hover{border-color:var(--accent);color:var(--text);}
 
 /* Solid focus indicators replace the former glow rings. */
-.search-btn:focus-visible{outline-color:#fff;outline-offset:2px;}
 #season-trigger:focus-visible{outline-color:var(--brand);outline-offset:3px;}
 .search-bar:focus-within{border-color:var(--brand);}
 
@@ -506,14 +497,14 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 @media(max-width:700px){
   .input-section{padding:16px;}
   #m-nametag,.pro-library-search input{font-size:16px;}
-  #search-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;}
-  #search-bar{min-height:46px;}
-  #result-season-group{grid-column:1 / -1;flex-wrap:wrap;justify-content:flex-start;gap:8px;}
+  #search-row{display:flex;flex-wrap:wrap;gap:8px;}
+  #search-bar{flex:1 1 100%;min-height:46px;}
+  #result-season-group{width:100%;flex-wrap:wrap;justify-content:flex-start;gap:8px;}
   #result-panel.shown{width:100%;padding:0;justify-content:flex-start;}
   #pro-library-trigger,#season-trigger{min-height:42px;}
   #result-panel{justify-content:flex-start;}
   #header-rank-badge{gap:6px;}
-  #header-rank-badge .stat-box{font-size:11px;padding:8px;gap:3px;}
+  #header-rank-badge .stat-box{min-height:42px;font-size:11px;padding:0 8px;gap:3px;}
   .pro-library{top:calc(100% + 6px);}
   .pro-result{grid-template-columns:minmax(0,1fr) 80px;}
   .pro-result-main{padding:9px 8px;gap:8px;}
@@ -530,7 +521,6 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
   .overview-previews{gap:14px;}
   body:not(.has-analysis):not(.detail-view) .wrap{justify-content:flex-start;padding:clamp(72px,15vh,128px) 20px 42px;}
   body:not(.has-analysis):not(.detail-view) .input-section{transform:none;padding:0;}
-  body:not(.has-analysis):not(.detail-view) #search-row{grid-template-columns:minmax(0,1fr) auto;}
   .search-intro{margin-bottom:24px;}
   .search-intro h1{font-size:clamp(2.15rem,11vw,3rem);}
   .search-intro p{font-size:14px;}
@@ -673,9 +663,8 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .rr-record{display:inline-flex;align-items:baseline;}
 .rr-summary-stat .rr-record{font-size:clamp(16px,2vw,22px);}
 .rr-record-separator{color:var(--muted);font-weight:400;}
-.rr-score-heading{font-size:18px;font-weight:650;margin:30px 0 8px;}
+.rr-score-heading{font-size:18px;font-weight:650;margin:30px 0 16px;}
 .rr-score-note{font-size:13px;line-height:1.6;color:#a1a1aa;margin:0 0 16px;max-width:760px;}
-.rr-score-note a{color:var(--brand);text-underline-offset:3px;}
 .rr-score-empty{padding:20px;color:#a1a1aa;font-size:13px;}
 .rr-trend-card{margin:0 0 24px;padding:20px;border:1px solid var(--surface-border);border-radius:10px;background:#141416;}
 .rr-trend-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;}
@@ -683,10 +672,10 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .rr-trend-total{font-size:16px;font-weight:750;font-variant-numeric:tabular-nums;}
 .rr-trend-total.positive{color:#4ade80;}.rr-trend-total.negative{color:#f87171;}.rr-trend-total.neutral{color:#c4c4cc;}
 .rr-trend-note,.rr-trend-detail{margin:8px 0 0;color:#a1a1aa;font-size:12px;line-height:1.5;}
-.rr-trend-scroll{margin-top:16px;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
+.rr-trend-scroll{margin-top:16px;overflow:hidden;}
 .rr-trend-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
-.rr-trend-svg{display:block;min-width:100%;height:220px;font-family:var(--font-body);}
-.rr-trend-svg .grid{stroke:#303034;stroke-width:1;}.rr-trend-svg .zero{stroke:#52525b;stroke-width:1;stroke-dasharray:4 5;}
+.rr-trend-svg{display:block;width:100%;height:194px;font-family:var(--font-body);}
+.rr-trend-svg .grid{stroke:#303034;stroke-width:1;}
 .rr-trend-svg .axis-label{fill:#a1a1aa;font-size:11px;font-variant-numeric:tabular-nums;}
 .rr-trend-svg .area{fill:rgba(255,255,255,.065);}
 .rr-trend-svg .line{fill:none;stroke:#e4e4e7;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;}
@@ -700,13 +689,10 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .rr-movement-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;}
 .rr-movement-head h2{margin:0;font-size:18px;font-weight:650;}
 .rr-movement-count{color:#a1a1aa;font-size:12px;font-variant-numeric:tabular-nums;}
-.rr-movement-note{max-width:780px;margin:8px 0 14px;color:#a1a1aa;font-size:12px;line-height:1.6;}
-.rr-movement-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:10px;color:#b4b4bd;font-size:11px;}
-.rr-movement-insight{margin:0 0 10px;color:#d4d4d8;font-size:12px;line-height:1.5;}
+.rr-movement-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:12px 0 10px;color:#b4b4bd;font-size:11px;}
 .rr-movement-legend span{display:inline-flex;align-items:center;gap:6px;}
 .rr-legend-mark{display:inline-block;width:10px;height:10px;border-radius:50%;background:#71717a;}
 .rr-legend-mark.win{background:#4ade80;}.rr-legend-mark.loss{background:#f87171;}
-.rr-legend-mark.trend{width:18px;height:3px;border-radius:999px;background:linear-gradient(90deg,#4ade80,#a1a1aa,#f87171);}
 .rr-movement-scroll{position:relative;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
 .rr-movement-scroll:focus-visible{outline:2px solid #4ade80;outline-offset:3px;}
 .rr-movement-svg{display:block;width:100%;min-width:720px;height:auto;font-family:var(--font-body);}
@@ -716,21 +702,15 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .rr-movement-svg .x-grid{stroke:#29292e;stroke-width:1;}
 .rr-movement-svg .axis-label,.rr-movement-svg .tick-label{fill:#a1a1aa;font-size:11px;}
 .rr-movement-svg .rank-band-label{fill:#c4c4cc;font-size:10px;font-weight:600;}
-.rr-movement-svg .trend-area{fill:rgba(96,165,250,.08);}
-.rr-movement-svg .trend-line{fill:none;stroke:url(#rr-movement-gradient);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
-.rr-movement-svg .balance-point{fill:#f4f4f5;stroke:#141416;stroke-width:2;}
 .rr-movement-svg .trend-point{opacity:.42;stroke:#141416;stroke-width:1.5;}
 .rr-movement-svg .trend-point.positive{fill:#4ade80;}.rr-movement-svg .trend-point.negative{fill:#f87171;}.rr-movement-svg .trend-point.neutral{fill:#a1a1aa;}
 .rr-movement-svg g[tabindex]:hover .trend-point,.rr-movement-svg g[tabindex]:focus .trend-point{opacity:1;stroke:#fff;stroke-width:2.5;}
 .rr-movement-svg g[tabindex]:focus{outline:none;}
-.rr-dot-tooltip{position:absolute;z-index:4;display:flex;flex-direction:column;gap:3px;min-width:max-content;padding:8px 10px;border:1px solid #3f3f46;border-radius:7px;background:#202023;color:#f4f4f5;box-shadow:0 8px 24px rgba(0,0,0,.4);font-size:12px;line-height:1.25;pointer-events:none;transform:translate(-50%,calc(-100% - 10px));}
-.rr-dot-tooltip[hidden]{display:none;}
-.rr-dot-tooltip strong{font-weight:700;}.rr-dot-tooltip span{font-weight:750;font-variant-numeric:tabular-nums;}
 @media(max-width:600px){
   .rank-table th,.rank-table td,.rank-table.duos-table th,.rank-table.duos-table td{padding-left:14px;padding-right:14px;}
   .rr-movement-card,.rr-trend-card{padding:14px;}
 }
-@media(prefers-reduced-motion:reduce){.rank-table tbody tr,.input-section,.search-bar,.search-btn,.pro-result-main,.pro-result-tracker{transition:none;}.spinner,#season-trigger.loading::before,.shake{animation:none;}}
+@media(prefers-reduced-motion:reduce){.rank-table tbody tr,.input-section,.search-bar,.pro-result-main,.pro-result-tracker{transition:none;}.spinner,#season-trigger.loading::before,.shake{animation:none;}}
 @media(max-width:700px){.rr-summary-stats,.server-summary-stats{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:440px){.rr-summary-stats{grid-template-columns:repeat(2,minmax(0,1fr));}.rr-summary-stat dd{font-size:22px;}.server-summary-stat dd{font-size:19px;}}
 @media(max-width:760px){
@@ -782,7 +762,6 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
             autocomplete="off" spellcheck="false" oninput="onManualInput()" onkeydown="handleSearchKeydown(event)"/>
         </div>
       </div>
-      <button type="button" class="search-btn" id="search-submit" onclick="submitSearch()">Analyze</button>
       <div id="result-season-group">
         <div class="result-panel" id="result-panel"><span class="player-card-byline" id="header-rank-badge"></span></div>
         <button type="button" class="pro-library-trigger" id="pro-library-trigger" aria-haspopup="dialog" aria-controls="pro-library" aria-expanded="false" onclick="toggleProPlayerLibrary()">
@@ -813,8 +792,6 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
     <div id="status-bar" role="status" aria-live="polite" style="display:none;"><div class="spinner" id="spinner"></div><span id="status-text"></span></div>
     <div class="progress-wrap" style="display:none;"><div class="progress-fill" id="progress-fill"></div></div>
   </div>
-
-  <div id="profile-route-label" class="profile-route-label" hidden><span>Player</span><strong id="profile-route-name"></strong></div>
 
   <nav class="page-nav" aria-label="Main navigation" hidden>
     <a href="/" data-page="overview" aria-current="page">Overview</a>
@@ -922,25 +899,22 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
       <dl id="rr-summary-stats" class="rr-summary-stats" aria-label="RR summary"></dl>
       <section class="rr-trend-card" aria-labelledby="rr-trend-title">
         <div class="rr-trend-head"><h2 id="rr-trend-title">RR trend <span id="rr-trend-count" class="rr-movement-count"></span></h2><strong id="rr-trend-total" class="rr-trend-total"></strong></div>
-        <p class="rr-trend-note">Running total of recorded RR changes across all available matches in this act. Scroll to explore the full history; matches without RR data are skipped.</p>
+        <p class="rr-trend-note">Recorded rank and RR after each match in this act, oldest to newest. Matches without rank or RR data are skipped.</p>
         <div id="rr-trend-chart" class="rr-trend-scroll" role="region" aria-label="RR trend across matches" tabindex="0"></div>
         <p id="rr-trend-detail" class="rr-trend-detail" role="status"></p>
       </section>
       <section id="rr-movement-section" class="rr-movement-section" hidden aria-labelledby="rr-movement-title">
         <div class="rr-movement-card">
           <div class="rr-movement-head"><h2 id="rr-movement-title">RR payout balance by starting rank</h2><span id="rr-movement-count" class="rr-movement-count"></span></div>
-          <p class="rr-movement-note">Each dot is a match’s RR payout at its reconstructed starting rank + RR. The line is average RR per win minus average RR lost per loss near that rank. Above zero suggests the visible rank was below the player’s MMR; below zero suggests it was above. Grey marks a difference within 2 RR. A clear zero crossing estimates where rank and MMR aligned during this act, but MMR can change over time. At least two nearby wins and losses are needed. Draws and five-stacks are excluded; Rank Shield losses use their recorded payout. Refunds are not added. Double-click a rank area to zoom; double-click again to reset.</p>
           <div class="rr-movement-legend" aria-label="Chart legend">
-            <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span><span><i class="rr-legend-mark trend"></i>Win payout − loss payout</span>
+            <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span>
           </div>
-          <p id="rr-movement-insight" class="rr-movement-insight" role="status"></p>
           <div id="rr-movement-chart" class="rr-movement-scroll" role="region" aria-label="RR movement chart" tabindex="0"></div>
         </div>
       </section>
       <div class="s-card rr-table-card"><div id="rr-rank-table" class="table-scroll" role="region" aria-label="RR by player rank" tabindex="0"></div></div>
       <section aria-labelledby="rr-score-title">
         <h2 id="rr-score-title" class="rr-score-heading">RR by scoreline</h2>
-        <p class="rr-score-note">Compare your RR from close games and big wins or losses. Scores show the winning team first. These are observed averages; <a href="https://playvalorant.com/en-gb/news/game-updates/valorant-patch-notes-6-0/" target="_blank" rel="noopener noreferrer">individual performance and hidden MMR</a> also affect RR, so the difference is not an isolated round-margin bonus.</p>
         <div class="s-card rr-table-card"><div id="rr-score-table" class="table-scroll" role="region" aria-label="RR by match scoreline" tabindex="0"></div></div>
       </section>
     </div>
@@ -1330,6 +1304,9 @@ let _rrChangeByMatchId={};
 // position within a season, else the post-match position minus the movement
 // that actually applied. Immortal+ is normalized to 2100 + cumulative RR.
 let _preRRByMatchId={};
+// Exact displayed RR position and tier after each match for the RR trend.
+let _postRRByMatchId={};
+let _postTierByMatchId={};
 // Exact tier at that pre-match position when a preceding MMR-history entry is
 // available. Immortal+ tier thresholds vary by region rather than every 100 RR.
 let _preTierByMatchId={};
@@ -1661,8 +1638,6 @@ function applyPage(focus=false){
   const titles={overview:'vlravg — Average Lobby Rank & Valorant Stats',duos:'Duos — vlravg',matches:'Match History — vlravg','lobby-rank':'Lobby Rank — vlravg',servers:'Servers — vlravg',rr:'RR Breakdown — vlravg',names:'Name History — vlravg'};
   const profileTitles={overview:'Overview',duos:'Duos',matches:'Match History','lobby-rank':'Lobby Rank',servers:'Servers',rr:'RR Breakdown',names:'Name History'};
   document.title=playerRoute?`${playerRoute.name}#${playerRoute.tag} — ${profileTitles[activePage]} — vlravg`:titles[activePage];
-  document.getElementById('profile-route-label').hidden=!playerRoute;
-  document.getElementById('profile-route-name').textContent=playerRoute?`${playerRoute.name}#${playerRoute.tag}`:'';
   document.querySelectorAll('a[data-page]').forEach(link=>{
     const page=link.dataset.page;
     link.setAttribute('href',playerRoute
@@ -1694,6 +1669,13 @@ window.addEventListener('popstate',()=>{applyPage();loadPlayerFromRoute();});
 
 
 
+function actOptionLabel(uuid,stats){
+  const games=Number(stats?.games);
+  const label=getActLabel(uuid,stats?.short);
+  return Number.isFinite(games)&&games>0
+    ?`${label} · ${games.toLocaleString()} ${games===1?'game':'games'}`
+    :label;
+}
 function updateSeasonDropdown(seasonStats,seasonOrder){
   const sel=document.getElementById('m-season');
   const current=sel.value;
@@ -1705,10 +1687,11 @@ function updateSeasonDropdown(seasonStats,seasonOrder){
   const order=(seasonOrder||[]).slice().reverse();
   order.forEach(uuid=>{
     const stats=seasonStats[uuid.toLowerCase()]||seasonStats[uuid];
-    if(!stats||stats.games===0)return;
+    const games=Number(stats?.games);
+    if(!Number.isFinite(games)||games<=0)return;
     const opt=document.createElement('option');
     opt.value=uuid;
-    opt.textContent=getActLabel(uuid,stats.short);
+    opt.textContent=actOptionLabel(uuid,stats);
     sel.appendChild(opt);
   });
   // Restore previous selection if it's still in the list
@@ -2297,7 +2280,7 @@ function runAnalysis(searchOverride,{fromUrl=false,initialAct=null}={}){
   CURRENT_TIER_ID=null;
   CURRENT_RR=null;
   allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;mhDayStats={};
-  _rrChangeByMatchId={};_preRRByMatchId={};_preTierByMatchId={};_refundedRRByMatchId={};_derankProtectedByMatchId={};
+  _rrChangeByMatchId={};_preRRByMatchId={};_preTierByMatchId={};_postRRByMatchId={};_postTierByMatchId={};_refundedRRByMatchId={};_derankProtectedByMatchId={};
   allTeammates=[];allEncounters=[];serverData=[];serverPartySize=0;serverFilteredMatchCount=0;lobbyRankPartySize=0;lobbyRankFilteredMatchCount=0;rrMovementZoomTier=null;
   const serverPartyAll=document.querySelector('input[name="servers-party-size"][value="0"]');
   if(serverPartyAll)serverPartyAll.checked=true;
@@ -3129,12 +3112,14 @@ function processMatch(m){
   // RR total going into this match — the x-axis position in RR movement.
   const myPreRR=_preRRByMatchId[matchId]??null;
   const myPreTierId=_preTierByMatchId[matchId]??null;
+  const myPostRR=_postRRByMatchId[matchId]??null;
+  const myPostTierId=_postTierByMatchId[matchId]??null;
   // RR restored alongside this result (for example after a cheater ban).
   const myRefundedRR=_refundedRRByMatchId[matchId]??0;
   // Whether Rank Shield absorbed this match's loss (badge didn't drop even
   // though myRR above still carries the normal negative payout).
   const myDerankProtected=_derankProtectedByMatchId[matchId]??false;
-  return{mapName,serverName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,avgTeamRank,avgEnemyRank,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,myPreRR,myPreTierId,myRefundedRR,myDerankProtected,myPartyPenalty,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
+  return{mapName,serverName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,avgTeamRank,avgEnemyRank,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,myPreRR,myPreTierId,myPostRR,myPostTierId,myRefundedRR,myDerankProtected,myPartyPenalty,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
 }
 
 function extractStats(p,fallbackRounds=null){
@@ -3455,7 +3440,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
         if(!selected){
           selected=document.createElement('option');
           selected.value=TARGET_SEASON;
-          selected.textContent=getActLabel(TARGET_SEASON);
+          selected.textContent=actOptionLabel(TARGET_SEASON,seasonStats[TARGET_SEASON.toLowerCase()]);
           sel.appendChild(selected);
           renderSeasonOptions();
         }
@@ -3551,6 +3536,8 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
         };
         const previousTotal=historyTotal(prev);
         const endingTotal=historyTotal(h);
+        if(endingTotal!=null)_postRRByMatchId[h.match_id]=endingTotal;
+        if((h?.tier?.id??0)>=3)_postTierByMatchId[h.match_id]=h.tier.id;
         if(sameSeason&&previousTotal!=null){
           _preRRByMatchId[h.match_id]=previousTotal;
           if((prev?.tier?.id??0)>=3)_preTierByMatchId[h.match_id]=prev.tier.id;
@@ -4489,20 +4476,6 @@ function rrPositionFromElo(elo,tierHint=null){
   return{tier,rr,label:`${avgLabelShort(tier)} · ${rr} RR`};
 }
 
-function rrPayoutBalanceAt(rows,value,bandwidth){
-  let winTotal=0,winWeight=0,lossTotal=0,lossWeight=0,wins=0,losses=0;
-  rows.forEach(row=>{
-    const distance=(row.axisRR-value)/bandwidth;
-    // A distant result must not create an apparent balance point where one
-    // outcome was never observed near this rank.
-    if(Math.abs(distance)>2)return;
-    const weight=Math.exp(-.5*distance*distance);
-    if(row.m.won===true){winTotal+=row.net*weight;winWeight+=weight;wins++;}
-    else{lossTotal+=-row.net*weight;lossWeight+=weight;losses++;}
-  });
-  return wins>=2&&losses>=2?winTotal/winWeight-lossTotal/lossWeight:null;
-}
-
 function rrMovementXAxis(rows,zoomTier){
   const positions=rows.map(row=>zoomTier==null?row.m.myPreRR:
     rrPositionFromElo(row.m.myPreRR,row.m.myPreTierId??row.m.myTierId).rr);
@@ -4547,9 +4520,6 @@ function renderRRMovement(matches){
   rows=rows.map((row,index)=>({...row,axisRR:axis.positions[index]}));
 
   const penalties=rows.filter(row=>row.penalty>0).length;
-  const rawMin=axis.observedMin;
-  const rawMax=axis.observedMax;
-  const rawSpan=Math.max(1,rawMax-rawMin);
   document.getElementById('rr-movement-count').textContent=[
     rrMovementZoomTier!=null?`${avgLabel(rrMovementZoomTier)} only`:null,
     `${rows.length} covered ${rows.length===1?'match':'matches'}`,
@@ -4564,11 +4534,6 @@ function renderRRMovement(matches){
     if(textValue!=null)el.textContent=textValue;
     return el;
   };
-  const tooltip=document.createElement('div');
-  tooltip.id='rr-dot-tooltip';
-  tooltip.className='rr-dot-tooltip';
-  tooltip.role='tooltip';
-  tooltip.hidden=true;
   const width=900,height=340,left=68,right=20,top=34,bottom=58;
   const plotRight=width-right,plotBottom=height-bottom,plotWidth=plotRight-left,plotHeight=plotBottom-top;
   const xMin=axis.min,xMax=axis.max;
@@ -4580,21 +4545,8 @@ function renderRRMovement(matches){
   const svg=node('svg',{class:`rr-movement-svg${rrMovementZoomTier!=null?' zoomed':''}`,viewBox:`0 0 ${width} ${height}`,role:'img','aria-labelledby':'rr-movement-svg-title rr-movement-svg-desc'});
   svg.append(
     node('title',{id:'rr-movement-svg-title'},'RR payout balance by starting rank and RR'),
-    node('desc',{id:'rr-movement-svg-desc'},'Dots show individual RR payouts. The line shows the difference between nearby average win and loss payouts; a zero crossing estimates where visible rank aligned with MMR during this act. Draws and five-stacks are excluded; Rank Shield losses use recorded payouts and refunds are not added.'),
+    node('desc',{id:'rr-movement-svg-desc'},'Dots show individual RR payouts by starting rank. Green dots are gains and red dots are losses.'),
   );
-  const defs=node('defs');
-  const gradient=node('linearGradient',{id:'rr-movement-gradient',x1:'0',x2:'0',y1:top,y2:plotBottom,gradientUnits:'userSpaceOnUse'});
-  const offset=value=>(y(value)-top)/plotHeight*100;
-  gradient.append(
-    node('stop',{offset:'0%','stop-color':'#4ade80'}),
-    node('stop',{offset:`${Math.max(0,offset(2)-.5)}%`,'stop-color':'#4ade80'}),
-    node('stop',{offset:`${Math.min(100,offset(2)+.5)}%`,'stop-color':'#a1a1aa'}),
-    node('stop',{offset:`${Math.max(0,offset(-2)-.5)}%`,'stop-color':'#a1a1aa'}),
-    node('stop',{offset:`${Math.min(100,offset(-2)+.5)}%`,'stop-color':'#f87171'}),
-    node('stop',{offset:'100%','stop-color':'#f87171'}),
-  );
-  defs.appendChild(gradient);
-  svg.appendChild(defs);
 
   const availableTiers=new Set(allRows.map(rowTier));
   const toggleRankZoom=tier=>{
@@ -4663,7 +4615,7 @@ function renderRRMovement(matches){
     svg.appendChild(node('line',{x1:left,y1:py,x2:plotRight,y2:py,class:value===0?'zero':'grid'}));
     svg.appendChild(node('text',{x:left-10,y:py+4,'text-anchor':'end',class:'tick-label'},value>0?`+${value}`:String(value)));
   });
-  const yTitle=node('text',{x:15,y:(top+plotBottom)/2,'text-anchor':'middle',class:'axis-label',transform:`rotate(-90 15 ${(top+plotBottom)/2})`},'RR payout / difference');
+  const yTitle=node('text',{x:15,y:(top+plotBottom)/2,'text-anchor':'middle',class:'axis-label',transform:`rotate(-90 15 ${(top+plotBottom)/2})`},'RR payout');
   svg.appendChild(yTitle);
   if(rrMovementZoomTier!=null){
     const range=xMax-xMin;
@@ -4699,70 +4651,6 @@ function renderRRMovement(matches){
   svg.appendChild(node('text',{x:(left+plotRight)/2,y:height-9,'text-anchor':'middle',class:'axis-label'},
     rrMovementZoomTier==null?'Starting rank + RR':'Starting RR'));
 
-  const smoothPath=curvePoints=>{
-    if(!curvePoints.length)return'';
-    if(curvePoints.length===1)return`M ${curvePoints[0].px} ${curvePoints[0].py}`;
-    let path=`M ${curvePoints[0].px} ${curvePoints[0].py}`;
-    for(let index=0;index<curvePoints.length-1;index++){
-      const before=curvePoints[index-1]||curvePoints[index];
-      const current=curvePoints[index];
-      const next=curvePoints[index+1];
-      const after=curvePoints[index+2]||next;
-      const minY=Math.min(current.py,next.py),maxY=Math.max(current.py,next.py);
-      const cp1x=current.px+(next.px-before.px)/6;
-      const cp1y=Math.max(minY,Math.min(maxY,current.py+(next.py-before.py)/6));
-      const cp2x=next.px-(after.px-current.px)/6;
-      const cp2y=Math.max(minY,Math.min(maxY,next.py-(after.py-current.py)/6));
-      path+=` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${next.px} ${next.py}`;
-    }
-    return path;
-  };
-  const bandwidth=Math.max(50,rawSpan*.18);
-  const trendSampleCount=rawMax===rawMin||rows.length===1?1:Math.min(100,Math.max(40,rows.length));
-  const trendPoints=Array.from({length:trendSampleCount},(_,index)=>{
-    const value=trendSampleCount===1?rawMin:rawMin+rawSpan*index/(trendSampleCount-1);
-    const balance=rrPayoutBalanceAt(rows,value,bandwidth);
-    return balance==null?null:{value,balance,px:x(value),py:y(balance)};
-  });
-  const trendSegments=[];
-  trendPoints.forEach((point,index)=>{
-    if(point){
-      if(index===0||trendPoints[index-1]==null)trendSegments.push([]);
-      trendSegments[trendSegments.length-1].push(point);
-    }
-  });
-  const validTrend=trendPoints.filter(Boolean);
-  const nearParity=validTrend.length>1&&validTrend.every(point=>Math.abs(point.balance)<=2);
-  const balanceRanks=[];
-  trendSegments.filter(segment=>segment.length>1).forEach(segment=>{
-    const curve=smoothPath(segment);
-    svg.appendChild(node('path',{d:`${curve} L ${segment[segment.length-1].px} ${y(0)} L ${segment[0].px} ${y(0)} Z`,class:'trend-area','aria-hidden':'true'}));
-    svg.appendChild(node('path',{d:curve,class:'trend-line','aria-hidden':'true'}));
-    for(let index=1;index<segment.length;index++){
-      const before=segment[index-1],after=segment[index];
-      if(nearParity||before.balance*after.balance>0||before.balance===after.balance)continue;
-      const fraction=before.balance/(before.balance-after.balance);
-      const value=before.value+(after.value-before.value)*fraction;
-      const nearest=rows.reduce((best,row)=>Math.abs(row.m.myPreRR-value)<Math.abs(best.m.myPreRR-value)?row:best);
-      const position=rrMovementZoomTier==null
-        ?rrPositionFromElo(value,nearest.m.myPreTierId??nearest.m.myTierId)
-        :{tier:rrMovementZoomTier,rr:Math.round(value)};
-      const label=`Estimated MMR-aligned rank near ${avgLabel(position.tier)} · ${position.rr} RR`;
-      const marker=node('circle',{cx:x(value),cy:y(0),r:5,class:'balance-point','aria-label':label});
-      marker.appendChild(node('title',{},label));
-      svg.appendChild(marker);
-      balanceRanks.push(`${avgLabelShort(position.tier)} · ${position.rr} RR`);
-    }
-  });
-  const insight=document.getElementById('rr-movement-insight');
-  if(validTrend.length<2)insight.textContent='There are not enough nearby wins and losses to estimate a payout balance at these ranks.';
-  else if(nearParity)insight.textContent='Win and loss payouts stay within about 2 RR of each other across the covered ranks. This sample does not identify one distinct MMR-aligned rank.';
-  else if(balanceRanks.length===1)insight.textContent=`Estimated payout balance near ${balanceRanks[0]}. This is where observed win gains and loss costs were roughly equal.`;
-  else if(balanceRanks.length>1)insight.textContent='The payout trend crosses zero more than once, so this sample does not identify one distinct MMR-aligned rank.';
-  else if(validTrend.every(point=>point.balance>0))insight.textContent='Win gains exceed loss costs across the covered ranks; the balance point is outside this observed range.';
-  else if(validTrend.every(point=>point.balance<0))insight.textContent='Loss costs exceed win gains across the covered ranks; the balance point is outside this observed range.';
-  else insight.textContent='The observed payouts do not identify a clear balance point at these ranks.';
-
   const sortedRows=rows.slice().sort((a,b)=>a.axisRR-b.axisRR||(a.m.startedAtMs||0)-(b.m.startedAtMs||0));
   const overlapTotals=new Map();
   sortedRows.forEach(row=>{
@@ -4784,37 +4672,33 @@ function renderRRMovement(matches){
     const position=rrPositionFromElo(row.m.myPreRR,row.m.myPreTierId??row.m.myTierId);
     const rankText=`${avgLabel(position.tier)} · ${position.rr} RR`;
     const changeText=row.net===0?'0 RR':`${rrSigned(row.net,0)} RR`;
-    const group=node('g',{tabindex:'0',role:'img','aria-label':`${rankText}. ${changeText}`,'aria-describedby':tooltip.id});
+    const group=node('g',{tabindex:'0',role:'img','aria-label':`${rankText}. ${changeText}`});
     const pointClass=row.net>0?'positive':row.net<0?'negative':'neutral';
     const marker=node('circle',{cx:px,cy:py,r:3.5,class:`trend-point ${pointClass}`});
     group.appendChild(marker);
-    const showTooltip=(clientX,clientY)=>{
-      const rank=document.createElement('strong');rank.textContent=rankText;
-      const change=document.createElement('span');change.textContent=changeText;
-      change.className=row.net>0?'rank-positive':row.net<0?'rank-negative':'';
-      tooltip.replaceChildren(rank,change);
-      const bounds=container.getBoundingClientRect();
-      const minX=container.scrollLeft+72,maxX=container.scrollLeft+container.clientWidth-72;
-      tooltip.style.left=Math.max(minX,Math.min(maxX,clientX-bounds.left+container.scrollLeft))+'px';
-      tooltip.style.top=Math.max(44,clientY-bounds.top+container.scrollTop)+'px';
-      tooltip.hidden=false;
-    };
-    group.addEventListener('pointerenter',event=>showTooltip(event.clientX,event.clientY));
-    group.addEventListener('pointermove',event=>showTooltip(event.clientX,event.clientY));
-    group.addEventListener('pointerleave',()=>{tooltip.hidden=true;});
-    group.addEventListener('focus',()=>{const bounds=marker.getBoundingClientRect();showTooltip(bounds.left+bounds.width/2,bounds.top);});
-    group.addEventListener('blur',()=>{tooltip.hidden=true;});
     svg.appendChild(group);
   });
-  container.append(svg,tooltip);
+  container.appendChild(svg);
 }
 
+let rrTrendMatches=[];
+let rrTrendRenderedWidth=0;
+let rrTrendResizeObserver=null;
 function renderRRTrend(matches){
   const container=document.getElementById('rr-trend-chart');
   const detail=document.getElementById('rr-trend-detail');
   const count=document.getElementById('rr-trend-count');
   const total=document.getElementById('rr-trend-total');
-  const ordered=matches.filter(m=>Number.isFinite(m.myRR)).sort((a,b)=>(a.startedAtMs||0)-(b.startedAtMs||0));
+  rrTrendMatches=matches;
+  if(!rrTrendResizeObserver&&typeof ResizeObserver!=='undefined'){
+    rrTrendResizeObserver=new ResizeObserver(()=>{
+      const width=Math.round(container.clientWidth);
+      if(width&&width!==rrTrendRenderedWidth)renderRRTrend(rrTrendMatches);
+    });
+    rrTrendResizeObserver.observe(container);
+  }
+  const ordered=matches.filter(m=>Number.isFinite(m.myRR)&&Number.isFinite(m.myPostRR))
+    .sort((a,b)=>(a.startedAtMs||0)-(b.startedAtMs||0));
   count.textContent=`· ${ordered.length} ${ordered.length===1?'match':'matches'}`;
   container.replaceChildren();
   if(!ordered.length){
@@ -4823,24 +4707,24 @@ function renderRRTrend(matches){
     detail.textContent='';
     const empty=document.createElement('div');
     empty.className='rr-trend-empty';
-    empty.textContent='No recorded RR changes for matches in this act.';
+    empty.textContent='No recorded rank and RR changes for matches in this act.';
     container.appendChild(empty);
     return;
   }
 
-  let running=0;
-  const points=ordered.map(m=>({match:m,value:running+=m.myRR}));
+  const running=ordered.reduce((sum,m)=>sum+m.myRR,0);
+  const points=ordered.map(m=>({match:m,value:m.myPostRR}));
   total.textContent=`${rrSigned(running,0)} RR`;
   total.className=`rr-trend-total ${running>0?'positive':running<0?'negative':'neutral'}`;
   detail.textContent='Focus or hover a point to see that match’s RR change.';
 
-  const left=58,right=24,top=18,bottom=178,height=220;
-  const width=Math.max(640,Math.min(window.innerWidth-88,872),left+right+Math.max(1,points.length-1)*20);
+  const left=110,right=12,top=18,bottom=178,height=194;
+  const width=Math.max(left+right+2,Math.round(container.clientWidth)||872);
+  rrTrendRenderedWidth=Math.round(container.clientWidth);
   const values=points.map(p=>p.value);
-  const low=values.reduce((min,value)=>Math.min(min,value),0);
-  const high=values.reduce((max,value)=>Math.max(max,value),0);
+  const low=Math.min(...values),high=Math.max(...values);
   const pad=Math.max(10,(high-low)*.12);
-  const min=low-pad,max=high+pad;
+  const min=Math.max(0,low-pad),max=high+pad;
   const x=i=>points.length===1?left+(width-left-right)/2:left+i*(width-left-right)/(points.length-1);
   const y=value=>bottom-(value-min)/(max-min)*(bottom-top);
   const ns='http://www.w3.org/2000/svg';
@@ -4850,27 +4734,32 @@ function renderRRTrend(matches){
     if(content!=null)item.textContent=content;
     return item;
   };
-  const svg=el('svg',{class:'rr-trend-svg',width,height,viewBox:`0 0 ${width} ${height}`,'aria-label':`Cumulative RR trend across ${points.length} matches, net ${rrSigned(running,0)} RR`});
+  const svg=el('svg',{class:'rr-trend-svg',width,height,viewBox:`0 0 ${width} ${height}`,'aria-label':`Rank and RR trend across ${points.length} matches, net ${rrSigned(running,0)} RR`});
+  const rankAt=(value,tierHint)=>{
+    const nearest=tierHint==null?points.reduce((best,point)=>Math.abs(point.value-value)<Math.abs(best.value-value)?point:best):null;
+    const rank=rrPositionFromElo(Math.round(value),tierHint??nearest.match.myPostTierId);
+    return `${avgLabelShort(rank.tier)} · ${rank.rr} RR`;
+  };
   for(let i=0;i<=3;i++){
     const value=min+(max-min)*i/3;
     const yy=y(value);
     svg.appendChild(el('line',{class:'grid',x1:left,y1:yy,x2:width-right,y2:yy}));
-    svg.appendChild(el('text',{class:'axis-label',x:0,y:yy+4},`${Math.round(value)>0?'+':''}${Math.round(value)}`));
+    svg.appendChild(el('text',{class:'axis-label',x:left-8,y:yy+4,'text-anchor':'end'},rankAt(value)));
   }
-  if(min<0&&max>0)svg.appendChild(el('line',{class:'zero',x1:left,y1:y(0),x2:width-right,y2:y(0)}));
   const line=points.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
   if(points.length>1){
     svg.appendChild(el('path',{class:'area',d:`${line} L${x(points.length-1).toFixed(1)},${bottom} L${x(0).toFixed(1)},${bottom} Z`}));
     svg.appendChild(el('path',{class:'line',d:line}));
   }
   const dateLabel=m=>Number.isFinite(m.startedAtMs)?new Date(m.startedAtMs).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'Date unavailable';
+  const spacing=points.length>1?(width-left-right)/(points.length-1):width-left-right;
   points.forEach(({match,value},i)=>{
     const change=rrSigned(match.myRR,0);
-    const label=`Match ${i+1} of ${points.length}, ${dateLabel(match)}: ${change} RR; running total ${rrSigned(value,0)} RR`;
+    const label=`Match ${i+1} of ${points.length}, ${dateLabel(match)}: ${rankAt(value,match.myPostTierId)} after ${change} RR change`;
     const group=el('g',{tabindex:'0','aria-label':label});
     group.appendChild(el('title',{},label));
-    group.appendChild(el('circle',{class:`point ${match.myRR>0?'positive':match.myRR<0?'negative':'neutral'}`,cx:x(i),cy:y(value),r:3.5}));
-    group.appendChild(el('circle',{cx:x(i),cy:y(value),r:11,fill:'transparent'}));
+    group.appendChild(el('circle',{class:`point ${match.myRR>0?'positive':match.myRR<0?'negative':'neutral'}`,cx:x(i),cy:y(value),r:Math.min(3.5,Math.max(1.5,spacing*.22))}));
+    group.appendChild(el('circle',{cx:x(i),cy:y(value),r:Math.min(11,Math.max(3,spacing/2)),fill:'transparent'}));
     const show=()=>{detail.textContent=label;};
     const reset=()=>{if(document.activeElement!==group)detail.textContent='Focus or hover a point to see that match’s RR change.';};
     group.addEventListener('pointerenter',show);
@@ -4879,8 +4768,6 @@ function renderRRTrend(matches){
     group.addEventListener('blur',reset);
     svg.appendChild(group);
   });
-  svg.appendChild(el('text',{class:'axis-label',x:left,y:height-10},'Oldest'));
-  svg.appendChild(el('text',{class:'axis-label',x:width-right,y:height-10,'text-anchor':'end'},'Newest'));
   container.appendChild(svg);
 }
 
