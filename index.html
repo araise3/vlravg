@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#3b82f6">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   color-scheme:dark;
@@ -23,6 +23,7 @@
   --win:#22c55e;--loss:#ef4444;--draw:#f59e0b;
   --font-body:'Geist',Geist,system-ui,sans-serif;
   --font-display:'Geist',system-ui,sans-serif;
+  --font-table:'IBM Plex Sans','Geist',system-ui,sans-serif;
   /* Geist Mono is Geist's own monospace companion — same skeleton and
      x-height, so formula strips sit next to body copy without looking
      like a different document. */
@@ -445,16 +446,15 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .overview-hero .rank-icon-wrap img{width:96px;height:96px;object-fit:contain;}
 .overview-hero .avg-rank-name{font-size:clamp(27px,3.5vw,40px);font-weight:750;white-space:normal;letter-spacing:-.035em;}
 .overview-hero .avg-rank-rr{display:block;margin:10px 0 0;font-size:16px;letter-spacing:0;font-weight:500;color:#b5b5bd;}
-.overview-party-lobbies{flex-shrink:0;min-width:280px;border:1px solid #303b4c;border-radius:10px;overflow:hidden;background:#111923;}
+.overview-party-lobbies{flex-shrink:0;min-width:280px;border:1px solid #29292d;border-radius:8px;overflow:hidden;background:#111113;}
 .overview-party-lobbies[hidden]{display:none;}
-.overview-party-table{width:100%;border-collapse:collapse;font-size:12px;}
-.overview-party-table th,.overview-party-table td{padding:10px 13px;border-bottom:1px solid #273241;}
-.overview-party-table thead th{background:#1c2837;color:#b3c5db;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;}
+.overview-party-table{width:100%;border-collapse:collapse;font:12px var(--font-table);font-variant-numeric:tabular-nums;}
+.overview-party-table th,.overview-party-table td{padding:10px 13px;border-bottom:1px solid #262629;}
+.overview-party-table thead th{background:#171719;color:#a9a9b2;font-size:10px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;}
 .overview-party-table th:first-child{text-align:left;}
 .overview-party-table th:last-child{text-align:right;}
-.overview-party-table tbody th{font-weight:650;color:#e8eef8;}
-.overview-party-table tbody tr:nth-child(even){background:#16212d;}
-.overview-party-table tbody tr:hover{background:#1c2b3d;}
+.overview-party-table tbody th{font-weight:600;color:#e4e4e7;}
+.overview-party-table tbody tr:hover{background:#1b1b1f;}
 .overview-party-table tbody tr:last-child>*{border-bottom:0;}
 .overview-party-value{display:flex;align-items:center;justify-content:flex-end;gap:6px;white-space:nowrap;font-variant-numeric:tabular-nums;}
 .overview-party-rr{color:#a1a1aa;font-size:11px;}
@@ -553,26 +553,24 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .page-empty[hidden]{display:none;}
 .detail-view #results-section > :not(#error-container){display:none!important;}
 /* Shared table surface across the detailed statistic pages. */
-#sg-rank-card,#lobby-teams-card,#party-size-section,#teammates-section,#name-history-card,.rr-table-card,.servers-table-card{padding:0;overflow:hidden;border:1px solid #303b4c;border-radius:12px;background:#101721;box-shadow:0 12px 34px rgba(0,0,0,.16);}
+#sg-rank-card,#lobby-teams-card,#party-size-section,#teammates-section,#name-history-card,.rr-table-card,.servers-table-card{padding:0;overflow:hidden;border:1px solid #29292d;border-radius:8px;background:#111113;box-shadow:none;}
 #name-history-card[hidden]{display:none;}
-.name-history-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 20px;border-bottom:1px solid #303b4c;background:#172232;}
+.name-history-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 20px;border-bottom:1px solid #29292d;background:#151517;}
 .name-history-toolbar-title{display:block;color:#c4c4cc;font-size:13px;font-weight:600;}
 .name-history-sort{display:flex;align-items:center;gap:9px;color:#a1a1aa;font-size:12px;white-space:nowrap;}
 .name-history-sort select{min-height:38px;padding:0 28px 0 11px;border:1px solid var(--surface-border);border-radius:var(--radius-sm);background:#111113;color:var(--text);font:inherit;cursor:pointer;}
 .name-history-sort select:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
 .name-history-table-scroll{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
-.name-history-table{width:100%;min-width:680px;border-collapse:separate;border-spacing:0;table-layout:fixed;text-align:left;}
+.name-history-table{width:100%;min-width:680px;border-collapse:separate;border-spacing:0;table-layout:fixed;text-align:left;font-family:var(--font-table);font-variant-numeric:tabular-nums;}
 .name-history-table th:first-child{width:34%;}
 .name-history-table th:nth-child(2),.name-history-table th:nth-child(3){width:21%;}
-.name-history-table th,.name-history-table td{padding:16px 20px;border-bottom:1px solid #273241;text-align:left;vertical-align:middle;}
-.name-history-table thead th{background:#1c2837;color:#b3c5db;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;border-bottom-color:#394a60;}
+.name-history-table th,.name-history-table td{padding:14px 18px;border-bottom:1px solid #262629;text-align:left;vertical-align:middle;}
+.name-history-table thead th{background:#171719;color:#a9a9b2;font-size:10px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;border-bottom-color:#323236;}
 .name-history-table tbody tr:last-child th,.name-history-table tbody tr:last-child td{border-bottom:0;}
-.name-history-table tbody tr:nth-child(even){background:#151e2a;}
-.name-history-table tbody tr:hover{background:#1c2b3d;}
-.name-history-table thead th:first-child{position:sticky;left:0;z-index:2;box-shadow:1px 0 #394a60;}
-.name-history-table tbody th:first-child{position:sticky;left:0;z-index:1;background:#101721;box-shadow:1px 0 #303b4c;}
-.name-history-table tbody tr:nth-child(even) th:first-child{background:#151e2a;}
-.name-history-table tbody tr:hover th:first-child{background:#1c2b3d;}
+.name-history-table tbody tr:hover{background:#1b1b1f;}
+.name-history-table thead th:first-child{position:sticky;left:0;z-index:2;box-shadow:1px 0 #29292d;}
+.name-history-table tbody th:first-child{position:sticky;left:0;z-index:1;background:#111113;box-shadow:1px 0 #29292d;}
+.name-history-table tbody tr:hover th:first-child{background:#1b1b1f;}
 .name-history-table .name-history-date,.name-history-table .name-history-act{color:#c4c4cc;font-size:12px;font-weight:500;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .name-history-table .name-history-act{color:#a1a1aa;}
 .name-history-identity{min-width:0;}
@@ -600,7 +598,7 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .duo-player-name .duo-name{overflow:hidden;text-overflow:ellipsis;}
 .duo-player-name .duo-tag{color:#a1a1aa;font-size:12px;}
 .rank-table .table-lobby-value{justify-content:flex-end;font-size:13px;}
-.rank-table{width:100%;min-width:620px;border-collapse:separate;border-spacing:0;text-align:right;font-variant-numeric:tabular-nums;}
+.rank-table{width:100%;min-width:620px;border-collapse:separate;border-spacing:0;text-align:right;font-family:var(--font-table);font-variant-numeric:tabular-nums;}
 .rank-table.duos-table{min-width:680px;}
 .rank-table.duos-table th,.rank-table.duos-table td{padding-left:16px;padding-right:16px;}
 .duos-table th:first-child{width:25%;}
@@ -615,34 +613,33 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .encounters-empty{padding:20px;color:#a1a1aa;font-size:13px;}
 .party-icon{display:inline-flex;align-items:center;flex-shrink:0;gap:0;}
 .party-icon>span{line-height:0;}
-.rank-table th,.rank-table td{height:58px;padding:13px 20px;border-bottom:1px solid #273241;white-space:nowrap;vertical-align:middle;line-height:1.4;}
-.rank-table thead th{height:48px;padding-top:12px;padding-bottom:12px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#b3c5db;background:#1c2837;border-bottom-color:#394a60;}
+.rank-table th,.rank-table td{height:52px;padding:11px 18px;border-bottom:1px solid #262629;white-space:nowrap;vertical-align:middle;line-height:1.4;}
+.rank-table thead th{height:44px;padding-top:10px;padding-bottom:10px;font-size:10px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:#a9a9b2;background:#171719;border-bottom-color:#323236;}
 .rank-table th:first-child{text-align:left;}
-.rank-table tbody th:first-child{position:sticky;left:0;z-index:1;background:#101721;color:#f0f5fc;font-weight:650;box-shadow:1px 0 #303b4c;}
-.rank-table thead th:first-child{position:sticky;left:0;z-index:3;box-shadow:1px 0 #394a60;}
+.rank-table tbody th:first-child{position:sticky;left:0;z-index:1;background:#111113;color:#e4e4e7;font-weight:600;box-shadow:1px 0 #29292d;}
+.rank-table thead th:first-child{position:sticky;left:0;z-index:3;box-shadow:1px 0 #29292d;}
 .rank-table thead th{padding:0!important;}
-.table-sort-btn{display:flex;align-items:center;justify-content:flex-end;width:100%;min-height:48px;padding:12px 16px 12px 30px;font:inherit;letter-spacing:inherit;text-transform:inherit;text-align:inherit;white-space:nowrap;transition:background-color .15s,color .15s;}
+.table-sort-btn{display:flex;align-items:center;justify-content:flex-end;width:100%;min-height:44px;padding:10px 16px 10px 30px;font:inherit;letter-spacing:inherit;text-transform:inherit;text-align:inherit;white-space:nowrap;transition:background-color .15s,color .15s;}
 .rank-table th:first-child .table-sort-btn{justify-content:flex-start;}
 .table-sort-label{position:relative;}
 .table-sort-label::before{position:absolute;right:calc(100% + 7px);top:50%;transform:translateY(-50%);font-size:12px;letter-spacing:0;color:var(--brand);}
-.table-sort-btn:hover{background:#2a3a50;color:#fff;}
+.table-sort-btn:hover{background:#222226;color:#fff;}
 .table-sort-btn:focus-visible{outline:2px solid var(--brand);outline-offset:-3px;}
 .rank-table th[aria-sort="ascending"] .table-sort-label::before{content:'↑';}
 .rank-table th[aria-sort="descending"] .table-sort-label::before{content:'↓';}
-.rank-table th[aria-sort="ascending"],.rank-table th[aria-sort="descending"]{color:#fff;background:#28415f;box-shadow:inset 0 -2px 0 var(--brand);}
-.rank-table thead th:first-child[aria-sort="ascending"],.rank-table thead th:first-child[aria-sort="descending"]{box-shadow:1px 0 #394a60,inset 0 -2px 0 var(--brand);}
+.rank-table th[aria-sort="ascending"],.rank-table th[aria-sort="descending"]{color:#e4e4e7;box-shadow:inset 0 -2px 0 var(--brand);}
+.rank-table thead th:first-child[aria-sort="ascending"],.rank-table thead th:first-child[aria-sort="descending"]{box-shadow:1px 0 #29292d,inset 0 -2px 0 var(--brand);}
 .rank-table tbody tr:last-child>*{border-bottom:0;}
 .rank-table tbody tr{transition:background-color .15s;}
-.rank-table tbody tr:nth-child(even){background:#151e2a;}
-.rank-table tbody tr:nth-child(even) th:first-child{background:#151e2a;}
-.rank-table tbody tr:hover,.rank-table tbody tr:focus-within{background:#1c2b3d;}
-.rank-table tbody tr:hover th:first-child,.rank-table tbody tr:focus-within th:first-child{background:#1c2b3d;}
+.rank-table tbody tr:hover,.rank-table tbody tr:focus-within{background:#1b1b1f;}
+.rank-table tbody tr:hover th:first-child,.rank-table tbody tr:focus-within th:first-child{background:#1b1b1f;}
 .rank-row-identity{display:flex;align-items:center;gap:10px;font-size:14px;}
 .rank-row-identity img{width:24px;height:24px;object-fit:contain;}
-.rank-table td{font:500 13px/1.4 var(--font-mono);color:#dce5f2;}
+.rank-table td{font:500 13px/1.4 var(--font-table);font-variant-numeric:tabular-nums;color:#d4d4da;}
 .rank-positive{color:#4ade80;}.rank-negative{color:#f87171;}
 .rank-table td.rank-positive{color:#72e6a0;}.rank-table td.rank-negative{color:#ff9999;}
-.rank-table td.table-best{position:relative;background:rgba(var(--brand-rgb),.14);box-shadow:inset 0 -2px 0 var(--brand);color:#f6faff;font-weight:700;}
+.rank-table td.table-best{position:relative;font-weight:700;}
+.rank-table td.table-best::after{content:'';position:absolute;right:7px;top:50%;width:5px;height:5px;background:var(--brand);border-radius:1px;transform:translateY(-50%) rotate(45deg);}
 .rank-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 #party-size-section{margin-bottom:24px;}
 .rr-table-card{padding:0;overflow:hidden;margin-bottom:24px;}
@@ -692,10 +689,8 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .rr-trend-svg .axis-label{fill:#a1a1aa;font-size:11px;font-variant-numeric:tabular-nums;}
 .rr-trend-svg .area{fill:rgba(255,255,255,.065);}
 .rr-trend-svg .line{fill:none;stroke:#e4e4e7;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;}
-.rr-trend-svg .point{stroke:#141416;stroke-width:1.5;}
-.rr-trend-svg .point.positive{fill:#4ade80;}.rr-trend-svg .point.negative{fill:#f87171;}.rr-trend-svg .point.neutral{fill:#a1a1aa;}
-.rr-trend-svg .point.sparse{opacity:0;}
-.rr-trend-svg g[tabindex]:hover .point,.rr-trend-svg g[tabindex]:focus .point{opacity:1;stroke:#fff;stroke-width:2.5;}
+.rr-trend-svg .cursor-line{opacity:0;stroke:var(--brand);stroke-width:1;stroke-dasharray:3 3;pointer-events:none;}
+.rr-trend-svg g[tabindex]:hover .cursor-line,.rr-trend-svg g[tabindex]:focus .cursor-line{opacity:.8;}
 .rr-trend-svg g[tabindex]:focus{outline:none;}
 .rr-trend-empty{padding:28px 0;color:#a1a1aa;font-size:13px;}
 .rr-movement-section{margin:0 0 24px;}
@@ -725,6 +720,7 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .rr-movement-svg g[tabindex]:focus{outline:none;}
 @media(max-width:600px){
   .rank-table th,.rank-table td,.rank-table.duos-table th,.rank-table.duos-table td{padding-left:14px;padding-right:14px;}
+  .rank-table td.table-best::after{right:4px;}
   .rr-movement-card,.rr-trend-card{padding:14px;}
 }
 @media(prefers-reduced-motion:reduce){.rank-table tbody tr,.input-section,.search-bar,.pro-result-main,.pro-result-tracker{transition:none;}.spinner,#season-trigger.loading::before,.shake{animation:none;}}
@@ -4625,9 +4621,20 @@ function renderRRMovement(matches){
       end:next?rankBoundary(group,next):xMax,
     };
   });
+  if(rrMovementZoomTier==null){
+    // Display Immortal 3 as the 200–300 RR band. This changes the band and
+    // label only; match coordinates and their recorded tiers stay untouched.
+    const immo3=rankBands.findIndex(band=>band.tier===26);
+    if(immo3!==-1){
+      rankBands[immo3].start=2300;
+      rankBands[immo3].end=2400;
+      if(immo3>0)rankBands[immo3-1].end=2300;
+      if(immo3<rankBands.length-1)rankBands[immo3+1].start=2400;
+    }
+  }
   rankBands.forEach(({tier,start,end},index)=>{
-    const bandLeft=index===0?left:Math.max(left,x(start));
-    const bandRight=index===rankBands.length-1?plotRight:Math.min(plotRight,x(end));
+    const bandLeft=Math.max(left,x(start));
+    const bandRight=Math.min(plotRight,x(end));
     if(bandRight<=bandLeft)return;
     const interactive=availableTiers.has(tier);
     const band=node('rect',{x:bandLeft,y:top,width:bandRight-bandLeft,height:plotHeight,fill:index%2?'rgba(255,255,255,.018)':'rgba(255,255,255,.035)',class:interactive?'rank-band':'','aria-hidden':interactive?'false':'true'});
@@ -4809,14 +4816,12 @@ function renderRRTrend(matches){
   }
   const dateLabel=m=>Number.isFinite(m.startedAtMs)?new Date(m.startedAtMs).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'Date unavailable';
   const spacing=points.length>1?(width-left-right)/(points.length-1):width-left-right;
-  const markerStep=spacing<8?Math.ceil(24/spacing):1;
   points.forEach(({match,value},i)=>{
     const change=rrSigned(match.myRR,0);
     const label=`Match ${i+1} of ${points.length}, ${dateLabel(match)}: ${rankAt(value,match.myPostTierId)} after ${change} RR change`;
     const group=el('g',{tabindex:'0','aria-label':label});
     group.appendChild(el('title',{},label));
-    const sparse=markerStep>1&&i!==0&&i!==points.length-1&&i%markerStep!==0;
-    group.appendChild(el('circle',{class:`point ${match.myRR>0?'positive':match.myRR<0?'negative':'neutral'}${sparse?' sparse':''}`,cx:x(i),cy:y(value),r:Math.min(3.5,Math.max(1.5,spacing*.22))}));
+    group.appendChild(el('line',{class:'cursor-line',x1:x(i),y1:top,x2:x(i),y2:bottom}));
     group.appendChild(el('circle',{cx:x(i),cy:y(value),r:Math.min(11,Math.max(3,spacing/2)),fill:'transparent'}));
     const show=()=>{detail.textContent=label;};
     const reset=()=>{if(document.activeElement!==group)detail.textContent='Focus or hover a point to see that match’s RR change.';};
