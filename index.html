@@ -4595,9 +4595,33 @@ function rrPayoutMedian(values){
   return sorted.length%2?sorted[middle]:(sorted[middle-1]+sorted[middle])/2;
 }
 
+function rrSmoothPayoutTrend(points){
+  // Sample a shape-preserving curve so the plotted line and its balance
+  // intersections use the same coordinates, without overshooting payouts.
+  if(points.length<2)return points;
+  const result=[points[0]];
+  const slope=(a,b)=>(b.payout-a.payout)/(b.position-a.position);
+  for(let i=0;i<points.length-1;i++){
+    const a=points[i],b=points[i+1],span=b.position-a.position;
+    const delta=slope(a,b);
+    const previous=i?slope(points[i-1],a):delta;
+    const next=i+2<points.length?slope(b,points[i+2]):delta;
+    const tangent=other=>delta&&Math.sign(other)===Math.sign(delta)
+      ?Math.sign(delta)*Math.min(Math.abs((other+delta)/2),3*Math.abs(delta)):0;
+    const start=tangent(previous),end=tangent(next);
+    for(let step=1;step<=8;step++){
+      const t=step/8,t2=t*t,t3=t2*t;
+      const payout=(2*t3-3*t2+1)*a.payout+(t3-2*t2+t)*span*start
+        +(-2*t3+3*t2)*b.payout+(t3-t2)*span*end;
+      result.push({position:a.position+span*t,payout});
+    }
+  }
+  return result;
+}
+
 function rrPayoutTrend(rows,positive){
   // Seven neighbouring payouts of the same sign describe a typical payout
-  // magnitude without fitting a curve or treating one unusual match as a trend.
+  // magnitude without treating one unusual match as the whole trend.
   const ordered=rows.filter(row=>positive?row.net>0:row.net<0)
     .sort((a,b)=>a.axisRR-b.axisRR);
   if(ordered.length<8)return [];
@@ -4608,18 +4632,32 @@ function rrPayoutTrend(rows,positive){
     if(!atPosition.has(position))atPosition.set(position,[]);
     atPosition.get(position).push(rrPayoutMedian(window.map(row=>Math.abs(row.net))));
   }
-  return [...atPosition].map(([position,payouts])=>({position,payout:rrPayoutMedian(payouts)}));
+  const points=[...atPosition].map(([position,payouts])=>({position,payout:rrPayoutMedian(payouts)}));
+  // The rolling window omits its first and last three matches. Continue the
+  // line to the first and last observed starting RR for this result.
+  if(points[0].position>ordered[0].axisRR)
+    points.unshift({position:ordered[0].axisRR,payout:points[0].payout});
+  if(points.at(-1).position<ordered.at(-1).axisRR)
+    points.push({position:ordered.at(-1).axisRR,payout:points.at(-1).payout});
+  const softened=points.map((point,index)=>({
+    position:point.position,
+    payout:((points[index-1]?.payout??point.payout)+2*point.payout+(points[index+1]?.payout??point.payout))/4,
+  }));
+  return rrSmoothPayoutTrend(softened);
 }
 
 function rrTrendPayoutAt(trend,position){
   if(position<trend[0].position||position>trend.at(-1).position)return null;
-  for(let i=1;i<trend.length;i++){
-    if(position>trend[i].position)continue;
-    const before=trend[i-1],after=trend[i];
-    const fraction=(position-before.position)/(after.position-before.position);
-    return before.payout+(after.payout-before.payout)*fraction;
+  let low=0,high=trend.length-1;
+  while(low<high){
+    const middle=Math.floor((low+high)/2);
+    if(trend[middle].position<position)low=middle+1;
+    else high=middle;
   }
-  return trend.at(-1).payout;
+  if(low===0)return trend[0].payout;
+  const before=trend[low-1],after=trend[low];
+  const fraction=(position-before.position)/(after.position-before.position);
+  return before.payout+(after.payout-before.payout)*fraction;
 }
 
 function rrPayoutBalancePoint(gainTrend,lossTrend){
@@ -4638,7 +4676,11 @@ function rrPayoutBalancePoint(gainTrend,lossTrend){
   };
   const samples=positions.map(at),crossings=[];
   samples.forEach((point,index)=>{
-    if(Math.abs(point.difference)<1e-9)crossings.push(point);
+    if(Math.abs(point.difference)<1e-9&&(!index||Math.abs(samples[index-1].difference)>=1e-9)){
+      let last=index;
+      while(last+1<samples.length&&Math.abs(samples[last+1].difference)<1e-9)last++;
+      crossings.push(at((point.position+samples[last].position)/2));
+    }
     const next=samples[index+1];
     if(next&&point.difference*next.difference<0){
       const fraction=-point.difference/(next.difference-point.difference);
@@ -4680,7 +4722,7 @@ function renderRRMovement(matches){
     balanceText.textContent='Payout balance appears once gain and loss trends share a starting-RR range.';
   }
   document.getElementById('rr-movement-trend-note').textContent=gainTrend.length>1||lossTrend.length>1
-    ?'Lines show the median magnitude of seven nearby payouts of the same type, across starting RR. Dots are individual matches.'
+    ?'Curves smooth the median magnitude of seven nearby payouts of the same type and span their observed starting RR. Dots are individual matches.'
     :'Typical payout trends need at least eight recorded gains or losses. Dots show individual payout magnitudes.';
 
   const penalties=rows.filter(row=>row.penalty>0).length;
@@ -4702,8 +4744,10 @@ function renderRRMovement(matches){
   const plotRight=width-right,plotBottom=height-bottom,plotWidth=plotRight-left,plotHeight=plotBottom-top;
   const xMin=axis.min,xMax=axis.max;
   const payouts=rows.map(row=>Math.abs(row.net));
-  const yMin=Math.max(0,Math.floor(Math.min(...payouts)/5)*5-5);
-  const yMax=Math.max(yMin+5,Math.ceil(Math.max(...payouts)/5)*5+5);
+  const payoutMin=Math.min(...payouts),payoutMax=Math.max(...payouts);
+  const yPad=Math.max(.75,(payoutMax-payoutMin)*.08);
+  const yMin=Math.max(0,Math.floor((payoutMin-yPad)*2)/2);
+  const yMax=Math.max(yMin+2,Math.ceil((payoutMax+yPad)*2)/2);
   const xInset=rrMovementZoomTier!=null?12:0;
   const x=value=>left+xInset+(value-xMin)/(xMax-xMin)*(plotWidth-2*xInset);
   const y=value=>top+(yMax-value)/(yMax-yMin)*plotHeight;
@@ -4783,7 +4827,10 @@ function renderRRMovement(matches){
     const target=rankBands.find(band=>value>=band.start&&value<=band.end);
     if(target)toggleRankZoom(target.tier);
   });
-  const yTicks=Array.from({length:5},(_,i)=>yMax-(yMax-yMin)*i/4);
+  const yStep=[1,2,2.5,5,10,20,50].find(step=>step>=(yMax-yMin)/5)||50;
+  const yTicks=[];
+  for(let tick=Math.ceil(yMin/yStep)*yStep;tick<=yMax+1e-9;tick+=yStep)
+    yTicks.push(tick);
   yTicks.forEach(value=>{
     const py=y(value);
     svg.appendChild(node('line',{x1:left,y1:py,x2:plotRight,y2:py,class:'grid'}));
