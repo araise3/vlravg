@@ -141,6 +141,9 @@ h1 span{color:var(--accent);}
 .stat-box{display:inline-flex;align-items:center;gap:6px;min-height:44px;box-sizing:border-box;background:#0b0b0b;border:.5px solid var(--surface-border);border-radius:var(--radius-md);padding:0 14px;font-size:14px;color:var(--text);white-space:nowrap;flex-shrink:0;line-height:1;}
 .stat-box .rank-word{font-weight:400;}
 .stat-box .rr-sub{font-size:1em;color:var(--text);}
+.player-card-byline .stat-box{animation:header-pill-pop .32s cubic-bezier(.2,1.3,.35,1) both;transform-origin:center left;}
+.player-card-byline .stat-box:nth-child(2){animation-delay:.09s;}
+@keyframes header-pill-pop{from{opacity:0;transform:translateY(9px) scale(.9);}to{opacity:1;transform:translateY(0) scale(1);}}
 .example-chip{display:inline-block;font-family:var(--font-body);font-size:11px;background:var(--bg3);border:.5px solid var(--border2);border-radius:var(--radius-xs);padding:3px 8px;color:var(--muted);cursor:pointer;margin-top:8px;transition:background .15s,border-color .15s,color .15s,box-shadow .15s,transform .15s;}
 .example-chip:hover{color:var(--accent);border-color:var(--accent);}
 
@@ -394,6 +397,9 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .player-row.is-party{}
 .player-row.is-me.is-party{}
 .player-name-wrap{flex:1;min-width:0;display:flex;align-items:center;gap:4px;overflow:visible;}
+a.player-name-wrap{color:inherit;text-decoration:none;}
+a.player-name-wrap:hover .player-name,a.player-name-wrap:hover .player-tag{color:var(--brand);text-decoration:underline;text-underline-offset:3px;}
+a.player-name-wrap:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:2px;}
 .player-row .player-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex-shrink:1;}
 .player-row .player-name.party-name{color:#3b82f6;}
 .player-tag{font-size:11px;color:var(--muted);font-family:var(--font-body);white-space:nowrap;flex-shrink:0;}
@@ -450,6 +456,7 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .overview-party-lobbies[hidden]{display:none;}
 .overview-party-table{width:100%;border-collapse:collapse;font:12px var(--font-table);font-variant-numeric:tabular-nums;}
 .overview-party-table th,.overview-party-table td{padding:10px 13px;border-bottom:1px solid #262629;}
+.overview-party-table tr>*+*{border-left:1px solid #29292d;}
 .overview-party-table thead th{background:#171719;color:#a9a9b2;font-size:10px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;}
 .overview-party-table th:first-child{text-align:left;}
 .overview-party-table th:last-child{text-align:right;}
@@ -476,6 +483,9 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .overview-preview-row:first-child{border-top:0;}
 .overview-preview-identity{display:flex;align-items:center;gap:8px;min-width:0;}
 .overview-preview-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+a.overview-preview-name{color:inherit;text-decoration:none;}
+a.overview-preview-name:hover{color:var(--brand);text-decoration:underline;text-underline-offset:3px;}
+a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
 .overview-preview-tag{color:#92929b;font-size:11px;}
 .overview-preview-value{flex-shrink:0;color:#b4b4bd;font-size:12px;font-variant-numeric:tabular-nums;}
 .overview-preview-score{color:var(--text);font-variant-numeric:tabular-nums;}
@@ -486,6 +496,13 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .overview-rr-values>div+div{padding-left:24px;border-left:1px solid var(--surface-border);}
 .overview-rr-values span{display:block;font-size:11px;color:#a1a1aa;margin-bottom:8px;}
 .overview-rr-values strong{display:block;font-size:30px;font-weight:700;}
+.overview-rr-trend{margin-top:10px;padding-top:12px;border-top:1px solid #29292d;}
+.overview-rr-trend-label{display:block;color:#a1a1aa;font-size:11px;margin-bottom:8px;}
+.overview-rr-trend svg{display:block;width:100%;height:84px;overflow:visible;}
+.overview-rr-trend .area{fill:rgba(228,228,231,.07);}
+.overview-rr-trend .line{fill:none;stroke:#e4e4e7;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;}
+.overview-rr-trend .endpoint{fill:#e4e4e7;}
+.overview-rr-trend-empty{display:block;color:#a1a1aa;font-size:12px;padding:20px 0;}
 .overview-preview-note{font-size:12px;color:#a1a1aa;margin:12px 0 0;line-height:1.6;}
 .overview-clutches{border:1px solid var(--surface-border);border-radius:12px;background:var(--surface);}
 .overview-clutches-heading{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px;padding:18px 20px;}
@@ -555,16 +572,12 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 /* Shared table surface across the detailed statistic pages. */
 #sg-rank-card,#lobby-teams-card,#party-size-section,#teammates-section,#name-history-card,.rr-table-card,.servers-table-card{padding:0;overflow:hidden;border:1px solid #29292d;border-radius:8px;background:#111113;box-shadow:none;}
 #name-history-card[hidden]{display:none;}
-.name-history-toolbar{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 20px;border-bottom:1px solid #29292d;background:#151517;}
-.name-history-toolbar-title{display:block;color:#c4c4cc;font-size:13px;font-weight:600;}
-.name-history-sort{display:flex;align-items:center;gap:9px;color:#a1a1aa;font-size:12px;white-space:nowrap;}
-.name-history-sort select{min-height:38px;padding:0 28px 0 11px;border:1px solid var(--surface-border);border-radius:var(--radius-sm);background:#111113;color:var(--text);font:inherit;cursor:pointer;}
-.name-history-sort select:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
 .name-history-table-scroll{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
 .name-history-table{width:100%;min-width:680px;border-collapse:separate;border-spacing:0;table-layout:fixed;text-align:left;font-family:var(--font-table);font-variant-numeric:tabular-nums;}
 .name-history-table th:first-child{width:34%;}
 .name-history-table th:nth-child(2),.name-history-table th:nth-child(3){width:21%;}
 .name-history-table th,.name-history-table td{padding:14px 18px;border-bottom:1px solid #262629;text-align:left;vertical-align:middle;}
+.name-history-table tr>*+*{border-left:1px solid #29292d;}
 .name-history-table thead th{background:#171719;color:#a9a9b2;font-size:10px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;border-bottom-color:#323236;}
 .name-history-table tbody tr:last-child th,.name-history-table tbody tr:last-child td{border-bottom:0;}
 .name-history-table tbody tr:hover{background:#1b1b1f;}
@@ -579,7 +592,6 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .name-history-id span{color:#a1a1aa;font-weight:500;}
 .name-history-id .name-history-current{display:inline-block;margin-left:9px;color:var(--brand);font-size:11px;font-weight:700;}
 @media(max-width:520px){
-  .name-history-toolbar{padding:12px 16px;}
   .name-history-table th,.name-history-table td{padding:13px 16px;}
 }
 .name-history-note{font-size:12px;color:#a1a1aa;line-height:1.6;margin-top:14px;}
@@ -607,13 +619,14 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .encounters-section h2{margin:0 0 8px;font-size:18px;font-weight:650;}
 .encounters-section p{margin:0 0 14px;color:#a1a1aa;font-size:12px;line-height:1.6;}
 .encounters-table{min-width:620px;}
-.encounter-link{color:var(--text);text-decoration:none;}
-.encounter-link:hover{color:var(--brand);text-decoration:underline;text-underline-offset:3px;}
-.encounter-link:focus-visible{outline:2px solid var(--brand);outline-offset:3px;}
+a.duo-player-name{color:var(--text);text-decoration:none;}
+a.duo-player-name:hover{color:var(--brand);text-decoration:underline;text-underline-offset:3px;}
+a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3px;}
 .encounters-empty{padding:20px;color:#a1a1aa;font-size:13px;}
 .party-icon{display:inline-flex;align-items:center;flex-shrink:0;gap:0;}
 .party-icon>span{line-height:0;}
 .rank-table th,.rank-table td{height:52px;padding:11px 18px;border-bottom:1px solid #262629;white-space:nowrap;vertical-align:middle;line-height:1.4;}
+.rank-table tr>*+*{border-left:1px solid #29292d;}
 .rank-table thead th{height:44px;padding-top:10px;padding-bottom:10px;font-size:10px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;color:#a9a9b2;background:#171719;border-bottom-color:#323236;}
 .rank-table th:first-child{text-align:left;}
 .rank-table tbody th:first-child{position:sticky;left:0;z-index:1;background:#111113;color:#e4e4e7;font-weight:600;box-shadow:1px 0 #29292d;}
@@ -716,14 +729,24 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .rr-movement-svg .rank-band-label{fill:#c4c4cc;font-size:10px;font-weight:600;}
 .rr-movement-svg .trend-point{opacity:.42;stroke:#141416;stroke-width:1.5;}
 .rr-movement-svg .trend-point.positive{fill:#4ade80;}.rr-movement-svg .trend-point.negative{fill:#f87171;}.rr-movement-svg .trend-point.neutral{fill:#a1a1aa;}
-.rr-movement-svg g[tabindex]:hover .trend-point,.rr-movement-svg g[tabindex]:focus .trend-point{opacity:1;stroke:#fff;stroke-width:2.5;}
-.rr-movement-svg g[tabindex]:focus{outline:none;}
+.rr-movement-svg .trend-point,.rr-movement-svg .payout-trend{pointer-events:none;}
+.rr-movement-svg .payout-trend{fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
+.rr-movement-svg .payout-trend.positive{stroke:#4ade80;}.rr-movement-svg .payout-trend.negative{stroke:#f87171;}
+.rr-movement-svg .balance-connector{stroke:var(--brand);stroke-width:1.5;stroke-dasharray:4 4;pointer-events:none;}
+.rr-movement-svg .balance-center{fill:var(--brand);stroke:#141416;stroke-width:2;pointer-events:none;}
+.rr-movement-svg .balance-endpoint{fill:#141416;stroke-width:2.5;pointer-events:none;}
+.rr-movement-svg .balance-endpoint.gain{stroke:#4ade80;}.rr-movement-svg .balance-endpoint.loss{stroke:#f87171;}
+.rr-legend-line{display:inline-block;width:21px;height:3px;border-radius:3px;background:linear-gradient(90deg,#4ade80 0 46%,transparent 46% 54%,#f87171 54%);}
+.rr-legend-balance{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--brand);}
+.rr-movement-balance{margin-top:10px;color:#d4d4da;font-size:12px;line-height:1.5;font-variant-numeric:tabular-nums;}
+.rr-movement-balance strong{color:var(--brand);font-weight:700;}
+.rr-movement-trend-note{margin:8px 0 0;color:#a1a1aa;font-size:12px;line-height:1.5;}
 @media(max-width:600px){
   .rank-table th,.rank-table td,.rank-table.duos-table th,.rank-table.duos-table td{padding-left:14px;padding-right:14px;}
   .rank-table td.table-best::after{right:4px;}
   .rr-movement-card,.rr-trend-card{padding:14px;}
 }
-@media(prefers-reduced-motion:reduce){.rank-table tbody tr,.input-section,.search-bar,.pro-result-main,.pro-result-tracker{transition:none;}.spinner,#season-trigger.loading::before,.shake{animation:none;}}
+@media(prefers-reduced-motion:reduce){.rank-table tbody tr,.input-section,.search-bar,.pro-result-main,.pro-result-tracker{transition:none;}.spinner,#season-trigger.loading::before,.shake,.player-card-byline .stat-box{animation:none;}}
 @media(max-width:700px){.rr-summary-stats,.server-summary-stats{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:440px){.rr-summary-stats{grid-template-columns:repeat(2,minmax(0,1fr));}.rr-summary-stat dd{font-size:22px;}.server-summary-stat dd{font-size:19px;}}
 @media(max-width:760px){
@@ -920,10 +943,12 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
         <div class="rr-movement-card">
           <div class="rr-movement-head"><h2 id="rr-movement-title">RR payout balance by starting rank</h2><span id="rr-movement-count" class="rr-movement-count"></span></div>
           <div class="rr-movement-legend" aria-label="Chart legend">
-            <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span>
+            <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span><span><i class="rr-legend-line"></i>Typical payout trend</span><span><i class="rr-legend-balance"></i>Payout balance</span>
             <span id="rr-movement-axis-note" class="rr-movement-axis-note" hidden>Axis breaks compress the empty range near 0</span>
           </div>
           <div id="rr-movement-chart" class="rr-movement-scroll" role="region" aria-label="RR movement chart" tabindex="0"></div>
+          <p id="rr-movement-balance" class="rr-movement-balance"></p>
+          <p id="rr-movement-trend-note" class="rr-movement-trend-note"></p>
         </div>
       </section>
       <div class="s-card rr-table-card"><div id="rr-rank-table" class="table-scroll" role="region" aria-label="RR by player rank" tabindex="0"></div></div>
@@ -1000,6 +1025,7 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
         <section class="overview-preview" aria-labelledby="overview-rr-title">
           <a class="overview-preview-heading" href="/rr" data-page="rr"><h2 id="overview-rr-title">RR Breakdown</h2><span aria-hidden="true">↗</span></a>
           <div class="overview-rr-values"><div><span>RR / Win</span><strong id="rr-win-value">—</strong></div><div><span>RR / Loss</span><strong id="rr-loss-value">—</strong></div></div>
+          <div class="overview-rr-trend"><span class="overview-rr-trend-label">RR trend</span><div id="overview-rr-trend-chart" role="img" aria-label="RR trend unavailable"></div></div>
           <p class="overview-preview-note"><span id="rr-games-value">—</span> eligible games <span aria-hidden="true">·</span> <span id="rr-wr-value">—</span> win rate</p>
         </section>
         <section class="overview-preview" aria-labelledby="overview-matches-title">
@@ -1379,7 +1405,6 @@ let activePage='overview',analysisState='idle',rrHasData=false;
 let nameHistoryRows=[],nameHistoryState='idle';
 let nameHistoryBackfill=null,nameBackfillBusy=false,nameBackfillError=false;
 let nameBackfillStopRequested=false,nameBackfillStopped=false,nameBackfillPages=0;
-let nameHistorySort='newest';
 async function loadNameHistory(puuid,generation=_analysisGen){
   nameHistoryState='loading';renderNameHistory();
   try{
@@ -1488,27 +1513,12 @@ function renderNameHistory(){
     }
     return;
   }
-  const toolbar=document.createElement('div');toolbar.className='name-history-toolbar';
-  const title=document.createElement('span');title.className='name-history-toolbar-title';
-  title.textContent=`${nameHistoryRows.length} observed period${nameHistoryRows.length===1?'':'s'}`;
-  const sortLabel=document.createElement('label');sortLabel.className='name-history-sort';sortLabel.textContent='Sort by';
-  const sort=document.createElement('select');sort.setAttribute('aria-label','Sort name history');
-  for(const [value,label] of [['newest','Newest first'],['oldest','Oldest first'],['name','Riot ID A–Z']]){
-    const option=document.createElement('option');option.value=value;option.textContent=label;sort.appendChild(option);
-  }
-  sort.value=nameHistorySort;
-  sort.addEventListener('change',()=>{nameHistorySort=sort.value;renderNameHistory();});
-  sortLabel.appendChild(sort);toolbar.append(title,sortLabel);
   const scroll=document.createElement('div');scroll.className='name-history-table-scroll';scroll.tabIndex=0;scroll.setAttribute('role','region');scroll.setAttribute('aria-label','Name history table');
   const table=document.createElement('table');table.className='name-history-table';
   table.innerHTML='<caption class="rank-sr-only">Observed Riot IDs, first and last observation dates, and acts</caption><thead><tr><th scope="col">Riot ID</th><th scope="col">First observed</th><th scope="col">Last observed</th><th scope="col">Act</th></tr></thead><tbody></tbody>';
   const body=table.querySelector('tbody');
   const dateFormat=new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
-  const rows=[...nameHistoryRows].sort((a,b)=>{
-    if(nameHistorySort==='name')return (a.name+'#'+a.tag).localeCompare(b.name+'#'+b.tag,undefined,{sensitivity:'base'})||Date.parse(b.first_seen)-Date.parse(a.first_seen);
-    const difference=Date.parse(b.first_seen)-Date.parse(a.first_seen);
-    return nameHistorySort==='oldest'?-difference:difference;
-  });
+  const rows=[...nameHistoryRows].sort((a,b)=>Date.parse(b.first_seen)-Date.parse(a.first_seen));
   rows.forEach(h=>{
     const item=document.createElement('tr');
     const identity=document.createElement('th');identity.scope='row';identity.className='name-history-identity';
@@ -1533,7 +1543,7 @@ function renderNameHistory(){
     const act=document.createElement('td');act.className='name-history-act';act.textContent=actRange.label;act.title=actRange.title;
     item.appendChild(act);body.appendChild(item);
   });
-  scroll.appendChild(table);container.append(toolbar,scroll);
+  scroll.appendChild(table);container.appendChild(scroll);
 }
 function updateDetailPages(){
   const ready=analysisState==='ready';
@@ -4190,7 +4200,7 @@ function renderOverviewPreviews(){
   fill('overview-duos',allTeammates.slice(0,3),(row,t)=>{
     const kd=t.deaths>0?t.kills/t.deaths:t.kills;
     const kdColor=kd>1?'rank-positive':kd<1?'rank-negative':'';
-    row.innerHTML=`<span class="overview-preview-name"><span class="overview-teammate-name"></span><span class="overview-preview-tag"></span></span><span class="overview-preview-value overview-teammate-values"><span title="Teammate K/D: ${t.kills} kills / ${t.deaths} deaths"><span class="${kdColor}">${kd.toFixed(2)}</span> K/D</span><span>${t.games} ${t.games===1?'match':'matches'}</span></span>`;
+    row.innerHTML=`<a class="overview-preview-name" href="${playerRouteUrl(t.name,t.tag)}"><span class="overview-teammate-name"></span><span class="overview-preview-tag"></span></a><span class="overview-preview-value overview-teammate-values"><span title="Teammate K/D: ${t.kills} kills / ${t.deaths} deaths"><span class="${kdColor}">${kd.toFixed(2)}</span> K/D</span><span>${t.games} ${t.games===1?'match':'matches'}</span></span>`;
     row.querySelector('.overview-teammate-name').textContent=t.name;
     row.querySelector('.overview-preview-tag').textContent=' #'+t.tag;
   },'No party teammates in these matches.');
@@ -4222,7 +4232,7 @@ function renderTeammates(){
   teammateRows.forEach(t=>{
     const wr=Math.round(t.wr);
     const row=document.createElement('tr');
-    row.innerHTML=`<th scope="row"><div class="duo-player-name"><span class="duo-name"></span><span class="duo-tag"></span></div></th>
+    row.innerHTML=`<th scope="row"><a class="duo-player-name" href="${playerRouteUrl(t.name,t.tag)}"><span class="duo-name"></span><span class="duo-tag"></span></a></th>
       <td>${t.games}</td>
       <td>${tableLobbyValue(t.rankSum,t.rankCount)}</td>
       <td class="${t.kd===1?'':t.kd>1?'rank-positive':'rank-negative'}" title="${t.kills} kills / ${t.deaths} deaths">${t.kd.toFixed(2)}</td>
@@ -4468,6 +4478,7 @@ const rrSigned=(x,d)=>`${x<0?'−':'+'}${Math.abs(x).toFixed(d)}`;
 
 function renderRRCard(matches){
   renderRRBreakdown(matches);
+  renderOverviewRRTrend(matches);
   const winVal=document.getElementById('rr-win-value');
   if(!winVal)return;
   const lossVal=document.getElementById('rr-loss-value');
@@ -4483,6 +4494,43 @@ function renderRRCard(matches){
   // the Stats card, since this excludes unrated/placement/5-stack games.
   if(gamesVal)gamesVal.textContent=res.n>0?res.n:'—';
   if(wrVal)wrVal.textContent=res.winRate!=null?`${Math.round(res.winRate)}%`:'—';
+}
+
+function renderOverviewRRTrend(matches){
+  const container=document.getElementById('overview-rr-trend-chart');
+  const ordered=matches.filter(m=>Number.isFinite(m.myRR)&&Number.isFinite(m.myPostRR))
+    .sort((a,b)=>(a.startedAtMs||0)-(b.startedAtMs||0));
+  container.replaceChildren();
+  if(!ordered.length){
+    const empty=document.createElement('span');empty.className='overview-rr-trend-empty';
+    empty.textContent='No recorded RR trend for this act.';
+    container.appendChild(empty);
+    container.setAttribute('aria-label',empty.textContent);
+    return;
+  }
+  const values=ordered.map(m=>m.myPostRR);
+  const low=Math.min(...values),high=Math.max(...values),pad=Math.max(10,(high-low)*.12);
+  const min=Math.max(0,low-pad),max=high+pad;
+  const width=400,height=84,left=3,right=3,top=5,bottom=78;
+  const x=i=>values.length===1?width/2:left+i*(width-left-right)/(values.length-1);
+  const y=value=>bottom-(value-min)/(max-min)*(bottom-top);
+  const points=values.map((value,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(value).toFixed(1)}`).join(' ');
+  const ns='http://www.w3.org/2000/svg';
+  const svg=document.createElementNS(ns,'svg');
+  svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
+  svg.setAttribute('preserveAspectRatio','none');
+  if(values.length>1){
+    const area=document.createElementNS(ns,'path');area.setAttribute('class','area');
+    area.setAttribute('d',`${points} L${x(values.length-1).toFixed(1)},${bottom} L${x(0).toFixed(1)},${bottom} Z`);
+    svg.appendChild(area);
+    const line=document.createElementNS(ns,'path');line.setAttribute('class','line');line.setAttribute('d',points);
+    svg.appendChild(line);
+  }
+  const endpoint=document.createElementNS(ns,'circle');endpoint.setAttribute('class','endpoint');
+  endpoint.setAttribute('cx',x(values.length-1));endpoint.setAttribute('cy',y(values.at(-1)));endpoint.setAttribute('r','3');
+  svg.appendChild(endpoint);
+  container.appendChild(svg);
+  container.setAttribute('aria-label',`RR trend across ${values.length} ${values.length===1?'match':'matches'} this act, from ${Math.round(values[0])} to ${Math.round(values.at(-1))} total rank RR`);
 }
 
 function rrPositionFromElo(elo,tierHint=null){
@@ -4528,6 +4576,71 @@ function rrMovementRows(matches){
   });
 }
 
+function rrPayoutMedian(values){
+  const sorted=[...values].sort((a,b)=>a-b);
+  const middle=Math.floor(sorted.length/2);
+  return sorted.length%2?sorted[middle]:(sorted[middle-1]+sorted[middle])/2;
+}
+
+function rrPayoutTrend(rows,positive){
+  // Seven neighbouring payouts of the same sign describe a typical payout
+  // without fitting a curve or treating a single unusual match as a trend.
+  const ordered=rows.filter(row=>positive?row.net>0:row.net<0)
+    .sort((a,b)=>a.axisRR-b.axisRR);
+  if(ordered.length<8)return [];
+  const atPosition=new Map();
+  for(let i=0;i<=ordered.length-7;i++){
+    const window=ordered.slice(i,i+7);
+    const position=window[3].axisRR;
+    if(!atPosition.has(position))atPosition.set(position,[]);
+    atPosition.get(position).push(rrPayoutMedian(window.map(row=>row.net)));
+  }
+  return [...atPosition].map(([position,payouts])=>({position,payout:rrPayoutMedian(payouts)}));
+}
+
+function rrTrendPayoutAt(trend,position){
+  if(position<trend[0].position||position>trend.at(-1).position)return null;
+  for(let i=1;i<trend.length;i++){
+    if(position>trend[i].position)continue;
+    const before=trend[i-1],after=trend[i];
+    const fraction=(position-before.position)/(after.position-before.position);
+    return before.payout+(after.payout-before.payout)*fraction;
+  }
+  return trend.at(-1).payout;
+}
+
+function rrPayoutBalancePoint(gainTrend,lossTrend){
+  if(gainTrend.length<2||lossTrend.length<2)return null;
+  const start=Math.max(gainTrend[0].position,lossTrend[0].position);
+  const end=Math.min(gainTrend.at(-1).position,lossTrend.at(-1).position);
+  if(start>=end)return null;
+  const positions=[...new Set([start,end,
+    ...gainTrend.map(point=>point.position).filter(value=>value>start&&value<end),
+    ...lossTrend.map(point=>point.position).filter(value=>value>start&&value<end),
+  ])].sort((a,b)=>a-b);
+  const at=position=>{
+    const gain=rrTrendPayoutAt(gainTrend,position);
+    const loss=rrTrendPayoutAt(lossTrend,position);
+    return{position,gain,loss,difference:gain+loss};
+  };
+  const samples=positions.map(at),crossings=[];
+  samples.forEach((point,index)=>{
+    if(Math.abs(point.difference)<1e-9)crossings.push(point);
+    const next=samples[index+1];
+    if(next&&point.difference*next.difference<0){
+      const fraction=-point.difference/(next.difference-point.difference);
+      crossings.push(at(point.position+(next.position-point.position)*fraction));
+    }
+  });
+  const center=(start+end)/2;
+  if(crossings.length){
+    const best=crossings.sort((a,b)=>Math.abs(a.position-center)-Math.abs(b.position-center))[0];
+    return{...best,exact:true};
+  }
+  const best=samples.sort((a,b)=>Math.abs(a.difference)-Math.abs(b.difference))[0];
+  return{...best,exact:false};
+}
+
 function renderRRMovement(matches){
   const section=document.getElementById('rr-movement-section');
   const container=document.getElementById('rr-movement-chart');
@@ -4541,6 +4654,21 @@ function renderRRMovement(matches){
 
   const axis=rrMovementXAxis(rows,rrMovementZoomTier);
   rows=rows.map((row,index)=>({...row,axisRR:axis.positions[index]}));
+  const gainTrend=rrPayoutTrend(rows,true),lossTrend=rrPayoutTrend(rows,false);
+  const balance=rrPayoutBalancePoint(gainTrend,lossTrend);
+  const balanceText=document.getElementById('rr-movement-balance');
+  if(balance){
+    const nearest=rows.reduce((best,row)=>Math.abs(row.axisRR-balance.position)<Math.abs(best.axisRR-balance.position)?row:best);
+    const position=rrMovementZoomTier==null
+      ?rrPositionFromElo(Math.round(balance.position),rowTier(nearest)).label
+      :`${avgLabelShort(rrMovementZoomTier)} · ${Math.round(balance.position)} RR`;
+    balanceText.innerHTML=`<strong>${balance.exact?'Payout balance':'Closest payout balance'}:</strong> ${position} · typical ${rrSigned(balance.gain,1)} gain / ${rrSigned(balance.loss,1)} loss${balance.exact?'':` · ${Math.abs(balance.difference).toFixed(1)} RR apart`}`;
+  }else{
+    balanceText.textContent='Payout balance appears once gain and loss trends share a starting-RR range.';
+  }
+  document.getElementById('rr-movement-trend-note').textContent=gainTrend.length>1||lossTrend.length>1
+    ?'Lines show the median of seven nearby payouts of the same type, across starting RR. Dots are individual matches.'
+    :'Typical payout trends need at least eight recorded gains or losses. Dots show individual matches.';
 
   const penalties=rows.filter(row=>row.penalty>0).length;
   document.getElementById('rr-movement-count').textContent=[
@@ -4585,11 +4713,8 @@ function renderRRMovement(matches){
     if(value<0)return zeroY+breakGap+(negativeCeiling-value)/(negativeCeiling-negativeBottom)*(plotBottom-zeroY-breakGap);
     return zeroY;
   };
-  const svg=node('svg',{class:`rr-movement-svg${rrMovementZoomTier!=null?' zoomed':''}`,viewBox:`0 0 ${width} ${height}`,role:'img','aria-labelledby':'rr-movement-svg-title rr-movement-svg-desc'});
-  svg.append(
-    node('title',{id:'rr-movement-svg-title'},'RR payout balance by starting rank and RR'),
-    node('desc',{id:'rr-movement-svg-desc'},`Dots show individual RR payouts by starting rank. Green dots are gains and red dots are losses.${breakAroundZero?' Empty ranges around zero are compressed and marked with axis breaks.':''}`),
-  );
+  const svg=node('svg',{class:`rr-movement-svg${rrMovementZoomTier!=null?' zoomed':''}`,viewBox:`0 0 ${width} ${height}`,role:'img','aria-label':'RR payout balance by starting rank and RR','aria-describedby':'rr-movement-svg-desc'});
+  svg.appendChild(node('desc',{id:'rr-movement-svg-desc'},`Dots show individual RR payouts by starting rank. Green and red lines show seven-match rolling median gains and losses when enough matches are available.${balance?` The blue marker shows ${balance.exact?'the payout balance':'the closest payout balance'} at starting rank ${Math.round(balance.position)}.`:''}${breakAroundZero?' Empty ranges around zero are compressed and marked with axis breaks.':''}`));
 
   const availableTiers=new Set(allRows.map(rowTier));
   const toggleRankZoom=tier=>{
@@ -4714,6 +4839,12 @@ function renderRRMovement(matches){
   svg.appendChild(node('text',{x:(left+plotRight)/2,y:height-9,'text-anchor':'middle',class:'axis-label'},
     rrMovementZoomTier==null?'Starting rank + RR':'Starting RR'));
 
+  for(const [trend,kind] of [[gainTrend,'positive'],[lossTrend,'negative']]){
+    if(trend.length<2)continue;
+    const path=trend.map(({position,payout},index)=>`${index?'L':'M'}${x(position).toFixed(1)},${y(payout).toFixed(1)}`).join(' ');
+    svg.appendChild(node('path',{d:path,class:`payout-trend ${kind}`,'aria-hidden':'true'}));
+  }
+
   const sortedRows=rows.slice().sort((a,b)=>a.axisRR-b.axisRR||(a.m.startedAtMs||0)-(b.m.startedAtMs||0));
   const overlapTotals=new Map();
   sortedRows.forEach(row=>{
@@ -4732,15 +4863,16 @@ function renderRRMovement(matches){
     return{row,px,py};
   });
   positionedRows.forEach(({row,px,py})=>{
-    const position=rrPositionFromElo(row.m.myPreRR,row.m.myPreTierId??row.m.myTierId);
-    const rankText=`${avgLabel(position.tier)} · ${position.rr} RR`;
-    const changeText=row.net===0?'0 RR':`${rrSigned(row.net,0)} RR`;
-    const group=node('g',{tabindex:'0',role:'img','aria-label':`${rankText}. ${changeText}`});
     const pointClass=row.net>0?'positive':row.net<0?'negative':'neutral';
-    const marker=node('circle',{cx:px,cy:py,r:3.5,class:`trend-point ${pointClass}`});
-    group.appendChild(marker);
-    svg.appendChild(group);
+    svg.appendChild(node('circle',{cx:px,cy:py,r:3.5,class:`trend-point ${pointClass}`,'aria-hidden':'true'}));
   });
+  if(balance){
+    const px=x(balance.position),gainY=y(balance.gain),lossY=y(balance.loss);
+    svg.appendChild(node('line',{x1:px,y1:gainY,x2:px,y2:lossY,class:'balance-connector','aria-hidden':'true'}));
+    svg.appendChild(node('circle',{cx:px,cy:gainY,r:5,class:'balance-endpoint gain','aria-hidden':'true'}));
+    svg.appendChild(node('circle',{cx:px,cy:lossY,r:5,class:'balance-endpoint loss','aria-hidden':'true'}));
+    svg.appendChild(node('circle',{cx:px,cy:y(0),r:4.5,class:'balance-center','aria-hidden':'true'}));
+  }
   container.appendChild(svg);
 }
 
@@ -4786,8 +4918,12 @@ function renderRRTrend(matches){
   rrTrendRenderedWidth=Math.round(container.clientWidth);
   const values=points.map(p=>p.value);
   const low=Math.min(...values),high=Math.max(...values);
-  const pad=Math.max(10,(high-low)*.12);
-  const min=Math.max(0,low-pad),max=high+pad;
+  // Anchor grid lines to clean rank/RR milestones instead of labeling
+  // arbitrary fractions of the observed range (such as 39 or 52 RR).
+  const paddedLow=Math.max(0,low-10),paddedHigh=high+10;
+  const tickStep=[100,200,500,1000].find(step=>Math.ceil(paddedHigh/step)-Math.floor(paddedLow/step)<=5)||1000;
+  const min=Math.floor(paddedLow/tickStep)*tickStep;
+  const max=Math.max(min+tickStep,Math.ceil(paddedHigh/tickStep)*tickStep);
   const x=i=>points.length===1?left+(width-left-right)/2:left+i*(width-left-right)/(points.length-1);
   const y=value=>bottom-(value-min)/(max-min)*(bottom-top);
   const ns='http://www.w3.org/2000/svg';
@@ -4803,11 +4939,12 @@ function renderRRTrend(matches){
     const rank=rrPositionFromElo(Math.round(value),tierHint??nearest.match.myPostTierId);
     return `${avgLabelShort(rank.tier)} · ${rank.rr} RR`;
   };
-  for(let i=0;i<=4;i++){
-    const value=min+(max-min)*i/4;
+  for(let value=min;value<=max;value+=tickStep){
     const yy=y(value);
+    const rank=rrPositionFromElo(value);
+    const tickLabel=rank.tier>=24?`Immo · ${rank.rr} RR`:avgLabelShort(rank.tier);
     svg.appendChild(el('line',{class:'grid',x1:left,y1:yy,x2:width-right,y2:yy}));
-    svg.appendChild(el('text',{class:'axis-label',x:left-8,y:yy+4,'text-anchor':'end'},rankAt(value)));
+    svg.appendChild(el('text',{class:'axis-label',x:left-8,y:yy+4,'text-anchor':'end'},tickLabel));
   }
   const line=points.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
   if(points.length>1){
@@ -5133,7 +5270,12 @@ function buildPlayersGrid(m){
     }
     const clVal=hasClutches?`${clWins}/${clTotal}`:'—';
     const clCls='player-1v2'+(!hasClutches?' p1v2-null':clWins>0?' p1v2-win':'');
-    return `<div class="${cls}"><span class="player-name-wrap"><span class="${nameClass}" title="${p.name}#${p.tag}">${p.name}</span><span class="player-tag">#${p.tag}</span></span><span class="${acsCls}">${acsVal}</span><span class="${kdCls}">${kdVal}</span><span class="${clCls}" title="Clutches this match (won/total situations), across all 1v1-1v5 types">${clVal}</span><span class="player-rank-txt ${rClass(p._tier)}">${p._label}</span></div>`;
+    const playerLabel=matchHtml(`${p.name||''}#${p.tag||''}`);
+    const playerContent=`<span class="${nameClass}">${matchHtml(p.name)}</span><span class="player-tag">#${matchHtml(p.tag)}</span>`;
+    const playerIdentity=p.name&&p.tag
+      ?`<a class="player-name-wrap" href="${matchHtml(playerRouteUrl(p.name,p.tag))}" title="Search ${playerLabel}">${playerContent}</a>`
+      :`<span class="player-name-wrap">${playerContent}</span>`;
+    return `<div class="${cls}">${playerIdentity}<span class="${acsCls}">${acsVal}</span><span class="${kdCls}">${kdVal}</span><span class="${clCls}" title="Clutches this match (won/total situations), across all 1v1-1v5 types">${clVal}</span><span class="player-rank-txt ${rClass(p._tier)}">${p._label}</span></div>`;
   }
 
   const grid=document.createElement('div');
