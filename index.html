@@ -713,8 +713,6 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-movement-count{color:#a1a1aa;font-size:12px;font-variant-numeric:tabular-nums;}
 .rr-movement-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:12px 0 10px;color:#b4b4bd;font-size:11px;}
 .rr-movement-legend span{display:inline-flex;align-items:center;gap:6px;}
-.rr-movement-legend .rr-movement-axis-note{margin-left:auto;color:#a1a1aa;}
-.rr-movement-legend .rr-movement-axis-note[hidden]{display:none;}
 .rr-legend-mark{display:inline-block;width:10px;height:10px;border-radius:50%;background:#71717a;}
 .rr-legend-mark.win{background:#4ade80;}.rr-legend-mark.loss{background:#f87171;}
 .rr-movement-scroll{position:relative;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
@@ -722,8 +720,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-movement-svg{display:block;width:100%;min-width:720px;height:auto;font-family:var(--font-body);}
 .rr-movement-svg .rank-band{cursor:pointer;}
 .rr-movement-svg .rank-band:focus{outline:none;fill:rgba(74,222,128,.07);stroke:#4ade80;stroke-opacity:.7;stroke-width:1.5;}
-.rr-movement-svg .grid{stroke:#303034;stroke-width:1;}.rr-movement-svg .zero{stroke:#71717a;stroke-width:1.5;}
-.rr-movement-svg .axis-break{fill:none;stroke:#a1a1aa;stroke-width:1.4;stroke-linecap:round;}
+.rr-movement-svg .grid{stroke:#303034;stroke-width:1;}
 .rr-movement-svg .x-grid{stroke:#29292e;stroke-width:1;}
 .rr-movement-svg .axis-label,.rr-movement-svg .tick-label{fill:#a1a1aa;font-size:11px;}
 .rr-movement-svg .rank-band-label{fill:#c4c4cc;font-size:10px;font-weight:600;}
@@ -732,10 +729,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-movement-svg .trend-point,.rr-movement-svg .payout-trend{pointer-events:none;}
 .rr-movement-svg .payout-trend{fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;}
 .rr-movement-svg .payout-trend.positive{stroke:#4ade80;}.rr-movement-svg .payout-trend.negative{stroke:#f87171;}
-.rr-movement-svg .balance-connector{stroke:var(--brand);stroke-width:1.5;stroke-dasharray:4 4;pointer-events:none;}
-.rr-movement-svg .balance-center{fill:var(--brand);stroke:#141416;stroke-width:2;pointer-events:none;}
-.rr-movement-svg .balance-endpoint{fill:#141416;stroke-width:2.5;pointer-events:none;}
-.rr-movement-svg .balance-endpoint.gain{stroke:#4ade80;}.rr-movement-svg .balance-endpoint.loss{stroke:#f87171;}
+.rr-movement-svg .balance-crossing{fill:var(--brand);stroke:#141416;stroke-width:2.5;pointer-events:none;}
 .rr-legend-line{display:inline-block;width:21px;height:3px;border-radius:3px;background:linear-gradient(90deg,#4ade80 0 46%,transparent 46% 54%,#f87171 54%);}
 .rr-legend-balance{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--brand);}
 .rr-movement-balance{margin-top:10px;color:#d4d4da;font-size:12px;line-height:1.5;font-variant-numeric:tabular-nums;}
@@ -944,7 +938,6 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
           <div class="rr-movement-head"><h2 id="rr-movement-title">RR payout balance by starting rank</h2><span id="rr-movement-count" class="rr-movement-count"></span></div>
           <div class="rr-movement-legend" aria-label="Chart legend">
             <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span><span><i class="rr-legend-line"></i>Typical payout trend</span><span><i class="rr-legend-balance"></i>Payout balance</span>
-            <span id="rr-movement-axis-note" class="rr-movement-axis-note" hidden>Axis breaks compress the empty range near 0</span>
           </div>
           <div id="rr-movement-chart" class="rr-movement-scroll" role="region" aria-label="RR movement chart" tabindex="0"></div>
           <p id="rr-movement-balance" class="rr-movement-balance"></p>
@@ -2342,6 +2335,26 @@ const MIN_RATED=7; // strict: a match needs at least this many rated players (of
 
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
+async function waitForRateLimit(ms){
+  const statusText=document.getElementById('status-text');
+  const deadline=performance.now()+ms;
+  let lastMessage='';
+  let ownsStatus=true;
+  const update=()=>{
+    if(lastMessage&&statusText.textContent!==lastMessage)ownsStatus=false;
+    if(!ownsStatus)return;
+    const seconds=Math.max(0,Math.ceil((deadline-performance.now())/1000));
+    const message=`Rate limit reached — waiting ${seconds}s for reset…`;
+    if(message!==lastMessage){
+      setStatus(message,true);
+      lastMessage=message;
+    }
+  };
+  update();
+  const timer=setInterval(update,200);
+  try{await sleep(ms);}finally{clearInterval(timer);}
+}
+
 // Pull a machine-readable error code out of HenrikDev's {status,errors:[{code,…}]}
 // body when available, so messages are specific (see docs → Error Codes).
 async function parseApiError(r){
@@ -2393,8 +2406,8 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
       if(typeof body.retryAfterMs==='number')retryMs=Math.max(body.retryAfterMs,RL_WAIT_FLOOR_MS);
     }catch(_){/* fall back to the floor if the body isn't as expected */}
     const wait=Math.min(retryMs,MAX_WAIT_MS);
-    if(!opts.quiet)setStatus(`Rate limit reached — waiting ${Math.ceil(wait/1000)}s for reset…`,true);
-    await sleep(wait);
+    if(opts.quiet)await sleep(wait);
+    else await waitForRateLimit(wait);
     return apiGet(url,opts,_attempt,_rl+1);
   }
 
@@ -4584,7 +4597,7 @@ function rrPayoutMedian(values){
 
 function rrPayoutTrend(rows,positive){
   // Seven neighbouring payouts of the same sign describe a typical payout
-  // without fitting a curve or treating a single unusual match as a trend.
+  // magnitude without fitting a curve or treating one unusual match as a trend.
   const ordered=rows.filter(row=>positive?row.net>0:row.net<0)
     .sort((a,b)=>a.axisRR-b.axisRR);
   if(ordered.length<8)return [];
@@ -4593,7 +4606,7 @@ function rrPayoutTrend(rows,positive){
     const window=ordered.slice(i,i+7);
     const position=window[3].axisRR;
     if(!atPosition.has(position))atPosition.set(position,[]);
-    atPosition.get(position).push(rrPayoutMedian(window.map(row=>row.net)));
+    atPosition.get(position).push(rrPayoutMedian(window.map(row=>Math.abs(row.net))));
   }
   return [...atPosition].map(([position,payouts])=>({position,payout:rrPayoutMedian(payouts)}));
 }
@@ -4621,7 +4634,7 @@ function rrPayoutBalancePoint(gainTrend,lossTrend){
   const at=position=>{
     const gain=rrTrendPayoutAt(gainTrend,position);
     const loss=rrTrendPayoutAt(lossTrend,position);
-    return{position,gain,loss,difference:gain+loss};
+    return{position,gain,loss,difference:gain-loss};
   };
   const samples=positions.map(at),crossings=[];
   samples.forEach((point,index)=>{
@@ -4635,10 +4648,10 @@ function rrPayoutBalancePoint(gainTrend,lossTrend){
   const center=(start+end)/2;
   if(crossings.length){
     const best=crossings.sort((a,b)=>Math.abs(a.position-center)-Math.abs(b.position-center))[0];
-    return{...best,exact:true};
+    return{...best,exact:true,crossings};
   }
   const best=samples.sort((a,b)=>Math.abs(a.difference)-Math.abs(b.difference))[0];
-  return{...best,exact:false};
+  return{...best,exact:false,crossings:[]};
 }
 
 function renderRRMovement(matches){
@@ -4662,13 +4675,13 @@ function renderRRMovement(matches){
     const position=rrMovementZoomTier==null
       ?rrPositionFromElo(Math.round(balance.position),rowTier(nearest)).label
       :`${avgLabelShort(rrMovementZoomTier)} · ${Math.round(balance.position)} RR`;
-    balanceText.innerHTML=`<strong>${balance.exact?'Payout balance':'Closest payout balance'}:</strong> ${position} · typical ${rrSigned(balance.gain,1)} gain / ${rrSigned(balance.loss,1)} loss${balance.exact?'':` · ${Math.abs(balance.difference).toFixed(1)} RR apart`}`;
+    balanceText.innerHTML=`<strong>${balance.exact?'Payout balance':'No trend intersection; closest point'}:</strong> ${position} · typical ${rrSigned(balance.gain,1)} gain / ${rrSigned(-balance.loss,1)} loss${balance.exact?'':` · ${Math.abs(balance.difference).toFixed(1)} RR apart`}`;
   }else{
     balanceText.textContent='Payout balance appears once gain and loss trends share a starting-RR range.';
   }
   document.getElementById('rr-movement-trend-note').textContent=gainTrend.length>1||lossTrend.length>1
-    ?'Lines show the median of seven nearby payouts of the same type, across starting RR. Dots are individual matches.'
-    :'Typical payout trends need at least eight recorded gains or losses. Dots show individual matches.';
+    ?'Lines show the median magnitude of seven nearby payouts of the same type, across starting RR. Dots are individual matches.'
+    :'Typical payout trends need at least eight recorded gains or losses. Dots show individual payout magnitudes.';
 
   const penalties=rows.filter(row=>row.penalty>0).length;
   document.getElementById('rr-movement-count').textContent=[
@@ -4688,33 +4701,14 @@ function renderRRMovement(matches){
   const width=900,height=340,left=68,right=20,top=34,bottom=58;
   const plotRight=width-right,plotBottom=height-bottom,plotWidth=plotRight-left,plotHeight=plotBottom-top;
   const xMin=axis.min,xMax=axis.max;
-  const payouts=rows.map(row=>row.net);
-  const gains=payouts.filter(value=>value>0),losses=payouts.filter(value=>value<0);
-  const positiveTop=gains.length?Math.ceil(Math.max(...gains)/5)*5:0;
-  const positiveFloor=gains.length?Math.max(0,Math.floor((Math.min(...gains)-.001)/5)*5):0;
-  const negativeBottom=losses.length?Math.floor(Math.min(...losses)/5)*5:0;
-  const negativeCeiling=losses.length?Math.min(0,Math.ceil((Math.max(...losses)+.001)/5)*5):0;
-  // An empty payout band around zero wastes most of the chart. Compress it
-  // only when both outcomes are well clear of zero, and mark the breaks.
-  const breakAroundZero=positiveFloor>=10&&negativeCeiling<=-10;
-  document.getElementById('rr-movement-axis-note').hidden=!breakAroundZero;
-  const zeroY=(top+plotBottom)/2,breakGap=25;
-  const oneSided=gains.length&&!losses.length?'gain':losses.length&&!gains.length?'loss':null;
-  const yMin=oneSided==='gain'?Math.max(0,Math.floor(Math.min(...gains)/5)*5-5)
-    :Math.floor(Math.min(0,...payouts)/5)*5-(oneSided==='loss'?5:0);
-  const yMax=Math.max(yMin+5,oneSided==='loss'
-    ?Math.min(0,Math.ceil(Math.max(...losses)/5)*5+5)
-    :Math.ceil(Math.max(0,...payouts)/5)*5+(oneSided==='gain'?5:0));
+  const payouts=rows.map(row=>Math.abs(row.net));
+  const yMin=Math.max(0,Math.floor(Math.min(...payouts)/5)*5-5);
+  const yMax=Math.max(yMin+5,Math.ceil(Math.max(...payouts)/5)*5+5);
   const xInset=rrMovementZoomTier!=null?12:0;
   const x=value=>left+xInset+(value-xMin)/(xMax-xMin)*(plotWidth-2*xInset);
-  const y=value=>{
-    if(!breakAroundZero)return top+(yMax-value)/(yMax-yMin)*plotHeight;
-    if(value>0)return top+(positiveTop-value)/(positiveTop-positiveFloor)*(zeroY-breakGap-top);
-    if(value<0)return zeroY+breakGap+(negativeCeiling-value)/(negativeCeiling-negativeBottom)*(plotBottom-zeroY-breakGap);
-    return zeroY;
-  };
-  const svg=node('svg',{class:`rr-movement-svg${rrMovementZoomTier!=null?' zoomed':''}`,viewBox:`0 0 ${width} ${height}`,role:'img','aria-label':'RR payout balance by starting rank and RR','aria-describedby':'rr-movement-svg-desc'});
-  svg.appendChild(node('desc',{id:'rr-movement-svg-desc'},`Dots show individual RR payouts by starting rank. Green and red lines show seven-match rolling median gains and losses when enough matches are available.${balance?` The blue marker shows ${balance.exact?'the payout balance':'the closest payout balance'} at starting rank ${Math.round(balance.position)}.`:''}${breakAroundZero?' Empty ranges around zero are compressed and marked with axis breaks.':''}`));
+  const y=value=>top+(yMax-value)/(yMax-yMin)*plotHeight;
+  const svg=node('svg',{class:`rr-movement-svg${rrMovementZoomTier!=null?' zoomed':''}`,viewBox:`0 0 ${width} ${height}`,role:'img','aria-label':'Absolute RR payout by starting rank','aria-describedby':'rr-movement-svg-desc'});
+  svg.appendChild(node('desc',{id:'rr-movement-svg-desc'},`Dots show the magnitude of individual RR payouts by starting rank. Green and red lines show seven-match rolling median gain and loss magnitudes when enough matches are available.${balance?.exact?` Blue markers show where the trends intersect; a gain and a loss cost the same RR at those starting ranks.`:''}`));
 
   const availableTiers=new Set(allRows.map(rowTier));
   const toggleRankZoom=tier=>{
@@ -4789,21 +4783,14 @@ function renderRRMovement(matches){
     const target=rankBands.find(band=>value>=band.start&&value<=band.end);
     if(target)toggleRankZoom(target.tier);
   });
-  const yTicks=breakAroundZero
-    ?[positiveTop,positiveFloor,0,negativeCeiling,negativeBottom]
-    :Array.from({length:5},(_,i)=>yMax-(yMax-yMin)*i/4);
+  const yTicks=Array.from({length:5},(_,i)=>yMax-(yMax-yMin)*i/4);
   yTicks.forEach(value=>{
     const py=y(value);
-    svg.appendChild(node('line',{x1:left,y1:py,x2:plotRight,y2:py,class:value===0?'zero':'grid'}));
+    svg.appendChild(node('line',{x1:left,y1:py,x2:plotRight,y2:py,class:'grid'}));
     const label=Number.isInteger(value)?String(value):value.toFixed(1);
-    svg.appendChild(node('text',{x:left-10,y:py+4,'text-anchor':'end',class:'tick-label'},value>0?`+${label}`:label));
+    svg.appendChild(node('text',{x:left-10,y:py+4,'text-anchor':'end',class:'tick-label'},label));
   });
-  if(breakAroundZero){
-    [zeroY-breakGap/2,zeroY+breakGap/2].forEach(py=>{
-      svg.appendChild(node('path',{d:`M${left-4} ${py+4}l7 -8m2 8l7 -8`,class:'axis-break','aria-hidden':'true'}));
-    });
-  }
-  const yTitle=node('text',{x:15,y:(top+plotBottom)/2,'text-anchor':'middle',class:'axis-label',transform:`rotate(-90 15 ${(top+plotBottom)/2})`},'RR payout');
+  const yTitle=node('text',{x:15,y:(top+plotBottom)/2,'text-anchor':'middle',class:'axis-label',transform:`rotate(-90 15 ${(top+plotBottom)/2})`},'RR payout magnitude');
   svg.appendChild(yTitle);
   if(rrMovementZoomTier!=null){
     const range=xMax-xMin;
@@ -4859,20 +4846,16 @@ function renderRRMovement(matches){
     overlapIndexes.set(key,index+1);
     const spacing=total>1?Math.min(3,18/(total-1)):0;
     const px=x(row.axisRR)+(index-(total-1)/2)*spacing;
-    const py=y(row.net);
+    const py=y(Math.abs(row.net));
     return{row,px,py};
   });
   positionedRows.forEach(({row,px,py})=>{
     const pointClass=row.net>0?'positive':row.net<0?'negative':'neutral';
     svg.appendChild(node('circle',{cx:px,cy:py,r:3.5,class:`trend-point ${pointClass}`,'aria-hidden':'true'}));
   });
-  if(balance){
-    const px=x(balance.position),gainY=y(balance.gain),lossY=y(balance.loss);
-    svg.appendChild(node('line',{x1:px,y1:gainY,x2:px,y2:lossY,class:'balance-connector','aria-hidden':'true'}));
-    svg.appendChild(node('circle',{cx:px,cy:gainY,r:5,class:'balance-endpoint gain','aria-hidden':'true'}));
-    svg.appendChild(node('circle',{cx:px,cy:lossY,r:5,class:'balance-endpoint loss','aria-hidden':'true'}));
-    svg.appendChild(node('circle',{cx:px,cy:y(0),r:4.5,class:'balance-center','aria-hidden':'true'}));
-  }
+  balance?.crossings.forEach(point=>{
+    svg.appendChild(node('circle',{cx:x(point.position),cy:y(point.gain),r:5.5,class:'balance-crossing','aria-hidden':'true'}));
+  });
   container.appendChild(svg);
 }
 
