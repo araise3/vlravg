@@ -1,7 +1,7 @@
 {
   "source": "vct-2026-data-analysis/src/lib/trackerLinks.json",
-  "playerCount": 265,
-  "accountCount": 269,
+  "playerCount": 264,
+  "accountCount": 268,
   "resolvedPuuidCount": 268,
   "players": [
     {
@@ -170,19 +170,6 @@
           "puuid": "44c6073c-523d-5ae8-80ca-0a2521ee632b",
           "riotId": "AsLanMashadWW#AsLan",
           "trackerUrl": "https://tracker.gg/valorant/profile/riot/AsLanMashadWW%23AsLan"
-        }
-      ]
-    },
-    {
-      "handle": "aspas",
-      "team": "MIBR",
-      "region": "Americas",
-      "countryCode": "br",
-      "accounts": [
-        {
-          "puuid": null,
-          "riotId": "MIBR aspas#naхy",
-          "trackerUrl": "https://tracker.gg/valorant/profile/riot/MIBR%20aspas%23na%D1%85y"
         }
       ]
     },
