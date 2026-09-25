@@ -13,7 +13,7 @@
 <meta name="theme-color" content="#3b82f6">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   color-scheme:dark;
@@ -23,7 +23,6 @@
   --win:#22c55e;--loss:#ef4444;--draw:#f59e0b;
   --font-body:'Geist',Geist,system-ui,sans-serif;
   --font-display:'Geist',system-ui,sans-serif;
-  --font-table:'IBM Plex Sans','Geist',system-ui,sans-serif;
   /* Geist Mono is Geist's own monospace companion — same skeleton and
      x-height, so formula strips sit next to body copy without looking
      like a different document. */
@@ -454,7 +453,7 @@ a.player-name-wrap:focus-visible{outline:2px solid var(--brand);outline-offset:2
 .overview-hero .avg-rank-rr{display:block;margin:10px 0 0;font-size:16px;letter-spacing:0;font-weight:500;color:#b5b5bd;}
 .overview-party-lobbies{flex-shrink:0;min-width:280px;border:1px solid #29292d;border-radius:8px;overflow:hidden;background:#111113;}
 .overview-party-lobbies[hidden]{display:none;}
-.overview-party-table{width:100%;border-collapse:collapse;font:12px var(--font-table);font-variant-numeric:tabular-nums;}
+.overview-party-table{width:100%;border-collapse:collapse;font:12px var(--font-display);font-variant-numeric:tabular-nums;}
 .overview-party-table th,.overview-party-table td{padding:10px 13px;border-bottom:1px solid #262629;}
 .overview-party-table tr>*+*{border-left:1px solid #29292d;}
 .overview-party-table thead th{background:#171719;color:#a9a9b2;font-size:10px;font-weight:650;letter-spacing:.06em;text-transform:uppercase;}
@@ -501,7 +500,10 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
 .overview-rr-trend svg{display:block;width:100%;height:84px;overflow:visible;}
 .overview-rr-trend .area{fill:rgba(228,228,231,.07);}
 .overview-rr-trend .line{fill:none;stroke:#e4e4e7;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;}
-.overview-rr-trend .endpoint{fill:#e4e4e7;}
+.overview-rr-trend .point{stroke:#141416;stroke-width:1.5;}
+.overview-rr-trend .point.positive{fill:#4ade80;}
+.overview-rr-trend .point.negative{fill:#f87171;}
+.overview-rr-trend .point.neutral{fill:#e4e4e7;}
 .overview-rr-trend-empty{display:block;color:#a1a1aa;font-size:12px;padding:20px 0;}
 .overview-preview-note{font-size:12px;color:#a1a1aa;margin:12px 0 0;line-height:1.6;}
 .overview-clutches{border:1px solid var(--surface-border);border-radius:12px;background:var(--surface);}
@@ -573,7 +575,7 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
 #sg-rank-card,#lobby-teams-card,#party-size-section,#teammates-section,#name-history-card,.rr-table-card,.servers-table-card{padding:0;overflow:hidden;border:1px solid #29292d;border-radius:8px;background:#111113;box-shadow:none;}
 #name-history-card[hidden]{display:none;}
 .name-history-table-scroll{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
-.name-history-table{width:100%;min-width:680px;border-collapse:separate;border-spacing:0;table-layout:fixed;text-align:left;font-family:var(--font-table);font-variant-numeric:tabular-nums;}
+.name-history-table{width:100%;min-width:680px;border-collapse:separate;border-spacing:0;table-layout:fixed;text-align:left;font-family:var(--font-display);font-variant-numeric:tabular-nums;}
 .name-history-table th:first-child{width:34%;}
 .name-history-table th:nth-child(2),.name-history-table th:nth-child(3){width:21%;}
 .name-history-table th,.name-history-table td{padding:14px 18px;border-bottom:1px solid #262629;text-align:left;vertical-align:middle;}
@@ -610,7 +612,7 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
 .duo-player-name .duo-name{overflow:hidden;text-overflow:ellipsis;}
 .duo-player-name .duo-tag{color:#a1a1aa;font-size:12px;}
 .rank-table .table-lobby-value{justify-content:flex-end;font-size:13px;}
-.rank-table{width:100%;min-width:620px;border-collapse:separate;border-spacing:0;text-align:right;font-family:var(--font-table);font-variant-numeric:tabular-nums;}
+.rank-table{width:100%;min-width:620px;border-collapse:separate;border-spacing:0;text-align:right;font-family:var(--font-display);font-variant-numeric:tabular-nums;}
 .rank-table.duos-table{min-width:680px;}
 .rank-table.duos-table th,.rank-table.duos-table td{padding-left:16px;padding-right:16px;}
 .duos-table th:first-child{width:25%;}
@@ -648,11 +650,10 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rank-table tbody tr:hover th:first-child,.rank-table tbody tr:focus-within th:first-child{background:#1b1b1f;}
 .rank-row-identity{display:flex;align-items:center;gap:10px;font-size:14px;}
 .rank-row-identity img{width:24px;height:24px;object-fit:contain;}
-.rank-table td{font:500 13px/1.4 var(--font-table);font-variant-numeric:tabular-nums;color:#d4d4da;}
+.rank-table td{font:500 13px/1.4 var(--font-display);font-variant-numeric:tabular-nums;color:#d4d4da;}
 .rank-positive{color:#4ade80;}.rank-negative{color:#f87171;}
 .rank-table td.rank-positive{color:#72e6a0;}.rank-table td.rank-negative{color:#ff9999;}
-.rank-table td.table-best{position:relative;font-weight:700;}
-.rank-table td.table-best::after{content:'';position:absolute;right:7px;top:50%;width:5px;height:5px;background:var(--brand);border-radius:1px;transform:translateY(-50%) rotate(45deg);}
+.rank-table td.table-best{background:rgba(var(--brand-rgb),.15);box-shadow:inset 0 0 0 1px rgba(var(--brand-rgb),.38);font-weight:700;}
 .rank-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 #party-size-section{margin-bottom:24px;}
 .rr-table-card{padding:0;overflow:hidden;margin-bottom:24px;}
@@ -737,7 +738,6 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-movement-trend-note{margin:8px 0 0;color:#a1a1aa;font-size:12px;line-height:1.5;}
 @media(max-width:600px){
   .rank-table th,.rank-table td,.rank-table.duos-table th,.rank-table.duos-table td{padding-left:14px;padding-right:14px;}
-  .rank-table td.table-best::after{right:4px;}
   .rr-movement-card,.rr-trend-card{padding:14px;}
 }
 @media(prefers-reduced-motion:reduce){.rank-table tbody tr,.input-section,.search-bar,.pro-result-main,.pro-result-tracker{transition:none;}.spinner,#season-trigger.loading::before,.shake,.player-card-byline .stat-box{animation:none;}}
@@ -1018,7 +1018,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
         <section class="overview-preview" aria-labelledby="overview-rr-title">
           <a class="overview-preview-heading" href="/rr" data-page="rr"><h2 id="overview-rr-title">RR Breakdown</h2><span aria-hidden="true">↗</span></a>
           <div class="overview-rr-values"><div><span>RR / Win</span><strong id="rr-win-value">—</strong></div><div><span>RR / Loss</span><strong id="rr-loss-value">—</strong></div></div>
-          <div class="overview-rr-trend"><span class="overview-rr-trend-label">RR trend</span><div id="overview-rr-trend-chart" role="img" aria-label="RR trend unavailable"></div></div>
+          <div class="overview-rr-trend"><span id="overview-rr-trend-label" class="overview-rr-trend-label">RR trend</span><div id="overview-rr-trend-chart" role="img" aria-label="RR trend unavailable"></div></div>
           <p class="overview-preview-note"><span id="rr-games-value">—</span> eligible games <span aria-hidden="true">·</span> <span id="rr-wr-value">—</span> win rate</p>
         </section>
         <section class="overview-preview" aria-labelledby="overview-matches-title">
@@ -4509,11 +4509,24 @@ function renderRRCard(matches){
   if(wrVal)wrVal.textContent=res.winRate!=null?`${Math.round(res.winRate)}%`:'—';
 }
 
+let overviewRRTrendMatches=[];
+let overviewRRTrendWidth=0;
+let overviewRRTrendResizeObserver=null;
 function renderOverviewRRTrend(matches){
   const container=document.getElementById('overview-rr-trend-chart');
-  const ordered=matches.filter(m=>Number.isFinite(m.myRR)&&Number.isFinite(m.myPostRR))
-    .sort((a,b)=>(a.startedAtMs||0)-(b.startedAtMs||0));
+  const label=document.getElementById('overview-rr-trend-label');
+  overviewRRTrendMatches=matches;
+  if(!overviewRRTrendResizeObserver&&typeof ResizeObserver!=='undefined'){
+    overviewRRTrendResizeObserver=new ResizeObserver(()=>{
+      const width=Math.round(container.clientWidth);
+      if(width&&width!==overviewRRTrendWidth)renderOverviewRRTrend(overviewRRTrendMatches);
+    });
+    overviewRRTrendResizeObserver.observe(container);
+  }
+  const recent=[...matches].sort((a,b)=>(a.startedAtMs||0)-(b.startedAtMs||0)).slice(-20);
+  const ordered=recent.filter(m=>Number.isFinite(m.myRR)&&Number.isFinite(m.myPostRR));
   container.replaceChildren();
+  label.textContent=recent.length?`RR trend · last ${recent.length} ${recent.length===1?'match':'matches'}`:'RR trend';
   if(!ordered.length){
     const empty=document.createElement('span');empty.className='overview-rr-trend-empty';
     empty.textContent='No recorded RR trend for this act.';
@@ -4524,14 +4537,14 @@ function renderOverviewRRTrend(matches){
   const values=ordered.map(m=>m.myPostRR);
   const low=Math.min(...values),high=Math.max(...values),pad=Math.max(10,(high-low)*.12);
   const min=Math.max(0,low-pad),max=high+pad;
-  const width=400,height=84,left=3,right=3,top=5,bottom=78;
+  overviewRRTrendWidth=Math.round(container.clientWidth);
+  const width=overviewRRTrendWidth||400,height=84,left=4,right=4,top=5,bottom=78;
   const x=i=>values.length===1?width/2:left+i*(width-left-right)/(values.length-1);
   const y=value=>bottom-(value-min)/(max-min)*(bottom-top);
   const points=values.map((value,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(value).toFixed(1)}`).join(' ');
   const ns='http://www.w3.org/2000/svg';
   const svg=document.createElementNS(ns,'svg');
   svg.setAttribute('viewBox',`0 0 ${width} ${height}`);
-  svg.setAttribute('preserveAspectRatio','none');
   if(values.length>1){
     const area=document.createElementNS(ns,'path');area.setAttribute('class','area');
     area.setAttribute('d',`${points} L${x(values.length-1).toFixed(1)},${bottom} L${x(0).toFixed(1)},${bottom} Z`);
@@ -4539,11 +4552,18 @@ function renderOverviewRRTrend(matches){
     const line=document.createElementNS(ns,'path');line.setAttribute('class','line');line.setAttribute('d',points);
     svg.appendChild(line);
   }
-  const endpoint=document.createElementNS(ns,'circle');endpoint.setAttribute('class','endpoint');
-  endpoint.setAttribute('cx',x(values.length-1));endpoint.setAttribute('cy',y(values.at(-1)));endpoint.setAttribute('r','3');
-  svg.appendChild(endpoint);
+  // Keep every point visible while the dots have breathing room. On narrower
+  // charts, the latest result alone marks the end without crowding the line.
+  const spacing=values.length>1?(width-left-right)/(values.length-1):width;
+  ordered.forEach((match,i)=>{
+    if(spacing<24&&i!==ordered.length-1)return;
+    const point=document.createElementNS(ns,'circle');
+    point.setAttribute('class',`point ${match.myRR>0?'positive':match.myRR<0?'negative':'neutral'}`);
+    point.setAttribute('cx',x(i));point.setAttribute('cy',y(values[i]));point.setAttribute('r',i===ordered.length-1?'3.5':'3');
+    svg.appendChild(point);
+  });
   container.appendChild(svg);
-  container.setAttribute('aria-label',`RR trend across ${values.length} ${values.length===1?'match':'matches'} this act, from ${Math.round(values[0])} to ${Math.round(values.at(-1))} total rank RR`);
+  container.setAttribute('aria-label',`RR trend across ${values.length} ${values.length===1?'match':'matches'} with recorded RR among the last ${recent.length} ${recent.length===1?'match':'matches'} this act, from ${Math.round(values[0])} to ${Math.round(values.at(-1))} total rank RR`);
 }
 
 function rrPositionFromElo(elo,tierHint=null){
