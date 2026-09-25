@@ -44,9 +44,13 @@ without writing indexed evidence rows for every page. Evidence saved before
 this optimization remains readable and is merged with the compact periods. RR
 rows are also left untouched when a refresh returns byte-for-byte unchanged data.
 An isolated historical identity sandwiched between the same Riot ID less than
-48 hours apart is discarded as a stale roster observation; slower or sustained
-name reuse remains separate. This correction is applied while reading existing
-compact evidence too, so a completed backfill does not need to run again.
+48 hours apart is discarded as a stale roster observation. A name seen for at
+most one day is also discarded when the surrounding observations of the same
+ID are less than seven days apart and at least one surrounding run spans a
+week. This covers stale matches at the end of a long name period even when the
+returning ID has just one match. Longer or less well-supported name reuse stays
+separate. The correction is applied while reading existing compact evidence too,
+so a completed backfill does not need to run again.
 The backfill has its own 00:07 UTC schedule so a Free-plan D1 write-limit pause
 resumes just after Cloudflare resets daily usage at 00:00 UTC.
 
