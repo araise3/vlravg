@@ -299,6 +299,40 @@ test('completed backfill evidence is corrected when the timeline is read',async 
   assert.equal(rows[1].last_seen,'2025-12-13T20:00:00.000Z');
 });
 
+test('an established name absorbs a short stale island even when its return has one match',async t=>{
+  const {db}=database(t);
+  await observeName(db,account('loopy','bibi'),'2026-04-30T05:17:00.000Z');
+  const evidence=[
+    {name:'Scooby dooby doo',tag:'wheru',played_at:'2024-05-15T12:00:00.000Z'},
+    {name:'Scooby dooby doo',tag:'wheru',played_at:'2025-09-15T12:00:00.000Z'},
+    {name:'loopy',tag:'bibi',played_at:'2025-09-16T12:00:00.000Z'},
+    {name:'Scooby dooby doo',tag:'wheru',played_at:'2025-09-19T12:00:00.000Z'},
+    {name:'666mirp',tag:'kill',played_at:'2025-09-20T12:00:00.000Z'},
+    {name:'666mirp',tag:'kill',played_at:'2025-10-19T12:00:00.000Z'},
+  ];
+  await db.prepare(`INSERT INTO player_name_backfill
+    (puuid,region,platform,next_start,complete,updated_at,evidence)
+    VALUES(?1,'eu','pc',100,1,?2,?3)`)
+    .bind(puuid,day(6),JSON.stringify(evidence)).run();
+  const rows=await readNameHistory(db,puuid);
+  assert.deepEqual(rows.map(row=>row.name),['loopy','666mirp','Scooby dooby doo']);
+  assert.equal(rows[2].first_seen,'2024-05-15T12:00:00.000Z');
+  assert.equal(rows[2].last_seen,'2025-09-19T12:00:00.000Z');
+  assert.equal(rows[0].ended_at,null);
+  // The saved cursor remains complete; no user-triggered or scheduled rescan is needed.
+  assert.equal((await db.prepare('SELECT complete FROM player_name_backfill WHERE puuid=?1').bind(puuid).first()).complete,1);
+});
+
+test('a brief return outside the stale-island window remains separate',()=>{
+  const rows=compactMatchEvidence([
+    {name:'A',tag:'EU',played_at:'2025-01-01T00:00:00.000Z'},
+    {name:'A',tag:'EU',played_at:'2025-06-01T00:00:00.000Z'},
+    {name:'B',tag:'EU',played_at:'2025-06-02T00:00:00.000Z'},
+    {name:'A',tag:'EU',played_at:'2025-06-10T00:00:00.000Z'},
+  ]);
+  assert.deepEqual(rows.map(row=>row.name),['A','A','B','A']);
+});
+
 test('compact evidence keeps a one-match name reuse outside the rapid-bounce window',()=>{
   const rows=compactMatchEvidence([
     {name:'A',tag:'EU',played_at:'2026-01-01T00:00:00.000Z'},
