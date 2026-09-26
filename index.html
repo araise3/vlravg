@@ -1730,7 +1730,6 @@ function updateSeasonDropdown(seasonStats,seasonOrder){
     const opt=document.createElement('option');
     opt.value=uuid;
     opt.textContent=actOptionLabel(uuid,stats);
-    opt.dataset.games=String(games);
     sel.appendChild(opt);
   });
   // Restore previous selection if it's still in the list
@@ -1762,7 +1761,7 @@ function renderSeasonOptions(){
     if(o.value&&Number.isFinite(games)&&games>0){
       const count=document.createElement('span');
       count.className='season-option-games';
-      count.textContent=`${games.toLocaleString()} ${games===1?'game':'games'}`;
+      count.textContent=`${games.toLocaleString()} available ${games===1?'match':'matches'}`;
       row.appendChild(count);
       row.setAttribute('aria-label',`${act.textContent}, ${count.textContent}`);
     }
@@ -3378,6 +3377,29 @@ function tagActPlacements(matches){
 }
 
 /* ── LOAD ─────────────────────────────────────────────────── */
+const MAX_HISTORY_OFFSET=5000;
+// MMR season totals belong to the account's current region and can reset on a
+// transfer. The match list is keyed to the player across regions, so seek to
+// the selected act by its calendar boundary instead of using those totals as
+// either a skip offset or a stopping condition.
+async function findHistoryStartForAct(nextActStart,generation){
+  if(!Number.isFinite(nextActStart)||nextActStart>Date.now())return 0;
+  let lo=0,hi=MAX_HISTORY_OFFSET;
+  while(lo<hi){
+    if(generation!==_analysisGen)return 0;
+    const mid=Math.floor((lo+hi)/2);
+    setStatus('Locating act in match history…',true);
+    const url=`${API_BASE}/history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}?mode=competitive&size=1&start=${mid}`;
+    const {j}=await apiGet(url);
+    const match=j.data?.[0];
+    const started=match?Date.parse(match.metadata?.started_at):null;
+    if(match&&!Number.isFinite(started))return 0; // scan from newest if dates cannot be trusted
+    if(match&&started>=nextActStart)lo=mid+1;
+    else hi=mid;
+  }
+  return Math.max(0,lo-BATCH); // overlap one page at the act boundary
+}
+
 // Henrik's stored-matches endpoint is a compact archive, not a v4 match
 // payload. Use its 100-record pages to locate missing IDs for an older act,
 // then fetch full details only for those IDs so every existing stat keeps its
@@ -3404,8 +3426,13 @@ async function recoverStoredSeasonMatches(collected,myGen){
       if(!id||row?.meta?.season?.id?.toLowerCase()!==wanted||
          row?.stats?.puuid?.toLowerCase()!==PUUID.toLowerCase()||known.has(id))return;
       known.add(id);
-      missing.push(id);
+      missing.push({id,region:row.meta.region||REGION});
     });
+    const actStart=getActInfoByUuid(TARGET_SEASON)?.start;
+    if(Number.isFinite(actStart)&&rows.every(row=>{
+      const started=Date.parse(row?.meta?.started_at);
+      return Number.isFinite(started)&&started<actStart;
+    }))break;
     if(payload?.results?.after===0)break;
   }
   let failures=0;
@@ -3414,9 +3441,10 @@ async function recoverStoredSeasonMatches(collected,myGen){
     setStatus(`Recovering stored match ${i+1}/${missing.length}…`,true);
     setProgress(Math.min(85+(i+1)/missing.length*10,95));
     try{
-      const {j}=await apiGet(`${API_BASE}/match-detail/${region}/${encodeURIComponent(missing[i])}`);
+      const {id,region:matchRegion}=missing[i];
+      const {j}=await apiGet(`${API_BASE}/match-detail/${encodeURIComponent(matchRegion)}/${encodeURIComponent(id)}`);
       const match=j?.data||j;
-      if(match?.metadata?.match_id!==missing[i]||!isSeason(match)||
+      if(match?.metadata?.match_id!==id||!isSeason(match)||
          !match?.players?.some(p=>p.puuid?.toLowerCase()===PUUID.toLowerCase()))continue;
       collected.push(match);
       failures=0;
@@ -3481,8 +3509,8 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     }
     writePlayerRoute(PLAYER,TAG,TARGET_SEASON,pendingRoutePush?'push':'replace');
 
-    // Step 1: fetch v3/mmr (or reuse the prefetch) — used for dropdown update, auto-select, and offset calculation
-    let targetCount=null;
+    // Step 1: fetch v3/mmr (or reuse the prefetch) for rank and act selection.
+    // Its per-act game counts are regional, not a reliable match-list total.
     let start=0;
     let finalCurrent=null;
     let useServerArchive=false;
@@ -3520,7 +3548,6 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
           selected=document.createElement('option');
           selected.value=TARGET_SEASON;
           selected.textContent=actOptionLabel(TARGET_SEASON,seasonStats[TARGET_SEASON.toLowerCase()]);
-          if(seasonStats[TARGET_SEASON.toLowerCase()]?.games>0)selected.dataset.games=String(seasonStats[TARGET_SEASON.toLowerCase()].games);
           sel.appendChild(selected);
           renderSeasonOptions();
         }
@@ -3546,29 +3573,23 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
         if(!picked)showSeasonIdle('No played acts');
       }
 
-      // Compute game count + skip offset for the target season
-      if(TARGET_SEASON){
-        const actEntry=seasonal.find(s=>s.season?.id===TARGET_SEASON);
-        if(actEntry?.games){
-          targetCount=actEntry.games;
-          const targetIdx=seasonOrder.indexOf(TARGET_SEASON);
-          const skipGames=seasonal
-            .filter(s=>seasonOrder.indexOf(s.season?.id)>targetIdx)
-            .reduce((sum,s)=>sum+(s.games||0),0);
-          start=Math.max(0,skipGames-20);
-          setStatus(`Act has ${targetCount} games — jumping to offset ${start}…`,true);
-        }
-      }
     }catch(_){
-      // MMR fetch failed — proceed from offset 0 with no optimisation.
+      // MMR fetch failed — match history still loads from its own timeline.
     }
     // Resolve the real calendar-current act before consulting shared history.
     // Archive failures never affect the normal API path.
     await loadSeasonDates();
     const liveCurrentActId=currentActId();
     const targetActStart=getActInfoByUuid(TARGET_SEASON)?.start??null;
+    if(TARGET_SEASON&&TARGET_SEASON.toLowerCase()!==liveCurrentActId&&targetActStart!=null){
+      const actMeta=_actMeta&&Object.keys(_actMeta).length?_actMeta:HARDCODED_ACT_META;
+      const nextActStart=Math.min(...Object.values(actMeta).map(info=>info?.start)
+        .filter(value=>Number.isFinite(value)&&value>targetActStart));
+      try{start=await findHistoryStartForAct(nextActStart,myGen);}catch(_){start=0;}
+      if(myGen!==_analysisGen)return;
+    }
     if(liveCurrentActId){
-      useServerArchive=!!(PUUID&&TARGET_SEASON&&targetCount!=null&&TARGET_SEASON.toLowerCase()===liveCurrentActId);
+      useServerArchive=!!(PUUID&&TARGET_SEASON&&TARGET_SEASON.toLowerCase()===liveCurrentActId);
       if(useServerArchive){
         try{archivedMatches=await readServerMatchArchive(PUUID,liveCurrentActId,myGen);}catch(_){archivedMatches=[];}
         start=0; // current-act scans always begin at the newest match
@@ -3634,43 +3655,32 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     if(myGen!==_analysisGen)return;
 
     // Step 2: paginate match history. D1 rows are shared across every browser.
-    // A full archive satisfies the request; otherwise fetch newest-first until
-    // the union reaches the rank endpoint's game count.
+    // Continue through the whole act: regional MMR totals cannot prove that
+    // either the live list or the shared archive is complete after a transfer.
     let collected=[];
     const archivedIds=new Set(archivedMatches.map(m=>m.metadata?.match_id||m.match_id).filter(Boolean));
-    const archiveSatisfies=!!(useServerArchive&&targetCount!=null&&archivedIds.size>=targetCount);
     // Safety bound: the v4 matchlist response has no total/pagination metadata
     // (only status+data), so an empty page is the sole reliable end signal. Since
     // we no longer treat a short page as the end, guard against a pathological
     // never-empty response with a hard offset ceiling. Competitive history is
     // finite and this is far beyond any real account's game count.
-    const MAX_OFFSET=5000;
-    let guardPages=0, MAX_PAGES=600; // ~ MAX_OFFSET/min-page-size, belt-and-braces
+    let guardPages=0, MAX_PAGES=600; // ~ MAX_HISTORY_OFFSET/min-page-size, belt-and-braces
     let liveHistoryError=null;
-
-    if(archiveSatisfies){
-      setStatus(`Loading ${archivedMatches.length} saved matches…`,true);
-      setProgress(95);
-    }
-    while(!archiveSatisfies){
-      if(start>=MAX_OFFSET||++guardPages>MAX_PAGES)break; // safety stop
+    while(true){
+      if(start>=MAX_HISTORY_OFFSET||++guardPages>MAX_PAGES)break; // safety stop
       // Update status and progress bar together from the same value so they stay in sync
       const found=new Set([...archivedIds,...collected.map(m=>m.metadata?.match_id||m.match_id).filter(Boolean)]).size;
-      const pct=targetCount?Math.round(found/targetCount*100):null;
-      setStatus(`Fetching matches ${start+1}–${start+BATCH} · ${found}${targetCount?'/'+targetCount:''} found${pct?' ('+pct+'%)':''}…`,true);
-      setProgress(targetCount
-        ?Math.min(5+found/targetCount*90,95)
-        :Math.min(10+start/4,85));
+      setStatus(`Fetching matches ${start+1}–${start+BATCH} · ${found} found…`,true);
+      setProgress(Math.min(10+found/10,85));
 
       const url=`${API_BASE}/history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}?mode=competitive&size=${BATCH}&start=${start}${useServerArchive?`&puuid=${encodeURIComponent(PUUID)}`:''}`;
       let j;
       try{
         ({j}=await fetchWithRetry(url));
       }catch(e){
-        // A failed live lookup for an older act should still get a chance to
-        // recover from the PUUID-keyed stored archive below.
-        if(TARGET_SEASON&&TARGET_SEASON.toLowerCase()!==liveCurrentActId){liveHistoryError=e;break;}
-        throw e;
+        // Let the PUUID-keyed stored archive recover this act if live history
+        // becomes unavailable, regardless of the account's current region.
+        liveHistoryError=e;break;
       }
       if(myGen!==_analysisGen)return; // superseded by a newer act selection
       const data=j.data||[];
@@ -3690,11 +3700,6 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
         collected.push(m);
       });
 
-      // If we're fetching a specific act and have all its games, stop.
-      if(TARGET_SEASON&&targetCount){
-        const unique=new Set([...archivedIds,...collected.map(m=>m.metadata?.match_id||m.match_id).filter(Boolean)]);
-        if(unique.size>=targetCount)break;
-      }
       // Scrolled past the season — a full-ish page with zero matching games
       // means we've paged beyond the target act.
       if(TARGET_SEASON&&collected.length>0&&onPage.length===0)break;
@@ -3707,11 +3712,9 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       if(myGen!==_analysisGen)return;
     }
 
-    // Check the stored index when the live v4 list left a historical act
-    // incomplete (or MMR provided no count). Full details are requested only
-    // for IDs missing from the live result.
-    if(TARGET_SEASON&&TARGET_SEASON.toLowerCase()!==liveCurrentActId&&
-       (targetCount==null||collected.length<targetCount)){
+    // Check the PUUID-keyed stored index for matches absent from the live
+    // list. Its compact records carry each match's original region.
+    if(TARGET_SEASON){
       try{await recoverStoredSeasonMatches(collected,myGen);}catch(_){/* Keep live rows. */}
       if(myGen!==_analysisGen)return;
     }
@@ -3727,6 +3730,9 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     const processed=deduped.map(processMatch)
       .sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0));
     allMatches=tagActPlacements(tagPostResetPlacements(processed));
+    const selectedOption=[...document.getElementById('m-season').options]
+      .find(option=>option.value.toLowerCase()===TARGET_SEASON.toLowerCase());
+    if(selectedOption){selectedOption.dataset.games=String(allMatches.length);renderSeasonOptions();}
     if(myGen!==_analysisGen)return; // a newer analysis took over
     setProgress(100);
     setTimeout(()=>setProgress(0),600);
