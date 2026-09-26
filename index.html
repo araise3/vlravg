@@ -944,7 +944,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
         <div class="rr-movement-card">
           <div class="rr-movement-head"><h2 id="rr-movement-title">RR payout balance by starting rank</h2><span id="rr-movement-count" class="rr-movement-count"></span></div>
           <div class="rr-movement-legend" aria-label="Chart legend">
-            <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span><span><i class="rr-legend-line"></i>Match payout path</span><span><i class="rr-legend-balance"></i>Payout balance</span>
+            <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span><span><i class="rr-legend-line"></i>Match payout path</span><span><i class="rr-legend-balance"></i>Average balance</span>
           </div>
           <div id="rr-movement-chart" class="rr-movement-scroll" role="region" aria-label="RR movement chart" tabindex="0"></div>
           <p id="rr-movement-balance" class="rr-movement-balance"></p>
@@ -4634,54 +4634,35 @@ function rrPayoutTrend(rows,positive){
     .map(row=>({position:row.plotRR,payout:Math.abs(row.net)}));
 }
 
-function rrTrendPayoutAt(trend,position){
-  if(position<trend[0].position||position>trend.at(-1).position)return null;
-  let low=0,high=trend.length-1;
-  while(low<high){
-    const middle=Math.floor((low+high)/2);
-    if(trend[middle].position<position)low=middle+1;
-    else high=middle;
-  }
-  if(low===0)return trend[0].payout;
-  const before=trend[low-1],after=trend[low];
-  const fraction=(position-before.position)/(after.position-before.position);
-  return before.payout+(after.payout-before.payout)*fraction;
+function rrAveragePayoutFit(rows){
+  // Fit the average payout by starting RR using every match of this outcome.
+  // A single unusual match cannot create its own balance crossing.
+  if(rows.length<7)return null;
+  const meanX=rows.reduce((sum,row)=>sum+row.axisRR,0)/rows.length;
+  const meanY=rows.reduce((sum,row)=>sum+Math.abs(row.net),0)/rows.length;
+  const spread=rows.reduce((sum,row)=>sum+(row.axisRR-meanX)**2,0);
+  if(spread<1e-9)return null;
+  const slope=rows.reduce((sum,row)=>sum+(row.axisRR-meanX)*(Math.abs(row.net)-meanY),0)/spread;
+  return{min:Math.min(...rows.map(row=>row.axisRR)),max:Math.max(...rows.map(row=>row.axisRR)),
+    slope,at:position=>meanY+slope*(position-meanX)};
 }
 
-function rrPayoutBalancePoint(gainTrend,lossTrend){
-  if(gainTrend.length<2||lossTrend.length<2)return null;
-  const start=Math.max(gainTrend[0].position,lossTrend[0].position);
-  const end=Math.min(gainTrend.at(-1).position,lossTrend.at(-1).position);
+function rrPayoutBalancePoint(rows){
+  const gain=rrAveragePayoutFit(rows.filter(row=>row.net>0));
+  const loss=rrAveragePayoutFit(rows.filter(row=>row.net<0));
+  if(!gain||!loss)return null;
+  const start=Math.max(gain.min,loss.min),end=Math.min(gain.max,loss.max);
   if(start>=end)return null;
-  const positions=[...new Set([start,end,
-    ...gainTrend.map(point=>point.position).filter(value=>value>start&&value<end),
-    ...lossTrend.map(point=>point.position).filter(value=>value>start&&value<end),
-  ])].sort((a,b)=>a-b);
-  const at=position=>{
-    const gain=rrTrendPayoutAt(gainTrend,position);
-    const loss=rrTrendPayoutAt(lossTrend,position);
-    return{position,gain,loss,difference:gain-loss};
-  };
-  const samples=positions.map(at),crossings=[];
-  samples.forEach((point,index)=>{
-    if(Math.abs(point.difference)<1e-9&&(!index||Math.abs(samples[index-1].difference)>=1e-9)){
-      let last=index;
-      while(last+1<samples.length&&Math.abs(samples[last+1].difference)<1e-9)last++;
-      crossings.push(at((point.position+samples[last].position)/2));
-    }
-    const next=samples[index+1];
-    if(next&&point.difference*next.difference<0){
-      const fraction=-point.difference/(next.difference-point.difference);
-      crossings.push(at(point.position+(next.position-point.position)*fraction));
-    }
-  });
+  const at=position=>({position,gain:gain.at(position),loss:loss.at(position),
+    difference:gain.at(position)-loss.at(position)});
   const center=(start+end)/2;
-  if(crossings.length){
-    const best=crossings.sort((a,b)=>Math.abs(a.position-center)-Math.abs(b.position-center))[0];
-    return{...best,exact:true,crossings};
+  const slopeDifference=gain.slope-loss.slope;
+  if(Math.abs(slopeDifference)>1e-9){
+    const crossing=center-at(center).difference/slopeDifference;
+    if(crossing>=start&&crossing<=end)return{...at(crossing),exact:true};
   }
-  const best=samples.sort((a,b)=>Math.abs(a.difference)-Math.abs(b.difference))[0];
-  return{...best,exact:false,crossings:[]};
+  const nearest=[at(start),at(end)].sort((a,b)=>Math.abs(a.difference)-Math.abs(b.difference))[0];
+  return{...nearest,exact:false};
 }
 
 function renderRRMovement(matches){
@@ -4713,19 +4694,19 @@ function renderRRMovement(matches){
     return{...row,plotRR:row.axisRR+offsetPx*(axis.max-axis.min)/(plotWidth-2*xInset)};
   });
   const gainTrend=rrPayoutTrend(rows,true),lossTrend=rrPayoutTrend(rows,false);
-  const balance=rrPayoutBalancePoint(gainTrend,lossTrend);
+  const balance=rrPayoutBalancePoint(rows);
   const balanceText=document.getElementById('rr-movement-balance');
   if(balance){
     const nearest=rows.reduce((best,row)=>Math.abs(row.axisRR-balance.position)<Math.abs(best.axisRR-balance.position)?row:best);
     const position=rrMovementZoomTier==null
       ?rrPositionFromElo(Math.round(balance.position),rowTier(nearest)).label
       :`${avgLabelShort(rrMovementZoomTier)} · ${Math.round(balance.position)} RR`;
-    balanceText.innerHTML=`<strong>${balance.exact?'Payout balance':'No path intersection; closest point'}:</strong> ${position} · ${rrSigned(balance.gain,1)} gain / ${rrSigned(-balance.loss,1)} loss${balance.exact?'':` · ${Math.abs(balance.difference).toFixed(1)} RR apart`}`;
+    balanceText.innerHTML=`<strong>${balance.exact?'Average payout balance':'No average balance in covered range'}:</strong> ${position} · fitted ${rrSigned(balance.gain,1)} gain / ${rrSigned(-balance.loss,1)} loss${balance.exact?'':` · closest gap ${Math.abs(balance.difference).toFixed(1)} RR`}`;
   }else{
-    balanceText.textContent='Payout balance appears once gain and loss paths share a starting-RR range.';
+    balanceText.textContent='Average payout balance needs at least seven gains and seven losses across a shared starting-RR range.';
   }
   document.getElementById('rr-movement-trend-note').textContent=gainTrend.length>1||lossTrend.length>1
-    ?'Lines connect every recorded payout of the same type in starting-RR order. Outlined dots are individual matches.'
+    ?'Lines connect individual payouts in starting-RR order. The balance point comes from average payout lines fitted across all recorded gains and losses.'
     :'Lines appear with two recorded gains or losses. Outlined dots are individual matches.';
 
   const penalties=rows.filter(row=>row.penalty>0).length;
@@ -4745,6 +4726,7 @@ function renderRRMovement(matches){
   };
   const xMin=axis.min,xMax=axis.max;
   const payouts=rows.map(row=>Math.abs(row.net));
+  if(balance?.exact)payouts.push(balance.gain);
   const payoutMin=Math.min(...payouts),payoutMax=Math.max(...payouts);
   const yPad=Math.max(.75,(payoutMax-payoutMin)*.08);
   const yMin=Math.max(0,Math.floor((payoutMin-yPad)*2)/2);
@@ -4752,7 +4734,7 @@ function renderRRMovement(matches){
   const x=value=>left+xInset+(value-xMin)/(xMax-xMin)*(plotWidth-2*xInset);
   const y=value=>top+(yMax-value)/(yMax-yMin)*plotHeight;
   const svg=node('svg',{class:`rr-movement-svg${rrMovementZoomTier!=null?' zoomed':''}`,viewBox:`0 0 ${width} ${height}`,role:'img','aria-label':'Absolute RR payout by starting rank','aria-describedby':'rr-movement-svg-desc'});
-  svg.appendChild(node('desc',{id:'rr-movement-svg-desc'},`Outlined dots show individual RR payouts by starting rank. Green and red lines connect every gain and loss respectively in starting-rank order.${balance?.exact?` A blue marker shows the selected path intersection.`:''}`));
+  svg.appendChild(node('desc',{id:'rr-movement-svg-desc'},`Outlined dots show individual RR payouts by starting rank. Green and red lines connect every gain and loss respectively in starting-rank order.${balance?.exact?` A blue marker shows where fitted average gain and loss payouts are equal.`:''}`));
 
   const availableTiers=new Set(allRows.map(rowTier));
   const toggleRankZoom=tier=>{
@@ -4981,7 +4963,7 @@ function renderRRTrend(matches){
     const rank=rrPositionFromElo(value,tier);
     svg.appendChild(el('line',{class:'grid',x1:left,y1:yy,x2:width-right,y2:yy}));
     if(RANK_ICONS[tier])svg.appendChild(el('image',{href:RANK_ICONS[tier],x:left-72,y:yy-10,width:20,height:20,'aria-hidden':'true'}));
-    svg.appendChild(el('text',{class:'axis-label',x:left-8,y:yy+4,'text-anchor':'end'},`${rank.rr} RR`));
+    svg.appendChild(el('text',{class:'axis-label',x:left-8,y:yy+4,'text-anchor':'end'},String(rank.rr)));
   }
   const line=points.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
   if(points.length>1){
