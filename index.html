@@ -665,9 +665,9 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 #party-size-section{margin-bottom:24px;}
 .rr-table-card{padding:0;overflow:hidden;margin-bottom:24px;}
 .rr-summary-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 24px;}
-.rr-summary-stat{min-width:0;padding:14px;background:#1c1c1c;border:1px solid var(--surface-border);border-radius:7px;}
+.rr-summary-stat{--rr-summary-size:24px;min-width:0;padding:14px;background:#1c1c1c;border:1px solid var(--surface-border);border-radius:7px;container-type:inline-size;}
 .rr-summary-stat dt{font-size:11px;font-weight:700;text-transform:uppercase;color:#c4c4cc;margin-bottom:5px;}
-.rr-summary-stat dd{margin:0;font-size:24px;font-weight:750;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.rr-summary-stat dd{margin:0;font-size:var(--rr-summary-size);font-weight:750;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .server-summary-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 24px;}
 .server-summary-stat{min-width:0;padding:14px;background:#1c1c1c;border:1px solid var(--surface-border);border-radius:7px;}
 .server-summary-stat dt{font-size:11px;font-weight:700;text-transform:uppercase;color:#c4c4cc;margin-bottom:5px;}
@@ -692,7 +692,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .match-server{font-family:var(--font-body);font-size:11px;color:#a1a1aa;white-space:nowrap;}
 .rr-draw{color:#facc15;}
 .rr-record{display:inline-flex;align-items:baseline;}
-.rr-summary-stat .rr-record{font-size:clamp(16px,2vw,22px);}
+.rr-summary-stat .rr-record{font-size:clamp(16px,13cqi,var(--rr-summary-size));}
 .rr-record-separator{color:var(--muted);font-weight:400;}
 .rr-score-heading{font-size:18px;font-weight:650;margin:30px 0 16px;}
 .rr-score-note{font-size:13px;line-height:1.6;color:#a1a1aa;margin:0 0 16px;max-width:760px;}
@@ -744,11 +744,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-movement-svg .trend-point,.rr-movement-svg .payout-trend{pointer-events:none;}
 .rr-movement-svg .payout-trend{fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
 .rr-movement-svg .payout-trend.positive{stroke:#4ade80;}.rr-movement-svg .payout-trend.negative{stroke:#f87171;}
-.rr-movement-svg .balance-crossing{fill:var(--brand);stroke:#141416;stroke-width:2.5;pointer-events:none;}
 .rr-legend-line{display:inline-block;width:21px;height:3px;border-radius:3px;background:linear-gradient(90deg,#4ade80 0 46%,transparent 46% 54%,#f87171 54%);}
-.rr-legend-balance{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--brand);}
-.rr-movement-balance{margin-top:10px;color:#d4d4da;font-size:12px;line-height:1.5;font-variant-numeric:tabular-nums;}
-.rr-movement-balance strong{color:var(--brand);font-weight:700;}
 .rr-movement-trend-note{margin:8px 0 0;color:#a1a1aa;font-size:12px;line-height:1.5;}
 @media(max-width:600px){
   .rank-table th,.rank-table td,.rank-table.duos-table th,.rank-table.duos-table td{padding-left:14px;padding-right:14px;}
@@ -756,7 +752,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 }
 @media(prefers-reduced-motion:reduce){.rank-table tbody tr,.input-section,.search-bar,.pro-result-main,.pro-result-tracker{transition:none;}.spinner,#season-trigger.loading::before,.shake,.player-card-byline .stat-box,.result-panel .tracker-pill{animation:none;}}
 @media(max-width:700px){.rr-summary-stats,.server-summary-stats{grid-template-columns:repeat(2,minmax(0,1fr));}}
-@media(max-width:440px){.rr-summary-stats{grid-template-columns:repeat(2,minmax(0,1fr));}.rr-summary-stat dd{font-size:22px;}.server-summary-stat dd{font-size:19px;}}
+@media(max-width:440px){.rr-summary-stats{grid-template-columns:repeat(2,minmax(0,1fr));}.rr-summary-stat{--rr-summary-size:22px;}.server-summary-stat dd{font-size:19px;}}
 @media(max-width:760px){
   #matches-page .match-card.expanded .players-grid{grid-template-columns:minmax(0,1fr);gap:16px;}
   .match-row{grid-template-columns:170px minmax(0,1fr);}
@@ -949,12 +945,11 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
       </section>
       <section id="rr-movement-section" class="rr-movement-section" hidden aria-labelledby="rr-movement-title">
         <div class="rr-movement-card">
-          <div class="rr-movement-head"><h2 id="rr-movement-title">RR payout balance by starting rank</h2><span id="rr-movement-count" class="rr-movement-count"></span></div>
+          <div class="rr-movement-head"><h2 id="rr-movement-title">RR payouts by starting rank</h2><span id="rr-movement-count" class="rr-movement-count"></span></div>
           <div class="rr-movement-legend" aria-label="Chart legend">
-            <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span><span><i class="rr-legend-line"></i>Match payout path</span><span><i class="rr-legend-balance"></i>Average balance</span>
+            <span><i class="rr-legend-mark win"></i>Match gain</span><span><i class="rr-legend-mark loss"></i>Match loss</span><span><i class="rr-legend-line"></i>Match payout path</span>
           </div>
           <div id="rr-movement-chart" class="rr-movement-scroll" role="region" aria-label="RR movement chart" tabindex="0"></div>
-          <p id="rr-movement-balance" class="rr-movement-balance"></p>
           <p id="rr-movement-trend-note" class="rr-movement-trend-note"></p>
         </div>
       </section>
@@ -4641,37 +4636,6 @@ function rrPayoutTrend(rows,positive){
     .map(row=>({position:row.plotRR,payout:Math.abs(row.net)}));
 }
 
-function rrAveragePayoutFit(rows){
-  // Fit the average payout by starting RR using every match of this outcome.
-  // A single unusual match cannot create its own balance crossing.
-  if(rows.length<7)return null;
-  const meanX=rows.reduce((sum,row)=>sum+row.axisRR,0)/rows.length;
-  const meanY=rows.reduce((sum,row)=>sum+Math.abs(row.net),0)/rows.length;
-  const spread=rows.reduce((sum,row)=>sum+(row.axisRR-meanX)**2,0);
-  if(spread<1e-9)return null;
-  const slope=rows.reduce((sum,row)=>sum+(row.axisRR-meanX)*(Math.abs(row.net)-meanY),0)/spread;
-  return{min:Math.min(...rows.map(row=>row.axisRR)),max:Math.max(...rows.map(row=>row.axisRR)),
-    slope,at:position=>meanY+slope*(position-meanX)};
-}
-
-function rrPayoutBalancePoint(rows){
-  const gain=rrAveragePayoutFit(rows.filter(row=>row.net>0));
-  const loss=rrAveragePayoutFit(rows.filter(row=>row.net<0));
-  if(!gain||!loss)return null;
-  const start=Math.max(gain.min,loss.min),end=Math.min(gain.max,loss.max);
-  if(start>=end)return null;
-  const at=position=>({position,gain:gain.at(position),loss:loss.at(position),
-    difference:gain.at(position)-loss.at(position)});
-  const center=(start+end)/2;
-  const slopeDifference=gain.slope-loss.slope;
-  if(Math.abs(slopeDifference)>1e-9){
-    const crossing=center-at(center).difference/slopeDifference;
-    if(crossing>=start&&crossing<=end)return{...at(crossing),exact:true};
-  }
-  const nearest=[at(start),at(end)].sort((a,b)=>Math.abs(a.difference)-Math.abs(b.difference))[0];
-  return{...nearest,exact:false};
-}
-
 function renderRRMovement(matches){
   const section=document.getElementById('rr-movement-section');
   const container=document.getElementById('rr-movement-chart');
@@ -4701,19 +4665,8 @@ function renderRRMovement(matches){
     return{...row,plotRR:row.axisRR+offsetPx*(axis.max-axis.min)/(plotWidth-2*xInset)};
   });
   const gainTrend=rrPayoutTrend(rows,true),lossTrend=rrPayoutTrend(rows,false);
-  const balance=rrPayoutBalancePoint(rows);
-  const balanceText=document.getElementById('rr-movement-balance');
-  if(balance){
-    const nearest=rows.reduce((best,row)=>Math.abs(row.axisRR-balance.position)<Math.abs(best.axisRR-balance.position)?row:best);
-    const position=rrMovementZoomTier==null
-      ?rrPositionFromElo(Math.round(balance.position),rowTier(nearest)).label
-      :`${avgLabelShort(rrMovementZoomTier)} · ${Math.round(balance.position)} RR`;
-    balanceText.innerHTML=`<strong>${balance.exact?'Average payout balance':'No average balance in covered range'}:</strong> ${position} · fitted ${rrSigned(balance.gain,1)} gain / ${rrSigned(-balance.loss,1)} loss${balance.exact?'':` · closest gap ${Math.abs(balance.difference).toFixed(1)} RR`}`;
-  }else{
-    balanceText.textContent='Average payout balance needs at least seven gains and seven losses across a shared starting-RR range.';
-  }
   document.getElementById('rr-movement-trend-note').textContent=gainTrend.length>1||lossTrend.length>1
-    ?'Lines connect individual payouts in starting-RR order. The balance point comes from average payout lines fitted across all recorded gains and losses.'
+    ?'Lines connect individual payouts in starting-RR order.'
     :'Lines appear with two recorded gains or losses. Outlined dots are individual matches.';
 
   const penalties=rows.filter(row=>row.penalty>0).length;
@@ -4733,7 +4686,6 @@ function renderRRMovement(matches){
   };
   const xMin=axis.min,xMax=axis.max;
   const payouts=rows.map(row=>Math.abs(row.net));
-  if(balance?.exact)payouts.push(balance.gain);
   const payoutMin=Math.min(...payouts),payoutMax=Math.max(...payouts);
   const yPad=Math.max(.75,(payoutMax-payoutMin)*.08);
   const yMin=Math.max(0,Math.floor((payoutMin-yPad)*2)/2);
@@ -4741,7 +4693,7 @@ function renderRRMovement(matches){
   const x=value=>left+xInset+(value-xMin)/(xMax-xMin)*(plotWidth-2*xInset);
   const y=value=>top+(yMax-value)/(yMax-yMin)*plotHeight;
   const svg=node('svg',{class:`rr-movement-svg${rrMovementZoomTier!=null?' zoomed':''}`,viewBox:`0 0 ${width} ${height}`,role:'img','aria-label':'Absolute RR payout by starting rank','aria-describedby':'rr-movement-svg-desc'});
-  svg.appendChild(node('desc',{id:'rr-movement-svg-desc'},`Outlined dots show individual RR payouts by starting rank. Green and red lines connect every gain and loss respectively in starting-rank order.${balance?.exact?` A blue marker shows where fitted average gain and loss payouts are equal.`:''}`));
+  svg.appendChild(node('desc',{id:'rr-movement-svg-desc'},'Outlined dots show individual RR payouts by starting rank. Green and red lines connect every gain and loss respectively in starting-rank order.'));
 
   const availableTiers=new Set(allRows.map(rowTier));
   const toggleRankZoom=tier=>{
@@ -4872,8 +4824,6 @@ function renderRRMovement(matches){
     const pointClass=row.net>0?'positive':row.net<0?'negative':'neutral';
     svg.appendChild(node('circle',{cx:x(row.plotRR),cy:y(Math.abs(row.net)),r:2.5,class:`trend-point ${pointClass}`,'aria-hidden':'true'}));
   });
-  if(balance?.exact)
-    svg.appendChild(node('circle',{cx:x(balance.position),cy:y(balance.gain),r:5.5,class:'balance-crossing','aria-hidden':'true'}));
   container.appendChild(svg);
 }
 
