@@ -5041,15 +5041,25 @@ function renderRRTrend(matches){
     }
   });
   const edges=[...boundaries].sort((a,b)=>a-b);
+  const bands=[];
   for(let i=0;i<edges.length-1;i++){
     const start=edges[i],end=edges[i+1];
-    svg.appendChild(el('rect',{class:'rank-band',x:left,y:y(end),width:width-left-right,height:y(start)-y(end),fill:rColor(tierAt((start+end)/2)),'fill-opacity':.14,'aria-hidden':'true'}));
+    const tier=tierAt((start+end)/2);
+    const previous=bands.at(-1);
+    if(previous?.tier===tier)previous.end=end;
+    else bands.push({start,end,tier});
   }
+  bands.forEach(({start,end,tier})=>{
+    const bandTop=y(end),bandHeight=y(start)-bandTop;
+    svg.appendChild(el('rect',{class:'rank-band',x:left,y:bandTop,width:width-left-right,height:bandHeight,fill:rColor(tier),'fill-opacity':.14,'aria-hidden':'true'}));
+    if(RANK_ICONS[tier]){
+      const size=Math.min(20,bandHeight);
+      svg.appendChild(el('image',{href:RANK_ICONS[tier],x:left-22-size/2,y:bandTop+(bandHeight-size)/2,width:size,height:size,'aria-hidden':'true'}));
+    }
+  });
   for(let value=min;value<=max;value+=tickStep){
     const yy=y(value);
-    const tier=tierAt(value);
     svg.appendChild(el('line',{class:'grid',x1:left,y1:yy,x2:width-right,y2:yy}));
-    if(RANK_ICONS[tier])svg.appendChild(el('image',{href:RANK_ICONS[tier],x:left-32,y:yy-10,width:20,height:20,'aria-hidden':'true'}));
   }
   const line=points.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
   if(points.length>1){
