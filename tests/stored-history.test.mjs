@@ -67,7 +67,7 @@ test('unavailable old match details do not prevent later archived games from loa
   const ids=['missing-1','missing-2','missing-3','available'];
   const context={
     PUUID:puuid,TARGET_SEASON:season,REGION:'eu',API_BASE:'/api',_analysisGen:1,
-    setStatus(){},setProgress(){},isSeason:()=>true,
+    setStatus(){},setProgress(){},isSeason:()=>true,getActInfoByUuid:()=>null,
     apiGet:async url=>{
       if(url.includes('/stored-matches/'))return{j:{data:ids.map(id=>({meta:{id,season:{id:season}},stats:{puuid}})),results:{after:0}}};
       const id=url.split('/').at(-1);
@@ -80,4 +80,27 @@ test('unavailable old match details do not prevent later archived games from loa
   await recover(matches,1);
   assert.equal(matches.length,1);
   assert.equal(matches[0].metadata.match_id,'available');
+});
+
+test('archive recovery fetches transferred matches from their recorded region',async()=>{
+  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  const start=html.indexOf('async function recoverStoredSeasonMatches(');
+  const end=html.indexOf('\nasync function loadAll(',start);
+  const urls=[];
+  const context={
+    PUUID:puuid,TARGET_SEASON:season,REGION:'eu',API_BASE:'/api',_analysisGen:1,
+    setStatus(){},setProgress(){},isSeason:()=>true,getActInfoByUuid:()=>null,
+    apiGet:async url=>{
+      urls.push(url);
+      if(url.includes('/stored-matches/'))return{j:{data:[
+        {meta:{id:'old-na-match',region:'na',season:{id:season}},stats:{puuid}},
+      ],results:{after:0}}};
+      return{j:{data:{metadata:{match_id:'old-na-match'},players:[{puuid}]}}};
+    },
+  };
+  const recover=runInNewContext(html.slice(start,end)+'\nrecoverStoredSeasonMatches',context);
+  const matches=[];
+  await recover(matches,1);
+  assert.equal(matches.length,1);
+  assert.deepEqual(urls,[`/api/stored-matches/eu/${puuid}?page=1`,'/api/match-detail/na/old-na-match']);
 });
