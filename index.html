@@ -632,6 +632,14 @@ a.duo-player-name:hover,a.duo-player-name:hover .duo-tag{color:var(--brand);}
 a.duo-player-name:hover::after{content:'';position:absolute;left:0;right:0;bottom:-2px;height:1px;background:var(--brand);}
 a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3px;}
 .encounters-empty{padding:20px;color:#a1a1aa;font-size:13px;}
+.wintrade-section{margin-top:28px;}
+.wintrade-section h2{margin:0 0 8px;font-size:18px;font-weight:650;}
+.wintrade-section>p{margin:0 0 14px;color:#a1a1aa;font-size:12px;line-height:1.6;max-width:850px;}
+.wintrade-table{min-width:900px;}
+.wintrade-score{font-weight:700;color:#e4e4e7;}
+.wintrade-score.medium{color:#facc15;}
+.wintrade-score.high{color:#f87171;}
+.wintrade-note{margin-top:10px!important;}
 .party-icon{display:inline-flex;align-items:center;flex-shrink:0;gap:0;}
 .party-icon>span{line-height:0;}
 .rank-table th,.rank-table td{height:52px;padding:11px 18px;border-bottom:1px solid #262629;white-space:nowrap;vertical-align:middle;line-height:1.4;}
@@ -875,6 +883,12 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
       <h2 id="encounters-title">Encounters</h2>
       <p>Players you met in at least two counted matches this act, on either team. Anyone who queued in your party is excluded.</p>
       <div class="s-card rr-table-card"><div id="encounters-list" class="table-scroll" role="region" aria-label="Repeated player encounters" tabindex="0"></div></div>
+    </section>
+    <section id="wintrade-section" class="wintrade-section" hidden aria-labelledby="wintrade-title">
+      <h2 id="wintrade-title">Wintrading signals</h2>
+      <p>Repeated opponents with unusually low combat stats in your matches. The likelihood score is a heuristic ranking, not a measured probability or proof of intent. A verified prior party game raises the score; one bad game alone does not flag anyone.</p>
+      <div class="s-card rr-table-card"><div id="wintrade-list" class="table-scroll" role="region" aria-label="Wintrading signal table" tabindex="0"></div></div>
+      <p class="wintrade-note">Low game: under 65% of the other enemy players’ median ACS and below 0.65 K/D. Only opponents met at least twice with at least one low game appear. Scores use repeat meetings, low games, your wins against them, and verified party history.</p>
     </section>
     <div id="duos-empty" class="page-empty" role="status">Search for a player above to see who they queue with.</div>
   </main>
@@ -1593,6 +1607,7 @@ function updateDetailPages(){
   const showCard=ready&&allTeammates.length>0;
   document.getElementById('teammates-section').style.display=showCard?'block':'none';
   document.getElementById('encounters-section').hidden=!ready||!allMatches.length;
+  document.getElementById('wintrade-section').hidden=!ready||!allMatches.length;
   const empty=document.getElementById('duos-empty');
   empty.hidden=ready&&allMatches.length>0||analysisState==='error';
   empty.textContent=analysisState==='loading'?'Loading this player’s matches…':ready
@@ -4157,6 +4172,7 @@ function buildTeammates(){
 
   renderTeammates();
   renderEncounters();
+  renderWintradeSignals();
   renderOverviewPreviews();
   updateDetailPages();
 
@@ -4192,6 +4208,118 @@ function renderEncounters(){
     tbody.appendChild(row);
   });
   const values=allEncounters.map(row=>[`${row.name}#${row.tag}`,row.games,row.sameTeam,row.opponents,row.lastSeen||null]);
+  list.appendChild(table);
+  initTableSorting(list,values);
+}
+
+// This is a transparent screening heuristic, not a calibrated probability of
+// cheating. Repeated low performances against the searched player are evidence
+// worth reviewing, but match data cannot establish collusion or intent.
+function computeWintradeSignals(matches,partyScope,playerPuuid,playerName,playerTag){
+  const myId=playerPuuid?.toLowerCase()||'';
+  const myRiotId=`${playerName}#${playerTag}`.toLowerCase();
+  const findMe=m=>m.players?.find(p=>myId?p.puuid?.toLowerCase()===myId:
+    `${p.name}#${p.tag}`.toLowerCase()===myRiotId);
+  const keyFor=p=>p.puuid?`id:${p.puuid.toLowerCase()}`:
+    p.name&&p.tag?`riot:${p.name}#${p.tag}`.toLowerCase():'';
+  const partyGames=new Map();
+  partyScope.forEach(m=>{
+    const me=findMe(m);
+    if(!me||!m.myPartyId)return;
+    m.players.forEach(p=>{
+      const key=keyFor(p);
+      if(p===me||!key||p.team_id!==me.team_id||p.party_id!==m.myPartyId)return;
+      partyGames.set(key,(partyGames.get(key)||0)+1);
+    });
+  });
+  const byPlayer=new Map();
+  matches.forEach(m=>{
+    const me=findMe(m);
+    if(!me?.team_id)return;
+    const enemy=m.players.filter(p=>p.team_id&&p.team_id!==me.team_id);
+    const seen=new Set();
+    enemy.forEach(p=>{
+      const key=keyFor(p);
+      if(!key||seen.has(key)||!p.name||!p.tag)return;
+      seen.add(key);
+      let row=byPlayer.get(key);
+      if(!row){
+        row={key,name:p.name,tag:p.tag,encounters:0,lowGames:0,measuredGames:0,
+          acsSum:0,acsCount:0,killsSum:0,deathsSum:0,wins:0,decided:0,
+          lowSeverity:0,partyGames:partyGames.get(key)||0,lastSeen:0};
+        byPlayer.set(key,row);
+      }
+      row.encounters++;
+      if(m.won!=null){row.decided++;if(m.won)row.wins++;}
+      if(Number.isFinite(p._acs)){
+        row.acsSum+=p._acs;row.acsCount++;
+      }
+      if(Number.isFinite(p._kills)&&Number.isFinite(p._deaths)){
+        row.killsSum+=p._kills;row.deathsSum+=p._deaths;
+      }
+      const peerAcs=enemy.filter(q=>q!==p&&Number.isFinite(q._acs))
+        .map(q=>q._acs).sort((a,b)=>a-b);
+      if(Number.isFinite(p._acs)&&Number.isFinite(p._kills)&&
+         Number.isFinite(p._deaths)&&p._deaths>0&&peerAcs.length>=3){
+        const mid=Math.floor(peerAcs.length/2);
+        const median=peerAcs.length%2?peerAcs[mid]:(peerAcs[mid-1]+peerAcs[mid])/2;
+        if(median>0){
+          row.measuredGames++;
+          const acsRatio=p._acs/median;
+          const kd=p._kills/p._deaths;
+          if(acsRatio<0.65&&kd<0.65){
+            row.lowGames++;
+            row.lowSeverity+=Math.min(1,(0.65-acsRatio)/0.65);
+          }
+        }
+      }
+      if((m.startedAtMs||0)>row.lastSeen){row.lastSeen=m.startedAtMs;row.name=p.name;row.tag=p.tag;}
+    });
+  });
+  return [...byPlayer.values()].filter(row=>row.encounters>=2&&row.lowGames>0).map(row=>{
+    const repeat=20*Math.min(1,(row.encounters-1)/4);
+    const low=35*row.lowGames/row.measuredGames;
+    const severity=10*row.lowSeverity/row.lowGames;
+    const wins=20*Math.max(0,(row.decided?row.wins/row.decided:0)-0.5)*2;
+    const party=row.partyGames?Math.min(15,7+4*(row.partyGames-1)):0;
+    // Keep sparse records out of the highest bands regardless of a lucky streak.
+    const sampleCap=row.encounters===2?45:row.encounters===3?65:95;
+    return{...row,score:Math.round(Math.min(95,Math.min(sampleCap,repeat+low+severity+wins)+party)),
+      avgAcs:row.acsCount?row.acsSum/row.acsCount:null,
+      kd:row.deathsSum?row.killsSum/row.deathsSum:null};
+  }).sort((a,b)=>b.score-a.score||b.encounters-a.encounters||b.lastSeen-a.lastSeen);
+}
+
+function renderWintradeSignals(){
+  const list=document.getElementById('wintrade-list');
+  list.replaceChildren();
+  const rows=computeWintradeSignals(statMatches,allMatches,PUUID,PLAYER,TAG);
+  if(!rows.length){
+    const empty=document.createElement('div');empty.className='encounters-empty';
+    empty.textContent='No repeated opponents with unusually low combat stats in these matches.';
+    list.appendChild(empty);return;
+  }
+  const table=document.createElement('table');table.className='rank-table wintrade-table';
+  table.innerHTML='<caption class="rank-sr-only">Heuristic wintrading signals; percentages are not calibrated probabilities</caption><thead><tr><th scope="col">Opponent</th><th scope="col">Likelihood signal</th><th scope="col">Enemy games</th><th scope="col">Low games</th><th scope="col">Avg ACS</th><th scope="col">K/D</th><th scope="col">Your wins</th><th scope="col">Party games</th></tr></thead><tbody></tbody>';
+  rows.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML='<th scope="row"><a class="duo-player-name encounter-link"><span class="duo-name"></span><span class="duo-tag"></span></a></th><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
+    const link=tr.querySelector('a');link.href=playerRouteUrl(r.name,r.tag,'overview',TARGET_SEASON);
+    link.querySelector('.duo-name').textContent=r.name;
+    link.querySelector('.duo-tag').textContent='#'+r.tag;
+    const cells=tr.querySelectorAll('td');
+    cells[0].textContent=r.score+'%';
+    cells[0].className='wintrade-score'+(r.score>=70?' high':r.score>=40?' medium':'');
+    cells[0].title='Heuristic signal strength, not a measured chance of cheating';
+    cells[1].textContent=r.encounters;
+    cells[2].textContent=`${r.lowGames}/${r.measuredGames}`;
+    cells[3].textContent=r.avgAcs==null?'—':Math.round(r.avgAcs);
+    cells[4].textContent=r.kd==null?'—':r.kd.toFixed(2);
+    cells[5].textContent=`${r.wins}/${r.decided}`;
+    cells[6].textContent=r.partyGames;
+    table.tBodies[0].appendChild(tr);
+  });
+  const values=rows.map(r=>[`${r.name}#${r.tag}`,r.score,r.encounters,r.lowGames,r.avgAcs,r.kd,r.wins,r.partyGames]);
   list.appendChild(table);
   initTableSorting(list,values);
 }
