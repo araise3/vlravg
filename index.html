@@ -703,16 +703,23 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-trend-total{font-size:16px;font-weight:750;font-variant-numeric:tabular-nums;}
 .rr-trend-total.positive{color:#4ade80;}.rr-trend-total.negative{color:#f87171;}.rr-trend-total.neutral{color:#c4c4cc;}
 .rr-trend-note,.rr-trend-detail{margin:8px 0 0;color:#a1a1aa;font-size:12px;line-height:1.5;}
-.rr-trend-scroll{margin-top:16px;overflow:hidden;}
+.rr-trend-scroll{position:relative;margin-top:16px;overflow:hidden;}
 .rr-trend-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
 .rr-trend-svg{display:block;width:100%;height:194px;font-family:var(--font-body);}
 .rr-trend-svg .grid{stroke:#303034;stroke-width:1;}
-.rr-trend-svg .axis-label{fill:#a1a1aa;font-size:11px;font-variant-numeric:tabular-nums;}
 .rr-trend-svg .area{fill:rgba(255,255,255,.065);}
 .rr-trend-svg .line{fill:none;stroke:#e4e4e7;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;}
-.rr-trend-svg .cursor-line{opacity:0;stroke:var(--brand);stroke-width:1;stroke-dasharray:3 3;pointer-events:none;}
-.rr-trend-svg g[tabindex]:hover .cursor-line,.rr-trend-svg g[tabindex]:focus .cursor-line{opacity:.8;}
+.rr-trend-svg .cursor-band{fill:var(--brand);fill-opacity:.12;pointer-events:none;}
+.rr-trend-svg .cursor-line{stroke:var(--brand);stroke-width:1;pointer-events:none;}
+.rr-trend-svg .cursor-point{fill:#e4e4e7;stroke:#141416;stroke-width:2;pointer-events:none;}
+.rr-trend-svg [hidden],.rr-trend-tooltip[hidden]{display:none;}
 .rr-trend-svg g[tabindex]:focus{outline:none;}
+.rr-trend-tooltip{position:absolute;z-index:2;top:8px;min-width:150px;max-width:calc(100% - 16px);padding:10px 12px;border:1px solid #43434b;border-radius:8px;background:#202024;box-shadow:0 8px 24px #0008;color:#e8eaf0;font-size:12px;line-height:1.4;pointer-events:none;}
+.rr-trend-tooltip-date{color:#a1a1aa;font-size:11px;}
+.rr-trend-tooltip-change{margin:3px 0 6px;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;}
+.rr-trend-tooltip-change.positive{color:#4ade80;}.rr-trend-tooltip-change.negative{color:#f87171;}
+.rr-trend-tooltip-rank{display:flex;align-items:center;gap:7px;white-space:nowrap;}
+.rr-trend-tooltip-rank img{width:22px;height:22px;}
 .rr-trend-empty{padding:28px 0;color:#a1a1aa;font-size:13px;}
 .rr-movement-section{margin:0 0 24px;}
 .rr-movement-card{padding:20px;border:1px solid var(--surface-border);border-radius:10px;background:#141416;}
@@ -4907,7 +4914,7 @@ function renderRRTrend(matches){
   total.className=`rr-trend-total ${running>0?'positive':running<0?'negative':'neutral'}`;
   detail.textContent='Focus or hover a point to see that match’s RR change.';
 
-  const left=90,right=12,top=18,bottom=178,height=194;
+  const left=42,right=12,top=18,bottom=178,height=194;
   const width=Math.max(left+right+2,Math.round(container.clientWidth)||872);
   rrTrendRenderedWidth=Math.round(container.clientWidth);
   const values=points.map(p=>p.value);
@@ -4952,18 +4959,11 @@ function renderRRTrend(matches){
     const start=edges[i],end=edges[i+1];
     svg.appendChild(el('rect',{class:'rank-band',x:left,y:y(end),width:width-left-right,height:y(start)-y(end),fill:rColor(tierAt((start+end)/2)),'fill-opacity':.14,'aria-hidden':'true'}));
   }
-  const rankAt=(value,tierHint)=>{
-    const nearest=tierHint==null?points.reduce((best,point)=>Math.abs(point.value-value)<Math.abs(best.value-value)?point:best):null;
-    const rank=rrPositionFromElo(Math.round(value),tierHint??nearest.match.myPostTierId);
-    return `${avgLabelShort(rank.tier)} · ${rank.rr} RR`;
-  };
   for(let value=min;value<=max;value+=tickStep){
     const yy=y(value);
     const tier=tierAt(value);
-    const rank=rrPositionFromElo(value,tier);
     svg.appendChild(el('line',{class:'grid',x1:left,y1:yy,x2:width-right,y2:yy}));
-    if(RANK_ICONS[tier])svg.appendChild(el('image',{href:RANK_ICONS[tier],x:left-72,y:yy-10,width:20,height:20,'aria-hidden':'true'}));
-    svg.appendChild(el('text',{class:'axis-label',x:left-8,y:yy+4,'text-anchor':'end'},String(rank.rr)));
+    if(RANK_ICONS[tier])svg.appendChild(el('image',{href:RANK_ICONS[tier],x:left-32,y:yy-10,width:20,height:20,'aria-hidden':'true'}));
   }
   const line=points.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
   if(points.length>1){
@@ -4972,22 +4972,63 @@ function renderRRTrend(matches){
   }
   const dateLabel=m=>Number.isFinite(m.startedAtMs)?new Date(m.startedAtMs).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'Date unavailable';
   const spacing=points.length>1?(width-left-right)/(points.length-1):width-left-right;
+  const cursorBand=el('rect',{class:'cursor-band',x:0,y:top,width:Math.min(24,Math.max(12,spacing*.6)),height:bottom-top,hidden:''});
+  const cursorLine=el('line',{class:'cursor-line',x1:0,y1:top,x2:0,y2:bottom,hidden:''});
+  const cursorPoint=el('circle',{class:'cursor-point',cx:0,cy:0,r:4,hidden:''});
+  svg.append(cursorBand,cursorLine,cursorPoint);
+  const tooltip=document.createElement('div');
+  tooltip.className='rr-trend-tooltip';
+  tooltip.hidden=true;
+  const tipDate=document.createElement('div');tipDate.className='rr-trend-tooltip-date';
+  const tipChange=document.createElement('div');tipChange.className='rr-trend-tooltip-change';
+  const tipRank=document.createElement('div');tipRank.className='rr-trend-tooltip-rank';
+  const tipIcon=document.createElement('img');tipIcon.alt='';
+  const tipRankText=document.createElement('span');
+  tipRank.append(tipIcon,tipRankText);
+  tooltip.append(tipDate,tipChange,tipRank);
+  const show=i=>{
+    const {match,value}=points[i],rank=rrPositionFromElo(value,match.myPostTierId);
+    const xx=x(i),change=rrSigned(match.myRR,0);
+    cursorBand.setAttribute('x',xx-Number(cursorBand.getAttribute('width'))/2);
+    cursorLine.setAttribute('x1',xx);cursorLine.setAttribute('x2',xx);
+    cursorPoint.setAttribute('cx',xx);cursorPoint.setAttribute('cy',y(value));
+    [cursorBand,cursorLine,cursorPoint].forEach(item=>item.removeAttribute('hidden'));
+    tipDate.textContent=dateLabel(match);
+    tipChange.textContent=`${match.myRR>0?'RR gain':match.myRR<0?'RR loss':'RR change'} ${change}`;
+    tipChange.className=`rr-trend-tooltip-change ${match.myRR>0?'positive':match.myRR<0?'negative':''}`;
+    if(RANK_ICONS[rank.tier])tipIcon.src=RANK_ICONS[rank.tier];
+    tipIcon.hidden=!RANK_ICONS[rank.tier];
+    tipRankText.textContent=`${avgLabel(rank.tier)} · ${rank.rr} RR`;
+    tooltip.hidden=false;
+    tooltip.style.left=`${Math.max(8,Math.min(xx+12,width-tooltip.offsetWidth-8))}px`;
+    detail.textContent=`Match ${i+1} of ${points.length}, ${dateLabel(match)}: ${avgLabel(rank.tier)} · ${rank.rr} RR after ${change} RR change`;
+  };
+  const hide=()=>{
+    [cursorBand,cursorLine,cursorPoint].forEach(item=>item.setAttribute('hidden',''));
+    tooltip.hidden=true;
+    detail.textContent='Focus or hover a point to see that match’s RR change.';
+  };
   points.forEach(({match,value},i)=>{
     const change=rrSigned(match.myRR,0);
-    const label=`Match ${i+1} of ${points.length}, ${dateLabel(match)}: ${rankAt(value,match.myPostTierId)} after ${change} RR change`;
+    const rank=rrPositionFromElo(value,match.myPostTierId);
+    const label=`Match ${i+1} of ${points.length}, ${dateLabel(match)}: ${avgLabel(rank.tier)} · ${rank.rr} RR after ${change} RR change`;
     const group=el('g',{tabindex:'0','aria-label':label});
-    group.appendChild(el('title',{},label));
-    group.appendChild(el('line',{class:'cursor-line',x1:x(i),y1:top,x2:x(i),y2:bottom}));
     group.appendChild(el('circle',{cx:x(i),cy:y(value),r:Math.min(11,Math.max(3,spacing/2)),fill:'transparent'}));
-    const show=()=>{detail.textContent=label;};
-    const reset=()=>{if(document.activeElement!==group)detail.textContent='Focus or hover a point to see that match’s RR change.';};
-    group.addEventListener('pointerenter',show);
-    group.addEventListener('pointerleave',reset);
-    group.addEventListener('focus',show);
-    group.addEventListener('blur',reset);
+    group.addEventListener('focus',()=>show(i));
+    group.addEventListener('blur',hide);
     svg.appendChild(group);
   });
-  container.appendChild(svg);
+  svg.addEventListener('pointermove',event=>{
+    if(document.activeElement?.closest?.('.rr-trend-svg'))return;
+    const bounds=svg.getBoundingClientRect();
+    const plotX=(event.clientX-bounds.left)*width/bounds.width;
+    if(plotX<left||plotX>width-right){hide();return;}
+    show(points.length===1?0:Math.max(0,Math.min(points.length-1,Math.round((plotX-left)/spacing))));
+  });
+  svg.addEventListener('pointerleave',()=>{
+    if(!document.activeElement?.closest?.('.rr-trend-svg'))hide();
+  });
+  container.append(svg,tooltip);
 }
 
 function renderRRBreakdown(matches){
