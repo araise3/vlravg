@@ -939,7 +939,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
       <dl id="rr-summary-stats" class="rr-summary-stats" aria-label="RR summary"></dl>
       <section class="rr-trend-card" aria-labelledby="rr-trend-title">
         <div class="rr-trend-head"><h2 id="rr-trend-title">RR trend <span id="rr-trend-count" class="rr-movement-count"></span></h2><strong id="rr-trend-total" class="rr-trend-total"></strong></div>
-        <p class="rr-trend-note">Recorded rank and RR after each match in this act, oldest to newest. Matches without rank or RR data are skipped.</p>
+        <p class="rr-trend-note">Recorded rank and RR after each match in this act, oldest to newest. Matches without rank or RR data are skipped. The chart shows Radiant from 300 RR; hover or focus shows the recorded rank.</p>
         <div id="rr-trend-chart" class="rr-trend-scroll" role="region" aria-label="RR trend across matches" tabindex="0"></div>
         <p id="rr-trend-detail" class="rr-trend-detail" role="status"></p>
       </section>
@@ -4885,18 +4885,20 @@ function renderRRTrend(matches){
     return item;
   };
   const svg=el('svg',{class:'rr-trend-svg',width,height,viewBox:`0 0 ${width} ${height}`,'aria-label':`Rank and RR trend across ${points.length} matches, net ${rrSigned(running,0)} RR`});
+  const radiantChartFloor=2100+300; // Visual guide only; the tooltip uses each match's recorded tier.
+  const immortalPoints=points.filter(point=>point.value>=2100&&point.value<radiantChartFloor&&point.match.myPostTierId>=24&&point.match.myPostTierId<27)
+    .sort((a,b)=>a.value-b.value);
   const tierAt=value=>{
     if(value<2100)return rrPositionFromElo(value).tier;
-    // Immortal and Radiant cutoffs depend on the region. Use the nearest
-    // recorded post-match tier rather than inventing a fixed RR threshold.
-    const ranked=points.filter(point=>point.match.myPostTierId>=24);
-    if(!ranked.length)return 24;
-    return ranked.reduce((best,point)=>Math.abs(point.value-value)<Math.abs(best.value-value)?point:best).match.myPostTierId;
+    if(value>=radiantChartFloor)return 27;
+    // Preserve observed Immortal divisions without letting a historical
+    // Radiant badge move the chart's chosen 300-RR visual boundary.
+    if(!immortalPoints.length)return 24;
+    return immortalPoints.reduce((best,point)=>Math.abs(point.value-value)<Math.abs(best.value-value)?point:best).match.myPostTierId;
   };
   const boundaries=new Set([min,max]);
   for(let value=Math.ceil(min/100)*100;value<max&&value<=2100;value+=100)boundaries.add(value);
-  const immortalPoints=points.filter(point=>point.value>=2100&&point.match.myPostTierId>=24)
-    .sort((a,b)=>a.value-b.value);
+  if(radiantChartFloor>min&&radiantChartFloor<max)boundaries.add(radiantChartFloor);
   immortalPoints.slice(1).forEach((point,index)=>{
     const previous=immortalPoints[index];
     if(point.match.myPostTierId!==previous.match.myPostTierId){
