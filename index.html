@@ -711,12 +711,11 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-score-note{font-size:13px;line-height:1.6;color:#a1a1aa;margin:0 0 16px;max-width:760px;}
 .rr-score-empty{padding:20px;color:#a1a1aa;font-size:13px;}
 .rr-trend-card{margin:0 0 24px;padding:20px;border:1px solid var(--surface-border);border-radius:10px;background:#141416;}
-.rr-trend-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.rr-trend-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.rr-trend-head-main{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-width:0;}
 .rr-trend-head h2{margin:0;font-size:18px;font-weight:650;}
 .rr-trend-total{font-size:16px;font-weight:750;font-variant-numeric:tabular-nums;}
 .rr-trend-total.positive{color:#4ade80;}.rr-trend-total.negative{color:#f87171;}.rr-trend-total.neutral{color:#c4c4cc;}
-.rr-trend-note{margin:8px 0 0;color:#a1a1aa;font-size:12px;line-height:1.5;}
-.rr-trend-filter{margin-top:14px;}
 .rr-trend-scroll{position:relative;margin-top:16px;overflow:hidden;}
 .rr-trend-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
 .rr-trend-svg{display:block;width:100%;height:194px;font-family:var(--font-body);}
@@ -963,15 +962,16 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
     <div id="rr-tables" hidden>
       <dl id="rr-summary-stats" class="rr-summary-stats" aria-label="RR summary"></dl>
       <section class="rr-trend-card" aria-labelledby="rr-trend-title">
-        <div class="rr-trend-head"><h2 id="rr-trend-title">RR trend <span id="rr-trend-count" class="rr-movement-count"></span></h2><strong id="rr-trend-total" class="rr-trend-total"></strong></div>
-        <p id="rr-trend-note" class="rr-trend-note">Rank and RR after each match in this act, oldest to newest; matches without data are skipped.</p>
-        <div class="party-size-filter rr-trend-filter" role="radiogroup" aria-labelledby="rr-trend-range-label">
-          <span id="rr-trend-range-label">Matches</span>
-          <div class="party-size-options">
-            <label><input type="radio" name="rr-trend-range" value="20" checked onchange="setRRTrendRange(this.value)"><span>20 most recent</span></label>
-            <label><input type="radio" name="rr-trend-range" value="all" onchange="setRRTrendRange(this.value)"><span>All time</span></label>
-            <label><input type="radio" name="rr-trend-range" value="10" onchange="setRRTrendRange(this.value)"><span>10 most recent</span></label>
+        <div class="rr-trend-head">
+          <div class="rr-trend-head-main">
+            <h2 id="rr-trend-title">RR trend</h2>
+            <div class="party-size-options rr-trend-filter" role="radiogroup" aria-label="RR trend match range">
+              <label><input type="radio" name="rr-trend-range" value="all" checked onchange="setRRTrendRange(this.value)"><span id="rr-trend-all-label">All time (0)</span></label>
+              <label><input type="radio" name="rr-trend-range" value="20" aria-label="20 most recent matches" onchange="setRRTrendRange(this.value)"><span>20</span></label>
+              <label><input type="radio" name="rr-trend-range" value="10" aria-label="10 most recent matches" onchange="setRRTrendRange(this.value)"><span>10</span></label>
+            </div>
           </div>
+          <strong id="rr-trend-total" class="rr-trend-total"></strong>
         </div>
         <div id="rr-trend-chart" class="rr-trend-scroll" role="region" aria-label="RR trend across matches" tabindex="0"></div>
       </section>
@@ -2418,8 +2418,8 @@ function runAnalysis(searchOverride,{fromUrl=false,initialAct=null}={}){
   allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;mhDayStats={};
   _rrChangeByMatchId={};_preRRByMatchId={};_preTierByMatchId={};_postRRByMatchId={};_postTierByMatchId={};_refundedRRByMatchId={};_derankProtectedByMatchId={};
   allTeammates=[];allEncounters=[];serverData=[];serverPartySize=0;serverFilteredMatchCount=0;lobbyRankPartySize=0;lobbyRankFilteredMatchCount=0;rrMovementZoomTier=null;
-  rrTrendRange='20';
-  document.querySelector('input[name="rr-trend-range"][value="20"]').checked=true;
+  rrTrendRange='all';
+  document.querySelector('input[name="rr-trend-range"][value="all"]').checked=true;
   const serverPartyAll=document.querySelector('input[name="servers-party-size"][value="0"]');
   if(serverPartyAll)serverPartyAll.checked=true;
   const lobbyRankPartyAll=document.querySelector('input[name="lobby-rank-party-size"][value="0"]');
@@ -5134,7 +5134,7 @@ function renderRRMovement(matches){
 let rrTrendMatches=[];
 let rrTrendRenderedWidth=0;
 let rrTrendResizeObserver=null;
-let rrTrendRange='20';
+let rrTrendRange='all';
 function setRRTrendRange(value){
   if(!['10','20','all'].includes(value))return;
   rrTrendRange=value;
@@ -5155,10 +5155,9 @@ function rrDuoInfo(match){
 }
 function renderRRTrend(matches){
   const container=document.getElementById('rr-trend-chart');
-  const note=document.getElementById('rr-trend-note');
-  const count=document.getElementById('rr-trend-count');
   const total=document.getElementById('rr-trend-total');
   rrTrendMatches=matches;
+  document.getElementById('rr-trend-all-label').textContent=`All time (${matches.length})`;
   if(!rrTrendResizeObserver&&typeof ResizeObserver!=='undefined'){
     rrTrendResizeObserver=new ResizeObserver(()=>{
       const width=Math.round(container.clientWidth);
@@ -5170,9 +5169,6 @@ function renderRRTrend(matches){
   const scoped=showDuos?[...matches].sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0)).slice(0,Number(rrTrendRange)):matches;
   const ordered=scoped.filter(m=>Number.isFinite(m.myRR)&&Number.isFinite(m.myPostRR))
     .sort((a,b)=>(a.startedAtMs||0)-(b.startedAtMs||0));
-  note.textContent=showDuos
-    ?`Rank and RR for the ${rrTrendRange} most recent matches in this act, oldest to newest; matches without data are skipped. Blue bands show duo runs and net RR. Hover or focus for teammate and rank.`
-    :'Rank and RR for all recorded matches in the selected act, oldest to newest; matches without data are skipped. Hover or focus for recorded rank.';
   const duoInfos=ordered.map(m=>showDuos?rrDuoInfo(m):null);
   const duoRuns=[];
   const duoRunAt=[];
@@ -5190,7 +5186,6 @@ function renderRRTrend(matches){
   }
   const duoCount=duoInfos.filter(Boolean).length;
   const duoNet=ordered.reduce((sum,m,i)=>sum+(duoInfos[i]?m.myRR:0),0);
-  count.textContent=`· ${ordered.length} ${ordered.length===1?'match':'matches'}`;
   container.replaceChildren();
   if(!ordered.length){
     total.textContent='—';
@@ -5273,8 +5268,9 @@ function renderRRTrend(matches){
   }
   const bandLabels=[];
   duoRuns.forEach(run=>{
-    const start=Math.max(left,x(run.start)-spacing/2);
-    const end=Math.min(width-right,x(run.end)+spacing/2);
+    const inset=Math.min(3,spacing/4);
+    const start=Math.max(left,x(run.start)-spacing/2+inset);
+    const end=Math.min(width-right,x(run.end)+spacing/2-inset);
     const bandWidth=end-start;
     if(run.count<3||bandWidth<35)return;
     svg.appendChild(el('rect',{class:'duo-band',x:start,y:top,width:bandWidth,height:bottom-top,'aria-hidden':'true'}));
