@@ -100,6 +100,7 @@ const PREFIX = "/api";
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const MATCH_ARCHIVE_ROUTE = new RegExp(`^/match-archive/(${UUID})/(${UUID})$`, 'i');
 const MATCH_ARCHIVE_PAGE_SIZE = 10;
+const MATCH_ARCHIVE_COUNTS_ROUTE = new RegExp(`^/match-archive-counts/(${UUID})$`, 'i');
 
 async function gzipMatch(match) {
   const source = new Blob([JSON.stringify(match)]).stream();
@@ -153,6 +154,21 @@ async function readMatchArchive(env, puuid, seasonId, start) {
     ).bind(puuid, seasonId, MATCH_ARCHIVE_PAGE_SIZE, start).all();
     const matches = await Promise.all((results || []).map(row => gunzipMatch(row.payload)));
     const res = json({ data: matches }, 200);
+    res.headers.set('Cache-Control', 'no-store');
+    return res;
+  } catch {
+    return json({ error: 'Match archive unavailable' }, 503);
+  }
+}
+
+async function readMatchArchiveCounts(env, puuid) {
+  if (!env.APP_DB) return json({ error: 'Match archive unavailable' }, 503);
+  try {
+    const { results } = await env.APP_DB.prepare(
+      'SELECT season_id, COUNT(*) AS matches FROM match_archive WHERE puuid=?1 GROUP BY season_id'
+    ).bind(puuid).all();
+    const counts = Object.fromEntries((results || []).map(row => [row.season_id, row.matches]));
+    const res = json({ data: counts }, 200);
     res.headers.set('Cache-Control', 'no-store');
     return res;
   } catch {
@@ -892,6 +908,9 @@ export async function onRequestGet(context) {
   // hard-fail on a missing CALIB_DB binding: getCalibModel() already falls
   // back to the frozen constants, which is a perfectly good response.
   if (requestPath === "/calib-model") return handleCalibModel(env);
+
+  const archiveCountsMatch = requestPath.match(MATCH_ARCHIVE_COUNTS_ROUTE);
+  if (archiveCountsMatch) return readMatchArchiveCounts(env, archiveCountsMatch[1].toLowerCase());
 
   const archiveMatch = requestPath.match(MATCH_ARCHIVE_ROUTE);
   if (archiveMatch) {
