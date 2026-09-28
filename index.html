@@ -167,8 +167,6 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .progress-fill{height:100%;background:#888888;border-radius:2px;width:0%;transition:width .4s;}
 .progress-wrap.indeterminate .progress-fill{width:35%!important;animation:search-progress 1.5s ease-in-out infinite;}
 @keyframes search-progress{from{transform:translateX(-100%)}to{transform:translateX(300%)}}
-.analysis-load-note{margin:0 0 14px;padding:10px 14px;border:1px solid #3b4654;border-radius:8px;background:#17202a;color:#c9d7e7;font:500 12px/1.5 var(--font-body);}
-.analysis-load-note[hidden]{display:none;}
 
 /* summary cards */
 .summary-grid{display:flex;flex-direction:column;gap:14px;margin-bottom:14px;}
@@ -857,7 +855,6 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
     <a href="/matches" data-page="matches">Match History</a>
     <a href="/names" data-page="names">Name History</a>
   </nav>
-  <div id="analysis-load-note" class="analysis-load-note" role="status" aria-live="polite" hidden></div>
   <main id="names-page" class="detail-page" hidden aria-labelledby="names-title">
     <div class="page-heading">
       <h1 id="names-title" tabindex="-1">Name History</h1>
@@ -1453,11 +1450,6 @@ function currentActId(){
 // Pages share one search/data flow and one placement filter. Their result
 // sections stay mounted so navigation preserves loaded data and open matches.
 let activePage='overview',analysisState='idle',rrHasData=false;
-function setAnalysisLoadNote(message){
-  const note=document.getElementById('analysis-load-note');
-  if(note.textContent!==message)note.textContent=message;
-  note.hidden=!message;
-}
 let nameHistoryRows=[],nameHistoryState='idle';
 let nameHistoryBackfill=null,nameBackfillBusy=false,nameBackfillError=false;
 let nameBackfillStopRequested=false,nameBackfillStopped=false,nameBackfillPages=0;
@@ -2381,7 +2373,7 @@ function runAnalysis(searchOverride,{fromUrl=false,initialAct=null}={}){
   PLAYER=playerName;TAG=playerTag;REGION=playerRegion;PLATFORM=playerPlatform;TARGET_SEASON=playerSeason;PUUID=parsed.puuid;
   document.body.classList.add('has-analysis');
   analysisState='loading';
-  setAnalysisLoadNote('');
+  setStatus('');
   const inputIdentity=parsed.name?parsed:parseSearchInput(document.getElementById('m-nametag').value.trim());
   const pendingRoutePush=!fromUrl&&!inputIdentity?.name;
   if(!fromUrl&&inputIdentity?.name)writePlayerRoute(inputIdentity.name,inputIdentity.tag,playerSeason);
@@ -2447,11 +2439,10 @@ async function waitForRateLimit(ms,onUpdate){
     if(lastMessage&&statusText.textContent!==lastMessage)ownsStatus=false;
     if(!ownsStatus)return;
     const seconds=Math.max(0,Math.ceil((deadline-performance.now())/1000));
-    const message=`Rate limit reached — waiting ${seconds}s for reset…`;
+    const message=onUpdate?.(seconds)||`Rate limit reached — waiting ${seconds}s for reset…`;
     if(message!==lastMessage){
       setStatus(message,true);
       lastMessage=message;
-      onUpdate?.(seconds);
     }
   };
   update();
@@ -3557,11 +3548,11 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       .sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0))));
     setSeasonMatchCount(TARGET_SEASON,allMatches.length,'loading');
     renderAll(true);
-    setAnalysisLoadNote(`Showing ${allMatches.length} games. Checking for more matches…`);
+    setStatus(`Showing ${allMatches.length} games. Checking for more matches…`,true);
   };
   const onRateLimit=seconds=>{
     if(myGen===_analysisGen&&allMatches.length)
-      setAnalysisLoadNote(`Showing ${allMatches.length} games. API rate limit reached; loading resumes automatically in about ${Math.ceil(seconds/5)*5}s.`);
+      return `Showing ${allMatches.length} games. API rate limit reached; loading resumes automatically in about ${Math.ceil(seconds/5)*5}s.`;
   };
   try{
     // Step 0: resolve PUUID so we can find the player in historical matches
@@ -3624,7 +3615,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
           if(!TARGET_SEASON)TARGET_SEASON=previewActId;
           finalizeHeader(null,resolvedAccount);
           publishMatches(page);
-          setAnalysisLoadNote(`Showing ${allMatches.length} saved games. Loading remaining games…`);
+          setStatus(`Showing ${allMatches.length} saved games. Loading remaining games…`,true);
         },()=>!TARGET_SEASON||TARGET_SEASON.toLowerCase()===archiveActId).catch(()=>[]);
     }
 
@@ -3718,7 +3709,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
           if(myGen!==_analysisGen)return;
           finalizeHeader(finalCurrent,resolvedAccount);
           publishMatches(page);
-          setAnalysisLoadNote(`Showing ${allMatches.length} saved games. Loading remaining games…`);
+          setStatus(`Showing ${allMatches.length} saved games. Loading remaining games…`,true);
         });
         if(myGen!==_analysisGen)return;
         if(archivedMatches.length)publishMatches(archivedMatches);
@@ -3874,21 +3865,18 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     setProgress(100);
     setTimeout(()=>setProgress(0),600);
     renderAll();
-    setAnalysisLoadNote(scanStoppedEarly&&allMatches.length
-      ?`Showing ${allMatches.length} games. The live match scan stopped early; search again later to load more.`
-      :'');
+    if(scanStoppedEarly&&allMatches.length)
+      setStatus(`Showing ${allMatches.length} games. The live match scan stopped early; search again later to load more.`);
   }catch(e){
     if(myGen!==_analysisGen)return; // superseded run — swallow its error
     if(allMatches.length){
-      setStatus('');
       setSeasonMatchCount(TARGET_SEASON,allMatches.length,'partial');
-      setAnalysisLoadNote(`Showing ${allMatches.length} games. More games could not be loaded right now; search again later.`);
+      setStatus(`Showing ${allMatches.length} games. More games could not be loaded right now; search again later.`);
       return;
     }
     analysisState='error';
     updateDetailPages();
     setStatus('');
-    setAnalysisLoadNote('');
     document.getElementById('error-container').innerHTML=
       `<div class="error-box">Error: ${e.message}<br><br>Check browser console (F12) for details.</div>`;
   }
@@ -5532,7 +5520,7 @@ function setStatus(msg,spin=false){
   document.getElementById('status-text').textContent=msg;
   document.getElementById('spinner').style.display=spin?'block':'none';
   bar.style.display=msg?'flex':'none';
-  pw.style.display=msg?'block':'none';
+  pw.style.display=msg&&spin?'block':'none';
 }
 function setProgress(pct){
   const wrap=document.querySelector('.progress-wrap');
