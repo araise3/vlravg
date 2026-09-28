@@ -5517,16 +5517,21 @@ function renderLobbyTeamsTable(rows){
 function setStatus(msg,spin=false){
   const bar=document.getElementById('status-bar');
   const pw=bar.nextElementSibling;
+  // Keep both rows in the results header so the navigation and cards do not
+  // jump upward when loading finishes and the message clears.
+  const reserveSpace=document.body.classList.contains('has-analysis');
   document.getElementById('status-text').textContent=msg;
   document.getElementById('spinner').style.display=spin?'block':'none';
-  bar.style.display=msg?'flex':'none';
-  pw.style.display=msg&&spin?'block':'none';
+  bar.style.display=msg||reserveSpace?'flex':'none';
+  bar.style.visibility=msg?'visible':'hidden';
+  pw.style.display=(msg&&spin)||reserveSpace?'block':'none';
+  pw.style.visibility=msg&&spin?'visible':'hidden';
 }
 function setProgress(pct){
   const wrap=document.querySelector('.progress-wrap');
   wrap.classList.toggle('indeterminate',pct==null);
   document.getElementById('progress-fill').style.width=pct==null?'':Math.min(pct,100)+'%';
-  if(pct===0)setTimeout(()=>document.querySelector('.progress-wrap').style.display='none',400);
+  if(pct===0)setTimeout(()=>{if(!wrap.classList.contains('indeterminate'))wrap.style.visibility='hidden';},400);
 }
 
 // Count the greyed-out placement-week games in the stats (or not). Only the stat
