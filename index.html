@@ -513,7 +513,6 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
 .overview-rr-trend .point.positive{fill:#4ade80;}
 .overview-rr-trend .point.negative{fill:#f87171;}
 .overview-rr-trend .point.neutral{fill:#e4e4e7;}
-.overview-rr-trend .point.duo{stroke:var(--brand);stroke-width:2.5;}
 .overview-rr-trend-empty{display:block;color:#a1a1aa;font-size:12px;padding:20px 0;}
 .overview-preview-note{font-size:12px;color:#a1a1aa;margin:12px 0 0;line-height:1.6;}
 .overview-clutches{border:1px solid var(--surface-border);border-radius:12px;background:var(--surface);}
@@ -716,7 +715,8 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-trend-head h2{margin:0;font-size:18px;font-weight:650;}
 .rr-trend-total{font-size:16px;font-weight:750;font-variant-numeric:tabular-nums;}
 .rr-trend-total.positive{color:#4ade80;}.rr-trend-total.negative{color:#f87171;}.rr-trend-total.neutral{color:#c4c4cc;}
-.rr-trend-note,.rr-trend-detail{margin:8px 0 0;color:#a1a1aa;font-size:12px;line-height:1.5;}
+.rr-trend-note{margin:8px 0 0;color:#a1a1aa;font-size:12px;line-height:1.5;}
+.rr-trend-filter{margin-top:14px;}
 .rr-trend-scroll{position:relative;margin-top:16px;overflow:hidden;}
 .rr-trend-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
 .rr-trend-svg{display:block;width:100%;height:194px;font-family:var(--font-body);}
@@ -726,9 +726,6 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-trend-svg .duo-band{fill:var(--brand);fill-opacity:.075;pointer-events:none;}
 .rr-trend-svg .duo-boundary{stroke:var(--brand);stroke-opacity:.8;stroke-width:1.5;pointer-events:none;}
 .rr-trend-svg .duo-band-label{fill:#93c5fd;font-size:10px;font-weight:700;text-anchor:middle;paint-order:stroke;stroke:#141416;stroke-width:3px;pointer-events:none;}
-.rr-trend-svg .duo-point{stroke:var(--brand);stroke-width:2;fill:#e4e4e7;}
-.rr-trend-svg .duo-point.positive{fill:#4ade80;}
-.rr-trend-svg .duo-point.negative{fill:#f87171;}
 .rr-trend-svg .cursor-band{fill:var(--brand);fill-opacity:.12;pointer-events:none;}
 .rr-trend-svg .cursor-line{stroke:var(--brand);stroke-width:1;pointer-events:none;}
 .rr-trend-svg .cursor-point{fill:#e4e4e7;stroke:#141416;stroke-width:2;pointer-events:none;}
@@ -967,9 +964,16 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
       <dl id="rr-summary-stats" class="rr-summary-stats" aria-label="RR summary"></dl>
       <section class="rr-trend-card" aria-labelledby="rr-trend-title">
         <div class="rr-trend-head"><h2 id="rr-trend-title">RR trend <span id="rr-trend-count" class="rr-movement-count"></span></h2><strong id="rr-trend-total" class="rr-trend-total"></strong></div>
-        <p class="rr-trend-note">Rank and RR after each match in this act, oldest to newest; matches without data are skipped. Blue bands show duo runs and net RR, while outlined dots show other duo games. Hover or focus for teammate and rank. Radiant is shown from 300 RR.</p>
+        <p id="rr-trend-note" class="rr-trend-note">Rank and RR after each match in this act, oldest to newest; matches without data are skipped.</p>
+        <div class="party-size-filter rr-trend-filter" role="radiogroup" aria-labelledby="rr-trend-range-label">
+          <span id="rr-trend-range-label">Matches</span>
+          <div class="party-size-options">
+            <label><input type="radio" name="rr-trend-range" value="20" checked onchange="setRRTrendRange(this.value)"><span>20 most recent</span></label>
+            <label><input type="radio" name="rr-trend-range" value="all" onchange="setRRTrendRange(this.value)"><span>All time</span></label>
+            <label><input type="radio" name="rr-trend-range" value="10" onchange="setRRTrendRange(this.value)"><span>10 most recent</span></label>
+          </div>
+        </div>
         <div id="rr-trend-chart" class="rr-trend-scroll" role="region" aria-label="RR trend across matches" tabindex="0"></div>
-        <p id="rr-trend-detail" class="rr-trend-detail" role="status"></p>
       </section>
       <section id="rr-movement-section" class="rr-movement-section" hidden aria-labelledby="rr-movement-title">
         <div class="rr-movement-card">
@@ -2414,6 +2418,8 @@ function runAnalysis(searchOverride,{fromUrl=false,initialAct=null}={}){
   allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;mhDayStats={};
   _rrChangeByMatchId={};_preRRByMatchId={};_preTierByMatchId={};_postRRByMatchId={};_postTierByMatchId={};_refundedRRByMatchId={};_derankProtectedByMatchId={};
   allTeammates=[];allEncounters=[];serverData=[];serverPartySize=0;serverFilteredMatchCount=0;lobbyRankPartySize=0;lobbyRankFilteredMatchCount=0;rrMovementZoomTier=null;
+  rrTrendRange='20';
+  document.querySelector('input[name="rr-trend-range"][value="20"]').checked=true;
   const serverPartyAll=document.querySelector('input[name="servers-party-size"][value="0"]');
   if(serverPartyAll)serverPartyAll.checked=true;
   const lobbyRankPartyAll=document.querySelector('input[name="lobby-rank-party-size"][value="0"]');
@@ -4871,18 +4877,16 @@ function renderOverviewRRTrend(matches){
     const line=document.createElementNS(ns,'path');line.setAttribute('class','line');line.setAttribute('d',points);
     svg.appendChild(line);
   }
-  // The preview is capped at 20 matches. Shrink dots with the available
-  // spacing so every result stays visible even in the narrow layout.
   const spacing=values.length>1?(width-left-right)/(values.length-1):width;
   const pointRadius=Math.max(2,Math.min(3,spacing/7));
   ordered.forEach((match,i)=>{
     const point=document.createElementNS(ns,'circle');
-    point.setAttribute('class',`point ${match.myRR>0?'positive':match.myRR<0?'negative':'neutral'}${rrDuoInfo(match)?' duo':''}`);
+    point.setAttribute('class',`point ${match.myRR>0?'positive':match.myRR<0?'negative':'neutral'}`);
     point.setAttribute('cx',x(i));point.setAttribute('cy',y(values[i]));point.setAttribute('r',i===ordered.length-1?pointRadius+.5:pointRadius);
     svg.appendChild(point);
   });
   container.appendChild(svg);
-  container.setAttribute('aria-label',`RR trend across ${values.length} ${values.length===1?'match':'matches'} with recorded RR among the last ${recent.length} ${recent.length===1?'match':'matches'} this act, from ${Math.round(values[0])} to ${Math.round(values.at(-1))} total rank RR; blue-outlined dots mark duo games`);
+  container.setAttribute('aria-label',`RR trend across ${values.length} ${values.length===1?'match':'matches'} with recorded RR among the last ${recent.length} ${recent.length===1?'match':'matches'} this act, from ${Math.round(values[0])} to ${Math.round(values.at(-1))} total rank RR`);
 }
 
 function rrPositionFromElo(elo,tierHint=null){
@@ -5130,6 +5134,14 @@ function renderRRMovement(matches){
 let rrTrendMatches=[];
 let rrTrendRenderedWidth=0;
 let rrTrendResizeObserver=null;
+let rrTrendRange='20';
+function setRRTrendRange(value){
+  if(!['10','20','all'].includes(value))return;
+  rrTrendRange=value;
+  const input=document.querySelector(`input[name="rr-trend-range"][value="${value}"]`);
+  if(input)input.checked=true;
+  renderRRTrend(rrTrendMatches);
+}
 function rrDuoInfo(match){
   if(match.partySize!==2||!match.myPartyId)return null;
   const me=match.players?.find(p=>PUUID?p.puuid===PUUID:
@@ -5143,7 +5155,7 @@ function rrDuoInfo(match){
 }
 function renderRRTrend(matches){
   const container=document.getElementById('rr-trend-chart');
-  const detail=document.getElementById('rr-trend-detail');
+  const note=document.getElementById('rr-trend-note');
   const count=document.getElementById('rr-trend-count');
   const total=document.getElementById('rr-trend-total');
   rrTrendMatches=matches;
@@ -5154,9 +5166,14 @@ function renderRRTrend(matches){
     });
     rrTrendResizeObserver.observe(container);
   }
-  const ordered=matches.filter(m=>Number.isFinite(m.myRR)&&Number.isFinite(m.myPostRR))
+  const showDuos=rrTrendRange!=='all';
+  const scoped=showDuos?[...matches].sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0)).slice(0,Number(rrTrendRange)):matches;
+  const ordered=scoped.filter(m=>Number.isFinite(m.myRR)&&Number.isFinite(m.myPostRR))
     .sort((a,b)=>(a.startedAtMs||0)-(b.startedAtMs||0));
-  const duoInfos=ordered.map(rrDuoInfo);
+  note.textContent=showDuos
+    ?`Rank and RR for the ${rrTrendRange} most recent matches in this act, oldest to newest; matches without data are skipped. Blue bands show duo runs and net RR. Hover or focus for teammate and rank.`
+    :'Rank and RR for all recorded matches in the selected act, oldest to newest; matches without data are skipped. Hover or focus for recorded rank.';
+  const duoInfos=ordered.map(m=>showDuos?rrDuoInfo(m):null);
   const duoRuns=[];
   const duoRunAt=[];
   for(let i=0;i<ordered.length;){
@@ -5178,7 +5195,6 @@ function renderRRTrend(matches){
   if(!ordered.length){
     total.textContent='—';
     total.className='rr-trend-total neutral';
-    detail.textContent='';
     const empty=document.createElement('div');
     empty.className='rr-trend-empty';
     empty.textContent='No recorded rank and RR changes for matches in this act.';
@@ -5190,8 +5206,6 @@ function renderRRTrend(matches){
   const points=ordered.map(m=>({match:m,value:m.myPostRR}));
   total.textContent=`${rrSigned(running,0)} RR`;
   total.className=`rr-trend-total ${running>0?'positive':running<0?'negative':'neutral'}`;
-  const defaultDetail=`${duoCount?`${duoCount} duo ${duoCount===1?'game':'games'}: ${rrSigned(duoNet,0)} RR. `:''}Focus or hover a point to see that match’s RR change.`;
-  detail.textContent=defaultDetail;
 
   const left=42,right=12,top=18,bottom=178,height=194;
   const width=Math.max(left+right+2,Math.round(container.clientWidth)||872);
@@ -5277,10 +5291,6 @@ function renderRRTrend(matches){
     svg.appendChild(el('path',{class:'area',d:`${line} L${x(points.length-1).toFixed(1)},${bottom} L${x(0).toFixed(1)},${bottom} Z`}));
     svg.appendChild(el('path',{class:'line',d:line}));
   }
-  points.forEach(({match,value},i)=>{
-    if(!duoInfos[i])return;
-    svg.appendChild(el('circle',{class:`duo-point ${match.myRR>0?'positive':match.myRR<0?'negative':'neutral'}`,cx:x(i),cy:y(value),r:Math.max(2.5,Math.min(5,spacing/3)),'aria-hidden':'true'}));
-  });
   bandLabels.forEach(label=>svg.appendChild(label));
   const dateLabel=m=>Number.isFinite(m.startedAtMs)?new Date(m.startedAtMs).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'Date unavailable';
   const cursorBand=el('rect',{class:'cursor-band',x:0,y:top,width:Math.min(24,Math.max(12,spacing*.6)),height:bottom-top,hidden:''});
@@ -5316,12 +5326,10 @@ function renderRRTrend(matches){
     tipRankText.textContent=`${avgLabel(rank.tier)} · ${rank.rr} RR`;
     tooltip.hidden=false;
     tooltip.style.left=`${Math.max(8,Math.min(xx+12,width-tooltip.offsetWidth-8))}px`;
-    detail.textContent=`Match ${i+1} of ${points.length}, ${dateLabel(match)}: ${avgLabel(rank.tier)} · ${rank.rr} RR after ${change} RR change${duo?`; ${duo.label}${run?`, ${rrSigned(run.net,0)} RR across ${run.count} games`:''}`:''}`;
   };
   const hide=()=>{
     [cursorBand,cursorLine,cursorPoint].forEach(item=>item.setAttribute('hidden',''));
     tooltip.hidden=true;
-    detail.textContent=defaultDetail;
   };
   points.forEach(({match,value},i)=>{
     const change=rrSigned(match.myRR,0);
