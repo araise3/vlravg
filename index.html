@@ -620,6 +620,7 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
 .rank-table .table-lobby-value{justify-content:flex-end;font-size:13px;}
 .rank-table{width:100%;min-width:620px;border-collapse:separate;border-spacing:0;text-align:right;font-family:var(--font-display);font-variant-numeric:tabular-nums;}
 .rank-table.duos-table{min-width:680px;}
+#teammate-list .duos-table{min-width:800px;}
 .rank-table.duos-table th,.rank-table.duos-table td{padding-left:16px;padding-right:16px;}
 .duos-table th:first-child{width:25%;}
 .duos-table th:nth-child(3){width:28%;}
@@ -4155,9 +4156,10 @@ function buildTeammates(){
       // Only count players who were in the same party (duo/trio/5-stack)
       if(!m.myPartyId||p.party_id!==m.myPartyId)return;
       const key=p.puuid||`${p.name}#${p.tag}`;
-      if(!tmap[key])tmap[key]={name:p.name,tag:p.tag,key,games:0,wins:0,kills:0,deaths:0,rankSum:0,rankCount:0,acsSum:0,acsCount:0,placeSum:0,placeCount:0};
+      if(!tmap[key])tmap[key]={name:p.name,tag:p.tag,key,games:0,wins:0,kills:0,deaths:0,rankSum:0,rankCount:0,acsSum:0,acsCount:0,placeSum:0,placeCount:0,rrTotal:0,rrCount:0};
       tmap[key].games++;
       if(m.won===true)tmap[key].wins++;
+      if(Number.isFinite(m.myRR)){tmap[key].rrTotal+=m.myRR;tmap[key].rrCount++;}
       tmap[key].kills+=p._kills||0;
       tmap[key].deaths+=p._deaths||0;
       if(m.avgRank!=null){tmap[key].rankSum+=m.avgRank;tmap[key].rankCount++;}
@@ -4385,8 +4387,8 @@ function renderTeammates(){
   if(!allTeammates.length)return;
   const table=document.createElement('table');
   table.className='rank-table duos-table';
-  table.innerHTML=`<caption class="rank-sr-only">Teammates you played with, including their K/D and average ACS</caption>
-    <thead><tr><th scope="col">Teammate</th><th scope="col">Matches</th><th scope="col">Avg Lobby</th><th scope="col" title="Teammate K/D">K/D</th><th scope="col" title="Teammate average ACS">Avg ACS</th><th scope="col">Win rate</th></tr></thead><tbody></tbody>`;
+  table.innerHTML=`<caption class="rank-sr-only">Party teammates, including their K/D, average ACS, and your total recorded RR change together</caption>
+    <thead><tr><th scope="col">Teammate</th><th scope="col">Matches</th><th scope="col">Avg Lobby</th><th scope="col" title="Teammate K/D">K/D</th><th scope="col" title="Teammate average ACS">Avg ACS</th><th scope="col">Win rate</th><th scope="col" title="Your net RR change in matches with this teammate">Total RR</th></tr></thead><tbody></tbody>`;
   const tbody=table.querySelector('tbody');
   const teammateRows=allTeammates.map(t=>({
     ...t,
@@ -4403,12 +4405,13 @@ function renderTeammates(){
       <td>${tableLobbyValue(t.rankSum,t.rankCount)}</td>
       <td class="${t.kd===1?'':t.kd>1?'rank-positive':'rank-negative'}" title="${t.kills} kills / ${t.deaths} deaths">${t.kd.toFixed(2)}</td>
       <td>${t.acs==null?'—':Math.round(t.acs)}</td>
-      <td class="${wr===50?'':wr>50?'rank-positive':'rank-negative'}">${wr}%</td>`;
+      <td class="${wr===50?'':wr>50?'rank-positive':'rank-negative'}">${wr}%</td>
+      <td class="${!t.rrCount||t.rrTotal===0?'':t.rrTotal>0?'rank-positive':'rank-negative'}" title="${t.rrCount} of ${t.games} shared matches have recorded RR change">${t.rrCount?rrSigned(t.rrTotal,0):'—'}</td>`;
     row.querySelector('.duo-name').textContent=t.name;
     row.querySelector('.duo-tag').textContent='#'+t.tag;
     tbody.appendChild(row);
   });
-  const values=teammateRows.map(t=>[t.name+'#'+t.tag,t.games,t.lobby,t.kd,t.acs,t.wr]);
+  const values=teammateRows.map(t=>[t.name+'#'+t.tag,t.games,t.lobby,t.kd,t.acs,t.wr,t.rrCount?t.rrTotal:null]);
   highlightTableMaxima(table,values,[
     {column:2,label:'average lobby rank'},{column:3,label:'K/D'},
     {column:4,label:'average ACS'},{column:5,label:'win rate'},
