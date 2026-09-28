@@ -725,6 +725,10 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-trend-svg .duo-band{fill:var(--brand);fill-opacity:.075;pointer-events:none;}
 .rr-trend-svg .duo-boundary{stroke:var(--brand);stroke-opacity:.8;stroke-width:1.5;pointer-events:none;}
 .rr-trend-svg .duo-band-label{fill:#93c5fd;font-size:10px;font-weight:700;text-anchor:middle;paint-order:stroke;stroke:#141416;stroke-width:3px;pointer-events:none;}
+.rr-trend-svg .result-point{stroke:#141416;stroke-width:1.5;pointer-events:none;}
+.rr-trend-svg .result-point.win{fill:#4ade80;}
+.rr-trend-svg .result-point.loss{fill:#f87171;}
+.rr-trend-svg .result-point.draw{fill:#facc15;}
 .rr-trend-svg .cursor-band{fill:var(--brand);fill-opacity:.12;pointer-events:none;}
 .rr-trend-svg .cursor-line{stroke:var(--brand);stroke-width:1;pointer-events:none;}
 .rr-trend-svg .cursor-point{fill:#e4e4e7;stroke:#141416;stroke-width:2;pointer-events:none;}
@@ -967,6 +971,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
             <h2 id="rr-trend-title">RR trend</h2>
             <div class="party-size-options rr-trend-filter" role="radiogroup" aria-label="RR trend match range">
               <label><input type="radio" name="rr-trend-range" value="all" checked onchange="setRRTrendRange(this.value)"><span id="rr-trend-all-label">All time (0)</span></label>
+              <label id="rr-trend-50-option" hidden><input type="radio" name="rr-trend-range" value="50" aria-label="50 most recent matches" onchange="setRRTrendRange(this.value)"><span>50</span></label>
               <label><input type="radio" name="rr-trend-range" value="20" aria-label="20 most recent matches" onchange="setRRTrendRange(this.value)"><span>20</span></label>
               <label><input type="radio" name="rr-trend-range" value="10" aria-label="10 most recent matches" onchange="setRRTrendRange(this.value)"><span>10</span></label>
             </div>
@@ -5136,7 +5141,7 @@ let rrTrendRenderedWidth=0;
 let rrTrendResizeObserver=null;
 let rrTrendRange='all';
 function setRRTrendRange(value){
-  if(!['10','20','all'].includes(value))return;
+  if(!['10','20','50','all'].includes(value)||(value==='50'&&rrTrendMatches.length<=50))return;
   rrTrendRange=value;
   const input=document.querySelector(`input[name="rr-trend-range"][value="${value}"]`);
   if(input)input.checked=true;
@@ -5158,6 +5163,11 @@ function renderRRTrend(matches){
   const total=document.getElementById('rr-trend-total');
   rrTrendMatches=matches;
   document.getElementById('rr-trend-all-label').textContent=`All time (${matches.length})`;
+  document.getElementById('rr-trend-50-option').hidden=matches.length<=50;
+  if(rrTrendRange==='50'&&matches.length<=50){
+    rrTrendRange='all';
+    document.querySelector('input[name="rr-trend-range"][value="all"]').checked=true;
+  }
   if(!rrTrendResizeObserver&&typeof ResizeObserver!=='undefined'){
     rrTrendResizeObserver=new ResizeObserver(()=>{
       const width=Math.round(container.clientWidth);
@@ -5287,6 +5297,10 @@ function renderRRTrend(matches){
     svg.appendChild(el('path',{class:'area',d:`${line} L${x(points.length-1).toFixed(1)},${bottom} L${x(0).toFixed(1)},${bottom} Z`}));
     svg.appendChild(el('path',{class:'line',d:line}));
   }
+  points.forEach(({match,value},i)=>{
+    const result=match.won===true?'win':match.won===false?'loss':'draw';
+    svg.appendChild(el('circle',{class:`result-point ${result}`,cx:x(i),cy:y(value),r:Math.max(2,Math.min(4,spacing/3)),'aria-hidden':'true'}));
+  });
   bandLabels.forEach(label=>svg.appendChild(label));
   const dateLabel=m=>Number.isFinite(m.startedAtMs)?new Date(m.startedAtMs).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'Date unavailable';
   const cursorBand=el('rect',{class:'cursor-band',x:0,y:top,width:Math.min(24,Math.max(12,spacing*.6)),height:bottom-top,hidden:''});
@@ -5331,7 +5345,8 @@ function renderRRTrend(matches){
     const change=rrSigned(match.myRR,0);
     const rank=rrPositionFromElo(value,match.myPostTierId);
     const duo=duoInfos[i],run=duoRunAt[i];
-    const label=`Match ${i+1} of ${points.length}, ${dateLabel(match)}: ${avgLabel(rank.tier)} · ${rank.rr} RR after ${change} RR change${duo?`; ${duo.label}${run?`, ${rrSigned(run.net,0)} RR across ${run.count} games`:''}`:''}`;
+    const result=match.won===true?'Win':match.won===false?'Loss':'Draw';
+    const label=`Match ${i+1} of ${points.length}, ${dateLabel(match)}, ${result}: ${avgLabel(rank.tier)} · ${rank.rr} RR after ${change} RR change${duo?`; ${duo.label}${run?`, ${rrSigned(run.net,0)} RR across ${run.count} games`:''}`:''}`;
     const group=el('g',{tabindex:'0','aria-label':label});
     group.appendChild(el('circle',{cx:x(i),cy:y(value),r:Math.min(11,Math.max(3,spacing/2)),fill:'transparent'}));
     group.addEventListener('focus',()=>show(i));
