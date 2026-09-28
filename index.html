@@ -1413,9 +1413,8 @@ let allTeammates=[],allEncounters=[],serverData=[],serverPartySize=0,serverFilte
 // ── SHARED MATCH ARCHIVE ──────────────────────────────────────────────────
 // Trusted full matches are kept in APP_DB by the proxy. Browser tabs and
 // devices read the same archive; failures fall back to live history.
-async function readServerMatchArchive(puuid,seasonId,generation,onBatch,isRelevant=()=>true){
+async function readServerMatchArchive(puuid,seasonId,generation,isRelevant=()=>true){
   const matches=[];
-  let pending=[];
   for(let start=0;start<=5000;start+=10){
     if(generation!==_analysisGen||!isRelevant())return [];
     let response,j;
@@ -1432,14 +1431,8 @@ async function readServerMatchArchive(puuid,seasonId,generation,onBatch,isReleva
     }
     const page=Array.isArray(j?.data)?j.data:[];
     matches.push(...page);
-    pending.push(...page);
-    if(onBatch&&pending.length&&(start===0||pending.length>=40||page.length<10)){
-      onBatch(pending);
-      pending=[];
-    }
     if(page.length<10)break;
   }
-  if(onBatch&&pending.length)onBatch(pending);
   return matches;
 }
 async function readSavedMatchCounts(puuid){
@@ -3627,18 +3620,22 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       ?Promise.resolve(prefetchSnapshot.savedCounts)
       :readSavedMatchCounts(PUUID);
 
-    // The shared full-match archive needs only a PUUID and act. Show its first
-    // page before rank/RR calls can be delayed by the upstream rate limit.
+    // The shared full-match archive needs only a PUUID and act. Read it while
+    // rank loads, then show the complete saved act in one update.
     let archivedMatches=[],archiveActId='',archivePromise=null;
     const previewActId=TARGET_SEASON||currentActId();
     if(PUUID&&previewActId){
       archiveActId=previewActId.toLowerCase();
-      archivePromise=readServerMatchArchive(PUUID,previewActId,myGen,page=>{
-          if(myGen!==_analysisGen||(TARGET_SEASON&&TARGET_SEASON.toLowerCase()!==archiveActId))return;
-          if(!TARGET_SEASON)TARGET_SEASON=previewActId;
-          publishMatches(page);
-          setStatus(`Showing ${allMatches.length} saved games. Loading remaining games…`,true);
-        },()=>!TARGET_SEASON||TARGET_SEASON.toLowerCase()===archiveActId).catch(()=>[]);
+      archivePromise=readServerMatchArchive(PUUID,previewActId,myGen,
+        ()=>!TARGET_SEASON||TARGET_SEASON.toLowerCase()===archiveActId).then(matches=>{
+          if(myGen!==_analysisGen||(TARGET_SEASON&&TARGET_SEASON.toLowerCase()!==archiveActId))return matches;
+          if(matches.length){
+            if(!TARGET_SEASON)TARGET_SEASON=previewActId;
+            publishMatches(matches);
+            setStatus(`Showing ${allMatches.length} saved games. Loading remaining games…`,true);
+          }
+          return matches;
+        }).catch(()=>[]);
     }
 
     // Step 1: fetch v3/mmr (or reuse the prefetch) for rank and act selection.
@@ -3738,13 +3735,12 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     if(PUUID&&TARGET_SEASON&&archiveActId!==TARGET_SEASON.toLowerCase()){
       archiveActId=TARGET_SEASON.toLowerCase();
       try{
-        archivedMatches=await readServerMatchArchive(PUUID,TARGET_SEASON,myGen,page=>{
-          if(myGen!==_analysisGen)return;
-          publishMatches(page);
-          setStatus(`Showing ${allMatches.length} saved games. Loading remaining games…`,true);
-        });
+        archivedMatches=await readServerMatchArchive(PUUID,TARGET_SEASON,myGen);
         if(myGen!==_analysisGen)return;
-        if(archivedMatches.length)publishMatches(archivedMatches);
+        if(archivedMatches.length){
+          publishMatches(archivedMatches);
+          setStatus(`Showing ${allMatches.length} saved games. Loading remaining games…`,true);
+        }
       }catch(_){archivedMatches=[];}
     }
     const targetActStart=getActInfoByUuid(TARGET_SEASON)?.start??null;
@@ -5297,7 +5293,7 @@ function renderRRTrend(matches){
     svg.appendChild(el('path',{class:'area',d:`${line} L${x(points.length-1).toFixed(1)},${bottom} L${x(0).toFixed(1)},${bottom} Z`}));
     svg.appendChild(el('path',{class:'line',d:line}));
   }
-  points.forEach(({match,value},i)=>{
+  if(showDuos)points.forEach(({match,value},i)=>{
     const result=match.won===true?'win':match.won===false?'loss':'draw';
     svg.appendChild(el('circle',{class:`result-point ${result}`,cx:x(i),cy:y(value),r:Math.max(2,Math.min(4,spacing/3)),'aria-hidden':'true'}));
   });
