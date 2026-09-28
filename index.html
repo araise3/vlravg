@@ -1198,7 +1198,7 @@ function getSeasonOrder(seasonal){
     .map(s=>s.id);
 }
 
-// Fill the resolved rank and region together after account lookup.
+// Reveal the resolved account badges with the selected act after rank lookup.
 function finalizeHeader(current,showTracker=false){
   const el=document.getElementById('header-rank-badge');
   if(!el)return;
@@ -1450,6 +1450,7 @@ function currentActId(){
 // Pages share one search/data flow and one placement filter. Their result
 // sections stay mounted so navigation preserves loaded data and open matches.
 let activePage='overview',analysisState='idle',rrHasData=false;
+let headerRevealPending=false;
 let nameHistoryRows=[],nameHistoryState='idle';
 let nameHistoryBackfill=null,nameBackfillBusy=false,nameBackfillError=false;
 let nameBackfillStopRequested=false,nameBackfillStopped=false,nameBackfillPages=0;
@@ -1837,7 +1838,7 @@ function renderSeasonOptions(){
 function updateSeasonTriggerLabel(){
   const sel=document.getElementById('m-season');
   const label=document.getElementById('season-trigger-label');
-  if(!label)return;
+  if(!label||headerRevealPending)return;
   const selected=sel.selectedOptions[0];
   label.textContent=sel.value?(selected?.text||'Most recent act'):'Most recent act';
   label.title=label.textContent;
@@ -2373,6 +2374,8 @@ function runAnalysis(searchOverride,{fromUrl=false,initialAct=null}={}){
   PLAYER=playerName;TAG=playerTag;REGION=playerRegion;PLATFORM=playerPlatform;TARGET_SEASON=playerSeason;PUUID=parsed.puuid;
   document.body.classList.add('has-analysis');
   analysisState='loading';
+  headerRevealPending=true;
+  showSeasonLoading();
   setStatus('');
   const inputIdentity=parsed.name?parsed:parseSearchInput(document.getElementById('m-nametag').value.trim());
   const pendingRoutePush=!fromUrl&&!inputIdentity?.name;
@@ -3613,7 +3616,6 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       archivePromise=readServerMatchArchive(PUUID,previewActId,myGen,page=>{
           if(myGen!==_analysisGen||(TARGET_SEASON&&TARGET_SEASON.toLowerCase()!==archiveActId))return;
           if(!TARGET_SEASON)TARGET_SEASON=previewActId;
-          finalizeHeader(null,resolvedAccount);
           publishMatches(page);
           setStatus(`Showing ${allMatches.length} saved games. Loading remaining games…`,true);
         },()=>!TARGET_SEASON||TARGET_SEASON.toLowerCase()===archiveActId).catch(()=>[]);
@@ -3624,6 +3626,14 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     let start=0;
     let finalCurrent=null;
     let useServerArchive=false;
+    const revealHeader=()=>{
+      if(myGen!==_analysisGen||!headerRevealPending)return;
+      headerRevealPending=false;
+      if(TARGET_SEASON)showSeasonSelect();
+      else showSeasonIdle('No played acts');
+      writePlayerRoute(PLAYER,TAG,TARGET_SEASON,'replace');
+      finalizeHeader(finalCurrent,resolvedAccount);
+    };
     setStatus('Loading rank and acts…',true);
     try{
       let mmrJ;
@@ -3674,7 +3684,6 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
         TARGET_SEASON=sel.options[1]?.value||'';
         sel.value=TARGET_SEASON;
         if(TARGET_SEASON)updateSeasonTriggerLabel();
-        else showSeasonIdle('No played acts');
       }
 
     }catch(_){
@@ -3691,6 +3700,10 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
         if(allMatches.length)setSeasonMatchCount(TARGET_SEASON,allMatches.length,'loading');
       }
     }
+    // Archived matches may already be on screen, but keep the header together
+    // until the selected act is known. If MMR has no act, history can supply it.
+    if(myGen!==_analysisGen)return;
+    if(TARGET_SEASON)revealHeader();
     if(archivePromise){
       archivedMatches=await archivePromise;
       if(myGen!==_analysisGen)return;
@@ -3707,7 +3720,6 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       try{
         archivedMatches=await readServerMatchArchive(PUUID,TARGET_SEASON,myGen,page=>{
           if(myGen!==_analysisGen)return;
-          finalizeHeader(finalCurrent,resolvedAccount);
           publishMatches(page);
           setStatus(`Showing ${allMatches.length} saved games. Loading remaining games…`,true);
         });
@@ -3727,11 +3739,6 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       useServerArchive=!!(PUUID&&TARGET_SEASON&&TARGET_SEASON.toLowerCase()===liveCurrentActId);
       if(useServerArchive)start=0; // current-act scans always begin at the newest match
     }
-    // Reveal resolved rank and region together.
-    if(myGen!==_analysisGen)return;
-    writePlayerRoute(PLAYER,TAG,TARGET_SEASON,'replace');
-    finalizeHeader(finalCurrent,resolvedAccount);
-
     // Step 1.5: per-match RR gained/lost, keyed by match_id so processMatch
     // can attach it below. The proxy persists this server-side (see
     // mergeRRHistory), so it can cover more than upstream's live ~20-game
@@ -3823,7 +3830,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       // choose an act instead of silently mixing several acts together.
       if(!TARGET_SEASON){
         const firstAct=data[0]?.metadata?.season?.id||data[0]?.metadata?.season_id;
-        if(firstAct){TARGET_SEASON=firstAct;setSeasonMatchCount(firstAct,0,'loading');}
+        if(firstAct){TARGET_SEASON=firstAct;setSeasonMatchCount(firstAct,0,'loading');revealHeader();}
       }
 
       const onPage=TARGET_SEASON?data.filter(m=>isSeason(m)):data;
@@ -3860,6 +3867,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     }
     if(!collected.length&&!archivedMatches.length&&!rawMatches.size&&liveHistoryError)throw liveHistoryError;
     publishMatches([...collected,...archivedMatches]);
+    revealHeader();
     setSeasonMatchCount(TARGET_SEASON,allMatches.length,scanStoppedEarly?'partial':'found');
     if(myGen!==_analysisGen)return; // a newer analysis took over
     setProgress(100);
@@ -3869,6 +3877,11 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       setStatus(`Showing ${allMatches.length} games. The live match scan stopped early; search again later to load more.`);
   }catch(e){
     if(myGen!==_analysisGen)return; // superseded run — swallow its error
+    if(headerRevealPending){
+      headerRevealPending=false;
+      if(document.getElementById('m-season').options.length>1)showSeasonSelect();
+      else showSeasonIdle('Retry loading acts');
+    }
     if(allMatches.length){
       setSeasonMatchCount(TARGET_SEASON,allMatches.length,'partial');
       setStatus(`Showing ${allMatches.length} games. More games could not be loaded right now; search again later.`);
