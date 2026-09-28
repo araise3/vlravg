@@ -122,9 +122,9 @@ h1 span{color:var(--accent);}
 .season-popup::-webkit-scrollbar{width:7px;}
 .season-popup::-webkit-scrollbar-thumb{background:#353535;border-radius:4px;}
 .season-popup.open{display:block;}
-.season-option{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:34px;padding:7px 10px;font-size:12px;font-family:var(--font-body);color:var(--text);border-radius:var(--radius-sm);cursor:pointer;transition:background .12s,color .12s;}
+.season-option{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:42px;padding:7px 10px;font-size:12px;font-family:var(--font-body);color:var(--text);border-radius:var(--radius-sm);cursor:pointer;transition:background .12s,color .12s;}
 .season-option-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.season-option-games{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;}
+.season-option-games{color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap;}
 .season-option:hover,.season-option.highlighted{background:#242424;}
 .season-option.selected{color:var(--brand);background:color-mix(in srgb,var(--brand) 12%,#111111);font-weight:600;}
 #season-trigger{padding:0 12px;background:var(--bg2);border:.5px solid var(--border2);border-radius:var(--radius-md);color:var(--text);font-size:12px;font-weight:600;transition:border-color .15s,color .15s;}
@@ -165,6 +165,10 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 @keyframes spin{to{transform:rotate(360deg);}}
 .progress-wrap{height:3px;background:#30343b;border-radius:3px;overflow:hidden;margin-top:0;}
 .progress-fill{height:100%;background:#888888;border-radius:2px;width:0%;transition:width .4s;}
+.progress-wrap.indeterminate .progress-fill{width:35%!important;animation:search-progress 1.5s ease-in-out infinite;}
+@keyframes search-progress{from{transform:translateX(-100%)}to{transform:translateX(300%)}}
+.analysis-load-note{margin:0 0 14px;padding:10px 14px;border:1px solid #3b4654;border-radius:8px;background:#17202a;color:#c9d7e7;font:500 12px/1.5 var(--font-body);}
+.analysis-load-note[hidden]{display:none;}
 
 /* summary cards */
 .summary-grid{display:flex;flex-direction:column;gap:14px;margin-bottom:14px;}
@@ -495,7 +499,10 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
 .overview-match-values{display:grid;grid-template-columns:5ch 6ch;column-gap:8px;align-items:center;text-align:right;}
 .overview-teammate-values{display:grid;grid-template-columns:8ch 9ch;column-gap:10px;align-items:center;text-align:right;}
 .overview-match-result{width:3px;height:20px;border-radius:2px;flex-shrink:0;}
+#overview-matches{max-height:320px;overflow-y:auto;scrollbar-width:thin;}
+#overview-matches:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
 .overview-rr-values{display:grid;grid-template-columns:1fr 1fr;padding:4px 0 13px;}
+.overview-rr-scope{font-size:11px;color:#a1a1aa;margin:-5px 0 13px;}
 .overview-rr-values>div+div{padding-left:24px;border-left:1px solid var(--surface-border);}
 .overview-rr-values span{display:block;font-size:11px;color:#a1a1aa;margin-bottom:8px;}
 .overview-rr-values strong{display:block;font-size:30px;font-weight:700;}
@@ -759,7 +766,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
   .rank-table th,.rank-table td,.rank-table.duos-table th,.rank-table.duos-table td{padding-left:14px;padding-right:14px;}
   .rr-movement-card,.rr-trend-card{padding:14px;}
 }
-@media(prefers-reduced-motion:reduce){.rank-table tbody tr,.input-section,.search-bar,.pro-result-main,.pro-result-tracker{transition:none;}.spinner,#season-trigger.loading::before,.shake,.player-card-byline .stat-box,.result-panel .tracker-pill{animation:none;}}
+@media(prefers-reduced-motion:reduce){.rank-table tbody tr,.input-section,.search-bar,.pro-result-main,.pro-result-tracker{transition:none;}.spinner,#season-trigger.loading::before,.shake,.player-card-byline .stat-box,.result-panel .tracker-pill,.progress-wrap.indeterminate .progress-fill{animation:none;}}
 @media(max-width:700px){.rr-summary-stats,.server-summary-stats{grid-template-columns:repeat(2,minmax(0,1fr));}}
 @media(max-width:440px){.rr-summary-stats{grid-template-columns:repeat(2,minmax(0,1fr));}.rr-summary-stat{--rr-summary-size:22px;}.server-summary-stat dd{font-size:19px;}}
 @media(max-width:760px){
@@ -851,6 +858,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
     <a href="/matches" data-page="matches">Match History</a>
     <a href="/names" data-page="names">Name History</a>
   </nav>
+  <div id="analysis-load-note" class="analysis-load-note" role="status" aria-live="polite" hidden></div>
   <main id="names-page" class="detail-page" hidden aria-labelledby="names-title">
     <div class="page-heading">
       <h1 id="names-title" tabindex="-1">Name History</h1>
@@ -1041,13 +1049,14 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
         </section>
         <section class="overview-preview" aria-labelledby="overview-rr-title">
           <a class="overview-preview-heading" href="/rr" data-page="rr"><h2 id="overview-rr-title">RR Breakdown</h2><span aria-hidden="true">↗</span></a>
+          <p class="overview-rr-scope">RR from up to your last 20 matches this act</p>
           <div class="overview-rr-values"><div><span>RR / Win</span><strong id="rr-win-value">—</strong></div><div><span>RR / Loss</span><strong id="rr-loss-value">—</strong></div></div>
           <div class="overview-rr-trend"><span id="overview-rr-trend-label" class="overview-rr-trend-label">RR trend</span><div id="overview-rr-trend-chart" role="img" aria-label="RR trend unavailable"></div></div>
-          <p class="overview-preview-note"><span id="rr-games-value">—</span> eligible games <span aria-hidden="true">·</span> <span id="rr-wr-value">—</span> win rate</p>
+          <p class="overview-preview-note"><span id="rr-games-value">—</span> RR-eligible matches in this window <span aria-hidden="true">·</span> <span id="rr-wr-value">—</span> win rate</p>
         </section>
         <section class="overview-preview" aria-labelledby="overview-matches-title">
           <a class="overview-preview-heading" href="/matches" data-page="matches"><h2 id="overview-matches-title">Recent matches</h2><span aria-hidden="true">↗</span></a>
-          <div id="overview-matches"></div>
+          <div id="overview-matches" role="region" aria-label="Up to 20 recent matches" tabindex="0"></div>
         </section>
       </div>
     </div>
@@ -1390,18 +1399,43 @@ let allTeammates=[],allEncounters=[],serverData=[],serverPartySize=0,serverFilte
 // ── SHARED MATCH ARCHIVE ──────────────────────────────────────────────────
 // Trusted full matches are kept in APP_DB by the proxy. Browser tabs and
 // devices read the same archive; failures fall back to live history.
-async function readServerMatchArchive(puuid,seasonId,generation){
+async function readServerMatchArchive(puuid,seasonId,generation,onBatch,isRelevant=()=>true){
   const matches=[];
+  let pending=[];
   for(let start=0;start<=5000;start+=10){
-    if(generation!==_analysisGen)return [];
-    const response=await fetch(`${API_BASE}/match-archive/${encodeURIComponent(puuid)}/${encodeURIComponent(seasonId)}?start=${start}`,{cache:'no-store'});
-    if(!response.ok)throw new Error('Match archive unavailable');
-    const j=await response.json();
+    if(generation!==_analysisGen||!isRelevant())return [];
+    let response,j;
+    try{
+      response=await fetch(`${API_BASE}/match-archive/${encodeURIComponent(puuid)}/${encodeURIComponent(seasonId)}?start=${start}`,{cache:'no-store'});
+      if(response.ok)j=await response.json();
+    }catch(e){
+      if(matches.length)break;
+      throw e;
+    }
+    if(!response.ok){
+      if(matches.length)break;
+      throw new Error('Match archive unavailable');
+    }
     const page=Array.isArray(j?.data)?j.data:[];
     matches.push(...page);
+    pending.push(...page);
+    if(onBatch&&pending.length&&(start===0||pending.length>=40||page.length<10)){
+      onBatch(pending);
+      pending=[];
+    }
     if(page.length<10)break;
   }
+  if(onBatch&&pending.length)onBatch(pending);
   return matches;
+}
+async function readSavedMatchCounts(puuid){
+  if(!puuid)return{};
+  try{
+    const response=await fetch(`${API_BASE}/match-archive-counts/${encodeURIComponent(puuid)}`,{cache:'no-store'});
+    if(!response.ok)return{};
+    const {data}=await response.json();
+    return data&&typeof data==='object'&&!Array.isArray(data)?data:{};
+  }catch(_){return{};}
 }
 // The live season feed contains all acts, including future ones. The newest
 // start date that is not in the future is the one cacheable act. If both live
@@ -1420,6 +1454,11 @@ function currentActId(){
 // Pages share one search/data flow and one placement filter. Their result
 // sections stay mounted so navigation preserves loaded data and open matches.
 let activePage='overview',analysisState='idle',rrHasData=false;
+function setAnalysisLoadNote(message){
+  const note=document.getElementById('analysis-load-note');
+  if(note.textContent!==message)note.textContent=message;
+  note.hidden=!message;
+}
 let nameHistoryRows=[],nameHistoryState='idle';
 let nameHistoryBackfill=null,nameBackfillBusy=false,nameBackfillError=false;
 let nameBackfillStopRequested=false,nameBackfillStopped=false,nameBackfillPages=0;
@@ -1715,26 +1754,49 @@ window.addEventListener('popstate',()=>{applyPage();loadPlayerFromRoute();});
 function actOptionLabel(uuid,stats){
   return getActLabel(uuid,stats?.short);
 }
-function updateSeasonDropdown(seasonStats,seasonOrder){
+function updateSeasonDropdown(seasonStats,seasonOrder,savedCounts={}){
   const sel=document.getElementById('m-season');
   const current=sel.value;
-  // Keep the automatic newest-act choice, then add played acts newest first.
+  // Include acts saved under this PUUID even when the current region's MMR
+  // response has no games for them (for example after a region transfer).
   while(sel.options.length>1)sel.remove(1);
-  // Re-add only seasons the player has played, newest first. seasonOrder
-  // (oldest→newest) comes from getSeasonOrder(), built straight from
-  // whatever the API returns — so brand-new acts show up with no code changes.
-  const order=(seasonOrder||[]).slice().reverse();
+  const order=[...new Set([...(seasonOrder||[]),...Object.keys(savedCounts)].map(id=>id.toLowerCase()))]
+    .sort((a,b)=>{
+      const aStart=getActInfoByUuid(a)?.start,bStart=getActInfoByUuid(b)?.start;
+      if(aStart!=null&&bStart!=null)return bStart-aStart;
+      return (seasonOrder||[]).indexOf(b)-(seasonOrder||[]).indexOf(a);
+    });
   order.forEach(uuid=>{
     const stats=seasonStats[uuid.toLowerCase()]||seasonStats[uuid];
-    const games=Number(stats?.games);
-    if(!Number.isFinite(games)||games<=0)return;
+    const regionalGames=Number(stats?.games)||0;
+    const savedGames=Number(savedCounts[uuid.toLowerCase()]??savedCounts[uuid])||0;
+    if(regionalGames<=0&&savedGames<=0)return;
     const opt=document.createElement('option');
     opt.value=uuid;
     opt.textContent=actOptionLabel(uuid,stats);
+    opt.dataset.games=String(savedGames||regionalGames);
+    opt.dataset.countKind=savedGames?'saved':'regional';
     sel.appendChild(opt);
   });
   // Restore previous selection if it's still in the list
   if(current&&[...sel.options].some(o=>o.value===current))sel.value=current;
+  renderSeasonOptions();
+  updateSeasonTriggerLabel();
+}
+
+function setSeasonMatchCount(actId,count,kind){
+  if(!actId)return;
+  const sel=document.getElementById('m-season');
+  let option=[...sel.options].find(o=>o.value.toLowerCase()===actId.toLowerCase());
+  if(!option){
+    option=document.createElement('option');
+    option.value=actId;
+    option.textContent=actOptionLabel(actId);
+    sel.appendChild(option);
+  }
+  option.dataset.games=String(count);
+  option.dataset.countKind=kind;
+  sel.value=option.value;
   renderSeasonOptions();
   updateSeasonTriggerLabel();
 }
@@ -1759,10 +1821,16 @@ function renderSeasonOptions(){
     act.textContent=o.value?o.textContent:'Most recent act';
     row.appendChild(act);
     const games=Number(o.dataset.games);
-    if(o.value&&Number.isFinite(games)&&games>0){
+    if(o.value&&o.dataset.countKind){
       const count=document.createElement('span');
       count.className='season-option-games';
-      count.textContent=`${games.toLocaleString()} available ${games===1?'match':'matches'}`;
+      const amount=games.toLocaleString();
+      count.textContent=o.dataset.countKind==='loading'
+        ?(games?`${amount}+ matches found · still checking`:'Checking matches…')
+        :o.dataset.countKind==='partial'?`${amount}+ matches found · scan paused`
+        :o.dataset.countKind==='found'?`${amount} ${games===1?'match':'matches'} found`
+        :o.dataset.countKind==='saved'?`${amount} saved ${games===1?'match':'matches'}`
+        :`${amount} in current region`;
       row.appendChild(count);
       row.setAttribute('aria-label',`${act.textContent}, ${count.textContent}`);
     }
@@ -1779,7 +1847,15 @@ function updateSeasonTriggerLabel(){
   const sel=document.getElementById('m-season');
   const label=document.getElementById('season-trigger-label');
   if(!label)return;
-  label.textContent=sel.value?(sel.selectedOptions[0]?.text||'Most recent act'):'Most recent act';
+  const selected=sel.selectedOptions[0];
+  const games=Number(selected?.dataset.games);
+  const kind=selected?.dataset.countKind;
+  const count=kind==='found'?` · ${games} ${games===1?'match':'matches'}`
+    :kind==='loading'?(games?` · ${games}+ matches`:' · checking')
+    :kind==='partial'?` · ${games}+ matches`
+    :kind==='saved'?` · ${games} saved`:'';
+  label.textContent=sel.value?(selected?.text||'Most recent act')+count:'Most recent act';
+  label.title=label.textContent;
   // keep the popup's selected/aria state in sync too (cheap, avoids a second full rebuild path)
   document.querySelectorAll('#season-popup .season-option').forEach((row,i)=>{
     const isSel=sel.options[i]?.value===sel.value;
@@ -2232,6 +2308,14 @@ async function prefetchPlayerActs(openAfter=false){
     const tag=parsed.tag||acctData.tag||'';
     if(!name||!tag){_pendingPrefetchKey='';showSeasonIdle();return;}
 
+    const savedCounts=await readSavedMatchCounts(acctData.puuid);
+    if(myId!==_prefetchId)return;
+    if(Object.keys(savedCounts).length){
+      updateSeasonDropdown({},[],savedCounts);
+      showSeasonSelect();
+      if(openAfter){openSeasonDropdown();openAfter=false;}
+    }
+
     const mmrUrl=`${API_BASE}/rank/${region}/pc/${encodeURIComponent(name)}/${tag}`;
     const{j:mmrJ}=await apiGet(mmrUrl,{quiet:true});
     if(myId!==_prefetchId)return;
@@ -2244,29 +2328,28 @@ async function prefetchPlayerActs(openAfter=false){
       seasonStats[id]={games:s.games||0,short:s.season?.short||null};
     });
 
-    if(!Object.values(seasonStats).some(s=>s.games>0)){_pendingPrefetchKey='';showSeasonIdle('No played acts');return;}
+    if(!Object.values(seasonStats).some(s=>s.games>0)&&!Object.keys(savedCounts).length){_pendingPrefetchKey='';showSeasonIdle('No played acts');return;}
     const seasonOrder=getSeasonOrder(seasonal);
-    updateSeasonDropdown(seasonStats,seasonOrder);
+    updateSeasonDropdown(seasonStats,seasonOrder,savedCounts);
 
     const sel=document.getElementById('m-season');
     if(!sel.value){
-      for(let i=seasonOrder.length-1;i>=0;i--){
-        const uuid=seasonOrder[i];
-        if(seasonStats[uuid.toLowerCase()]?.games>0){sel.value=uuid;break;}
-      }
+      sel.value=sel.options[1]?.value||'';
       updateSeasonTriggerLabel();
     }
 
     _lastPrefetchKey=key;
     _seasonOptionsKey=key;
     _pendingPrefetchKey='';
-    _prefetchCache={key,acctJ,mmrJ};
+    _prefetchCache={key,acctJ,mmrJ,savedCounts};
     showSeasonSelect();
     if(openAfter)openSeasonDropdown();
   }catch(_){
     if(myId!==_prefetchId)return;
     _pendingPrefetchKey='';
-    showSeasonIdle('Retry loading acts');
+    if(document.getElementById('m-season').options.length>1){
+      _lastPrefetchKey=key;_seasonOptionsKey=key;showSeasonSelect();
+    }else showSeasonIdle('Retry loading acts');
   }
 }
 
@@ -2306,6 +2389,7 @@ function runAnalysis(searchOverride,{fromUrl=false,initialAct=null}={}){
   PLAYER=playerName;TAG=playerTag;REGION=playerRegion;PLATFORM=playerPlatform;TARGET_SEASON=playerSeason;PUUID=parsed.puuid;
   document.body.classList.add('has-analysis');
   analysisState='loading';
+  setAnalysisLoadNote('');
   const inputIdentity=parsed.name?parsed:parseSearchInput(document.getElementById('m-nametag').value.trim());
   const pendingRoutePush=!fromUrl&&!inputIdentity?.name;
   if(!fromUrl&&inputIdentity?.name)writePlayerRoute(inputIdentity.name,inputIdentity.tag,playerSeason);
@@ -2362,7 +2446,7 @@ const MIN_RATED=7; // strict: a match needs at least this many rated players (of
 
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
-async function waitForRateLimit(ms){
+async function waitForRateLimit(ms,onUpdate){
   const statusText=document.getElementById('status-text');
   const deadline=performance.now()+ms;
   let lastMessage='';
@@ -2375,6 +2459,7 @@ async function waitForRateLimit(ms){
     if(message!==lastMessage){
       setStatus(message,true);
       lastMessage=message;
+      onUpdate?.(seconds);
     }
   };
   update();
@@ -2434,7 +2519,7 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
     }catch(_){/* fall back to the floor if the body isn't as expected */}
     const wait=Math.min(retryMs,MAX_WAIT_MS);
     if(opts.quiet)await sleep(wait);
-    else await waitForRateLimit(wait);
+    else await waitForRateLimit(wait,opts.onRateLimit);
     return apiGet(url,opts,_attempt,_rl+1);
   }
 
@@ -3383,15 +3468,15 @@ const MAX_HISTORY_OFFSET=5000;
 // transfer. The match list is keyed to the player across regions, so seek to
 // the selected act by its calendar boundary instead of using those totals as
 // either a skip offset or a stopping condition.
-async function findHistoryStartForAct(nextActStart,generation){
+async function findHistoryStartForAct(nextActStart,generation,onRateLimit){
   if(!Number.isFinite(nextActStart)||nextActStart>Date.now())return 0;
   let lo=0,hi=MAX_HISTORY_OFFSET;
   while(lo<hi){
     if(generation!==_analysisGen)return 0;
     const mid=Math.floor((lo+hi)/2);
-    setStatus('Locating act in match history…',true);
+    setStatus('Finding this act’s matches…',true);
     const url=`${API_BASE}/history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}?mode=competitive&size=1&start=${mid}`;
-    const {j}=await apiGet(url);
+    const {j}=await apiGet(url,{onRateLimit});
     const match=j.data?.[0];
     const started=match?Date.parse(match.metadata?.started_at):null;
     if(match&&!Number.isFinite(started))return 0; // scan from newest if dates cannot be trusted
@@ -3406,19 +3491,19 @@ async function findHistoryStartForAct(nextActStart,generation){
 // then fetch full details only for those IDs so every existing stat keeps its
 // normal full-match meaning. This is best-effort: an incomplete archive must
 // never discard the live matches already found.
-async function recoverStoredSeasonMatches(collected,myGen){
+async function recoverStoredSeasonMatches(collected,alreadySaved,myGen,onRateLimit){
   if(!PUUID||!TARGET_SEASON)return;
-  const known=new Set(collected.map(m=>m.metadata?.match_id||m.match_id).filter(Boolean));
+  const known=new Set([...alreadySaved,...collected.map(m=>m.metadata?.match_id||m.match_id).filter(Boolean)]);
   const missing=[];
   const wanted=TARGET_SEASON.toLowerCase();
   const region=encodeURIComponent(REGION);
   const puuid=encodeURIComponent(PUUID);
   for(let page=1;page<=100;page++){
     if(myGen!==_analysisGen)return;
-    setStatus(`Checking stored matches · page ${page}…`,true);
+    setStatus('Checking older games…',true);
     let payload;
     try{
-      ({j:payload}=await apiGet(`${API_BASE}/stored-matches/${region}/${puuid}?page=${page}`));
+      ({j:payload}=await apiGet(`${API_BASE}/stored-matches/${region}/${puuid}?page=${page}`,{onRateLimit}));
     }catch(_){break;} // no stored archive, or temporarily unavailable
     const rows=Array.isArray(payload?.data)?payload.data:[];
     if(!rows.length)break;
@@ -3439,11 +3524,10 @@ async function recoverStoredSeasonMatches(collected,myGen){
   let failures=0;
   for(let i=0;i<missing.length;i++){
     if(myGen!==_analysisGen)return;
-    setStatus(`Recovering stored match ${i+1}/${missing.length}…`,true);
-    setProgress(Math.min(85+(i+1)/missing.length*10,95));
+    setStatus(`Adding older games · ${i+1} of ${missing.length}…`,true);
     try{
       const {id,region:matchRegion}=missing[i];
-      const {j}=await apiGet(`${API_BASE}/match-detail/${encodeURIComponent(matchRegion)}/${encodeURIComponent(id)}`);
+      const {j}=await apiGet(`${API_BASE}/match-detail/${encodeURIComponent(matchRegion)}/${encodeURIComponent(id)}`,{onRateLimit});
       const match=j?.data||j;
       if(match?.metadata?.match_id!==id||!isSeason(match)||
          !match?.players?.some(p=>p.puuid?.toLowerCase()===PUUID.toLowerCase()))continue;
@@ -3462,7 +3546,31 @@ async function recoverStoredSeasonMatches(collected,myGen){
 async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
   const myGen=++_analysisGen; // supersede any in-flight analysis
   loadSeasonDates(); // fire off act-start dates now; awaited before we filter matches
-  setProgress(3);
+  setProgress(null); // the match API supplies no reliable total
+  const rawMatches=new Map(),processedMatches=new Map();
+  const publishMatches=(rows,reprocess=false)=>{
+    let added=false;
+    rows.forEach(raw=>{
+      const id=raw?.metadata?.match_id||raw?.match_id;
+      if(!id||rawMatches.has(id))return;
+      rawMatches.set(id,raw);
+      added=true;
+    });
+    if(!added&&!reprocess)return;
+    if(reprocess)processedMatches.clear();
+    rawMatches.forEach((raw,id)=>{
+      if(!processedMatches.has(id))processedMatches.set(id,processMatch(raw));
+    });
+    allMatches=tagActPlacements(tagPostResetPlacements([...processedMatches.values()]
+      .sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0))));
+    setSeasonMatchCount(TARGET_SEASON,allMatches.length,'loading');
+    renderAll(true);
+    setAnalysisLoadNote(`Showing ${allMatches.length} games. Checking for more matches…`);
+  };
+  const onRateLimit=seconds=>{
+    if(myGen===_analysisGen&&allMatches.length)
+      setAnalysisLoadNote(`Showing ${allMatches.length} games. API rate limit reached; loading resumes automatically in about ${Math.ceil(seconds/5)*5}s.`);
+  };
   try{
     // Step 0: resolve PUUID so we can find the player in historical matches
     // regardless of name changes over time
@@ -3509,25 +3617,44 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       trackerLink.setAttribute('aria-label',`Open ${PLAYER}#${TAG} on Tracker.gg`);
     }
     writePlayerRoute(PLAYER,TAG,TARGET_SEASON,pendingRoutePush?'push':'replace');
+    const savedCountsPromise=prefetchSnapshot?.savedCounts
+      ?Promise.resolve(prefetchSnapshot.savedCounts)
+      :readSavedMatchCounts(PUUID);
+
+    // The shared full-match archive needs only a PUUID and act. Show its first
+    // page before rank/RR calls can be delayed by the upstream rate limit.
+    let archivedMatches=[],archiveActId='',archivePromise=null;
+    const previewActId=TARGET_SEASON||currentActId();
+    if(PUUID&&previewActId){
+      archiveActId=previewActId.toLowerCase();
+      archivePromise=readServerMatchArchive(PUUID,previewActId,myGen,page=>{
+          if(myGen!==_analysisGen||(TARGET_SEASON&&TARGET_SEASON.toLowerCase()!==archiveActId))return;
+          if(!TARGET_SEASON)TARGET_SEASON=previewActId;
+          finalizeHeader(null,resolvedAccount);
+          publishMatches(page);
+          setAnalysisLoadNote(`Showing ${allMatches.length} saved games. Loading remaining games…`);
+        },()=>!TARGET_SEASON||TARGET_SEASON.toLowerCase()===archiveActId).catch(()=>[]);
+    }
 
     // Step 1: fetch v3/mmr (or reuse the prefetch) for rank and act selection.
     // Its per-act game counts are regional, not a reliable match-list total.
     let start=0;
     let finalCurrent=null;
     let useServerArchive=false;
-    let archivedMatches=[];
-    setStatus('Fetching season history…',true);
+    setStatus('Loading rank and acts…',true);
     try{
       let mmrJ;
       if(prefetchSnapshot?.mmrJ){
         mmrJ=prefetchSnapshot.mmrJ;
       }else{
         const mmrUrl=`${API_BASE}/rank/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}`;
-        ({j:mmrJ}=await apiGet(mmrUrl));
+        ({j:mmrJ}=await apiGet(mmrUrl,{onRateLimit}));
       }
       const seasonal=(mmrJ.data||mmrJ).seasonal||[];
       const seasonOrder=getSeasonOrder(seasonal);
       finalCurrent=(mmrJ.data||mmrJ).current||null;
+      const savedCounts=await savedCountsPromise;
+      if(myGen!==_analysisGen)return;
 
       // Build UUID-keyed stats map for dropdown
       const seasonStats={};
@@ -3538,9 +3665,10 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       });
 
       // Repopulate dropdown: only acts the player has played
-      if(Object.keys(seasonStats).length){
-        updateSeasonDropdown(seasonStats,seasonOrder);
+      if(Object.keys(seasonStats).length||Object.keys(savedCounts).length){
+        updateSeasonDropdown(seasonStats,seasonOrder,savedCounts);
         _seasonOptionsKey=parseSearchInput(document.getElementById('m-nametag').value.trim())?.key||'';
+        if(allMatches.length)setSeasonMatchCount(TARGET_SEASON,allMatches.length,'loading');
       }
       if(TARGET_SEASON){
         const sel=document.getElementById('m-season');
@@ -3557,44 +3685,64 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
         updateSeasonTriggerLabel();
       }
 
-      // Auto-select most recent played act if no season was explicitly chosen
+      // Saved acts can be newer than the current region's MMR act list.
       if(!TARGET_SEASON){
-        let picked=false;
-        for(let i=seasonOrder.length-1;i>=0;i--){
-          const uuid=seasonOrder[i];
-          if(seasonStats[uuid.toLowerCase()]?.games>0){
-            TARGET_SEASON=uuid;
-            const sel=document.getElementById('m-season');
-            sel.value=uuid;
-            updateSeasonTriggerLabel();
-            picked=true;
-            break;
-          }
-        }
-        if(!picked)showSeasonIdle('No played acts');
+        const sel=document.getElementById('m-season');
+        TARGET_SEASON=sel.options[1]?.value||'';
+        sel.value=TARGET_SEASON;
+        if(TARGET_SEASON)updateSeasonTriggerLabel();
+        else showSeasonIdle('No played acts');
       }
 
     }catch(_){
       // MMR fetch failed — match history still loads from its own timeline.
+      const savedCounts=await savedCountsPromise;
+      if(myGen!==_analysisGen)return;
+      if(Object.keys(savedCounts).length){
+        updateSeasonDropdown({},[],savedCounts);
+        if(!TARGET_SEASON){
+          TARGET_SEASON=document.getElementById('m-season').options[1]?.value||'';
+          document.getElementById('m-season').value=TARGET_SEASON;
+          updateSeasonTriggerLabel();
+        }
+        if(allMatches.length)setSeasonMatchCount(TARGET_SEASON,allMatches.length,'loading');
+      }
+    }
+    if(archivePromise){
+      archivedMatches=await archivePromise;
+      if(myGen!==_analysisGen)return;
+      if(TARGET_SEASON&&TARGET_SEASON.toLowerCase()!==archiveActId)archivedMatches=[];
+      if(archivedMatches.length)publishMatches(archivedMatches);
     }
     // Resolve the real calendar-current act before consulting shared history.
     // Archive failures never affect the normal API path.
     await loadSeasonDates();
+    if(myGen!==_analysisGen)return;
     const liveCurrentActId=currentActId();
+    if(PUUID&&TARGET_SEASON&&archiveActId!==TARGET_SEASON.toLowerCase()){
+      archiveActId=TARGET_SEASON.toLowerCase();
+      try{
+        archivedMatches=await readServerMatchArchive(PUUID,TARGET_SEASON,myGen,page=>{
+          if(myGen!==_analysisGen)return;
+          finalizeHeader(finalCurrent,resolvedAccount);
+          publishMatches(page);
+          setAnalysisLoadNote(`Showing ${allMatches.length} saved games. Loading remaining games…`);
+        });
+        if(myGen!==_analysisGen)return;
+        if(archivedMatches.length)publishMatches(archivedMatches);
+      }catch(_){archivedMatches=[];}
+    }
     const targetActStart=getActInfoByUuid(TARGET_SEASON)?.start??null;
     if(TARGET_SEASON&&TARGET_SEASON.toLowerCase()!==liveCurrentActId&&targetActStart!=null){
       const actMeta=_actMeta&&Object.keys(_actMeta).length?_actMeta:HARDCODED_ACT_META;
       const nextActStart=Math.min(...Object.values(actMeta).map(info=>info?.start)
         .filter(value=>Number.isFinite(value)&&value>targetActStart));
-      try{start=await findHistoryStartForAct(nextActStart,myGen);}catch(_){start=0;}
+      try{start=await findHistoryStartForAct(nextActStart,myGen,onRateLimit);}catch(_){start=0;}
       if(myGen!==_analysisGen)return;
     }
     if(liveCurrentActId){
       useServerArchive=!!(PUUID&&TARGET_SEASON&&TARGET_SEASON.toLowerCase()===liveCurrentActId);
-      if(useServerArchive){
-        try{archivedMatches=await readServerMatchArchive(PUUID,liveCurrentActId,myGen);}catch(_){archivedMatches=[];}
-        start=0; // current-act scans always begin at the newest match
-      }
+      if(useServerArchive)start=0; // current-act scans always begin at the newest match
     }
     // Reveal resolved rank and region together.
     if(myGen!==_analysisGen)return;
@@ -3608,7 +3756,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     // and non-blocking of the rest of the flow either way.
     try{
       const rrUrl=`${API_BASE}/mmr-history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}`;
-      const{j:rrJ}=await apiGet(rrUrl);
+      const{j:rrJ}=await apiGet(rrUrl,{onRateLimit});
       const history=(rrJ.data||rrJ).history||[];
       // Entries arrive oldest→newest per the API, but sort defensively so the
       // previous-entry carry-forward below always walks forward in time.
@@ -3654,12 +3802,12 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       // No RR-change data this run — matches just fall back to myRR===null.
     }
     if(myGen!==_analysisGen)return;
+    if(rawMatches.size)publishMatches([],true); // attach RR to saved matches
 
     // Step 2: paginate match history. D1 rows are shared across every browser.
     // Continue through the whole act: regional MMR totals cannot prove that
     // either the live list or the shared archive is complete after a transfer.
     let collected=[];
-    const archivedIds=new Set(archivedMatches.map(m=>m.metadata?.match_id||m.match_id).filter(Boolean));
     // Safety bound: the v4 matchlist response has no total/pagination metadata
     // (only status+data), so an empty page is the sole reliable end signal. Since
     // we no longer treat a short page as the end, guard against a pathological
@@ -3667,26 +3815,33 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     // finite and this is far beyond any real account's game count.
     let guardPages=0, MAX_PAGES=600; // ~ MAX_HISTORY_OFFSET/min-page-size, belt-and-braces
     let liveHistoryError=null;
+    let scanStoppedEarly=false;
     while(true){
-      if(start>=MAX_HISTORY_OFFSET||++guardPages>MAX_PAGES)break; // safety stop
-      // Update status and progress bar together from the same value so they stay in sync
-      const found=new Set([...archivedIds,...collected.map(m=>m.metadata?.match_id||m.match_id).filter(Boolean)]).size;
-      setStatus(`Fetching matches ${start+1}–${start+BATCH} · ${found} found…`,true);
-      setProgress(Math.min(10+found/10,85));
+      if(start>=MAX_HISTORY_OFFSET||++guardPages>MAX_PAGES){scanStoppedEarly=true;break;}
+      setStatus(allMatches.length
+        ?`Showing ${allMatches.length} matches · checking the rest of this act…`
+        :'Checking competitive match history…',true);
 
       const url=`${API_BASE}/history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}?mode=competitive&size=${BATCH}&start=${start}${useServerArchive?`&puuid=${encodeURIComponent(PUUID)}`:''}`;
       let j;
       try{
-        ({j}=await fetchWithRetry(url));
+        ({j}=await fetchWithRetry(url,{onRateLimit}));
       }catch(e){
         // Let the PUUID-keyed stored archive recover this act if live history
         // becomes unavailable, regardless of the account's current region.
-        liveHistoryError=e;break;
+        liveHistoryError=e;scanStoppedEarly=true;break;
       }
       if(myGen!==_analysisGen)return; // superseded by a newer act selection
       const data=j.data||[];
       // TRUE end of history: the API returned nothing at this offset.
       if(!data.length)break;
+
+      // When rank metadata is unavailable, use the newest actual match to
+      // choose an act instead of silently mixing several acts together.
+      if(!TARGET_SEASON){
+        const firstAct=data[0]?.metadata?.season?.id||data[0]?.metadata?.season_id;
+        if(firstAct){TARGET_SEASON=firstAct;setSeasonMatchCount(firstAct,0,'loading');}
+      }
 
       const onPage=TARGET_SEASON?data.filter(m=>isSeason(m)):data;
       // If the skip offset landed beyond an act that v4 no longer lists,
@@ -3700,6 +3855,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       onPage.forEach(m=>{
         collected.push(m);
       });
+      if(onPage.length)publishMatches(onPage);
 
       // Scrolled past the season — a full-ish page with zero matching games
       // means we've paged beyond the target act.
@@ -3716,33 +3872,31 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     // Check the PUUID-keyed stored index for matches absent from the live
     // list. Its compact records carry each match's original region.
     if(TARGET_SEASON){
-      try{await recoverStoredSeasonMatches(collected,myGen);}catch(_){/* Keep live rows. */}
+      try{await recoverStoredSeasonMatches(collected,new Set(rawMatches.keys()),myGen,onRateLimit);}catch(_){/* Keep live rows. */}
       if(myGen!==_analysisGen)return;
     }
-    if(!collected.length&&!archivedMatches.length&&liveHistoryError)throw liveHistoryError;
-
-    // Deduplicate by match_id
-    const seen=new Set();
-    const deduped=[...collected,...archivedMatches].filter(m=>{
-      const id=m.metadata?.match_id||m.match_id||'';
-      if(!id||seen.has(id))return false;
-      seen.add(id);return true;
-    });
-    const processed=deduped.map(processMatch)
-      .sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0));
-    allMatches=tagActPlacements(tagPostResetPlacements(processed));
-    const selectedOption=[...document.getElementById('m-season').options]
-      .find(option=>option.value.toLowerCase()===TARGET_SEASON.toLowerCase());
-    if(selectedOption){selectedOption.dataset.games=String(allMatches.length);renderSeasonOptions();}
+    if(!collected.length&&!archivedMatches.length&&!rawMatches.size&&liveHistoryError)throw liveHistoryError;
+    publishMatches([...collected,...archivedMatches]);
+    setSeasonMatchCount(TARGET_SEASON,allMatches.length,scanStoppedEarly?'partial':'found');
     if(myGen!==_analysisGen)return; // a newer analysis took over
     setProgress(100);
     setTimeout(()=>setProgress(0),600);
     renderAll();
+    setAnalysisLoadNote(scanStoppedEarly&&allMatches.length
+      ?`Showing ${allMatches.length} games. The live match scan stopped early; search again later to load more.`
+      :'');
   }catch(e){
     if(myGen!==_analysisGen)return; // superseded run — swallow its error
+    if(allMatches.length){
+      setStatus('');
+      setSeasonMatchCount(TARGET_SEASON,allMatches.length,'partial');
+      setAnalysisLoadNote(`Showing ${allMatches.length} games. More games could not be loaded right now; search again later.`);
+      return;
+    }
     analysisState='error';
     updateDetailPages();
     setStatus('');
+    setAnalysisLoadNote('');
     document.getElementById('error-container').innerHTML=
       `<div class="error-box">Error: ${e.message}<br><br>Check browser console (F12) for details.</div>`;
   }
@@ -3970,14 +4124,15 @@ function renderStats(skipPlaytime){
   buildTeammates();
 }
 
-function renderAll(){
+function renderAll(partial=false){
   analysisState='ready';
   if(!allMatches.length){
     updateDetailPages();
-    setStatus('No matches found for this season.');return;
+    if(!partial)setStatus('No matches found for this season.');
+    return;
   }
   renderStats();
-  setStatus('',false);
+  if(!partial)setStatus('',false);
   renderMatches();
 }
 
@@ -4332,6 +4487,11 @@ function renderWintradeSignals(){
   initTableSorting(list,values);
 }
 
+const OVERVIEW_RECENT_MATCH_LIMIT=20;
+function overviewRecentMatches(matches){
+  return [...matches].sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0)).slice(0,OVERVIEW_RECENT_MATCH_LIMIT);
+}
+
 function renderOverviewPreviews(){
   const rated=statMatches.filter(m=>m.avgRank!=null);
   const placements=allMatches.some(m=>m.postReset);
@@ -4372,7 +4532,7 @@ function renderOverviewPreviews(){
     row.querySelector('.overview-teammate-name').textContent=t.name;
     row.querySelector('.overview-preview-tag').textContent=' #'+t.tag;
   },'No party teammates in these matches.');
-  fill('overview-matches',[...allMatches].sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0)).slice(0,3),(row,m)=>{
+  fill('overview-matches',overviewRecentMatches(allMatches),(row,m)=>{
     const outcome=m.won===true?'Win':m.won===false?'Loss':'Draw';
     const color=m.won===true?'#4ade80':m.won===false?'#f87171':'#facc15';
     const score=m.myR!=null&&m.opR!=null?`${m.myR}–${m.opR}`:'—';
@@ -4647,20 +4807,21 @@ const rrSigned=(x,d)=>`${x<0?'−':'+'}${Math.abs(x).toFixed(d)}`;
 
 function renderRRCard(matches){
   renderRRBreakdown(matches);
-  renderOverviewRRTrend(matches);
+  const recent=overviewRecentMatches(matches);
+  renderOverviewRRTrend(recent);
   const winVal=document.getElementById('rr-win-value');
   if(!winVal)return;
   const lossVal=document.getElementById('rr-loss-value');
   const gamesVal=document.getElementById('rr-games-value');
   const wrVal=document.getElementById('rr-wr-value');
-  const res=computeRRStats(matches);
+  const res=computeRRStats(recent);
   winVal.className='stat-pill-value'+(res.avgGain!=null?' pos':'');
   winVal.textContent=res.avgGain!=null?rrSigned(res.avgGain,1):'—';
   lossVal.className='stat-pill-value'+(res.avgLoss!=null?' neg':'');
   lossVal.textContent=res.avgLoss!=null?rrSigned(-res.avgLoss,1):'—';
   // rrBucketStats already computes count and winRate for these RR-eligible
-  // rows — a different (smaller) set than the plain match count elsewhere in
-  // the Stats card, since this excludes unrated/placement/5-stack games.
+  // rows — a subset of the 20 latest matches, since this excludes
+  // unrated/placement/5-stack games.
   if(gamesVal)gamesVal.textContent=res.n>0?res.n:'—';
   if(wrVal)wrVal.textContent=res.winRate!=null?`${Math.round(res.winRate)}%`:'—';
 }
@@ -5382,7 +5543,9 @@ function setStatus(msg,spin=false){
   pw.style.display=msg?'block':'none';
 }
 function setProgress(pct){
-  document.getElementById('progress-fill').style.width=Math.min(pct,100)+'%';
+  const wrap=document.querySelector('.progress-wrap');
+  wrap.classList.toggle('indeterminate',pct==null);
+  document.getElementById('progress-fill').style.width=pct==null?'':Math.min(pct,100)+'%';
   if(pct===0)setTimeout(()=>document.querySelector('.progress-wrap').style.display='none',400);
 }
 
@@ -5539,6 +5702,7 @@ function buildMatchCard(m){
   const preMatchRankIcon=preMatchRank?rankIcon(preMatchRank.tier,64):'';
   const detailId='match-details-'+(++matchDetailsId);
   const card=document.createElement('article');
+  card.dataset.matchId=m.matchId;
   card.className='match-card '+rc+(m.postReset?' post-reset':'');
   card.innerHTML=
     '<button type="button" class="match-row" aria-expanded="false" aria-controls="'+detailId+'">'+
@@ -5643,6 +5807,9 @@ function updateLoadMoreBtn(total){
 
 // Full rebuild — used for the initial render, since everything needs redoing.
 function renderMatches(){
+  const container=document.getElementById('matches-container');
+  const expandedIds=new Set([...container.querySelectorAll('.match-card.expanded')].map(card=>card.dataset.matchId));
+  const focusedId=document.activeElement?.closest?.('.match-card')?.dataset.matchId;
   mhData=allMatches.slice().sort((a,b)=>(b.startedAtMs??0)-(a.startedAtMs??0));
   // Per-day avg lobby rank + total RR change, aggregated across the FULL set
   // (mhData) — not just whatever page is currently visible — so a day's
@@ -5672,7 +5839,7 @@ function renderMatches(){
   });
   renderMatchHistorySummary();
   const slice=mhData.slice(0,mhVisible);
-  const el=document.getElementById('matches-container');
+  const el=container;
   el.innerHTML='';
   if(!slice.length){
     el.innerHTML='<div class="empty">No competitive matches found for this act.</div>';
@@ -5685,6 +5852,10 @@ function renderMatches(){
   const{frag,lastDayKey}=buildMatchRows(slice,null);
   list.appendChild(frag);
   el.appendChild(list);
+  el.querySelectorAll('.match-card').forEach(card=>{
+    if(expandedIds.has(card.dataset.matchId))card.querySelector('.match-row').click();
+    if(focusedId===card.dataset.matchId)card.querySelector('.match-row').focus({preventScroll:true});
+  });
   mhLastDayKey=lastDayKey;
 
   updateLoadMoreBtn(mhData.length);
