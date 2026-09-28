@@ -68,10 +68,10 @@ h1 span{color:var(--accent);}
 .manual-input.combined{flex:1;background:transparent;border:none;padding:10px 14px;min-width:0;color:var(--text);font-size:14px;}
 .manual-input.combined::placeholder{color:#9aa3af;}
 .manual-input.combined:focus{border:none;outline:none;}
-.search-bar{display:flex;align-items:stretch;background:#0b0b0b;border:.5px solid var(--surface-border);border-radius:var(--radius-md);flex:1 1 auto;min-width:0;min-height:44px;transition:border-color .2s,box-shadow .2s;}
+.search-bar{display:flex;align-items:stretch;background:#0b0b0b;border:.5px solid var(--surface-border);border-radius:var(--radius-md);flex:1 1 auto;min-width:120px;min-height:44px;transition:border-color .2s,box-shadow .2s;}
 .search-bar-shake{display:flex;align-items:stretch;flex:1;min-width:0;}
 #search-row{display:flex;gap:4px;align-items:stretch;position:relative;min-height:44px;}
-#result-season-group{display:flex;align-items:stretch;gap:4px;min-width:0;}
+#result-season-group{display:flex;align-items:stretch;gap:4px;flex-shrink:0;}
 .shake{animation:shake-bar .4s ease;}
 @keyframes shake-bar{
   10%,90%{transform:translateX(-1px);}
@@ -134,9 +134,9 @@ h1 span{color:var(--accent);}
 #season-trigger:focus-visible{outline:2px solid var(--brand);outline-offset:3px;}
 .season-dropdown.open #season-trigger{border-color:var(--brand);}
 #season-trigger.loading::before{content:'';width:15px;height:15px;border:2px solid #657185;border-top-color:var(--brand);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;}
-.result-panel{min-width:0;display:none;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:4px;}
+.result-panel{display:none;align-items:center;justify-content:flex-end;flex-shrink:0;gap:4px;}
 .result-panel.shown{display:flex;}
-.player-card-byline{display:flex;align-items:stretch;gap:4px;flex-wrap:wrap;font-family:var(--font-body);}
+.player-card-byline{display:flex;align-items:stretch;gap:4px;font-family:var(--font-body);}
 .stat-box{display:inline-flex;align-items:center;gap:6px;min-height:44px;box-sizing:border-box;background:#0b0b0b;border:.5px solid var(--surface-border);border-radius:var(--radius-md);padding:0 14px;font-size:14px;color:var(--text);white-space:nowrap;flex-shrink:0;line-height:1;}
 .tracker-pill{display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;min-height:44px;box-sizing:border-box;padding:0 12px;background:#0b0b0b;border:.5px solid var(--surface-border);border-radius:var(--radius-md);text-decoration:none;transition:background .15s,border-color .15s;}
 .tracker-pill[hidden]{display:none;}
@@ -523,10 +523,9 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
 .overview-clutches-heading span{color:#a1a1aa;font-size:12px;font-weight:400;}
 .overview-clutch-details{padding:0 20px 20px;}
 .overview-grid a:focus-visible{outline:2px solid var(--brand);outline-offset:4px;}
-@media(min-width:701px) and (max-width:1040px){
+@media(min-width:701px) and (max-width:840px){
   #search-row{flex-wrap:wrap;}
-  #search-bar{min-width:250px;}
-  #result-season-group{width:100%;}
+  #search-bar{flex:1 1 100%;}
 }
 @media(max-width:700px){
   .input-section{padding:16px;}
