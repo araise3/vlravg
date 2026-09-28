@@ -513,6 +513,7 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
 .overview-rr-trend .point.positive{fill:#4ade80;}
 .overview-rr-trend .point.negative{fill:#f87171;}
 .overview-rr-trend .point.neutral{fill:#e4e4e7;}
+.overview-rr-trend .point.duo{stroke:var(--brand);stroke-width:2.5;}
 .overview-rr-trend-empty{display:block;color:#a1a1aa;font-size:12px;padding:20px 0;}
 .overview-preview-note{font-size:12px;color:#a1a1aa;margin:12px 0 0;line-height:1.6;}
 .overview-clutches{border:1px solid var(--surface-border);border-radius:12px;background:var(--surface);}
@@ -722,6 +723,12 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-trend-svg .grid{stroke:#303034;stroke-width:1;}
 .rr-trend-svg .area{fill:rgba(255,255,255,.065);}
 .rr-trend-svg .line{fill:none;stroke:#e4e4e7;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;}
+.rr-trend-svg .duo-band{fill:var(--brand);fill-opacity:.075;pointer-events:none;}
+.rr-trend-svg .duo-boundary{stroke:var(--brand);stroke-opacity:.8;stroke-width:1.5;pointer-events:none;}
+.rr-trend-svg .duo-band-label{fill:#93c5fd;font-size:10px;font-weight:700;text-anchor:middle;paint-order:stroke;stroke:#141416;stroke-width:3px;pointer-events:none;}
+.rr-trend-svg .duo-point{stroke:var(--brand);stroke-width:2;fill:#e4e4e7;}
+.rr-trend-svg .duo-point.positive{fill:#4ade80;}
+.rr-trend-svg .duo-point.negative{fill:#f87171;}
 .rr-trend-svg .cursor-band{fill:var(--brand);fill-opacity:.12;pointer-events:none;}
 .rr-trend-svg .cursor-line{stroke:var(--brand);stroke-width:1;pointer-events:none;}
 .rr-trend-svg .cursor-point{fill:#e4e4e7;stroke:#141416;stroke-width:2;pointer-events:none;}
@@ -731,6 +738,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-trend-tooltip-date{color:#a1a1aa;font-size:11px;}
 .rr-trend-tooltip-change{margin:3px 0 6px;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;}
 .rr-trend-tooltip-change.positive{color:#4ade80;}.rr-trend-tooltip-change.negative{color:#f87171;}
+.rr-trend-tooltip-party{margin-bottom:6px;color:#93c5fd;}
 .rr-trend-tooltip-rank{display:flex;align-items:center;gap:7px;white-space:nowrap;}
 .rr-trend-tooltip-rank img{width:22px;height:22px;}
 .rr-trend-empty{padding:28px 0;color:#a1a1aa;font-size:13px;}
@@ -845,6 +853,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
     <div id="status-bar" role="status" aria-live="polite" style="display:none;"><div class="spinner" id="spinner"></div><span id="status-text"></span></div>
     <div class="progress-wrap" style="display:none;"><div class="progress-fill" id="progress-fill"></div></div>
   </div>
+  <div id="results-header-spacer" aria-hidden="true"></div>
 
   <nav class="page-nav" aria-label="Main navigation" hidden>
     <a href="/" data-page="overview" aria-current="page">Overview</a>
@@ -958,7 +967,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
       <dl id="rr-summary-stats" class="rr-summary-stats" aria-label="RR summary"></dl>
       <section class="rr-trend-card" aria-labelledby="rr-trend-title">
         <div class="rr-trend-head"><h2 id="rr-trend-title">RR trend <span id="rr-trend-count" class="rr-movement-count"></span></h2><strong id="rr-trend-total" class="rr-trend-total"></strong></div>
-        <p class="rr-trend-note">Recorded rank and RR after each match in this act, oldest to newest. Matches without rank or RR data are skipped. The chart shows Radiant from 300 RR; hover or focus shows the recorded rank.</p>
+        <p class="rr-trend-note">Rank and RR after each match in this act, oldest to newest; matches without data are skipped. Blue bands show duo runs and net RR, while outlined dots show other duo games. Hover or focus for teammate and rank. Radiant is shown from 300 RR.</p>
         <div id="rr-trend-chart" class="rr-trend-scroll" role="region" aria-label="RR trend across matches" tabindex="0"></div>
         <p id="rr-trend-detail" class="rr-trend-detail" role="status"></p>
       </section>
@@ -4868,12 +4877,12 @@ function renderOverviewRRTrend(matches){
   const pointRadius=Math.max(2,Math.min(3,spacing/7));
   ordered.forEach((match,i)=>{
     const point=document.createElementNS(ns,'circle');
-    point.setAttribute('class',`point ${match.myRR>0?'positive':match.myRR<0?'negative':'neutral'}`);
+    point.setAttribute('class',`point ${match.myRR>0?'positive':match.myRR<0?'negative':'neutral'}${rrDuoInfo(match)?' duo':''}`);
     point.setAttribute('cx',x(i));point.setAttribute('cy',y(values[i]));point.setAttribute('r',i===ordered.length-1?pointRadius+.5:pointRadius);
     svg.appendChild(point);
   });
   container.appendChild(svg);
-  container.setAttribute('aria-label',`RR trend across ${values.length} ${values.length===1?'match':'matches'} with recorded RR among the last ${recent.length} ${recent.length===1?'match':'matches'} this act, from ${Math.round(values[0])} to ${Math.round(values.at(-1))} total rank RR`);
+  container.setAttribute('aria-label',`RR trend across ${values.length} ${values.length===1?'match':'matches'} with recorded RR among the last ${recent.length} ${recent.length===1?'match':'matches'} this act, from ${Math.round(values[0])} to ${Math.round(values.at(-1))} total rank RR; blue-outlined dots mark duo games`);
 }
 
 function rrPositionFromElo(elo,tierHint=null){
@@ -5121,6 +5130,17 @@ function renderRRMovement(matches){
 let rrTrendMatches=[];
 let rrTrendRenderedWidth=0;
 let rrTrendResizeObserver=null;
+function rrDuoInfo(match){
+  if(match.partySize!==2||!match.myPartyId)return null;
+  const me=match.players?.find(p=>PUUID?p.puuid===PUUID:
+    `${p.name}#${p.tag}`.toLowerCase()===`${PLAYER}#${TAG}`.toLowerCase());
+  const partner=me&&match.players.find(p=>p!==me&&p.party_id===match.myPartyId&&p.team_id===me.team_id);
+  return{
+    key:partner?.puuid||`${partner?.name||'unknown'}#${partner?.tag||match.myPartyId}`,
+    name:partner?.name||'Duo',
+    label:partner?.name?`Duo with ${partner.name}${partner.tag?'#'+partner.tag:''}`:'Duo match',
+  };
+}
 function renderRRTrend(matches){
   const container=document.getElementById('rr-trend-chart');
   const detail=document.getElementById('rr-trend-detail');
@@ -5136,6 +5156,23 @@ function renderRRTrend(matches){
   }
   const ordered=matches.filter(m=>Number.isFinite(m.myRR)&&Number.isFinite(m.myPostRR))
     .sort((a,b)=>(a.startedAtMs||0)-(b.startedAtMs||0));
+  const duoInfos=ordered.map(rrDuoInfo);
+  const duoRuns=[];
+  const duoRunAt=[];
+  for(let i=0;i<ordered.length;){
+    const info=duoInfos[i];
+    if(!info){i++;continue;}
+    let end=i,net=ordered[i].myRR;
+    while(end+1<ordered.length&&duoInfos[end+1]?.key===info.key){end++;net+=ordered[end].myRR;}
+    if(end>i){
+      const run={start:i,end,count:end-i+1,net,name:info.name};
+      duoRuns.push(run);
+      for(let j=i;j<=end;j++)duoRunAt[j]=run;
+    }
+    i=end+1;
+  }
+  const duoCount=duoInfos.filter(Boolean).length;
+  const duoNet=ordered.reduce((sum,m,i)=>sum+(duoInfos[i]?m.myRR:0),0);
   count.textContent=`· ${ordered.length} ${ordered.length===1?'match':'matches'}`;
   container.replaceChildren();
   if(!ordered.length){
@@ -5153,7 +5190,8 @@ function renderRRTrend(matches){
   const points=ordered.map(m=>({match:m,value:m.myPostRR}));
   total.textContent=`${rrSigned(running,0)} RR`;
   total.className=`rr-trend-total ${running>0?'positive':running<0?'negative':'neutral'}`;
-  detail.textContent='Focus or hover a point to see that match’s RR change.';
+  const defaultDetail=`${duoCount?`${duoCount} duo ${duoCount===1?'game':'games'}: ${rrSigned(duoNet,0)} RR. `:''}Focus or hover a point to see that match’s RR change.`;
+  detail.textContent=defaultDetail;
 
   const left=42,right=12,top=18,bottom=178,height=194;
   const width=Math.max(left+right+2,Math.round(container.clientWidth)||872);
@@ -5168,6 +5206,7 @@ function renderRRTrend(matches){
   const max=Math.max(min+tickStep,Math.ceil(paddedHigh/tickStep)*tickStep);
   const x=i=>points.length===1?left+(width-left-right)/2:left+i*(width-left-right)/(points.length-1);
   const y=value=>bottom-(value-min)/(max-min)*(bottom-top);
+  const spacing=points.length>1?(width-left-right)/(points.length-1):width-left-right;
   const ns='http://www.w3.org/2000/svg';
   const el=(tag,attrs={},content)=>{
     const item=document.createElementNS(ns,tag);
@@ -5175,7 +5214,7 @@ function renderRRTrend(matches){
     if(content!=null)item.textContent=content;
     return item;
   };
-  const svg=el('svg',{class:'rr-trend-svg',width,height,viewBox:`0 0 ${width} ${height}`,'aria-label':`Rank and RR trend across ${points.length} matches, net ${rrSigned(running,0)} RR`});
+  const svg=el('svg',{class:'rr-trend-svg',width,height,viewBox:`0 0 ${width} ${height}`,'aria-label':`Rank and RR trend across ${points.length} matches, net ${rrSigned(running,0)} RR${duoCount?`; ${duoCount} duo games net ${rrSigned(duoNet,0)} RR`:''}`});
   const radiantChartFloor=2100+300; // Visual guide only; the tooltip uses each match's recorded tier.
   const immortalPoints=points.filter(point=>point.value>=2100&&point.value<radiantChartFloor&&point.match.myPostTierId>=24&&point.match.myPostTierId<27)
     .sort((a,b)=>a.value-b.value);
@@ -5218,13 +5257,32 @@ function renderRRTrend(matches){
     const yy=y(value);
     svg.appendChild(el('line',{class:'grid',x1:left,y1:yy,x2:width-right,y2:yy}));
   }
+  const bandLabels=[];
+  duoRuns.forEach(run=>{
+    const start=Math.max(left,x(run.start)-spacing/2);
+    const end=Math.min(width-right,x(run.end)+spacing/2);
+    const bandWidth=end-start;
+    if(run.count<3||bandWidth<35)return;
+    svg.appendChild(el('rect',{class:'duo-band',x:start,y:top,width:bandWidth,height:bottom-top,'aria-hidden':'true'}));
+    for(const edge of [start,end])svg.appendChild(el('line',{class:'duo-boundary',x1:edge,y1:top,x2:edge,y2:bottom,'aria-hidden':'true'}));
+    if(bandWidth>=50){
+      const maxName=Math.max(3,Math.floor((bandWidth-10)/5));
+      const name=run.name.length>maxName?run.name.slice(0,maxName-1)+'…':run.name;
+      bandLabels.push(el('text',{class:'duo-band-label',x:(start+end)/2,y:bottom-23,'aria-hidden':'true'},name));
+      bandLabels.push(el('text',{class:'duo-band-label',x:(start+end)/2,y:bottom-9,'aria-hidden':'true'},`${rrSigned(run.net,0)} RR`));
+    }
+  });
   const line=points.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
   if(points.length>1){
     svg.appendChild(el('path',{class:'area',d:`${line} L${x(points.length-1).toFixed(1)},${bottom} L${x(0).toFixed(1)},${bottom} Z`}));
     svg.appendChild(el('path',{class:'line',d:line}));
   }
+  points.forEach(({match,value},i)=>{
+    if(!duoInfos[i])return;
+    svg.appendChild(el('circle',{class:`duo-point ${match.myRR>0?'positive':match.myRR<0?'negative':'neutral'}`,cx:x(i),cy:y(value),r:Math.max(2.5,Math.min(5,spacing/3)),'aria-hidden':'true'}));
+  });
+  bandLabels.forEach(label=>svg.appendChild(label));
   const dateLabel=m=>Number.isFinite(m.startedAtMs)?new Date(m.startedAtMs).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'Date unavailable';
-  const spacing=points.length>1?(width-left-right)/(points.length-1):width-left-right;
   const cursorBand=el('rect',{class:'cursor-band',x:0,y:top,width:Math.min(24,Math.max(12,spacing*.6)),height:bottom-top,hidden:''});
   const cursorLine=el('line',{class:'cursor-line',x1:0,y1:top,x2:0,y2:bottom,hidden:''});
   const cursorPoint=el('circle',{class:'cursor-point',cx:0,cy:0,r:4,hidden:''});
@@ -5234,14 +5292,16 @@ function renderRRTrend(matches){
   tooltip.hidden=true;
   const tipDate=document.createElement('div');tipDate.className='rr-trend-tooltip-date';
   const tipChange=document.createElement('div');tipChange.className='rr-trend-tooltip-change';
+  const tipParty=document.createElement('div');tipParty.className='rr-trend-tooltip-party';
   const tipRank=document.createElement('div');tipRank.className='rr-trend-tooltip-rank';
   const tipIcon=document.createElement('img');tipIcon.alt='';
   const tipRankText=document.createElement('span');
   tipRank.append(tipIcon,tipRankText);
-  tooltip.append(tipDate,tipChange,tipRank);
+  tooltip.append(tipDate,tipChange,tipParty,tipRank);
   const show=i=>{
     const {match,value}=points[i],rank=rrPositionFromElo(value,match.myPostTierId);
     const xx=x(i),change=rrSigned(match.myRR,0);
+    const duo=duoInfos[i],run=duoRunAt[i];
     cursorBand.setAttribute('x',xx-Number(cursorBand.getAttribute('width'))/2);
     cursorLine.setAttribute('x1',xx);cursorLine.setAttribute('x2',xx);
     cursorPoint.setAttribute('cx',xx);cursorPoint.setAttribute('cy',y(value));
@@ -5249,22 +5309,25 @@ function renderRRTrend(matches){
     tipDate.textContent=dateLabel(match);
     tipChange.textContent=`${match.myRR>0?'RR gain':match.myRR<0?'RR loss':'RR change'} ${change}`;
     tipChange.className=`rr-trend-tooltip-change ${match.myRR>0?'positive':match.myRR<0?'negative':''}`;
+    tipParty.hidden=!duo;
+    tipParty.textContent=duo?`${duo.label}${run?` · ${rrSigned(run.net,0)} RR across ${run.count} games`:''}`:'';
     if(RANK_ICONS[rank.tier])tipIcon.src=RANK_ICONS[rank.tier];
     tipIcon.hidden=!RANK_ICONS[rank.tier];
     tipRankText.textContent=`${avgLabel(rank.tier)} · ${rank.rr} RR`;
     tooltip.hidden=false;
     tooltip.style.left=`${Math.max(8,Math.min(xx+12,width-tooltip.offsetWidth-8))}px`;
-    detail.textContent=`Match ${i+1} of ${points.length}, ${dateLabel(match)}: ${avgLabel(rank.tier)} · ${rank.rr} RR after ${change} RR change`;
+    detail.textContent=`Match ${i+1} of ${points.length}, ${dateLabel(match)}: ${avgLabel(rank.tier)} · ${rank.rr} RR after ${change} RR change${duo?`; ${duo.label}${run?`, ${rrSigned(run.net,0)} RR across ${run.count} games`:''}`:''}`;
   };
   const hide=()=>{
     [cursorBand,cursorLine,cursorPoint].forEach(item=>item.setAttribute('hidden',''));
     tooltip.hidden=true;
-    detail.textContent='Focus or hover a point to see that match’s RR change.';
+    detail.textContent=defaultDetail;
   };
   points.forEach(({match,value},i)=>{
     const change=rrSigned(match.myRR,0);
     const rank=rrPositionFromElo(value,match.myPostTierId);
-    const label=`Match ${i+1} of ${points.length}, ${dateLabel(match)}: ${avgLabel(rank.tier)} · ${rank.rr} RR after ${change} RR change`;
+    const duo=duoInfos[i],run=duoRunAt[i];
+    const label=`Match ${i+1} of ${points.length}, ${dateLabel(match)}: ${avgLabel(rank.tier)} · ${rank.rr} RR after ${change} RR change${duo?`; ${duo.label}${run?`, ${rrSigned(run.net,0)} RR across ${run.count} games`:''}`:''}`;
     const group=el('g',{tabindex:'0','aria-label':label});
     group.appendChild(el('circle',{cx:x(i),cy:y(value),r:Math.min(11,Math.max(3,spacing/2)),fill:'transparent'}));
     group.addEventListener('focus',()=>show(i));
@@ -5530,21 +5593,24 @@ function renderLobbyTeamsTable(rows){
 function setStatus(msg,spin=false){
   const bar=document.getElementById('status-bar');
   const pw=bar.nextElementSibling;
-  // Keep both rows in the results header so the navigation and cards do not
-  // jump upward when loading finishes and the message clears.
-  const reserveSpace=document.body.classList.contains('has-analysis');
+  const header=document.querySelector('.input-section');
+  const spacer=document.getElementById('results-header-spacer');
+  const before=header.getBoundingClientRect().height;
   document.getElementById('status-text').textContent=msg;
   document.getElementById('spinner').style.display=spin?'block':'none';
-  bar.style.display=msg||reserveSpace?'flex':'none';
-  bar.style.visibility=msg?'visible':'hidden';
-  pw.style.display=(msg&&spin)||reserveSpace?'block':'none';
-  pw.style.visibility=msg&&spin?'visible':'hidden';
+  bar.style.display=msg?'flex':'none';
+  pw.style.display=msg&&spin?'block':'none';
+  if(document.body.classList.contains('has-analysis')){
+    // Transfer any height removed from the search card into the gap below it.
+    // The card can shrink without pulling the navigation and results upward.
+    const after=header.getBoundingClientRect().height;
+    spacer.style.height=Math.max(0,(parseFloat(spacer.style.height)||0)+before-after)+'px';
+  }else spacer.style.height='0px';
 }
 function setProgress(pct){
   const wrap=document.querySelector('.progress-wrap');
   wrap.classList.toggle('indeterminate',pct==null);
   document.getElementById('progress-fill').style.width=pct==null?'':Math.min(pct,100)+'%';
-  if(pct===0)setTimeout(()=>{if(!wrap.classList.contains('indeterminate'))wrap.style.visibility='hidden';},400);
 }
 
 // Count the greyed-out placement-week games in the stats (or not). Only the stat
