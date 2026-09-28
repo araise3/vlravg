@@ -972,8 +972,8 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
             <div class="party-size-options rr-trend-filter" role="radiogroup" aria-label="RR trend match range">
               <label><input type="radio" name="rr-trend-range" value="all" checked onchange="setRRTrendRange(this.value)"><span id="rr-trend-all-label">All time (0)</span></label>
               <label id="rr-trend-50-option" hidden><input type="radio" name="rr-trend-range" value="50" aria-label="50 most recent matches" onchange="setRRTrendRange(this.value)"><span>50</span></label>
+              <label><input type="radio" name="rr-trend-range" value="30" aria-label="30 most recent matches" onchange="setRRTrendRange(this.value)"><span>30</span></label>
               <label><input type="radio" name="rr-trend-range" value="20" aria-label="20 most recent matches" onchange="setRRTrendRange(this.value)"><span>20</span></label>
-              <label><input type="radio" name="rr-trend-range" value="10" aria-label="10 most recent matches" onchange="setRRTrendRange(this.value)"><span>10</span></label>
             </div>
           </div>
           <strong id="rr-trend-total" class="rr-trend-total"></strong>
@@ -5137,7 +5137,7 @@ let rrTrendRenderedWidth=0;
 let rrTrendResizeObserver=null;
 let rrTrendRange='all';
 function setRRTrendRange(value){
-  if(!['10','20','50','all'].includes(value)||(value==='50'&&rrTrendMatches.length<=50))return;
+  if(!['20','30','50','all'].includes(value)||(value==='50'&&rrTrendMatches.length<=50))return;
   rrTrendRange=value;
   const input=document.querySelector(`input[name="rr-trend-range"][value="${value}"]`);
   if(input)input.checked=true;
