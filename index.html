@@ -768,9 +768,8 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-movement-svg .trend-point,.rr-movement-svg .payout-trend{pointer-events:none;}
 .rr-movement-svg .payout-trend{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;}
 .rr-movement-svg .payout-trend.positive{stroke:#4ade80;}.rr-movement-svg .payout-trend.negative{stroke:#f87171;}
-.rr-movement-svg .estimate-point{stroke:#141416;stroke-width:1.5;cursor:help;}
-.rr-movement-svg .estimate-point.positive{fill:#4ade80;}.rr-movement-svg .estimate-point.negative{fill:#f87171;}
-.rr-movement-svg .estimate-point:focus-visible{stroke:#fff;stroke-width:2.5;outline:none;}
+.rr-movement-svg .estimate-hit-area{fill:transparent;stroke:none;pointer-events:all;cursor:help;}
+.rr-movement-svg .estimate-hit-area:focus-visible{stroke:#fff;stroke-width:1.5;outline:none;}
 .rr-legend-line{display:inline-block;width:21px;height:3px;border-radius:3px;}
 .rr-legend-line.win{background:#4ade80;}.rr-legend-line.loss{background:#f87171;}
 .rr-movement-trend-note{margin:8px 0 0;color:#a1a1aa;font-size:12px;line-height:1.5;}
@@ -5054,7 +5053,7 @@ function renderRRMovement(matches){
   const x=value=>left+xInset+(value-xMin)/(xMax-xMin)*(plotWidth-2*xInset);
   const y=value=>top+(yMax-value)/(yMax-yMin)*plotHeight;
   const svg=node('svg',{class:`rr-movement-svg${rrMovementZoomTier!=null?' zoomed':''}`,viewBox:`0 0 ${width} ${height}`,role:'group','aria-label':'Estimated RR payout by starting rank','aria-describedby':'rr-movement-svg-desc'});
-  svg.appendChild(node('desc',{id:'rr-movement-svg-desc'},'Green and red curves estimate RR payout for wins and losses. Faint dots show individual matches. Focus an estimate to hear its match count and starting-rank span.'));
+  svg.appendChild(node('desc',{id:'rr-movement-svg-desc'},'Green and red curves estimate RR payout for wins and losses. Faint dots show individual matches. Hover over or focus a curve to get its match count and starting-rank span.'));
 
   const availableTiers=new Set(allRows.map(rowTier));
   const toggleRankZoom=tier=>{
@@ -5184,15 +5183,18 @@ function renderRRMovement(matches){
       if(segment.length>1){
         const path=segment.map(({axisPosition,payout},index)=>`${index?'L':'M'}${x(axisPosition).toFixed(1)},${y(payout).toFixed(1)}`).join(' ');
         svg.appendChild(node('path',{d:path,class:`payout-trend ${kind}`,'aria-hidden':'true'}));
+      }else{
+        const estimate=segment[0],px=x(estimate.axisPosition),py=y(estimate.payout);
+        svg.appendChild(node('path',{d:`M${(px-3).toFixed(1)},${py.toFixed(1)} L${(px+3).toFixed(1)},${py.toFixed(1)}`,class:`payout-trend ${kind}`,'aria-hidden':'true'}));
       }
     });
     trend.filter(estimate=>estimate.payout!=null).forEach(estimate=>{
       const rangeStart=rrPositionFromElo(estimate.min,estimate.minTier).label;
       const rangeEnd=rrPositionFromElo(estimate.max,estimate.maxTier).label;
       const detail=`Estimated RR / ${won?'win':'loss'}: ${won?'+':'−'}${estimate.payout.toFixed(1)} RR. ${estimate.n} nearby ${won?'wins':'losses'} from ${rangeStart} to ${rangeEnd}. Act average: ${estimate.actMean.toFixed(1)} RR.`;
-      const marker=node('circle',{cx:x(estimate.axisPosition),cy:y(estimate.payout),r:3.5,class:`estimate-point ${kind}`,tabindex:'0',role:'img','aria-label':detail});
-      marker.appendChild(node('title',{},detail));
-      svg.appendChild(marker);
+      const hitArea=node('circle',{cx:x(estimate.axisPosition),cy:y(estimate.payout),r:6,class:'estimate-hit-area',tabindex:'0',role:'img','aria-label':detail});
+      hitArea.appendChild(node('title',{},detail));
+      svg.appendChild(hitArea);
     });
   }
   container.appendChild(svg);
