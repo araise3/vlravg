@@ -95,13 +95,13 @@ h1 span{color:var(--accent);}
 .pro-library-trigger svg{width:14px;height:14px;flex-shrink:0;}
 .pro-library-trigger .pro-library-chevron{width:10px;height:10px;transition:transform .15s ease;}
 .pro-library-trigger[aria-expanded="true"] .pro-library-chevron{transform:rotate(180deg);}
-.pro-library-results{min-height:50px;max-height:min(56vh,520px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#353535 transparent;}
+.pro-library-results{min-height:50px;max-height:min(56vh,520px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#353535 transparent;scrollbar-gutter:stable;padding-right:10px;}
 .pro-library-results::-webkit-scrollbar{width:7px;}
 .pro-library-results::-webkit-scrollbar-thumb{background:#353535;border-radius:4px;}
 .pro-result{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:stretch;border-top:1px solid #24282d;padding:6px 0;}
 .pro-result:first-of-type{border-top:0;}
 .pro-result-main{display:flex;align-items:center;justify-content:space-between;gap:14px;min-width:0;padding:10px 12px;border-radius:10px;text-align:left;transition:background .15s,color .15s;}
-.pro-result-main:hover,.pro-result.highlighted .pro-result-main{background:#202328;}
+.pro-result-main:hover,.pro-result.highlighted:not(:has(.pro-result-tracker:hover)) .pro-result-main{background:#202328;}
 .pro-result-main:focus-visible,.pro-result-tracker:focus-visible{outline:2px solid var(--brand);outline-offset:-2px;}
 .pro-result-copy{display:flex;flex-direction:column;gap:4px;min-width:0;}
 .pro-result-name{display:flex;align-items:baseline;gap:7px;min-width:0;}
@@ -109,9 +109,10 @@ h1 span{color:var(--accent);}
 .pro-result-account{font-size:11px;color:var(--muted);white-space:nowrap;}
 .pro-result-meta{font-size:11px;color:#92929b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .pro-result-action{flex-shrink:0;color:var(--brand);font-size:11px;font-weight:600;}
-.pro-result-tracker{display:flex;align-items:center;justify-content:center;min-width:110px;padding:0 10px;border:1px solid #30353c;border-radius:10px;text-decoration:none;transition:background .15s,border-color .15s;}
+.pro-result-tracker{display:flex;align-items:center;justify-content:center;gap:6px;min-width:124px;padding:0 10px;border:1px solid #30353c;border-radius:10px;text-decoration:none;color:#a1aab6;transition:background .15s,border-color .15s,color .15s;}
 .pro-result-tracker:hover{background:#202328;border-color:#4b525c;color:#fff;}
-.pro-result-tracker img{display:block;width:88px;height:auto;}
+.pro-result-tracker img{display:block;width:86px;height:auto;}
+.pro-result-tracker svg{width:12px;height:12px;flex-shrink:0;}
 .pro-library-empty{padding:18px 12px;text-align:center;color:var(--muted);font-size:12px;}
 .season-dropdown{position:relative;display:flex;align-items:stretch;}
 .season-trigger{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;}
@@ -540,8 +541,8 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
   .pro-library{top:calc(100% + 6px);}
   .pro-result{grid-template-columns:minmax(0,1fr) 80px;}
   .pro-result-main{padding:9px 8px;gap:8px;}
-  .pro-result-tracker{min-width:0;padding:0 8px;}
-  .pro-result-tracker img{width:60px;}
+  .pro-result-tracker{min-width:0;gap:4px;padding:0 6px;}
+  .pro-result-tracker img{width:50px;}
   .pro-result-action{display:none;}
   .overview-hero{padding:22px 22px 0;}
   .overview-hero .rank-icon-wrap img{width:76px;height:76px;}
@@ -2181,7 +2182,7 @@ function renderProPlayerResults(){
     const tracker=document.createElement('a');
     tracker.className='pro-result-tracker';tracker.href=row.trackerUrl;tracker.target='_blank';tracker.rel='noopener noreferrer';
     tracker.setAttribute('aria-label',`Open ${row.handle} on Tracker.gg`);
-    tracker.innerHTML='<img src="/assets/tracker-gg.svg" alt="Tracker.gg">';
+    tracker.innerHTML='<img src="/assets/tracker-gg.svg" alt="Tracker.gg"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2.5h4.5V7m0-4.5-6 6"/><path d="M12.5 9.5v2.25c0 .97-.78 1.75-1.75 1.75h-6.5c-.97 0-1.75-.78-1.75-1.75v-6.5c0-.97.78-1.75 1.75-1.75H6.5"/></svg>';
     tracker.addEventListener('click',()=>closeProPlayerLibrary());
     item.append(main,tracker);results.appendChild(item);
   });
