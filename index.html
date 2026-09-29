@@ -677,7 +677,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rank-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 #party-size-section{margin-bottom:24px;}
 .rr-table-card{padding:0;overflow:hidden;margin-bottom:24px;}
-.rr-summary-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 24px;}
+.rr-summary-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0;}
 .rr-summary-stat{--rr-summary-size:24px;min-width:0;padding:14px;background:#1c1c1c;border:1px solid var(--surface-border);border-radius:7px;container-type:inline-size;}
 .rr-summary-stat dt{font-size:11px;font-weight:700;text-transform:uppercase;color:#c4c4cc;margin-bottom:5px;}
 .rr-summary-stat dd{margin:0;font-size:var(--rr-summary-size);font-weight:750;line-height:1.2;font-variant-numeric:tabular-nums;white-space:nowrap;}
@@ -716,6 +716,8 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-trend-head h2{margin:0;font-size:18px;font-weight:650;}
 .rr-trend-total{font-size:16px;font-weight:750;font-variant-numeric:tabular-nums;}
 .rr-trend-total.positive{color:#4ade80;}.rr-trend-total.negative{color:#f87171;}.rr-trend-total.neutral{color:#c4c4cc;}
+.rr-trend-summary-label{margin:18px 0 10px;color:#a1a1aa;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
+.rr-trend-card .rr-summary-stats{padding-bottom:18px;border-bottom:1px solid #303034;}
 .rr-trend-scroll{position:relative;margin-top:16px;overflow:hidden;}
 .rr-trend-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
 .rr-trend-svg{display:block;width:100%;height:194px;font-family:var(--font-body);}
@@ -964,7 +966,6 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
     <div class="page-heading"><h1 id="rr-title" tabindex="-1">RR Breakdown</h1></div>
     <div id="rr-filter-host" hidden></div>
     <div id="rr-tables" hidden>
-      <dl id="rr-summary-stats" class="rr-summary-stats" aria-label="RR summary"></dl>
       <section class="rr-trend-card" aria-labelledby="rr-trend-title">
         <div class="rr-trend-head">
           <div class="rr-trend-head-main">
@@ -978,6 +979,8 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
           </div>
           <strong id="rr-trend-total" class="rr-trend-total"></strong>
         </div>
+        <p class="rr-trend-summary-label">RR summary · eligible games in selected range</p>
+        <dl id="rr-summary-stats" class="rr-summary-stats" aria-label="RR summary for selected match range"></dl>
         <div id="rr-trend-chart" class="rr-trend-scroll" role="region" aria-label="RR trend across matches" tabindex="0"></div>
       </section>
       <section id="rr-movement-section" class="rr-movement-section" hidden aria-labelledby="rr-movement-title">
@@ -5142,6 +5145,12 @@ function setRRTrendRange(value){
   const input=document.querySelector(`input[name="rr-trend-range"][value="${value}"]`);
   if(input)input.checked=true;
   renderRRTrend(rrTrendMatches);
+  renderRRSummary(rrTrendScopedMatches(rrTrendMatches));
+}
+function rrTrendScopedMatches(matches){
+  return rrTrendRange==='all'?matches:[...matches]
+    .sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0))
+    .slice(0,Number(rrTrendRange));
 }
 function rrDuoInfo(match){
   if(match.partySize!==2||!match.myPartyId)return null;
@@ -5172,7 +5181,7 @@ function renderRRTrend(matches){
     rrTrendResizeObserver.observe(container);
   }
   const showDuos=rrTrendRange!=='all';
-  const scoped=showDuos?[...matches].sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0)).slice(0,Number(rrTrendRange)):matches;
+  const scoped=rrTrendScopedMatches(matches);
   const ordered=scoped.filter(m=>Number.isFinite(m.myRR)&&Number.isFinite(m.myPostRR))
     .sort((a,b)=>(a.startedAtMs||0)-(b.startedAtMs||0));
   const duoInfos=ordered.map(m=>showDuos?rrDuoInfo(m):null);
@@ -5362,26 +5371,29 @@ function renderRRTrend(matches){
   container.append(svg,tooltip);
 }
 
-function renderRRBreakdown(matches){
+function renderRRSummary(matches){
   const summary=computeRRStats(matches);
-  rrHasData=matches.some(m=>Number.isFinite(m.myRR));
-  renderRRTrend(matches);
-  renderRRMovement(matches);
   const record=s=>{
     const drawLabel=s.draws?`, ${s.draws} draws`:'';
     const drawValue=s.draws?`<span class="rr-record-separator">/</span><span class="rr-draw">${s.draws}D</span>`:'';
     return `<span class="rr-record" aria-label="${s.wins} wins, ${s.losses} losses${drawLabel}"><span class="rank-positive">${s.wins}W</span><span class="rr-record-separator">/</span><span class="rank-negative">${s.losses}L</span>${drawValue}</span>`;
   };
-  const columns=`<th scope="col">K/D</th><th scope="col" title="Average combat score">ACS</th><th scope="col" title="Wins divided by wins plus losses; draws excluded">WR%</th><th scope="col">RR / Win</th><th scope="col">RR / Loss</th>`;
-  const winRateClass=rate=>rate==null||Math.round(rate)===50?'':Math.round(rate)>50?'rank-positive':'rank-negative';
-  const cells=s=>`<td>${s.n}</td><td class="${s.kd==null||s.kd===1?'':s.kd>1?'rank-positive':'rank-negative'}">${s.kd==null?'—':s.kd.toFixed(2)}</td><td>${s.acs==null?'—':Math.round(s.acs)}</td><td class="${winRateClass(s.winRate)}">${s.winRate==null?'—':Math.round(s.winRate)+'%'}</td><td class="rank-positive">${s.avgGain==null?'—':rrSigned(s.avgGain,1)}</td><td class="rank-negative">${s.avgLoss==null?'—':rrSigned(-s.avgLoss,1)}</td>`;
-  const scope='RR matches in this act, excluding placements, unrated ranks and full 5-stacks.';
   const stat=(label,value,color='')=>`<div class="rr-summary-stat"><dt>${label}</dt><dd class="${color}">${value}</dd></div>`;
   document.getElementById('rr-summary-stats').innerHTML=
     stat('RR / Win',summary.avgGain==null?'—':rrSigned(summary.avgGain,1),'rank-positive')+
     stat('RR / Loss',summary.avgLoss==null?'—':rrSigned(-summary.avgLoss,1),'rank-negative')+
     stat('Games',record(summary))+
     stat('Win rate',summary.winRate==null?'—':Math.round(summary.winRate)+'%');
+}
+function renderRRBreakdown(matches){
+  rrHasData=matches.some(m=>Number.isFinite(m.myRR));
+  renderRRTrend(matches);
+  renderRRSummary(rrTrendScopedMatches(matches));
+  renderRRMovement(matches);
+  const columns=`<th scope="col">K/D</th><th scope="col" title="Average combat score">ACS</th><th scope="col" title="Wins divided by wins plus losses; draws excluded">WR%</th><th scope="col">RR / Win</th><th scope="col">RR / Loss</th>`;
+  const winRateClass=rate=>rate==null||Math.round(rate)===50?'':Math.round(rate)>50?'rank-positive':'rank-negative';
+  const cells=s=>`<td>${s.n}</td><td class="${s.kd==null||s.kd===1?'':s.kd>1?'rank-positive':'rank-negative'}">${s.kd==null?'—':s.kd.toFixed(2)}</td><td>${s.acs==null?'—':Math.round(s.acs)}</td><td class="${winRateClass(s.winRate)}">${s.winRate==null?'—':Math.round(s.winRate)+'%'}</td><td class="rank-positive">${s.avgGain==null?'—':rrSigned(s.avgGain,1)}</td><td class="rank-negative">${s.avgLoss==null?'—':rrSigned(-s.avgLoss,1)}</td>`;
+  const scope='RR matches in this act, excluding placements, unrated ranks and full 5-stacks.';
   const groups=new Map();
   matches.forEach(m=>{
     if(!groups.has(m.myTierId))groups.set(m.myTierId,[]);
