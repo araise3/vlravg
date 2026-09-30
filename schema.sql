@@ -43,6 +43,38 @@ CREATE TABLE IF NOT EXISTS match_archive (
 CREATE INDEX IF NOT EXISTS idx_match_archive_player_season
   ON match_archive(puuid, season_id, started_at DESC, match_id DESC);
 
+-- Durable coverage is established from pages observed by the proxy, never
+-- from browser-supplied counts or a client "complete" flag. It has no expiry.
+CREATE TABLE IF NOT EXISTS match_archive_coverage (
+  puuid TEXT NOT NULL,
+  season_id TEXT NOT NULL,
+  region TEXT NOT NULL,
+  platform TEXT NOT NULL,
+  match_ids TEXT NOT NULL,
+  live_ids TEXT NOT NULL,
+  verified_at TEXT NOT NULL,
+  PRIMARY KEY (puuid, season_id, region, platform)
+);
+CREATE TABLE IF NOT EXISTS match_archive_scans (
+  scan_id TEXT PRIMARY KEY,
+  puuid TEXT NOT NULL,
+  season_id TEXT NOT NULL,
+  region TEXT NOT NULL,
+  platform TEXT NOT NULL,
+  base_match_ids TEXT NOT NULL,
+  base_live_ids TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_match_archive_scans_created ON match_archive_scans(created_at);
+CREATE TABLE IF NOT EXISTS match_archive_scan_pages (
+  scan_id TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('live','stored')),
+  page_start INTEGER NOT NULL,
+  data TEXT NOT NULL,
+  PRIMARY KEY (scan_id, kind, page_start),
+  FOREIGN KEY (scan_id) REFERENCES match_archive_scans(scan_id) ON DELETE CASCADE
+);
+
 -- Player identity, so the 24h refresh job (refresh-rr-history.mjs) can list
 -- who to re-ping without scanning rr_history — replaces the KV-metadata
 -- trick the old cheap-listing relied on.

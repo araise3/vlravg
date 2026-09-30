@@ -54,7 +54,7 @@ test('archive recovery fetches full details only for missing matches in the sele
   };
   const recover=runInNewContext(html.slice(start,end)+'\nrecoverStoredSeasonMatches',context);
   const matches=[{metadata:{match_id:'live'}}];
-  await recover(matches,1);
+  await recover(matches,new Set(),1);
   assert.equal(matches.length,2);
   assert.equal(matches[1].metadata.match_id,'archive');
   assert.deepEqual(urls,[`/api/stored-matches/eu/${puuid}?page=1`, '/api/match-detail/eu/archive']);
@@ -77,7 +77,7 @@ test('unavailable old match details do not prevent later archived games from loa
   };
   const recover=runInNewContext(html.slice(start,end)+'\nrecoverStoredSeasonMatches',context);
   const matches=[];
-  await recover(matches,1);
+  await recover(matches,new Set(),1);
   assert.equal(matches.length,1);
   assert.equal(matches[0].metadata.match_id,'available');
 });
@@ -100,7 +100,7 @@ test('archive recovery fetches transferred matches from their recorded region',a
   };
   const recover=runInNewContext(html.slice(start,end)+'\nrecoverStoredSeasonMatches',context);
   const matches=[];
-  await recover(matches,1);
+  await recover(matches,new Set(),1);
   assert.equal(matches.length,1);
   assert.deepEqual(urls,[`/api/stored-matches/eu/${puuid}?page=1`,'/api/match-detail/na/old-na-match']);
 });
