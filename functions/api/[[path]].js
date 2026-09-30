@@ -94,13 +94,37 @@
 
 import { observeName, readNameHistory } from "../../lib/name-history.mjs";
 import { backfillState, saveBackfillPage, saveStoredBackfillPage, saveStoredMatchDetail, skipStoredMatchDetail } from "../../lib/name-backfill.mjs";
+import { beginCoverageScan, readCoverageScan, recordCoveragePage, finishCoverageScan } from "../../lib/match-coverage.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
 const PREFIX = "/api";
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const MATCH_ARCHIVE_ROUTE = new RegExp(`^/match-archive/(${UUID})/(${UUID})$`, 'i');
 const MATCH_ARCHIVE_PAGE_SIZE = 10;
+const MATCH_ARCHIVE_MAX_PAGE_SIZE = 50;
+const MATCH_ARCHIVE_COMPRESSED_BUDGET = 512 * 1024;
+const MATCH_ARCHIVE_JSON_BUDGET = 8 * 1024 * 1024;
 const MATCH_ARCHIVE_COUNTS_ROUTE = new RegExp(`^/match-archive-counts/(${UUID})$`, 'i');
+const MATCH_COVERAGE_ROUTE = new RegExp(`^/match-coverage/(eu|na|ap|kr|latam|br)/(pc|console)/(${UUID})/(${UUID})$`, 'i');
+const coverageScope=m=>({region:m[1].toLowerCase(),platform:m[2].toLowerCase(),puuid:m[3].toLowerCase(),season_id:m[4].toLowerCase()});
+
+async function observeCoverageResponse(env,scanId,route,match,url,bodyText){
+  if(!scanId||!env.APP_DB)return;
+  const scan=await readCoverageScan(env.APP_DB,scanId);
+  if(!scan)return;
+  const payload=JSON.parse(bodyText);
+  if(route.historyByPuuid&&match[1]===scan.region&&match[2]===scan.platform&&match[3].toLowerCase()===scan.puuid){
+    await saveMatchArchivePage(env,bodyText,scan.puuid);
+    await recordCoveragePage(env.APP_DB,scan,'live',Number(url.searchParams.get('start')||0),payload);
+  }else if(route.storedMatches&&match[1]===scan.region&&match[2].toLowerCase()===scan.puuid){
+    await recordCoveragePage(env.APP_DB,scan,'stored',Number(url.searchParams.get('page')),payload);
+  }else if(route.matchDetail){
+    const row=payload?.data;
+    if(row?.metadata?.match_id===match[2]&&(row.metadata.season?.id||row.metadata.season_id)?.toLowerCase()===scan.season_id){
+      await saveMatchArchivePage(env,JSON.stringify({data:[row]}),scan.puuid);
+    }
+  }
+}
 
 async function gzipMatch(match) {
   const source = new Blob([JSON.stringify(match)]).stream();
@@ -145,15 +169,31 @@ async function saveMatchArchivePage(env, bodyText, puuid) {
   if (statements.length) await env.APP_DB.batch(statements);
 }
 
-async function readMatchArchive(env, puuid, seasonId, start) {
+async function readMatchArchive(env, puuid, seasonId, start, size) {
   if (!env.APP_DB) return json({ error: 'Match archive unavailable' }, 503);
   try {
     const { results } = await env.APP_DB.prepare(
-      'SELECT payload FROM match_archive WHERE puuid=?1 AND season_id=?2 '
-      + 'ORDER BY started_at DESC, match_id DESC LIMIT ?3 OFFSET ?4'
-    ).bind(puuid, seasonId, MATCH_ARCHIVE_PAGE_SIZE, start).all();
-    const matches = await Promise.all((results || []).map(row => gunzipMatch(row.payload)));
-    const res = json({ data: matches }, 200);
+      'WITH candidates AS (SELECT payload, started_at, match_id FROM match_archive '
+      + 'WHERE puuid=?1 AND season_id=?2 ORDER BY started_at DESC, match_id DESC LIMIT ?3 OFFSET ?4), '
+      + 'page AS (SELECT payload, ROW_NUMBER() OVER (ORDER BY started_at DESC, match_id DESC) AS n, '
+      + 'COUNT(*) OVER () AS total, SUM(length(payload)) OVER '
+      + '(ORDER BY started_at DESC, match_id DESC ROWS UNBOUNDED PRECEDING) AS bytes FROM candidates) '
+      + 'SELECT payload, total FROM page WHERE n<=?5 AND (bytes<=?6 OR n=1) ORDER BY n'
+    ).bind(puuid, seasonId, size + 1, start, size,
+      size === MATCH_ARCHIVE_PAGE_SIZE ? Number.MAX_SAFE_INTEGER : MATCH_ARCHIVE_COMPRESSED_BUDGET).all();
+    const matches = [];
+    let jsonBytes = 0;
+    // Decode sequentially: 50 large kill feeds must not all inflate at once.
+    // The first row always makes progress even if it exceeds the page budget.
+    for (const row of results || []) {
+      const match = await gunzipMatch(row.payload);
+      const bytes = new TextEncoder().encode(JSON.stringify(match)).byteLength;
+      if (size !== MATCH_ARCHIVE_PAGE_SIZE && matches.length && jsonBytes + bytes > MATCH_ARCHIVE_JSON_BUDGET) break;
+      matches.push(match);
+      jsonBytes += bytes;
+    }
+    const nextStart = matches.length < (results?.[0]?.total || 0) ? start + matches.length : null;
+    const res = json({ data: matches, nextStart }, 200);
     res.headers.set('Cache-Control', 'no-store');
     return res;
   } catch {
@@ -630,6 +670,13 @@ const GLIDE_CAP_MS = 4000;    // don't glide if the resulting spacing would be a
 // Public route -> real upstream HenrikDev path + this route's cache TTL.
 const ROUTES = [
   {
+    match: new RegExp(`^/history-by-puuid/([^/]+)/([^/]+)/(${UUID})$`, 'i'),
+    upstream: m=>`/valorant/v4/by-puuid/matches/${m[1]}/${m[2]}/${m[3]}`,
+    cacheTtl:150,
+    historyByPuuid:true,
+    foldCalibration:true,
+  },
+  {
     match: /^\/name-backfill\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,
     upstream: (m) => m.state.phase==='stored-detail'
       ? `/valorant/v4/match/${m.state.region}/${encodeURIComponent(m.state.stored_match.match_id)}`
@@ -903,6 +950,14 @@ export async function onRequestGet(context) {
   const { request, env } = context;
   const url = new URL(request.url);
   const requestPath = url.pathname.slice(PREFIX.length);
+  const coverageMatch=requestPath.match(MATCH_COVERAGE_ROUTE);
+  if(coverageMatch){
+    if(!env.APP_DB)return json({error:'Coverage storage unavailable'},503);
+    try{
+      const res=json({data:await beginCoverageScan(env.APP_DB,coverageScope(coverageMatch))},200);
+      res.headers.set('Cache-Control','no-store');return res;
+    }catch{return json({error:'Coverage storage unavailable'},503);}
+  }
   // No HenrikDev counterpart — a pure local D1 read, so it's handled before
   // the upstream ROUTES matching below rather than shoehorned into it. No
   // hard-fail on a missing CALIB_DB binding: getCalibModel() already falls
@@ -915,11 +970,16 @@ export async function onRequestGet(context) {
   const archiveMatch = requestPath.match(MATCH_ARCHIVE_ROUTE);
   if (archiveMatch) {
     const startText = url.searchParams.get('start') || '0';
+    const sizeText = url.searchParams.get('size') || String(MATCH_ARCHIVE_PAGE_SIZE);
     const start = Number(startText);
-    if (!/^\d+$/.test(startText) || !Number.isSafeInteger(start) || start > 5000 || start % MATCH_ARCHIVE_PAGE_SIZE) {
+    const size = Number(sizeText);
+    if (!/^\d+$/.test(startText) || !Number.isSafeInteger(start) || start > 5000) {
       return json({ error: 'Invalid archive offset' }, 400);
     }
-    return readMatchArchive(env, archiveMatch[1].toLowerCase(), archiveMatch[2].toLowerCase(), start);
+    if (!/^\d+$/.test(sizeText) || !Number.isInteger(size) || ![MATCH_ARCHIVE_PAGE_SIZE, MATCH_ARCHIVE_MAX_PAGE_SIZE].includes(size)) {
+      return json({ error: 'Invalid archive page size' }, 400);
+    }
+    return readMatchArchive(env, archiveMatch[1].toLowerCase(), archiveMatch[2].toLowerCase(), start, size);
   }
 
   let route = null, match = null;
@@ -930,11 +990,18 @@ export async function onRequestGet(context) {
   if (!route) return json({ error: "Unknown route" }, 404);
   // The player ID selects trusted match rows for shared storage. It is never
   // sent to HenrikDev and never lets a caller supply match contents.
-  const archivePuuid = route.foldCalibration && url.searchParams.get('mode') === 'competitive'
+  const scanId=new RegExp(`^${UUID}$`,'i').test(url.searchParams.get('scan')||'')?url.searchParams.get('scan'):null;
+  url.searchParams.delete('scan');
+  const archivePuuid = route.historyByPuuid?match[3].toLowerCase():route.foldCalibration && url.searchParams.get('mode') === 'competitive'
     && new RegExp(`^${UUID}$`, 'i').test(url.searchParams.get('puuid') || '')
     ? url.searchParams.get('puuid').toLowerCase() : null;
   if (route.foldCalibration) url.searchParams.delete('puuid');
-  if (route.storedMatches) {
+  if(route.historyByPuuid){
+    const startText=url.searchParams.get('start')||'0';
+    const start=Number(startText);
+    if(!/^\d+$/.test(startText)||!Number.isSafeInteger(start)||start>5000)return json({error:'Invalid history offset'},400);
+    url.search=`?mode=competitive&size=10&start=${start}`;
+  }else if (route.storedMatches) {
     const pageText = url.searchParams.get('page') || '1';
     const page = Number(pageText);
     if (!/^\d+$/.test(pageText) || !Number.isInteger(page) || page < 1 || page > 100) {
@@ -992,6 +1059,10 @@ export async function onRequestGet(context) {
   const cached = route.nameBackfill || (route.nameHistory && !storedNameHistory.history.length)
     ? null : await cache.match(cacheKey);
   if (cached) {
+    if(scanId){
+      try{await observeCoverageResponse(env,scanId,route,match,url,await cached.clone().text());}
+      catch{/* Never certify a page whose archive/evidence write failed. */}
+    }
     // The upstream account check can stay cached, but newly backfilled names
     // and progress must be visible immediately rather than an hour later.
     if (route.nameHistory && storedNameHistory.history.length) {
@@ -1002,7 +1073,7 @@ export async function onRequestGet(context) {
         const res = json(body,200); res.headers.set('X-Proxy-Cache','HIT');res.headers.set('Cache-Control','no-store');return res;
       } catch { return json({error:'Name history storage unavailable'},503); }
     }
-    if (route.foldCalibration && archivePuuid) {
+    if (route.foldCalibration && archivePuuid && !scanId) {
       context.waitUntil(cached.clone().text().then(body => saveMatchArchivePage(env, body, archivePuuid)).catch(() => {}));
     }
     const res = new Response(cached.body, cached);
@@ -1118,14 +1189,19 @@ export async function onRequestGet(context) {
   }
 
   if (upstream.status === 200 && route.foldCalibration) {
-    if (archivePuuid) context.waitUntil(saveMatchArchivePage(env, bodyText, archivePuuid).catch(() => {}));
+    if (archivePuuid && !scanId) context.waitUntil(saveMatchArchivePage(env, bodyText, archivePuuid).catch(() => {}));
     // Fire-and-forget: never touches bodyText/the response, so this adds
     // zero latency to the user-facing request either way.
     context.waitUntil(
       foldCalibration(env, bodyText, {
-        region: match[1], platform: match[2], name: decodeURIComponent(match[3]), tag: match[4],
+        region: match[1], platform: match[2], name: route.historyByPuuid?null:decodeURIComponent(match[3]), tag: route.historyByPuuid?null:match[4],
       }).catch(() => {})
     );
+  }
+
+  if(upstream.status===200&&scanId){
+    try{await observeCoverageResponse(env,scanId,route,match,url,bodyText);}
+    catch{/* Match fetching remains available; failed evidence cannot certify coverage. */}
   }
 
   if (upstream.status === 200 && route.persistRRHistory) {
@@ -1158,6 +1234,37 @@ export async function onRequestGet(context) {
   }
 
   return res;
+}
+
+export async function onRequestPost({request,env}){
+  const match=new URL(request.url).pathname.slice(PREFIX.length).match(MATCH_COVERAGE_ROUTE);
+  if(!match)return json({error:'Unknown route'},404);
+  if(!env.APP_DB)return json({error:'Coverage storage unavailable'},503);
+  let body;
+  try{
+    // No match data, counts, or browser assertions are accepted here.
+    const reader=request.body?.getReader();
+    if(!reader)return json({error:'Invalid coverage request'},400);
+    const decoder=new TextDecoder();
+    let text='',bytes=0;
+    try{
+      while(true){
+        const {done,value}=await reader.read();
+        if(done)break;
+        bytes+=value.byteLength;
+        if(bytes>256){await reader.cancel();return json({error:'Invalid coverage request'},400);}
+        text+=decoder.decode(value,{stream:true});
+      }
+      text+=decoder.decode();
+    }finally{reader.releaseLock();}
+    body=JSON.parse(text);
+  }catch{return json({error:'Invalid coverage request'},400);}
+  if(!new RegExp(`^${UUID}$`,'i').test(body?.scanId||'')||Object.keys(body).some(key=>key!=='scanId'))
+    return json({error:'Invalid coverage request'},400);
+  try{
+    const res=json({data:await finishCoverageScan(env.APP_DB,coverageScope(match),body.scanId)},200);
+    res.headers.set('Cache-Control','no-store');return res;
+  }catch{return json({error:'Coverage storage unavailable'},503);}
 }
 
 function json(obj, status) {

@@ -1424,15 +1424,15 @@ let allTeammates=[],allEncounters=[],serverData=[],serverPartySize=0,serverFilte
 // ── SHARED MATCH ARCHIVE ──────────────────────────────────────────────────
 // Trusted full matches are kept in APP_DB by the proxy. Browser tabs and
 // devices read the same archive; failures fall back to live history.
-async function readServerMatchArchive(puuid,seasonId,generation,isRelevant=()=>true){
+async function readServerMatchArchive(puuid,seasonId,generation,isRelevant=()=>true,opts={}){
   const matches=[];
-  for(let start=0;start<=5000;start+=10){
+  for(let start=0;start<=5000;){
     if(generation!==_analysisGen||!isRelevant())return [];
     let response,j;
     try{
-      response=await fetch(`${API_BASE}/match-archive/${encodeURIComponent(puuid)}/${encodeURIComponent(seasonId)}?start=${start}`,{cache:'no-store'});
-      if(response.ok)j=await response.json();
+      ({r:response,j}=await fetchApiJson(`${API_BASE}/match-archive/${encodeURIComponent(puuid)}/${encodeURIComponent(seasonId)}?start=${start}&size=50`,{cache:'no-store',signal:opts.signal}));
     }catch(e){
+      if(opts.signal?.aborted)throw e;
       if(matches.length)break;
       throw e;
     }
@@ -1440,18 +1440,28 @@ async function readServerMatchArchive(puuid,seasonId,generation,isRelevant=()=>t
       if(matches.length)break;
       throw new Error('Match archive unavailable');
     }
+    if(generation!==_analysisGen||!isRelevant())return [];
     const page=Array.isArray(j?.data)?j.data:[];
     matches.push(...page);
-    if(page.length<10)break;
+    if(page.length)opts.onPage?.(page);
+    if(Object.prototype.hasOwnProperty.call(j,'nextStart')){
+      if(j.nextStart===null){opts.onComplete?.();break;}
+      if(!Number.isSafeInteger(j.nextStart)||j.nextStart<=start)throw new Error('Invalid archive cursor');
+      start=j.nextStart;
+    }else{
+      // A previously deployed proxy still serves ten rows and no cursor.
+      if(page.length<10){opts.onComplete?.();break;}
+      start+=page.length;
+    }
   }
   return matches;
 }
-async function readSavedMatchCounts(puuid){
+async function readSavedMatchCounts(puuid,opts={}){
   if(!puuid)return{};
   try{
-    const response=await fetch(`${API_BASE}/match-archive-counts/${encodeURIComponent(puuid)}`,{cache:'no-store'});
+    const {r:response,j}=await fetchApiJson(`${API_BASE}/match-archive-counts/${encodeURIComponent(puuid)}`,{cache:'no-store',signal:opts.signal});
     if(!response.ok)return{};
-    const {data}=await response.json();
+    const {data}=j;
     return data&&typeof data==='object'&&!Array.isArray(data)?data:{};
   }catch(_){return{};}
 }
@@ -1476,10 +1486,10 @@ let headerRevealPending=false;
 let nameHistoryRows=[],nameHistoryState='idle';
 let nameHistoryBackfill=null,nameBackfillBusy=false,nameBackfillError=false;
 let nameBackfillStopRequested=false,nameBackfillStopped=false,nameBackfillPages=0;
-async function loadNameHistory(puuid,generation=_analysisGen){
+async function loadNameHistory(puuid,generation=_analysisGen,opts={signal:_analysisController?.signal}){
   nameHistoryState='loading';renderNameHistory();
   try{
-    const {j}=await apiGet(`${API_BASE}/name-history/${encodeURIComponent(puuid)}?platform=${encodeURIComponent(PLATFORM)}`,{quiet:true,cache:'no-store'});
+    const {j}=await apiGet(`${API_BASE}/name-history/${encodeURIComponent(puuid)}?platform=${encodeURIComponent(PLATFORM)}`,{...opts,quiet:true,cache:'no-store'});
     if(generation!==_analysisGen||puuid!==PUUID)return;
     if(!Array.isArray(j.data?.history))throw new Error('Invalid name history');
     nameHistoryRows=j.data.history;nameHistoryBackfill=j.data.backfill;nameHistoryState='ready';
@@ -1494,13 +1504,14 @@ async function loadOlderNames(){
   if(nameBackfillBusy){nameBackfillStopRequested=true;renderNameHistory();return;}
   if(!PUUID||nameHistoryBackfill?.complete||nameHistoryBackfill?.limited||!nameHistoryBackfill?.available)return;
   const puuid=PUUID,generation=_analysisGen;
+  const signal=_analysisController?.signal;
   nameBackfillBusy=true;nameBackfillStopRequested=false;nameBackfillStopped=false;nameBackfillError=false;renderNameHistory();
   try{
     // Each request saves one page and its cursor to D1. The browser drives the
     // full scan while this tab remains open; stopping never discards progress.
     while(!nameBackfillStopRequested&&generation===_analysisGen&&puuid===PUUID){
       const previous=nameHistoryBackfill;
-      const {j}=await apiGet(`${API_BASE}/name-backfill/${encodeURIComponent(puuid)}`,{quiet:true,cache:'no-store'});
+      const {j}=await apiGet(`${API_BASE}/name-backfill/${encodeURIComponent(puuid)}`,{quiet:true,cache:'no-store',signal});
       if(generation!==_analysisGen||puuid!==PUUID)return;
       if(!j.data?.backfill||!Array.isArray(j.data.history))throw new Error('Invalid backfill response');
       nameBackfillPages++;
@@ -1508,7 +1519,7 @@ async function loadOlderNames(){
       if(!nameHistoryBackfill.available||nameHistoryBackfill.complete||nameHistoryBackfill.limited||nameBackfillStopRequested)break;
       const cursor=b=>[b.next_start,b.matchlist_complete,b.stored_page,b.stored_scanned,b.stored_complete,b.stored_pending_count].join(':');
       if(previous&&cursor(previous)===cursor(nameHistoryBackfill))throw new Error('Name history scan made no progress');
-      await sleep(2500);
+      await sleep(2500,signal);
     }
   }catch{
     if(generation===_analysisGen&&puuid===PUUID)nameBackfillError=true;
@@ -1999,6 +2010,7 @@ let _prefetchId=0;
 // Bumped each time a new analysis starts; a run whose id no longer matches has
 // been superseded (e.g. the user picked a different act) and must stop writing.
 let _analysisGen=0;
+let _analysisController=null,_prefetchController=null;
 let _lastPrefetchKey='';
 let _prefetchCache=null; // {key, acctJ, mmrJ} — set once prefetchPlayerActs succeeds
 let _seasonOptionsKey='';
@@ -2286,6 +2298,7 @@ function onManualInput(){
     const sel=document.getElementById('m-season');
     if(sel){sel.length=1;sel.value='';renderSeasonOptions();updateSeasonTriggerLabel();}
     _prefetchId++;
+    _prefetchController?.abort();
     _lastPrefetchKey='';
     _seasonOptionsKey='';
     _pendingPrefetchKey='';
@@ -2303,10 +2316,13 @@ async function prefetchPlayerActs(openAfter=false){
   const key=parsed.key;
   if(_lastPrefetchKey===key)return;
   const myId=++_prefetchId;
+  _prefetchController?.abort();
+  _prefetchController=new AbortController();
+  const opts={quiet:true,signal:_prefetchController.signal};
   _pendingPrefetchKey=key;
   showSeasonLoading();
   try{
-    const{j:acctJ}=await apiGet(accountUrlFor(parsed),{quiet:true});
+    const{j:acctJ}=await apiGet(accountUrlFor(parsed),opts);
     if(myId!==_prefetchId)return;
     const acctData=acctJ.data||acctJ;
     const region=acctData.region||'eu';
@@ -2315,7 +2331,10 @@ async function prefetchPlayerActs(openAfter=false){
     const tag=parsed.tag||acctData.tag||'';
     if(!name||!tag){_pendingPrefetchKey='';showSeasonIdle();return;}
 
-    const savedCounts=await readSavedMatchCounts(acctData.puuid);
+    const savedCountsPromise=readSavedMatchCounts(acctData.puuid,opts);
+    const mmrUrl=`${API_BASE}/rank/${region}/pc/${encodeURIComponent(name)}/${tag}`;
+    const mmrPromise=apiGet(mmrUrl,opts).then(result=>({result}),error=>({error}));
+    const savedCounts=await savedCountsPromise;
     if(myId!==_prefetchId)return;
     if(Object.keys(savedCounts).length){
       updateSeasonDropdown({},[],savedCounts);
@@ -2323,8 +2342,9 @@ async function prefetchPlayerActs(openAfter=false){
       if(openAfter){openSeasonDropdown();openAfter=false;}
     }
 
-    const mmrUrl=`${API_BASE}/rank/${region}/pc/${encodeURIComponent(name)}/${tag}`;
-    const{j:mmrJ}=await apiGet(mmrUrl,{quiet:true});
+    const mmrOutcome=await mmrPromise;
+    if(mmrOutcome.error)throw mmrOutcome.error;
+    const{j:mmrJ}=mmrOutcome.result;
     if(myId!==_prefetchId)return;
 
     const seasonal=(mmrJ.data||mmrJ).seasonal||[];
@@ -2383,6 +2403,7 @@ function runAnalysis(searchOverride,{fromUrl=false,initialAct=null}={}){
   }
   if(document.getElementById('season-trigger').classList.contains('loading')){
     _prefetchId++;
+    _prefetchController?.abort();
     _pendingPrefetchKey='';
     showSeasonIdle();
   }
@@ -2455,16 +2476,67 @@ function runAnalysis(searchOverride,{fromUrl=false,initialAct=null}={}){
 
 const MIN_RATED=7; // strict: a match needs at least this many rated players (of 10) for its lobby rank to count
 
-function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+function sleep(ms,signal){
+  signal?.throwIfAborted();
+  return new Promise((resolve,reject)=>{
+    const cleanup=()=>signal?.removeEventListener('abort',onAbort);
+    const onAbort=()=>{clearTimeout(timer);cleanup();reject(signal.reason);};
+    const timer=setTimeout(()=>{cleanup();resolve();},ms);
+    signal?.addEventListener('abort',onAbort,{once:true});
+  });
+}
 
-async function waitForRateLimit(ms,onUpdate){
+// Bound Henrik concurrency per search; waiting for a retry never holds a slot.
+function createRequestPool(limit=2){
+  let active=0;
+  const queue=[];
+  const acquire=signal=>new Promise((resolve,reject)=>{
+    if(signal?.aborted){reject(signal.reason);return;}
+    const entry={start(){
+      signal?.removeEventListener('abort',onAbort);
+      active++;
+      let released=false;
+      resolve(()=>{
+        if(released)return;
+        released=true;active--;
+        queue.shift()?.start();
+      });
+    }};
+    const onAbort=()=>{const i=queue.indexOf(entry);if(i>=0)queue.splice(i,1);reject(signal.reason);};
+    if(active<limit)entry.start();
+    else{queue.push(entry);signal?.addEventListener('abort',onAbort,{once:true});}
+  });
+  return{acquire};
+}
+
+// Keep the timeout active through JSON body consumption, not just headers.
+async function fetchApiJson(url,opts={}){
+  opts.signal?.throwIfAborted();
+  const controller=new AbortController();
+  const onAbort=()=>controller.abort(opts.signal.reason);
+  opts.signal?.addEventListener('abort',onAbort,{once:true});
+  const timer=setTimeout(()=>controller.abort(new DOMException('Request timed out','TimeoutError')),opts.timeoutMs??30000);
+  try{
+    const r=await fetch(url,{cache:opts.cache||'default',signal:controller.signal,
+      method:opts.method||'GET',headers:opts.headers,body:opts.body});
+    let j;
+    try{j=await r.json();}catch(e){if(r.ok||controller.signal.aborted)throw e;j=null;}
+    controller.signal.throwIfAborted();
+    return{r,j};
+  }finally{
+    clearTimeout(timer);
+    opts.signal?.removeEventListener('abort',onAbort);
+  }
+}
+
+async function waitForRateLimit(ms,onUpdate,signal){
   const statusText=document.getElementById('status-text');
   const deadline=performance.now()+ms;
   let lastMessage='';
   let ownsStatus=true;
   const update=()=>{
     if(lastMessage&&statusText.textContent!==lastMessage)ownsStatus=false;
-    if(!ownsStatus)return;
+    if(!ownsStatus||signal?.aborted)return;
     const seconds=Math.max(0,Math.ceil((deadline-performance.now())/1000));
     const message=onUpdate?.(seconds)||`Rate limit reached — waiting ${seconds}s for reset…`;
     if(message!==lastMessage){
@@ -2474,17 +2546,14 @@ async function waitForRateLimit(ms,onUpdate){
   };
   update();
   const timer=setInterval(update,200);
-  try{await sleep(ms);}finally{clearInterval(timer);}
+  try{await sleep(ms,signal);}finally{clearInterval(timer);}
 }
 
 // Pull a machine-readable error code out of HenrikDev's {status,errors:[{code,…}]}
 // body when available, so messages are specific (see docs → Error Codes).
-async function parseApiError(r){
-  try{
-    const b=await r.json();
-    const e=b?.errors?.[0];
-    if(e)return `API ${r.status} (code ${e.code}): ${e.message||'error'}`;
-  }catch(_){/* non-JSON body */}
+function parseApiError(r,b){
+  const e=b?.errors?.[0];
+  if(e)return `API ${r.status} (code ${e.code}): ${e.message||'error'}`;
   return `API ${r.status}`;
 }
 
@@ -2503,17 +2572,21 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
   const MAX_RETRIES=5;   // hard failures (network / 5xx)
   const MAX_RL_WAITS=40; // 429 waits within one call (each waits the real reset)
 
-  let r;
+  opts.signal?.throwIfAborted();
+  let r,j;
   try{
-    r=await fetch(url,{cache:opts.cache||'default'});
+    const release=opts.pool?await opts.pool.acquire(opts.signal):()=>{};
+    try{({r,j}=await fetchApiJson(url,opts));}finally{release();}
   }catch(e){
+    if(opts.signal?.aborted)throw opts.signal.reason;
     // fetch() itself threw → network/CORS failure (e.g. proxy 5xx with no CORS).
     if(_attempt>=MAX_RETRIES)throw new Error('Network error — check your connection');
     const wait=Math.min(1500*Math.pow(2,_attempt),20000);
     if(!opts.quiet)setStatus(`Network error — retrying in ${Math.ceil(wait/1000)}s… (${_attempt+1}/${MAX_RETRIES})`,true);
-    await sleep(wait);
+    await sleep(wait,opts.signal);
     return apiGet(url,opts,_attempt+1,_rl);
   }
+  opts.signal?.throwIfAborted();
 
   // 1) 429 — the worker either declined before calling upstream (shared quota
   //    already exhausted this window) or relayed a real 429 from HenrikDev.
@@ -2523,29 +2596,25 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
   if(r.status===429){
     if(_rl>=MAX_RL_WAITS)throw new Error('Rate limited — please try again in a minute');
     let retryMs=RL_WAIT_FLOOR_MS;
-    try{
-      const body=await r.json();
-      if(typeof body.retryAfterMs==='number')retryMs=Math.max(body.retryAfterMs,RL_WAIT_FLOOR_MS);
-    }catch(_){/* fall back to the floor if the body isn't as expected */}
+    if(Number.isFinite(j?.retryAfterMs))retryMs=Math.max(j.retryAfterMs,RL_WAIT_FLOOR_MS);
     const wait=Math.min(retryMs,MAX_WAIT_MS);
-    if(opts.quiet)await sleep(wait);
-    else await waitForRateLimit(wait,opts.onRateLimit);
+    if(opts.quiet)await sleep(wait,opts.signal);
+    else await waitForRateLimit(wait,opts.onRateLimit,opts.signal);
     return apiGet(url,opts,_attempt,_rl+1);
   }
 
   // 2) Transient server errors — exponential backoff.
   if([500,502,503,504].includes(r.status)){
-    if(_attempt>=MAX_RETRIES)throw new Error(await parseApiError(r));
+    if(_attempt>=MAX_RETRIES)throw new Error(parseApiError(r,j));
     const wait=Math.min(1000*Math.pow(2,_attempt),16000); // 1,2,4,8,16s
     if(!opts.quiet)setStatus(`Server error (${r.status}) — retrying in ${Math.ceil(wait/1000)}s… (${_attempt+1}/${MAX_RETRIES})`,true);
-    await sleep(wait);
+    await sleep(wait,opts.signal);
     return apiGet(url,opts,_attempt+1,_rl);
   }
 
   // 3) Other non-OK (400/401/403/404…) — not retryable, surface the real reason.
-  if(!r.ok)throw new Error(await parseApiError(r));
+  if(!r.ok)throw new Error(parseApiError(r,j));
 
-  const j=await r.json();
   return{j};
 }
 
@@ -3380,7 +3449,7 @@ const HARDCODED_ACT_META={
 let _actMeta=null,_seasonDatesPromise=null;
 function loadSeasonDates(){
   if(_seasonDatesPromise)return _seasonDatesPromise;
-  _seasonDatesPromise=fetch('https://valorant-api.com/v1/seasons')
+  _seasonDatesPromise=fetch('https://valorant-api.com/v1/seasons',{signal:AbortSignal.timeout(10000)})
     .then(r=>r.ok?r.json():Promise.reject(r.status))
     .then(j=>{
       // Acts carry a parentUuid (their episode/season); episodes/seasons don't.
@@ -3473,12 +3542,34 @@ function tagActPlacements(matches){
 }
 
 /* ── LOAD ─────────────────────────────────────────────────── */
+// Coverage and page evidence live in D1; there is no browser cache or expiry.
+async function beginServerActScan(puuid,season,opts={}){
+  if(!puuid||!season)return null;
+  const url=`${API_BASE}/match-coverage/${REGION}/${PLATFORM}/${encodeURIComponent(puuid)}/${encodeURIComponent(season)}`;
+  try{
+    const {r,j}=await fetchApiJson(url,{...opts,cache:'no-store'});
+    if(!r.ok||!PUUID_RE.test(j?.data?.scanId||''))return null;
+    const coverage=j.data.coverage;
+    return{url,scanId:j.data.scanId,coverage:coverage&&Array.isArray(coverage.matchIds)&&Array.isArray(coverage.liveIds)
+      ?{matchIds:coverage.matchIds,liveIds:new Set(coverage.liveIds)}:null};
+  }catch{return null;} // A missing migration must never prevent normal fetching.
+}
+async function finishServerActScan(scan,opts={}){
+  if(!scan)return;
+  try{
+    await fetchApiJson(scan.url,{...opts,cache:'no-store',method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({scanId:scan.scanId})});
+  }catch{/* Keep matches available even if coverage could not be certified. */}
+}
+function isKnownHistoryPage(rows,coverage){
+  return !!(coverage&&rows.length&&rows.every(m=>coverage.liveIds.has(m.metadata?.match_id||m.match_id)));
+}
 const MAX_HISTORY_OFFSET=5000;
 // MMR season totals belong to the account's current region and can reset on a
 // transfer. The match list is keyed to the player across regions, so seek to
 // the selected act by its calendar boundary instead of using those totals as
 // either a skip offset or a stopping condition.
-async function findHistoryStartForAct(nextActStart,generation,onRateLimit){
+async function findHistoryStartForAct(nextActStart,generation,onRateLimit,opts={}){
   if(!Number.isFinite(nextActStart)||nextActStart>Date.now())return 0;
   let lo=0,hi=MAX_HISTORY_OFFSET;
   while(lo<hi){
@@ -3486,7 +3577,8 @@ async function findHistoryStartForAct(nextActStart,generation,onRateLimit){
     const mid=Math.floor((lo+hi)/2);
     setStatus('Finding this act’s matches…',true);
     const url=`${API_BASE}/history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}?mode=competitive&size=1&start=${mid}`;
-    const {j}=await apiGet(url,{onRateLimit});
+    const {j}=await apiGet(url,{...opts,onRateLimit});
+    if(generation!==_analysisGen)return 0;
     const match=j.data?.[0];
     const started=match?Date.parse(match.metadata?.started_at):null;
     if(match&&!Number.isFinite(started))return 0; // scan from newest if dates cannot be trusted
@@ -3501,22 +3593,28 @@ async function findHistoryStartForAct(nextActStart,generation,onRateLimit){
 // then fetch full details only for those IDs so every existing stat keeps its
 // normal full-match meaning. This is best-effort: an incomplete archive must
 // never discard the live matches already found.
-async function recoverStoredSeasonMatches(collected,alreadySaved,myGen,onRateLimit){
-  if(!PUUID||!TARGET_SEASON)return;
+async function recoverStoredSeasonMatches(collected,alreadySaved,myGen,onRateLimit,opts={}){
+  if(!PUUID||!TARGET_SEASON)return false;
   const known=new Set([...alreadySaved,...collected.map(m=>m.metadata?.match_id||m.match_id).filter(Boolean)]);
   const missing=[];
   const wanted=TARGET_SEASON.toLowerCase();
   const region=encodeURIComponent(REGION);
   const puuid=encodeURIComponent(PUUID);
+  let complete=false;
+  let storedSawTarget=false;
+  const scanQuery=opts.scanId?`&scan=${encodeURIComponent(opts.scanId)}`:'';
   for(let page=1;page<=100;page++){
-    if(myGen!==_analysisGen)return;
+    if(myGen!==_analysisGen)return false;
     setStatus('Checking older games…',true);
     let payload;
     try{
-      ({j:payload}=await apiGet(`${API_BASE}/stored-matches/${region}/${puuid}?page=${page}`,{onRateLimit}));
+      ({j:payload}=await apiGet(`${API_BASE}/stored-matches/${region}/${puuid}?page=${page}${scanQuery}`,{...opts,onRateLimit}));
     }catch(_){break;} // no stored archive, or temporarily unavailable
+    if(myGen!==_analysisGen)return false;
+    if(!Array.isArray(payload?.data))break;
     const rows=Array.isArray(payload?.data)?payload.data:[];
-    if(!rows.length)break;
+    if(!rows.length){complete=true;break;}
+    if(rows.some(row=>row?.meta?.season?.id?.toLowerCase()===wanted))storedSawTarget=true;
     rows.forEach(row=>{
       const id=row?.meta?.id;
       if(!id||row?.meta?.season?.id?.toLowerCase()!==wanted||
@@ -3525,25 +3623,27 @@ async function recoverStoredSeasonMatches(collected,alreadySaved,myGen,onRateLim
       missing.push({id,region:row.meta.region||REGION});
     });
     const actStart=getActInfoByUuid(TARGET_SEASON)?.start;
-    if(Number.isFinite(actStart)&&rows.every(row=>{
+    if((!opts.scanId||storedSawTarget)&&Number.isFinite(actStart)&&rows.every(row=>{
       const started=Date.parse(row?.meta?.started_at);
       return Number.isFinite(started)&&started<actStart;
-    }))break;
-    if(payload?.results?.after===0)break;
+    })){complete=true;break;}
+    if(payload?.results?.after===0){complete=true;break;}
   }
   let failures=0;
   for(let i=0;i<missing.length;i++){
-    if(myGen!==_analysisGen)return;
+    if(myGen!==_analysisGen)return false;
     setStatus(`Adding older games · ${i+1} of ${missing.length}…`,true);
     try{
       const {id,region:matchRegion}=missing[i];
-      const {j}=await apiGet(`${API_BASE}/match-detail/${encodeURIComponent(matchRegion)}/${encodeURIComponent(id)}`,{onRateLimit});
+      const {j}=await apiGet(`${API_BASE}/match-detail/${encodeURIComponent(matchRegion)}/${encodeURIComponent(id)}${scanQuery?`?${scanQuery.slice(1)}`:''}`,{...opts,onRateLimit});
+      if(myGen!==_analysisGen)return false;
       const match=j?.data||j;
       if(match?.metadata?.match_id!==id||!isSeason(match)||
-         !match?.players?.some(p=>p.puuid?.toLowerCase()===PUUID.toLowerCase()))continue;
+         !match?.players?.some(p=>p.puuid?.toLowerCase()===PUUID.toLowerCase())){complete=false;continue;}
       collected.push(match);
       failures=0;
     }catch(e){
+      complete=false;
       // A missing old detail is specific to that ID. Other repeated failures
       // suggest the endpoint is unavailable, so stop instead of issuing
       // hundreds of requests that cannot succeed.
@@ -3551,10 +3651,14 @@ async function recoverStoredSeasonMatches(collected,alreadySaved,myGen,onRateLim
       if(++failures>=3)break;
     }
   }
+  return complete;
 }
 
 async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
   const myGen=++_analysisGen; // supersede any in-flight analysis
+  _analysisController?.abort();
+  _analysisController=new AbortController();
+  const requestOpts={signal:_analysisController.signal,pool:createRequestPool(2)};
   loadSeasonDates(); // fire off act-start dates now; awaited before we filter matches
   setProgress(null); // the match API supplies no reliable total
   const rawMatches=new Map(),processedMatches=new Map();
@@ -3595,8 +3699,9 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
         acctJ=prefetchSnapshot.acctJ;
       }else{
         const acctUrl=accountUrlFor({puuid:byPuuid?PUUID:'',name:PLAYER,tag:TAG});
-        ({j:acctJ}=await apiGet(acctUrl));
+        ({j:acctJ}=await apiGet(acctUrl,requestOpts));
       }
+      if(myGen!==_analysisGen)return;
       const acctData=acctJ.data||acctJ;
       PUUID=acctData.puuid||PUUID;
       resolvedAccount=!!(acctData.name&&acctData.tag);
@@ -3607,6 +3712,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
         REGION=acctData.region.toLowerCase();
       }
     }catch(e){
+      if(myGen!==_analysisGen)return;
       // If account lookup fails, fall back to name+tag matching — except for
       // a PUUID search, which has nothing to fall back to.
       if(byPuuid)throw e;
@@ -3614,7 +3720,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     if(byPuuid&&(!PLAYER||!TAG))throw new Error('No account found for that PUUID');
     if(myGen!==_analysisGen)return;
     // Account-level history loads independently of match/act availability.
-    if(PUUID)void loadNameHistory(PUUID,myGen);
+    if(PUUID)void loadNameHistory(PUUID,myGen,requestOpts);
     // Autocorrect the input's casing now that it's resolved (corrected casing
     // on success, the originally-typed value stays as a fallback on failure).
     {
@@ -3629,25 +3735,83 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     writePlayerRoute(PLAYER,TAG,TARGET_SEASON,pendingRoutePush?'push':'replace');
     const savedCountsPromise=prefetchSnapshot?.savedCounts
       ?Promise.resolve(prefetchSnapshot.savedCounts)
-      :readSavedMatchCounts(PUUID);
+      :readSavedMatchCounts(PUUID,requestOpts);
 
-    // The shared full-match archive needs only a PUUID and act. Read it while
-    // rank loads, then show the complete saved act in one update.
+    // Saved pages publish immediately while independent Henrik requests load.
     let archivedMatches=[],archiveActId='',archivePromise=null;
+    let serverScan=null,verifiedScan=null,archiveComplete=false;
     const previewActId=TARGET_SEASON||currentActId();
+    const startArchive=actId=>{
+      archiveActId=actId.toLowerCase();
+      archiveComplete=false;
+      return readServerMatchArchive(PUUID,actId,myGen,
+        ()=>!TARGET_SEASON||TARGET_SEASON.toLowerCase()===actId.toLowerCase(),
+        {...requestOpts,onComplete:()=>{if(myGen===_analysisGen&&archiveActId===actId.toLowerCase())archiveComplete=true;},onPage:page=>{
+          if(myGen!==_analysisGen)return;
+          if(!TARGET_SEASON)TARGET_SEASON=actId;
+          publishMatches(page);
+        }}).catch(()=>[]);
+    };
     if(PUUID&&previewActId){
-      archiveActId=previewActId.toLowerCase();
-      archivePromise=readServerMatchArchive(PUUID,previewActId,myGen,
-        ()=>!TARGET_SEASON||TARGET_SEASON.toLowerCase()===archiveActId).then(matches=>{
-          if(myGen!==_analysisGen||(TARGET_SEASON&&TARGET_SEASON.toLowerCase()!==archiveActId))return matches;
-          if(matches.length){
-            if(!TARGET_SEASON)TARGET_SEASON=previewActId;
-            publishMatches(matches);
-            setStatus(`Showing ${allMatches.length} saved games. Loading remaining games…`,true);
-          }
-          return matches;
-        }).catch(()=>[]);
+      archivePromise=startArchive(previewActId);
     }
+
+    // Per-match RR gained/lost, keyed by match_id so processMatch
+    // can attach it below. The proxy persists this server-side (see
+    // mergeRRHistory), so it can cover more than upstream's live ~20-game
+    // window — but still isn't guaranteed to cover every match. Best-effort
+    // and runs alongside rank, archive and match fetching.
+    const rrPromise=(async()=>{
+      try{
+        const rrUrl=`${API_BASE}/mmr-history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}`;
+        const{j:rrJ}=await apiGet(rrUrl,{...requestOpts,quiet:true});
+        if(myGen!==_analysisGen)return;
+        const history=(rrJ.data||rrJ).history||[];
+        // Entries arrive oldest→newest per the API, but sort defensively so the
+        // previous-entry carry-forward below always walks forward in time.
+        const sorted=[...history].filter(h=>h.match_id).sort((a,b)=>new Date(a.date)-new Date(b.date));
+        let prev=null;
+        sorted.forEach(h=>{
+          const lastChange=Number.isFinite(h.last_change)?h.last_change:null;
+          const refundedRR=Number.isFinite(h.refunded_rr)?h.refunded_rr:0;
+          const derankProtected=!!h.was_derank_protected;
+          _rrChangeByMatchId[h.match_id]=lastChange;
+          _refundedRRByMatchId[h.match_id]=refundedRR;
+          _derankProtectedByMatchId[h.match_id]=derankProtected;
+          // Pre-match RR: the previous entry's elo is the exact value when the
+          // season hasn't changed. Across a season boundary (or for the first
+          // persisted entry) derive it from the ending total. Refunds apply on
+          // top of the match payout, while a protected loss reports its normal
+          // negative last_change but does not reduce the displayed RR.
+          const sameSeason=prev&&prev.season?.short===h.season?.short;
+          // Henrik's `elo` is tier-base + RR. At Immortal+, Riot's `rr` is
+          // cumulative while the tier changes at a regional threshold, so use a
+          // continuous coordinate rooted at the Immortal 1 floor. Otherwise a
+          // promotion would introduce a fake 100-point jump into this chart.
+          const historyTotal=entry=>{
+            const tier=entry?.tier?.id??0;
+            if(tier>=24&&Number.isFinite(entry?.rr))return 2100+entry.rr;
+            return Number.isFinite(entry?.elo)?entry.elo:(Number.isFinite(entry?.rr)?entry.rr:null);
+          };
+          const previousTotal=historyTotal(prev);
+          const endingTotal=historyTotal(h);
+          if(endingTotal!=null)_postRRByMatchId[h.match_id]=endingTotal;
+          if((h?.tier?.id??0)>=3)_postTierByMatchId[h.match_id]=h.tier.id;
+          if(sameSeason&&previousTotal!=null){
+            _preRRByMatchId[h.match_id]=previousTotal;
+            if((prev?.tier?.id??0)>=3)_preTierByMatchId[h.match_id]=prev.tier.id;
+          }else if(endingTotal!=null&&lastChange!=null){
+            const appliedMatchChange=derankProtected&&lastChange<0?0:lastChange;
+            _preRRByMatchId[h.match_id]=endingTotal-appliedMatchChange-refundedRR;
+            if((h?.tier?.id??0)>=3)_preTierByMatchId[h.match_id]=h.tier.id;
+          }
+          prev=h;
+        });
+      }catch(_){
+        // No RR-change data this run — matches just fall back to myRR===null.
+      }
+      if(myGen===_analysisGen&&rawMatches.size)publishMatches([],true); // attach RR to saved matches
+    })();
 
     // Step 1: fetch v3/mmr (or reuse the prefetch) for rank and act selection.
     // Its per-act game counts are regional, not a reliable match-list total.
@@ -3669,7 +3833,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
         mmrJ=prefetchSnapshot.mmrJ;
       }else{
         const mmrUrl=`${API_BASE}/rank/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}`;
-        ({j:mmrJ}=await apiGet(mmrUrl,{onRateLimit}));
+        ({j:mmrJ}=await apiGet(mmrUrl,{...requestOpts,onRateLimit}));
       }
       const seasonal=(mmrJ.data||mmrJ).seasonal||[];
       const seasonOrder=getSeasonOrder(seasonal);
@@ -3732,98 +3896,34 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     // until the selected act is known. If MMR has no act, history can supply it.
     if(myGen!==_analysisGen)return;
     if(TARGET_SEASON)revealHeader();
-    if(archivePromise){
-      archivedMatches=await archivePromise;
-      if(myGen!==_analysisGen)return;
-      if(TARGET_SEASON&&TARGET_SEASON.toLowerCase()!==archiveActId)archivedMatches=[];
-      if(archivedMatches.length)publishMatches(archivedMatches);
-    }
     // Resolve the real calendar-current act before consulting shared history.
     // Archive failures never affect the normal API path.
     await loadSeasonDates();
     if(myGen!==_analysisGen)return;
     const liveCurrentActId=currentActId();
     if(PUUID&&TARGET_SEASON&&archiveActId!==TARGET_SEASON.toLowerCase()){
-      archiveActId=TARGET_SEASON.toLowerCase();
-      try{
-        archivedMatches=await readServerMatchArchive(PUUID,TARGET_SEASON,myGen);
-        if(myGen!==_analysisGen)return;
-        if(archivedMatches.length){
-          publishMatches(archivedMatches);
-          setStatus(`Showing ${allMatches.length} saved games. Loading remaining games…`,true);
-        }
-      }catch(_){archivedMatches=[];}
+      archivePromise=startArchive(TARGET_SEASON);
+    }
+    if(PUUID&&TARGET_SEASON){
+      serverScan=await beginServerActScan(PUUID,TARGET_SEASON,requestOpts);
+      if(myGen!==_analysisGen)return;
+      verifiedScan=serverScan?.coverage||null;
     }
     const targetActStart=getActInfoByUuid(TARGET_SEASON)?.start??null;
     if(TARGET_SEASON&&TARGET_SEASON.toLowerCase()!==liveCurrentActId&&targetActStart!=null){
       const actMeta=_actMeta&&Object.keys(_actMeta).length?_actMeta:HARDCODED_ACT_META;
       const nextActStart=Math.min(...Object.values(actMeta).map(info=>info?.start)
         .filter(value=>Number.isFinite(value)&&value>targetActStart));
-      try{start=await findHistoryStartForAct(nextActStart,myGen,onRateLimit);}catch(_){start=0;}
+      try{start=await findHistoryStartForAct(nextActStart,myGen,onRateLimit,requestOpts);}catch(_){start=0;}
       if(myGen!==_analysisGen)return;
     }
     if(liveCurrentActId){
       useServerArchive=!!(PUUID&&TARGET_SEASON&&TARGET_SEASON.toLowerCase()===liveCurrentActId);
       if(useServerArchive)start=0; // current-act scans always begin at the newest match
     }
-    // Step 1.5: per-match RR gained/lost, keyed by match_id so processMatch
-    // can attach it below. The proxy persists this server-side (see
-    // mergeRRHistory), so it can cover more than upstream's live ~20-game
-    // window — but still isn't guaranteed to cover every match. Best-effort
-    // and non-blocking of the rest of the flow either way.
-    try{
-      const rrUrl=`${API_BASE}/mmr-history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}`;
-      const{j:rrJ}=await apiGet(rrUrl,{onRateLimit});
-      const history=(rrJ.data||rrJ).history||[];
-      // Entries arrive oldest→newest per the API, but sort defensively so the
-      // previous-entry carry-forward below always walks forward in time.
-      const sorted=[...history].filter(h=>h.match_id).sort((a,b)=>new Date(a.date)-new Date(b.date));
-      let prev=null;
-      sorted.forEach(h=>{
-        const lastChange=Number.isFinite(h.last_change)?h.last_change:null;
-        const refundedRR=Number.isFinite(h.refunded_rr)?h.refunded_rr:0;
-        const derankProtected=!!h.was_derank_protected;
-        _rrChangeByMatchId[h.match_id]=lastChange;
-        _refundedRRByMatchId[h.match_id]=refundedRR;
-        _derankProtectedByMatchId[h.match_id]=derankProtected;
-        // Pre-match RR: the previous entry's elo is the exact value when the
-        // season hasn't changed. Across a season boundary (or for the first
-        // persisted entry) derive it from the ending total. Refunds apply on
-        // top of the match payout, while a protected loss reports its normal
-        // negative last_change but does not reduce the displayed RR.
-        const sameSeason=prev&&prev.season?.short===h.season?.short;
-        // Henrik's `elo` is tier-base + RR. At Immortal+, Riot's `rr` is
-        // cumulative while the tier changes at a regional threshold, so use a
-        // continuous coordinate rooted at the Immortal 1 floor. Otherwise a
-        // promotion would introduce a fake 100-point jump into this chart.
-        const historyTotal=entry=>{
-          const tier=entry?.tier?.id??0;
-          if(tier>=24&&Number.isFinite(entry?.rr))return 2100+entry.rr;
-          return Number.isFinite(entry?.elo)?entry.elo:(Number.isFinite(entry?.rr)?entry.rr:null);
-        };
-        const previousTotal=historyTotal(prev);
-        const endingTotal=historyTotal(h);
-        if(endingTotal!=null)_postRRByMatchId[h.match_id]=endingTotal;
-        if((h?.tier?.id??0)>=3)_postTierByMatchId[h.match_id]=h.tier.id;
-        if(sameSeason&&previousTotal!=null){
-          _preRRByMatchId[h.match_id]=previousTotal;
-          if((prev?.tier?.id??0)>=3)_preTierByMatchId[h.match_id]=prev.tier.id;
-        }else if(endingTotal!=null&&lastChange!=null){
-          const appliedMatchChange=derankProtected&&lastChange<0?0:lastChange;
-          _preRRByMatchId[h.match_id]=endingTotal-appliedMatchChange-refundedRR;
-          if((h?.tier?.id??0)>=3)_preTierByMatchId[h.match_id]=h.tier.id;
-        }
-        prev=h;
-      });
-    }catch(_){
-      // No RR-change data this run — matches just fall back to myRR===null.
-    }
-    if(myGen!==_analysisGen)return;
-    if(rawMatches.size)publishMatches([],true); // attach RR to saved matches
-
     // Step 2: paginate match history. D1 rows are shared across every browser.
-    // Continue through the whole act: regional MMR totals cannot prove that
-    // either the live list or the shared archive is complete after a transfer.
+    // A first/partial search checks the whole act. Regional MMR totals never
+    // prove completeness; only coverage verified by the proxy enables early stopping.
     let collected=[];
     // Safety bound: the v4 matchlist response has no total/pagination metadata
     // (only status+data), so an empty page is the sole reliable end signal. Since
@@ -3833,22 +3933,26 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     let guardPages=0, MAX_PAGES=600; // ~ MAX_HISTORY_OFFSET/min-page-size, belt-and-braces
     let liveHistoryError=null;
     let scanStoppedEarly=false;
+    let knownPageStreak=0;
     while(true){
       if(start>=MAX_HISTORY_OFFSET||++guardPages>MAX_PAGES){scanStoppedEarly=true;break;}
       setStatus(allMatches.length
         ?`Showing ${allMatches.length} matches · checking the rest of this act…`
         :'Checking competitive match history…',true);
 
-      const url=`${API_BASE}/history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}?mode=competitive&size=${BATCH}&start=${start}${useServerArchive?`&puuid=${encodeURIComponent(PUUID)}`:''}`;
+      const url=serverScan
+        ?`${API_BASE}/history-by-puuid/${REGION}/${PLATFORM}/${encodeURIComponent(PUUID)}?start=${start}&scan=${encodeURIComponent(serverScan.scanId)}`
+        :`${API_BASE}/history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}?mode=competitive&size=${BATCH}&start=${start}${useServerArchive?`&puuid=${encodeURIComponent(PUUID)}`:''}`;
       let j;
       try{
-        ({j}=await fetchWithRetry(url,{onRateLimit}));
+        ({j}=await fetchWithRetry(url,{...requestOpts,onRateLimit}));
       }catch(e){
         // Let the PUUID-keyed stored archive recover this act if live history
         // becomes unavailable, regardless of the account's current region.
         liveHistoryError=e;scanStoppedEarly=true;break;
       }
       if(myGen!==_analysisGen)return; // superseded by a newer act selection
+      if(!Array.isArray(j.data)){liveHistoryError=new Error('Invalid match history');scanStoppedEarly=true;break;}
       const data=j.data||[];
       // TRUE end of history: the API returned nothing at this offset.
       if(!data.length)break;
@@ -3874,6 +3978,16 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       });
       if(onPage.length)publishMatches(onPage);
 
+      // The server proved prior coverage, but the browser must also have read
+      // every covered match before it can stop downloading the live timeline.
+      knownPageStreak=isKnownHistoryPage(data,verifiedScan)?knownPageStreak+1:0;
+      if(knownPageStreak>=2){
+        if(archivePromise){archivedMatches=await archivePromise;archivePromise=null;}
+        if(myGen!==_analysisGen)return;
+        if(archiveComplete&&verifiedScan.matchIds.every(id=>rawMatches.has(id)))break;
+        verifiedScan=null;knownPageStreak=0; // A failed/partial archive needs the full live scan.
+      }
+
       // Scrolled past the season — a full-ish page with zero matching games
       // means we've paged beyond the target act.
       if(TARGET_SEASON&&collected.length>0&&onPage.length===0)break;
@@ -3881,24 +3995,39 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       // Advance by the number of matches the API ACTUALLY returned (not the
       // requested size) — robust even if the API returns fewer than asked.
       start+=data.length;
-      // No manual inter-batch delay here: apiGet() paces itself from the live
-      // quota headers before every call. See the rate-limit ledger above.
+      // Quota pacing stays in the proxy; the browser never sees quota headers.
       if(myGen!==_analysisGen)return;
     }
+
+    // Both streams have published progressively; join before recovery so it
+    // requests full details only for IDs neither stream already supplied.
+    if(archivePromise)archivedMatches=await archivePromise;
+    if(myGen!==_analysisGen)return;
+    let recoveryComplete=false;
 
     // Check the PUUID-keyed stored index for matches absent from the live
     // list. Its compact records carry each match's original region.
     if(TARGET_SEASON){
-      try{await recoverStoredSeasonMatches(collected,new Set(rawMatches.keys()),myGen,onRateLimit);}catch(_){/* Keep live rows. */}
+      try{recoveryComplete=await recoverStoredSeasonMatches(collected,new Set(rawMatches.keys()),myGen,onRateLimit,
+        {...requestOpts,scanId:serverScan?.scanId});}catch(_){/* Keep live rows. */}
       if(myGen!==_analysisGen)return;
     }
+    await rrPromise;
+    if(myGen!==_analysisGen)return;
     if(!collected.length&&!archivedMatches.length&&!rawMatches.size&&liveHistoryError)throw liveHistoryError;
     publishMatches([...collected,...archivedMatches]);
+    // Provisional archive rows may have rendered before live act metadata.
+    // Refresh placement flags even when the last pages added no new IDs.
+    allMatches=tagActPlacements(tagPostResetPlacements(allMatches));
+    if(recoveryComplete&&!scanStoppedEarly&&!liveHistoryError){
+      await finishServerActScan(serverScan,requestOpts);
+      if(myGen!==_analysisGen)return;
+    }
     revealHeader();
     setSeasonMatchCount(TARGET_SEASON,allMatches.length,scanStoppedEarly?'partial':'found');
     if(myGen!==_analysisGen)return; // a newer analysis took over
     setProgress(100);
-    setTimeout(()=>setProgress(0),600);
+    setTimeout(()=>{if(myGen===_analysisGen)setProgress(0);},600);
     renderAll();
     if(scanStoppedEarly&&allMatches.length)
       setStatus(`Showing ${allMatches.length} games. The live match scan stopped early; search again later to load more.`);

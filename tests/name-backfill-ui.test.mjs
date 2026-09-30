@@ -11,7 +11,7 @@ const source=html.slice(start,end)+'\n({loadOlderNames,getState:()=>({pages:name
 const puuid='11111111-1111-4111-8111-111111111111';
 
 function client(apiGet){
-  const context={PUUID:puuid,_analysisGen:1,API_BASE:'/api',apiGet,sleep:async()=>{},renderNameHistory(){},
+  const context={PUUID:puuid,_analysisGen:1,_analysisController:null,API_BASE:'/api',apiGet,sleep:async()=>{},renderNameHistory(){},
     document:{getElementById(){return{addEventListener(){}}}}};
   const ui=runInNewContext(source,context);
   runInNewContext('nameHistoryBackfill={available:true,complete:false,limited:false,next_start:0}',context);
