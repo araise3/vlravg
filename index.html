@@ -626,6 +626,7 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
 .rank-table{width:100%;min-width:620px;border-collapse:separate;border-spacing:0;text-align:right;font-family:var(--font-display);font-variant-numeric:tabular-nums;}
 .rank-table.duos-table{min-width:680px;}
 #teammate-list .duos-table{min-width:800px;}
+#party-size-list .duos-table{min-width:800px;}
 .rank-table.duos-table th,.rank-table.duos-table td{padding-left:16px;padding-right:16px;}
 .duos-table th:first-child{width:25%;}
 .duos-table th:nth-child(3){width:28%;}
@@ -688,7 +689,10 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .server-summary-stat dd{margin:0;overflow:hidden;font-size:clamp(18px,2vw,24px);font-weight:750;line-height:1.2;text-overflow:ellipsis;white-space:nowrap;}
 .server-summary-stat small{display:block;margin-top:5px;color:#a1a1aa;font-size:11px;line-height:1.4;}
 .server-summary-stat:first-child small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.server-summary-stat:nth-child(-n+2) dd{overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:break-word;}
 .servers-table-card .rank-table{min-width:760px;}
+.servers-table-card .rank-table th:first-child{min-width:215px;white-space:normal;}
+.server-match-share{margin-left:6px;color:#a1a1aa;font-size:11px;white-space:nowrap;}
 .detail-filter-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
 .detail-filter-row[hidden]{display:none;}
 .detail-filter-row .hero-scope-toggle{margin:0;}
@@ -4231,23 +4235,25 @@ function renderServers(matches){
   if(!serverData.length)return;
   const table=document.createElement('table');
   table.className='rank-table';
-  table.innerHTML='<caption class="rank-sr-only">Match results and performance grouped by game server</caption><thead><tr><th scope="col">Server</th><th scope="col">Matches</th><th scope="col">Avg Lobby</th><th scope="col">K/D</th><th scope="col" title="Average combat score">Avg ACS</th><th scope="col" title="Wins divided by wins plus losses; draws excluded">Win rate</th><th scope="col">Share</th></tr></thead><tbody></tbody>';
+  table.innerHTML='<caption class="rank-sr-only">Match results and performance grouped by game server; match share is the percentage of matches with a known server</caption><thead><tr><th scope="col">Server</th><th scope="col">Matches / Share</th><th scope="col">Avg Lobby</th><th scope="col">K/D</th><th scope="col" title="Average combat score">Avg ACS</th><th scope="col" title="Wins divided by wins plus losses; draws excluded">Win rate</th></tr></thead><tbody></tbody>';
   const tbody=table.tBodies[0];
   serverData.forEach(row=>{
     const tr=document.createElement('tr');
-    const server=document.createElement('th');server.scope='row';server.textContent=row.name;tr.appendChild(server);
-    const matchesCell=tr.insertCell();matchesCell.textContent=row.games;
+    const server=document.createElement('th');server.scope='row';server.textContent=row.name;server.title=row.name;tr.appendChild(server);
+    const matchesCell=tr.insertCell();
+    matchesCell.textContent=row.games;
+    const share=document.createElement('span');share.className='server-match-share';share.textContent=`(${Math.round(row.share)}%)`;
+    matchesCell.appendChild(share);
     const lobby=tr.insertCell();lobby.innerHTML=tableLobbyValue(row.lobbySum,row.lobbyCount);
     const kd=tr.insertCell();kd.textContent=row.kd==null?'—':row.kd.toFixed(2);if(row.kd!=null&&row.kd!==1)kd.className=row.kd>1?'rank-positive':'rank-negative';
     const acs=tr.insertCell();acs.textContent=row.acs==null?'—':Math.round(row.acs);
     const winRate=tr.insertCell();winRate.textContent=row.winRate==null?'—':Math.round(row.winRate)+'%';if(row.winRate!=null&&Math.round(row.winRate)!==50)winRate.className=Math.round(row.winRate)>50?'rank-positive':'rank-negative';
-    const share=tr.insertCell();share.textContent=row.share==null?'—':Math.round(row.share)+'%';
     tbody.appendChild(tr);
   });
-  const values=serverData.map(row=>[row.name,row.games,row.avgLobby,row.kd,row.acs,row.winRate,row.share]);
+  const values=serverData.map(row=>[row.name,row.games,row.avgLobby,row.kd,row.acs,row.winRate]);
   highlightTableMaxima(table,values,[
-    {column:2,label:'average lobby rank'},{column:3,label:'K/D'},
-    {column:4,label:'average ACS'},{column:5,label:'win rate'},{column:6,label:'match share'},
+    {column:1,label:'matches and match share'},{column:2,label:'average lobby rank'},
+    {column:3,label:'K/D'},{column:4,label:'average ACS'},{column:5,label:'win rate'},
   ]);
   container.appendChild(table);
   initTableSorting(container,values);
@@ -4728,8 +4734,9 @@ function buildKdRankBuckets(bucketFn,{includeLobby,matches=statMatches}={}){
     const info=bucketFn(m);
     if(!info)return;
     const t=info.tier;
-    if(!rb[t])rb[t]={totalKills:0,totalDeaths:0,wins:0,total:0,label:info.label,icon:info.icon,acsSum:0,acsCount:0,lobbySum:0,lobbyCount:0,teamRankSum:0,teamRankCount:0,enemyRankSum:0,enemyRankCount:0};
+    if(!rb[t])rb[t]={totalKills:0,totalDeaths:0,wins:0,total:0,label:info.label,icon:info.icon,acsSum:0,acsCount:0,lobbySum:0,lobbyCount:0,teamRankSum:0,teamRankCount:0,enemyRankSum:0,enemyRankCount:0,rrTotal:0,rrCount:0};
     rb[t].total++;
+    if(Number.isFinite(m.myRR)){rb[t].rrTotal+=m.myRR;rb[t].rrCount++;}
     if(includeLobby&&m.avgRank!=null){rb[t].lobbySum+=m.avgRank;rb[t].lobbyCount++;}
     if(m.avgTeamRank!=null){rb[t].teamRankSum+=m.avgTeamRank;rb[t].teamRankCount++;}
     if(m.avgEnemyRank!=null){rb[t].enemyRankSum+=m.avgEnemyRank;rb[t].enemyRankCount++;}
@@ -5629,8 +5636,8 @@ function renderPerformanceTable(containerId,rows,party){
   if(!rows.length)return;
   const table=document.createElement('table');
   table.className='rank-table'+(party?' duos-table':'');
-  table.innerHTML=`<caption class="rank-sr-only">Your performance grouped by ${party?'party size':'average lobby rank'}</caption>
-    <thead><tr><th scope="col">${party?'Party size':'Lobby rank'}</th><th scope="col">Matches</th>${party?'<th scope="col">Avg Lobby</th>':''}<th scope="col">K/D</th><th scope="col">Avg ACS</th><th scope="col">Win rate</th></tr></thead><tbody></tbody>`;
+  table.innerHTML=`<caption class="rank-sr-only">Your performance grouped by ${party?'party size, including your total recorded RR change':'average lobby rank'}</caption>
+    <thead><tr><th scope="col">${party?'Party size':'Lobby rank'}</th><th scope="col">Matches</th>${party?'<th scope="col">Avg Lobby</th>':''}<th scope="col">K/D</th><th scope="col">Avg ACS</th><th scope="col">Win rate</th>${party?'<th scope="col" title="Your net RR change for this party size">Total RR</th>':''}</tr></thead><tbody></tbody>`;
   const tbody=table.querySelector('tbody');
   rows.forEach(b=>{
     const kd=b.totalDeaths>0?b.totalKills/b.totalDeaths:b.totalKills>0?b.totalKills:null;
@@ -5641,7 +5648,8 @@ function renderPerformanceTable(containerId,rows,party){
       ${party?`<td>${tableLobbyValue(b.lobbySum,b.lobbyCount)}</td>`:''}
       <td class="${kd==null||kd===1?'':kd>1?'rank-positive':'rank-negative'}" title="${b.totalKills} kills / ${b.totalDeaths} deaths">${kd==null?'—':kd.toFixed(2)}</td>
       <td>${b.acsCount?Math.round(b.acsSum/b.acsCount):'—'}</td>
-      <td class="${wr===50?'':wr>50?'rank-positive':'rank-negative'}">${wr}%</td>`;
+      <td class="${wr===50?'':wr>50?'rank-positive':'rank-negative'}">${wr}%</td>
+      ${party?`<td class="${!b.rrCount||b.rrTotal===0?'':b.rrTotal>0?'rank-positive':'rank-negative'}" title="${b.rrCount} of ${b.total} matches have recorded RR change">${b.rrCount?rrSigned(b.rrTotal,0):'—'}</td>`:''}`;
     row.querySelector('.rank-row-name').textContent=b.label||rName(b.tier);
     tbody.appendChild(row);
   });
@@ -5650,6 +5658,7 @@ function renderPerformanceTable(containerId,rows,party){
     b.totalDeaths>0?b.totalKills/b.totalDeaths:b.totalKills>0?b.totalKills:null,
     b.acsCount?b.acsSum/b.acsCount:null,
     b.wins/b.total*100,
+    ...(party?[b.rrCount?b.rrTotal:null]:[]),
   ]);
   highlightTableMaxima(table,values,party?[
     {column:2,label:'average lobby rank'},{column:3,label:'K/D'},
