@@ -692,7 +692,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .server-summary-stat:nth-child(-n+2) dd{overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:break-word;}
 .servers-table-card .rank-table{min-width:760px;}
 .servers-table-card .rank-table th:first-child{min-width:215px;white-space:normal;}
-.server-match-share{margin-left:6px;color:#a1a1aa;font-size:11px;white-space:nowrap;}
+.server-match-share{margin-left:6px;color:inherit;font-size:inherit;white-space:nowrap;}
 .detail-filter-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
 .detail-filter-row[hidden]{display:none;}
 .detail-filter-row .hero-scope-toggle{margin:0;}
@@ -4364,7 +4364,7 @@ function renderServers(matches){
   if(!serverData.length)return;
   const table=document.createElement('table');
   table.className='rank-table';
-  table.innerHTML='<caption class="rank-sr-only">Match results and performance grouped by game server; match share is the percentage of matches with a known server</caption><thead><tr><th scope="col">Server</th><th scope="col">Matches / Share</th><th scope="col">Avg Lobby</th><th scope="col">K/D</th><th scope="col" title="Average combat score">Avg ACS</th><th scope="col" title="Wins divided by wins plus losses; draws excluded">Win rate</th></tr></thead><tbody></tbody>';
+  table.innerHTML='<caption class="rank-sr-only">Match results and performance grouped by game server; match share is the percentage of matches with a known server</caption><thead><tr><th scope="col">Server</th><th scope="col">Matches</th><th scope="col">Avg Lobby</th><th scope="col">K/D</th><th scope="col" title="Average combat score">Avg ACS</th><th scope="col" title="Wins divided by wins plus losses; draws excluded">Win rate</th></tr></thead><tbody></tbody>';
   const tbody=table.tBodies[0];
   serverData.forEach(row=>{
     const tr=document.createElement('tr');
