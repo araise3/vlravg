@@ -5287,25 +5287,15 @@ function renderRRMovement(matches){
   }else{
     // The full chart uses a continuous Elo coordinate, but readers need the
     // familiar RR number below each rank band as well as the rank name above.
+    // Cover the entire axis independently of the shaded bands: Immortal RR
+    // can extend beyond the fixed Immortal 3 band's 300-RR endpoint.
     const tickStep=xMax-xMin<=500?50:100;
-    let lastTickX=-Infinity;
-    rankBands.forEach(({tier,start,end},index)=>{
-      const base=tier>=24?2100:(tier-3)*100;
-      const first=Math.ceil((Math.max(start,xMin)-base)/tickStep)*tickStep;
-      const last=Math.min(end,xMax)-base;
-      for(let rr=first;rr<=last;rr+=tickStep){
-        if(tier<24&&(rr<0||rr>100))continue;
-        const value=base+rr;
-        // A boundary shared by two bands gets one label, and very narrow
-        // bands do not pile numbers on top of their neighbours.
-        if(index<rankBands.length-1&&value===end)continue;
-        const px=x(value);
-        if(px-lastTickX<32)continue;
-        svg.appendChild(node('line',{x1:px,y1:top,x2:px,y2:plotBottom,class:'x-grid','aria-hidden':'true'}));
-        svg.appendChild(node('text',{x:px,y:plotBottom+20,'text-anchor':'middle',class:'tick-label'},String(rr)));
-        lastTickX=px;
-      }
-    });
+    for(let value=Math.ceil(xMin/tickStep)*tickStep;value<=xMax;value+=tickStep){
+      const px=x(value);
+      const rr=rrPositionFromElo(value).rr;
+      svg.appendChild(node('line',{x1:px,y1:top,x2:px,y2:plotBottom,class:'x-grid','aria-hidden':'true'}));
+      svg.appendChild(node('text',{x:px,y:plotBottom+20,'text-anchor':'middle',class:'tick-label'},String(rr)));
+    }
   }
   svg.appendChild(node('text',{x:(left+plotRight)/2,y:height-9,'text-anchor':'middle',class:'axis-label'},
     rrMovementZoomTier==null?'Starting rank + RR':'Starting RR'));

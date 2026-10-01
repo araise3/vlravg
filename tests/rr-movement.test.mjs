@@ -59,3 +59,29 @@ test('zoom uses displayed RR from zero and keeps higher Immortal RR',()=>{
   assert.equal(axis(sample,null).positions[0],2121);
   assert.equal(axis([{m:{myPreRR:2250,myPreTierId:24,myTierId:24}}],24).max,200);
 });
+
+test('full chart labels Immortal RR beyond the shaded 300-RR band',()=>{
+  const element=()=>({
+    children:[],attrs:{},textContent:'',
+    setAttribute(name,value){this.attrs[name]=value;},
+    appendChild(child){this.children.push(child);},
+    replaceChildren(){this.children=[];},
+    addEventListener(){},
+  });
+  const elements=new Map();
+  const document={
+    getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},
+    createElementNS:element,
+  };
+  const renderEnd=html.indexOf('\nlet rrTrendMatches=',end);
+  const render=runInNewContext(html.slice(start,renderEnd)+'\nrenderRRMovement',{
+    document,rrMovementZoomTier:null,avgLabel:()=>'',avgLabelShort:()=>'',
+  });
+  render([120,180,220,280,350,420,460].map(rr=>({
+    myPreRR:2100+rr,myPreTierId:rr<200?25:26,myTierId:26,
+    myRR:18,partySize:1,won:true,
+  })));
+  const svg=elements.get('rr-movement-chart').children[0];
+  const labels=svg.children.filter(node=>node.attrs.class==='tick-label'&&node.attrs.y==='302');
+  assert.deepEqual(labels.map(node=>node.textContent),['100','150','200','250','300','350','400','450']);
+});
