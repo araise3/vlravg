@@ -55,6 +55,11 @@ node scripts/export-rr-corpus.mjs
 python scripts/benchmark-rr-corpus.py .local/rr-corpus/snapshots/<timestamp>/corpus.ndjson.gz --act <act-short>
 ```
 
+The weekly workflow also benchmarks every act superseded by a newer observed
+act and uploads the reports with the snapshot. It does not guess future Riot
+act-end dates. With insufficient clean samples it reports that limitation;
+`ready_to_review` is not authorization to publish the curve automatically.
+
 The clean benchmark uses the preceding **witnessed** game's ending rank as
 starting rank and audits the payout/refund/shield coordinate equation. It
 excludes act transitions, coordinate discrepancies, unknown party evidence,

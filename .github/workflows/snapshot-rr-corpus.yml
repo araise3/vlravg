@@ -21,6 +21,8 @@ jobs:
           CF_D1_DATABASE_ID: ${{ secrets.CF_D1_DATABASE_ID }}
           CORPUS_OUT: .local/rr-corpus/snapshot
         run: node scripts/export-rr-corpus.mjs
+      - name: Compare models for acts superseded by a newer observed act
+        run: python scripts/benchmark-rr-corpus.py .local/rr-corpus/snapshot/corpus.ndjson.gz --completed-acts --out .local/rr-corpus/snapshot/benchmarks
       - uses: actions/upload-artifact@v4
         with:
           name: rr-research-snapshot
