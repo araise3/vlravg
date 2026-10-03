@@ -47,7 +47,7 @@ Growth in tracked accounts should be accompanied by a sweep-duration check.
 immutable gzip NDJSON file plus checksum manifest. It always reads fresh pages
 using `(puuid,match_id)` cursors; it never reuses stale OFFSET caches. Player keys
 are hashes of permanent PUUIDs. Name changes cannot split an account. Snapshot
-artifacts last 90 days; D1 evidence remains. For local exports, set `CF_API_TOKEN`,
+reports last 90 days; raw D1 evidence remains. For local exports, set `CF_API_TOKEN`,
 `CF_ACCOUNT_ID`, and `CF_D1_DATABASE_ID`, then run:
 
 ```powershell
@@ -56,7 +56,10 @@ python scripts/benchmark-rr-corpus.py .local/rr-corpus/snapshots/<timestamp>/cor
 ```
 
 The weekly workflow also benchmarks every act superseded by a newer observed
-act and uploads the reports with the snapshot. It does not guess future Riot
+act and uploads only aggregate reports and the snapshot checksum manifest.
+The raw snapshot is temporary on the runner and is not a GitHub artifact;
+use the local export command to retain raw evidence for further research.
+It does not guess future Riot
 act-end dates. With insufficient clean samples it reports that limitation;
 `ready_to_review` is not authorization to publish the curve automatically.
 
