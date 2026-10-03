@@ -171,22 +171,46 @@ def evaluate(rows):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('snapshot', type=Path)
-    parser.add_argument('--act', required=True)
+    parser.add_argument('--act', help='Act short name, or use --completed-acts')
+    parser.add_argument('--completed-acts', action='store_true', help='Benchmark acts superseded by a newer observed act')
     parser.add_argument('--out', type=Path, default=Path('.local/rr-corpus/benchmark'))
     args = parser.parse_args()
+    if bool(args.act) == bool(args.completed_acts):
+        parser.error('Choose --act or --completed-acts')
     with gzip.open(args.snapshot, 'rt', encoding='utf-8') as stream:
         records = [json.loads(line) for line in stream if line.strip()]
-    rows, audit = eligible_rows(records, args.act)
-    buckets = collections.defaultdict(list)
-    for row in rows:
-        buckets[(row['tier'], row['won'])].append(row)
-    coverage = [dict(starting_tier=tier, won=won, rows=len(seq), players=len({r['player'] for r in seq}))
-                for (tier, won), seq in sorted(buckets.items())]
-    report = dict(act=args.act, snapshot_sha256=hashlib.sha256(args.snapshot.read_bytes()).hexdigest(),
-                  audit=audit, coverage=coverage, evaluation=evaluate(rows))
-    args.out.mkdir(parents=True, exist_ok=True)
-    (args.out / 'benchmark.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
-    print(json.dumps(report, indent=2))
+    checksum = hashlib.sha256(args.snapshot.read_bytes()).hexdigest()
+    dates = {}
+    for rec in records:
+        act = rec['rr'].get('season', {}).get('short')
+        date = rec['rr'].get('date')
+        if act and date:
+            dates[act] = max(dates.get(act, ''), date)
+    active = max(dates, key=dates.get) if dates else None
+    acts = sorted(a for a in dates if a != active) if args.completed_acts else [args.act]
+    reports = []
+    for act in acts:
+        rows, audit = eligible_rows(records, act)
+        buckets = collections.defaultdict(list)
+        for row in rows:
+            buckets[(row['tier'], row['won'])].append(row)
+        coverage = [dict(starting_tier=tier, won=won, rows=len(seq), players=len({r['player'] for r in seq}))
+                    for (tier, won), seq in sorted(buckets.items())]
+        report = dict(act=act, snapshot_sha256=checksum, audit=audit, coverage=coverage, evaluation=evaluate(rows))
+        # Treat upstream labels as data; never use them directly as path segments.
+        directory = args.out / hashlib.sha256(act.encode()).hexdigest()[:12] if args.completed_acts else args.out
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / 'benchmark.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
+        reports.append(dict(act=act, eligible=len(rows), tuning_selected=report['evaluation']['tuning_selected'],
+                            ready_to_review=report['evaluation']['ready_to_review']))
+        if not args.completed_acts:
+            print(json.dumps(report, indent=2))
+    if args.completed_acts:
+        args.out.mkdir(parents=True, exist_ok=True)
+        index = dict(latest_observed_act=active, snapshot_sha256=checksum, reports=reports,
+                     completion_rule='Acts with data earlier than the latest observed act; not a forecast of Riot act-end dates.')
+        (args.out / 'index.json').write_text(json.dumps(index, indent=2), encoding='utf-8')
+        print(json.dumps(index, indent=2))
 
 
 if __name__ == '__main__':
