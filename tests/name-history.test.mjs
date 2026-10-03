@@ -91,6 +91,36 @@ test('RR still refreshes when a name check fails, and the run reports failure',a
   }});
   assert.equal(urls.length,2);assert.equal(result.rr.ok,true);assert.equal(result.ok,false);
 });
+
+test('accounts without a platform discover console RR instead of silently skipping',async()=>{
+  const urls=[];
+  const result=await refreshPlayer(account(),{origin:'https://example.test',sleepImpl:async()=>{},fetchImpl:async url=>{
+    urls.push(url);
+    return Response.json({data:url.includes('/name-history/')
+      ?{puuid,region:'eu',history:[{name:'Alpha',tag:'EU',ended_at:null}]}
+      :{account:{puuid},history:url.includes('/console/')?[{match_id:'console-match',last_change:20}]:[]}});
+  }});
+  assert.equal(result.ok,true);assert.equal(urls.length,3);
+  assert.match(urls[1],/\/eu\/pc\//);assert.match(urls[2],/\/eu\/console\//);
+  assert.equal(result.rr.data.history[0].last_change,20);
+});
+
+test('accounts missing a region fail explicitly rather than count as saved',async()=>{
+  const result=await refreshPlayer({puuid},{origin:'https://example.test',sleepImpl:async()=>{},
+    fetchImpl:async()=>Response.json({}, {status:404})});
+  assert.equal(result.ok,false);assert.equal(result.rr.ok,false);
+  assert.match(result.rr.reason,/region unavailable/);
+});
+
+test('a failed platform probe remains retryable after an empty PC history',async()=>{
+  const result=await refreshPlayer(account(),{origin:'https://example.test',sleepImpl:async()=>{},fetchImpl:async url=>{
+    if(url.includes('/console/'))return Response.json({}, {status:503});
+    return Response.json({data:url.includes('/name-history/')
+      ?{puuid,region:'eu',history:[{name:'Alpha',tag:'EU',ended_at:null}]}
+      :{account:{puuid},history:[]}});
+  }});
+  assert.equal(result.ok,false);assert.equal(result.rr.retryable,true);
+});
 test('429 retries use the proxy wait; malformed successes are failures',async()=>{
   let calls=0;const waits=[];
   const result=await requestJSON('https://example.test',async()=>++calls===1?Response.json({retryAfterMs:4500},{status:429}):Response.json({data:{}}),async ms=>waits.push(ms));
@@ -143,6 +173,29 @@ test('first name-history lookup enrolls a new account for ranked backfill',async
   assert.equal(body.data.backfill.available,true);
   assert.equal(body.data.backfill.platform,'pc');
   assert.equal((await db.prepare('SELECT platform FROM rr_players WHERE puuid=?1').bind(puuid).first()).platform,'pc');
+});
+
+test('RR refresh saves corrections without new match IDs and leaves identical rows untouched',async t=>{
+  const {db,sql}=database(t);
+  const entry={match_id:'existing-match',last_change:15,date:day(1)};
+  sql.prepare('INSERT INTO rr_history(puuid,match_id,data,date) VALUES (?,?,?,?)')
+    .run(puuid,entry.match_id,JSON.stringify(entry),entry.date);
+  sql.exec(`CREATE TABLE rr_write_count(n INTEGER); INSERT INTO rr_write_count VALUES(0);
+    CREATE TRIGGER count_rr_update AFTER UPDATE ON rr_history
+    BEGIN UPDATE rr_write_count SET n=n+1; END;`);
+  const oldCaches=globalThis.caches,oldFetch=globalThis.fetch;
+  globalThis.caches={default:{async match(){return null;},async put(){}}};
+  globalThis.fetch=async()=>Response.json({data:{account:account(),history:[{...entry,last_change:18}]}});
+  t.after(()=>{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;});
+  for(let i=0;i<2;i++){
+    const jobs=[];
+    const response=await onRequestGet({request:new Request(`https://example.test/api/mmr-history-by-puuid/eu/pc/${puuid}`),
+      env:{APP_DB:db,HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});
+    await Promise.all(jobs);
+    assert.equal(response.status,200);
+    assert.equal(JSON.parse(sql.prepare('SELECT data FROM rr_history').get().data).last_change,18);
+  }
+  assert.equal(sql.prepare('SELECT n FROM rr_write_count').get().n,1);
 });
 
 const historicalMatch=(id,name,tag,stamp)=>({metadata:{match_id:id,started_at:stamp},players:[{puuid,name,tag}]});

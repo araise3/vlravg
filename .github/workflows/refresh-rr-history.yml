@@ -81,4 +81,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-        run: gh workflow run backfill-all-names.yml --ref main -f runtime_minutes=300
+        run: gh workflow run backfill-all-names.yml --ref main -f runtime_minutes=30
