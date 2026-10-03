@@ -3,6 +3,8 @@
 import { pathToFileURL } from 'node:url';
 import { readFile } from 'node:fs/promises';
 import { createRequestScheduler } from './request-scheduler.mjs';
+import {loadActivity} from './rr-activity-query.mjs';
+import {pollingPolicy} from '../../lib/rr-activity.mjs';
 
 const DELAY_MS = 0; // Request starts are paced centrally; no extra per-player pause.
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -68,13 +70,14 @@ export async function requestJSON(url, fetchImpl = fetch, sleepImpl = sleep) {
   }
 }
 
-export async function refreshPlayer(player, { origin, fetchImpl = fetch, sleepImpl = sleep }) {
+export async function refreshPlayer(player, { origin, fetchImpl = fetch, sleepImpl = sleep, rrEnabled = true }) {
   const id = encodeURIComponent(player.puuid);
   const name = await requestJSON(`${origin}/api/name-history/${id}`, fetchImpl, sleepImpl);
   if (name.ok && (!Array.isArray(name.data.history) || !name.data.history.length ||
       name.data.puuid !== player.puuid.toLowerCase())) {
     name.ok = false; name.reason = 'invalid name history response';
   }
+  if(!rrEnabled)return {name,rr:{ok:true,skipped:true},ok:name.ok};
   // A failed name check must not prevent RR refreshes. The immutable PUUID
   // also lets RR continue working after a rename or a stale stored Riot ID.
   const region = name.ok ? name.data.region || player.region : player.region;
@@ -146,11 +149,11 @@ export async function listPlayers(env) {
   }
 }
 
-export async function refreshTrackedPlayers(players, { origin, fetchImpl, sleepImpl = sleep, log = console.log }) {
+export async function refreshTrackedPlayers(players, { origin, fetchImpl, sleepImpl = sleep, log = console.log, rrEnabled = true }) {
   let failed = 0;
   const deferred = [];
   for (const [i, player] of players.entries()) {
-    const result = await refreshPlayer(player, { origin, fetchImpl, sleepImpl });
+    const result = await refreshPlayer(player, { origin, fetchImpl, sleepImpl, rrEnabled });
     if (!result.ok) {
       if (result.name.retryable || result.rr.retryable) deferred.push(player);
       else failed++;
@@ -164,7 +167,7 @@ export async function refreshTrackedPlayers(players, { origin, fetchImpl, sleepI
   // the key. Retry those few players after the rest of the daily pass rather
   // than declaring the whole workflow failed and skipping their refresh.
   for (const [i, player] of deferred.entries()) {
-    const result = await refreshPlayer(player, { origin, fetchImpl, sleepImpl });
+    const result = await refreshPlayer(player, { origin, fetchImpl, sleepImpl, rrEnabled });
     if (!result.ok) failed++;
     log(`[retry ${i + 1}/${deferred.length}] ${player.puuid}: name ${result.name.ok ? 'checked' : 'FAILED: ' + result.name.reason}; RR ${result.rr.ok ? result.rr.skipped ? 'not tracked yet' : result.rr.data.history.length + ' matches' : 'FAILED: ' + result.rr.reason}`);
   }
@@ -183,15 +186,16 @@ export async function main(env = process.env) {
   const target=(env.TARGET_PUUID || '').trim().toLowerCase();
   if(target && !PUUID_RE.test(target))throw new Error('Invalid TARGET_PUUID');
   const [trackedPlayers,proPlayers]=await Promise.all([listPlayers(env),loadProPlayers()]);
-  const allPlayers=mergeTrackedPlayers(trackedPlayers,proPlayers);
-  const selected=target?allPlayers.filter(p=>p.puuid.toLowerCase()===target):allPlayers;
+  const allPlayers=mergeTrackedPlayers(await loadActivity(env,trackedPlayers),proPlayers);
+  const selected=target?allPlayers.filter(p=>p.puuid.toLowerCase()===target)
+    :allPlayers.filter(p=>pollingPolicy(p).cohort!=='inactive');
   if(target && !selected.length)throw new Error('Target player is not tracked or in the pro library');
   const players = maxPlayers ? selected.slice(0, maxPlayers) : selected;
-  console.log(`Checking names and RR for ${players.length} account(s): ${trackedPlayers.length} already tracked, ${proPlayers.length} resolved pro-library accounts merged by PUUID.`);
+  console.log(`Checking names for ${players.length} active/unassessed account(s); RR polling is managed by the activity-based corpus collector.`);
   // The public site shares this Henrik key. Leave headroom below its nominal
   // 60 requests/minute ceiling instead of consuming the entire budget here.
   const fetchImpl = createRequestScheduler({ intervalMs: 1500 });
-  const refresh = await refreshTrackedPlayers(players, { origin, fetchImpl });
+  const refresh = await refreshTrackedPlayers(players, { origin, fetchImpl, rrEnabled:Boolean(target) });
   let failed = refresh.failed;
   console.log(`Done: ${players.length - failed} succeeded, ${failed} failed.`);
   // Finish the time-sensitive daily checks for everyone before spending quota

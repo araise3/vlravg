@@ -1,4 +1,4 @@
-# Checks names and keeps persisted RR history growing without site visits.
+# Checks names for active accounts; RR capture uses the activity-based collector.
 #
 # The /api/mmr-history route only ever sees a player when someone searches
 # them, and HenrikDev only returns that player's most recent ~20 games. If a
@@ -59,7 +59,7 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Enroll pros, check names, and refresh RR for every account
+      - name: Enroll new pros and check names for active accounts
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}

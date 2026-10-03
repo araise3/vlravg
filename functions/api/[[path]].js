@@ -96,6 +96,7 @@ import { observeName, readNameHistory } from "../../lib/name-history.mjs";
 import { backfillState, saveBackfillPage, saveStoredBackfillPage, saveStoredMatchDetail, skipStoredMatchDetail } from "../../lib/name-backfill.mjs";
 import { beginCoverageScan, readCoverageScan, recordCoveragePage, finishCoverageScan } from "../../lib/match-coverage.mjs";
 import { collectRR, saveFeatures } from "../../lib/rr-corpus.mjs";
+import { discoverMatchPlayers } from "../../lib/rr-activity.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
 const PREFIX = "/api";
@@ -1000,19 +1001,23 @@ export async function onRequestGet(context) {
   }
   if (!route) return json({ error: "Unknown route" }, 404);
   if(route.rrCollect||route.rrFeature){
+    match.discover=route.rrFeature&&url.searchParams.get('discover')==='1';
     for(let i=1;i<match.length;i++)match[i]=match[i].toLowerCase();
     url.search='';
     if(!env.APP_DB)return json({error:'RR corpus storage unavailable'},503);
     if(route.rrFeature){
       try{
         // Callers can only request trusted RR match IDs already in our database.
-        const known=await env.APP_DB.prepare('SELECT match_id FROM rr_history WHERE puuid=?1 AND match_id=?2').bind(match[2],match[3]).first();
+        const known=await env.APP_DB.prepare('SELECT h.match_id,p.region,p.platform FROM rr_history h LEFT JOIN rr_players p ON p.puuid=h.puuid WHERE h.puuid=?1 AND h.match_id=?2').bind(match[2],match[3]).first();
         if(!known)return json({error:'Unknown RR match'},404);
+        match.discoveryScope={puuid:match[2],region:known.region,platform:known.platform};
         const saved=await env.APP_DB.prepare('SELECT match_id FROM rr_match_features WHERE puuid=?1 AND match_id=?2').bind(match[2],match[3]).first();
-        if(saved)return json({data:{puuid:match[2],match_id:match[3],saved:true}},200);
+        if(saved&&!match.discover)return json({data:{puuid:match[2],match_id:match[3],saved:true}},200);
         const archived=await env.APP_DB.prepare('SELECT payload FROM match_archive WHERE puuid=?1 AND match_id=?2').bind(match[2],match[3]).first();
         if(archived){
-          await saveFeatures(env.APP_DB,await gunzipMatch(archived.payload),match[2]);
+          const record=await gunzipMatch(archived.payload);
+          await saveFeatures(env.APP_DB,record,match[2]);
+          if(match.discover)await discoverMatchPlayers(env.APP_DB,record,match.discoveryScope);
           return json({data:{puuid:match[2],match_id:match[3],saved:true}},200);
         }
       }catch{return json({error:'RR feature storage unavailable'},503);}
@@ -1162,6 +1167,11 @@ export async function onRequestGet(context) {
 
   let bodyText = await upstream.text();
   const contentType = upstream.headers.get("Content-Type") || "application/json";
+  if(route.rrCollect&&[400,403,404].includes(upstream.status)){
+    try{await env.APP_DB.prepare('INSERT INTO rr_candidate_checks(puuid,platform,checked_at) VALUES(?1,?2,?3) ON CONFLICT(puuid,platform) DO UPDATE SET checked_at=excluded.checked_at')
+      .bind(match[3],match[2],new Date().toISOString()).run();}
+    catch{return json({error:'RR discovery retry could not be saved'},503);}
+  }
   if(route.rrFeature&&upstream.status===404){
     try{await env.APP_DB.prepare("INSERT INTO rr_feature_retry(puuid,match_id,next_attempt_at) VALUES(?1,?2,datetime('now','+1 day')) ON CONFLICT(puuid,match_id) DO UPDATE SET attempts=rr_feature_retry.attempts+1,next_attempt_at=datetime('now','+1 day')")
       .bind(match[2],match[3]).run();}
@@ -1255,6 +1265,7 @@ export async function onRequestGet(context) {
       else{
         if(payload.data?.metadata?.match_id?.toLowerCase()!==match[3])throw new Error('Wrong match');
         await saveFeatures(env.APP_DB,payload.data,match[2]);
+        if(match.discover)await discoverMatchPlayers(env.APP_DB,payload.data,match.discoveryScope);
         data={puuid:match[2],match_id:match[3],saved:true};
       }
       const res=json({data},200);res.headers.set('Cache-Control','no-store');return res;

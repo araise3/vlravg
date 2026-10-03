@@ -5,10 +5,12 @@ The `/names` tab shows each observed Riot ID, its first and last observed dates
 returning to an earlier ID starts another period. History belongs to the PUUID
 and spans acts.
 
-`Refresh names and RR history` runs daily at 05:17 UTC. It checks every player
-in `rr_players` by PUUID, then refreshes their RR by PUUID. The schedule is
+`Refresh names and RR history` runs daily at 05:17 UTC. It checks names for
+active and unassessed accounts by PUUID. Inactive accounts are skipped, and RR
+polling is owned by the activity-based corpus collector. A focused manual
+`target_puuid` run also checks RR. The schedule is
 best-effort. A manual run accepts `max_players` for a small verification sample;
-scheduled runs always process everyone. Existing Cloudflare secrets are reused.
+scheduled runs use the activity policy. Existing Cloudflare secrets are reused.
 Accounts without a saved platform are checked on PC and console, stopping once
 RR history is found. Missing regions and failed RR requests are reported as
 failures rather than successful skips. Corrected entries for existing match IDs
