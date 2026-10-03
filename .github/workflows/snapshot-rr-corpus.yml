@@ -25,6 +25,10 @@ jobs:
         run: python scripts/benchmark-rr-corpus.py .local/rr-corpus/snapshot/corpus.ndjson.gz --completed-acts --out .local/rr-corpus/snapshot/benchmarks
       - uses: actions/upload-artifact@v4
         with:
-          name: rr-research-snapshot
-          path: .local/rr-corpus/snapshot/
+          name: rr-research-report
+          # Raw per-match snapshots stay in the ephemeral runner. Persist only
+          # aggregate metrics and the checksum; the source corpus remains in D1.
+          path: |
+            .local/rr-corpus/snapshot/manifest.json
+            .local/rr-corpus/snapshot/benchmarks/
           retention-days: 90
