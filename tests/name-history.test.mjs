@@ -92,6 +92,14 @@ test('RR still refreshes when a name check fails, and the run reports failure',a
   assert.equal(urls.length,2);assert.equal(result.rr.ok,true);assert.equal(result.ok,false);
 });
 
+test('name-only daily refresh does not bypass the activity collector with a second RR fetch',async()=>{
+  const urls=[];
+  const result=await refreshPlayer({...account(),platform:'pc'},{origin:'https://example.test',rrEnabled:false,
+    sleepImpl:async()=>{},fetchImpl:async url=>{urls.push(url);return Response.json({data:{puuid,region:'eu',history:[{name:'Alpha',tag:'EU',ended_at:null}]}});}});
+  assert.equal(result.ok,true);assert.equal(result.rr.skipped,true);assert.equal(urls.length,1);
+  assert.match(urls[0],/\/name-history\//);
+});
+
 test('accounts without a platform discover console RR instead of silently skipping',async()=>{
   const urls=[];
   const result=await refreshPlayer(account(),{origin:'https://example.test',sleepImpl:async()=>{},fetchImpl:async url=>{

@@ -5,6 +5,8 @@ import {readFileSync} from 'node:fs';
 import {collectRR,matchFeatures,saveFeatures} from '../lib/rr-corpus.mjs';
 import {collectPlayers,corpusReport} from '../.github/scripts/collect-rr-corpus.mjs';
 import {onRequestGet} from '../functions/api/[[path]].js';
+import {pollingPolicy,selectPollingPlayers,selectDiscoveryCandidates,discoverMatchPlayers} from '../lib/rr-activity.mjs';
+import {loadActivity,loadCandidates} from '../.github/scripts/rr-activity-query.mjs';
 
 const puuid='11111111-1111-4111-8111-111111111111',mid='22222222-2222-4222-8222-222222222222',season='33333333-3333-4333-8333-333333333333';
 const entry=(id=mid)=>({match_id:id,date:'2026-10-03T00:00:00Z',last_change:20,tier:{id:12},rr:50,season:{id:season,short:'test'}});
@@ -93,4 +95,59 @@ test('collector storage failure returns 503 instead of an apparent saved payout'
   const response=await onRequestGet({request:new Request(`https://test/api/rr-collect/eu/pc/${puuid}`),
     env:{APP_DB:{...db,batch:async()=>{throw new Error('D1 full');}},HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});
   await Promise.all(jobs);assert.equal(response.status,503);
+});
+
+test('activity policy stops inactive accounts and assigns 4/12/24-hour intervals',()=>{
+  const now=Date.parse('2026-10-03T12:00:00Z'),ago=h=>new Date(now-h*3600000).toISOString();
+  const player={puuid,last_played_at:ago(1),checked_at:ago(5),games_7d:12};
+  assert.equal(pollingPolicy(player,now).intervalHours,4);assert.equal(pollingPolicy(player,now).due,true);
+  assert.equal(pollingPolicy({...player,games_7d:4},now).intervalHours,12);
+  assert.equal(pollingPolicy({...player,games_7d:1},now).intervalHours,24);
+  assert.equal(pollingPolicy({...player,last_played_at:ago(200)},now).due,false);
+  assert.equal(pollingPolicy({...player,last_played_at:null},now).due,false);
+  assert.equal(pollingPolicy({puuid},now).due,true);
+  assert.equal(selectPollingPlayers([{...player,last_played_at:ago(200)},player],now).length,1);
+});
+
+test('a paused account wakes once for a newly observed recent roster match',()=>{
+  const now=Date.parse('2026-10-03T12:00:00Z');
+  const player={puuid,last_played_at:'2026-09-01',checked_at:'2026-10-03T05:00:00Z',
+    candidate_played_at:'2026-10-03T04:00:00Z',candidate_observed_at:'2026-10-03T10:00:00Z'};
+  assert.equal(pollingPolicy(player,now).due,true);
+  assert.equal(pollingPolicy({...player,checked_at:'2026-10-03T11:00:00Z'},now).due,false);
+});
+
+test('discovery prioritizes activity within thin rank bands and bounds probes',()=>{
+  const now=Date.parse('2026-10-03T12:00:00Z');
+  const base={platform:'pc',last_played_at:'2026-10-03T00:00:00Z',games_7d:5};
+  const candidates=[{...base,puuid:'weak',tier:3,games_7d:1},{...base,puuid:'strong',tier:3,games_7d:4},
+    {...base,puuid:'high',tier:24,games_7d:20},{...base,puuid:'known',tier:24}];
+  const players=[{...base,puuid:'known',tier:24}];
+  const chosen=selectDiscoveryCandidates(candidates,players,2,now);
+  assert.deepEqual(chosen.map(p=>p.puuid),['strong','weak']);
+  assert.equal(selectDiscoveryCandidates(candidates,players,25,now).some(p=>p.puuid==='known'),false);
+});
+
+test('trusted roster evidence deduplicates fetches and ignores stale matches',async t=>{
+  const {db,sql}=database(t),m=match();
+  const opponent='44444444-4444-4444-8444-444444444444';m.players[1].puuid=opponent;
+  await discoverMatchPlayers(db,m,{puuid,region:'eu',platform:'pc'},'2026-10-03T12:00:00Z');
+  await discoverMatchPlayers(db,m,{puuid,region:'eu',platform:'pc'},'2026-10-03T13:00:00Z');
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_candidate_games').get().n,1);
+  assert.equal(sql.prepare('SELECT observed_at FROM rr_candidate_games').get().observed_at,'2026-10-03T12:00:00Z');
+  assert.equal(await discoverMatchPlayers(db,m,{puuid,region:'eu',platform:'pc'},'2026-10-10T00:00:00Z'),0);
+});
+
+test('activity queries see durable latest RR, count unique candidate games, and honor failed probe cooldown',async t=>{
+  const {db,sql}=database(t);
+  const fresh={...entry(),date:new Date().toISOString()};
+  await collectRR(db,payload([fresh]),{puuid,region:'eu',platform:'pc'});
+  const query=async(_env,query,params=[])=>{const s=db.prepare(query);return (await s.bind(...params).all()).results;};
+  const rows=await loadActivity({},[{puuid,region:'eu',platform:'pc'}],query);
+  assert.equal(rows[0].games_7d,1);assert.equal(rows[0].tier,12);
+  const m=match();m.metadata.started_at=fresh.date;m.players[1].puuid='44444444-4444-4444-8444-444444444444';
+  await discoverMatchPlayers(db,m,{puuid,region:'eu',platform:'pc'});
+  assert.equal((await loadCandidates({},query))[0].games_7d,1);
+  sql.prepare('INSERT INTO rr_candidate_checks VALUES(?,?,?)').run(m.players[1].puuid,'pc',new Date().toISOString());
+  assert.deepEqual(await loadCandidates({},query),[]);
 });

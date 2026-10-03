@@ -3,6 +3,8 @@ import {mkdir,writeFile,appendFile} from 'node:fs/promises';
 import {listPlayers,refreshPlayer,requestJSON} from './refresh-rr-history.mjs';
 import {createRequestScheduler} from './request-scheduler.mjs';
 import {d1Query} from './d1-query.mjs';
+import {loadActivity,loadCandidates} from './rr-activity-query.mjs';
+import {selectPollingPlayers,selectDiscoveryCandidates,pollingPolicy} from '../../lib/rr-activity.mjs';
 
 export async function collectPlayers(players,{origin,fetchImpl,log=console.log,concurrency=4}){
   let index=0,checked=0,gaps=0;
@@ -38,10 +40,18 @@ export async function corpusReport(env,query=d1Query){
     SUM(CASE WHEN json_extract(h.data,'$.last_change')<0 THEN 1 ELSE 0 END) AS losses
     FROM rr_history h LEFT JOIN rr_match_features f ON f.puuid=h.puuid AND f.match_id=h.match_id
     GROUP BY season_id,act,ending_tier ORDER BY act,ending_tier`);
-  const health=await query(env,`SELECT COUNT(*) AS tracked,
-    SUM(CASE WHEN c.checked_at IS NULL OR julianday(c.checked_at)<julianday('now','-8 hours') THEN 1 ELSE 0 END) AS stale,
-    SUM(COALESCE(c.possible_gaps,0)) AS possible_gaps
-    FROM rr_players p LEFT JOIN rr_collection c ON c.puuid=p.puuid AND c.platform=p.platform`);
+  const health=await query(env,`WITH activity AS (
+    SELECT p.puuid,c.checked_at,c.possible_gaps,
+      (SELECT MAX(julianday(date)) FROM rr_history h WHERE h.puuid=p.puuid) AS last_game,
+      (SELECT COUNT(*) FROM rr_history h WHERE h.puuid=p.puuid AND julianday(date)>=julianday('now','-7 days')) AS games
+    FROM rr_players p LEFT JOIN rr_collection c ON c.puuid=p.puuid AND c.platform=p.platform
+  ) SELECT COUNT(*) AS tracked,
+    SUM(CASE WHEN last_game<julianday('now','-7 days') OR (last_game IS NULL AND checked_at IS NOT NULL) THEN 1 ELSE 0 END) AS inactive,
+    SUM(CASE WHEN checked_at IS NULL AND (last_game IS NULL OR last_game>=julianday('now','-7 days')) THEN 1
+      WHEN last_game>=julianday('now','-7 days') AND julianday(checked_at)<=julianday('now')-
+        CASE WHEN games>=10 AND last_game>=julianday('now','-2 days') THEN 4.0/24
+          WHEN games>=3 AND last_game>=julianday('now','-3 days') THEN 12.0/24 ELSE 1 END THEN 1 ELSE 0 END) AS stale,
+    SUM(COALESCE(possible_gaps,0)) AS possible_gaps FROM activity`);
   return {at:new Date().toISOString(),health:health[0],ranks,
     note:'Rank buckets use ending tier for collection monitoring. Model evaluation reconstructs starting rank and excludes ambiguous rows.'};
 }
@@ -50,28 +60,36 @@ export async function main(env=process.env){
   const origin=new URL(env.SITE_ORIGIN||'https://vlravg1.pages.dev').origin;
   const limit=Number(env.DETAIL_LIMIT||1500);
   if(!Number.isSafeInteger(limit)||limit<0||limit>5000)throw new Error('Invalid DETAIL_LIMIT');
-  const players=await listPlayers(env);
-  const times=await d1Query(env,'SELECT puuid,MIN(checked_at) AS checked_at FROM rr_collection GROUP BY puuid');
-  const checked=new Map(times.map(p=>[p.puuid,p.checked_at]));
-  players.sort((a,b)=>(checked.get(a.puuid)||'').localeCompare(checked.get(b.puuid)||''));
+  const tracked=await loadActivity(env,await listPlayers(env));
+  const players=selectPollingPlayers(tracked);
+  const candidates=selectDiscoveryCandidates(await loadCandidates(env),tracked,25);
+  console.log(`Polling ${players.length}/${tracked.length} tracked accounts due by activity; scouting ${candidates.length} recent roster candidates.`);
   const fetchImpl=createRequestScheduler({intervalMs:1500});
   // Capture the irreplaceable rolling payout window before slower detail work.
   const refresh=await collectPlayers(players,{origin,fetchImpl});
+  const scouting=await collectPlayers(candidates,{origin,fetchImpl});
   let details=0,detailFailed=0;
   const pending=limit?await d1Query(env,`SELECT h.puuid,h.match_id,p.region FROM rr_history h
     JOIN rr_players p ON p.puuid=h.puuid LEFT JOIN rr_match_features f ON f.puuid=h.puuid AND f.match_id=h.match_id
     LEFT JOIN rr_feature_retry r ON r.puuid=h.puuid AND r.match_id=h.match_id
-    WHERE f.match_id IS NULL AND p.region IS NOT NULL AND (r.next_attempt_at IS NULL OR r.next_attempt_at<datetime('now'))
+    WHERE f.match_id IS NULL AND p.region IS NOT NULL
+    AND julianday(h.date)>=julianday('now','-7 days')
+    AND (r.next_attempt_at IS NULL OR r.next_attempt_at<datetime('now'))
     ORDER BY h.date DESC,h.puuid,h.match_id LIMIT ?1`,[limit]):[];
   let index=0;
+  const discoveryMatches=new Set();
   async function worker(){while(index<pending.length){
     const row=pending[index++];
-    const result=await requestJSON(`${origin}/api/rr-feature/${row.region}/${row.puuid}/${row.match_id}`,fetchImpl);
+    const discover=discoveryMatches.size<50&&!discoveryMatches.has(row.match_id);
+    if(discover)discoveryMatches.add(row.match_id);
+    const result=await requestJSON(`${origin}/api/rr-feature/${row.region}/${row.puuid}/${row.match_id}${discover?'?discover=1':''}`,fetchImpl);
     if(result.ok&&result.data.saved&&result.data.match_id===row.match_id)details++;
     else{detailFailed++;console.log(`Detail unavailable ${row.puuid}/${row.match_id}: ${result.reason||'invalid receipt'}`);}
   }}
   await Promise.all(Array.from({length:Math.min(4,pending.length)},worker));
-  const report={...await corpusReport(env),refresh,details,detailFailed,detailQueued:pending.length};
+  const activityCounts={};
+  for(const p of tracked){const cohort=pollingPolicy(p).cohort;activityCounts[cohort]=(activityCounts[cohort]||0)+1;}
+  const report={...await corpusReport(env),refresh,scouting,details,detailFailed,detailQueued:pending.length,activityCounts,candidatesScouted:candidates.length};
   await mkdir('.local/rr-corpus',{recursive:true});
   await writeFile('.local/rr-corpus/collection-report.json',JSON.stringify(report,null,2));
   console.log(JSON.stringify(report));

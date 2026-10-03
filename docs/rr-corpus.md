@@ -5,12 +5,35 @@ starting rank after an act. Pooling payouts across accounts alone would blend
 different hidden MMR states; large overall row counts are not sufficient.
 Existing frontend estimates remain in place while evidence accumulates.
 
-`Collect act RR corpus` runs every four hours, reads every `rr_players` account
-with pagination, and captures RR before slower match-detail work. Four workers
+`Collect act RR corpus` runs every four hours, reads the activity index for
+every tracked account, and captures only accounts due under the activity policy
+before slower match-detail work. Four workers
 share a 1.5-second request-start gate and pause together on proxy 429s. It shares
 the workflow lock with the daily name refresh and historical backfill. Historical
 backfill now yields after 30-minute runs and defers continuation when capture is
 waiting. GitHub scheduling is best-effort; a four-hour schedule is not a guarantee.
+
+Polling uses actual ranked-game dates, never the date someone searched an account:
+
+- Frequent: 10+ games in the last week and a game in the last 48 hours; every 4 hours.
+- Regular: 3+ games in the last week and a game in the last 72 hours; every 12 hours.
+- Occasional: a game in the last week; once a day.
+- Inactive: no ranked game in the last week; no routine RR polling or daily name refresh.
+
+Accounts without a prior check get one assessment. Fresh, unseen roster evidence
+can wake an inactive account once, and its returned RR history determines the
+new interval. Existing history is retained. The daily job refreshes names for
+active/unassessed accounts; it no longer fetches RR for everyone. A focused
+manual `target_puuid` run still checks both identity and RR.
+
+Up to 50 recent match rosters per collection run supply discovery evidence via
+`rr_candidate_games`. Only trusted match payloads are accepted; duplicate match
+fetches never count as extra games. Each run probes at most 25 new accounts from
+those rosters, prioritizing observed game frequency within rank bands and giving
+thin bands more slots. A first probe establishes the player's actual last-week
+activity from their RR history; occasional players get fewer subsequent checks.
+Failed/unavailable candidate probes cool down for a day, and failures while
+scouting do not mark successful tracked-account capture as failed.
 
 Henrik returns a rolling window of roughly 20 payouts. Expired unseen payouts
 cannot be recovered from ordinary match history. The collector records the last
@@ -19,7 +42,8 @@ window is a warning, not a count of lost games; season changes can also cause it
 Collection succeeds only after the D1 writes commit; storage failures produce
 503s and failed accounts make the workflow fail visibly.
 
-Apply `migrations/0005_rr_corpus.sql` to the existing APP_DB before deploying.
+Apply `migrations/0005_rr_corpus.sql` and `migrations/0006_rr_activity.sql` to
+the existing APP_DB before deploying.
 No secrets or bindings are added. New tables:
 
 - `rr_collection`: check time and overlap health per account/platform.
@@ -31,7 +55,8 @@ No secrets or bindings are added. New tables:
 - `rr_feature_retry`: unavailable match IDs get a day before their next attempt.
 
 The detail queue joins saved RR to features, reuses existing gzip match archives
-first, and otherwise fetches match-by-ID. It prioritizes newest evidence and
+first, and otherwise fetches match-by-ID. It prioritizes newest evidence from
+the last seven days and
 processes up to 1,500 missing rows per run. Only already-saved RR match IDs are
 accepted. No browser-supplied payout or feature data can enter the corpus.
 Compact feature rows avoid storing a full kill feed for every research sample.
