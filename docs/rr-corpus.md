@@ -37,8 +37,11 @@ accepted. No browser-supplied payout or feature data can enter the corpus.
 Compact feature rows avoid storing a full kill feed for every research sample.
 Payouts and feature evidence have no act-end expiry.
 
-Each run uploads `rr-corpus-coverage`: payouts, unique players, detail coverage,
+With repository variable `RR_REPORT_EXPORT_ENABLED=true`, each run uploads
+`rr-corpus-coverage`: payouts, unique players, detail coverage,
 gains and losses by act/ending tier, plus overdue accounts and possible gaps.
+Artifact exports are disabled until explicitly authorized. Collection and
+analysis still run, and the source evidence remains in D1.
 Ending-tier buckets are collection diagnostics, not model coordinates. Check
 these after rollout; increase detail capacity only if API and D1 budgets permit.
 Growth in tracked accounts should be accompanied by a sweep-duration check.
