@@ -24,6 +24,7 @@ jobs:
       - name: Compare models for acts superseded by a newer observed act
         run: python scripts/benchmark-rr-corpus.py .local/rr-corpus/snapshot/corpus.ndjson.gz --completed-acts --out .local/rr-corpus/snapshot/benchmarks
       - uses: actions/upload-artifact@v4
+        if: ${{ vars.RR_REPORT_EXPORT_ENABLED == 'true' }}
         with:
           name: rr-research-report
           # Raw per-match snapshots stay in the ephemeral runner. Persist only

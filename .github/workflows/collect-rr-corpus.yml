@@ -33,7 +33,7 @@ jobs:
           DETAIL_LIMIT: ${{ inputs.detail_limit || '1500' }}
         run: node .github/scripts/collect-rr-corpus.mjs
       - name: Save corpus coverage and collection failures
-        if: always()
+        if: ${{ always() && vars.RR_REPORT_EXPORT_ENABLED == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: rr-corpus-coverage
