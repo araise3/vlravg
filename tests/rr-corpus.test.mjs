@@ -117,6 +117,13 @@ test('a paused account wakes once for a newly observed recent roster match',()=>
   assert.equal(pollingPolicy({...player,checked_at:'2026-10-03T11:00:00Z'},now).due,false);
 });
 
+test('bounded polling favors relative overdue time so active cohorts cannot starve each other',()=>{
+  const now=Date.parse('2026-10-03T12:00:00Z');
+  const players=[{puuid:'frequent',games_7d:20,last_played_at:'2026-10-03T01:00:00Z',checked_at:'2026-10-03T07:00:00Z'},
+    {puuid:'occasional',games_7d:1,last_played_at:'2026-10-01T01:00:00Z',checked_at:'2026-10-01T01:00:00Z'}];
+  assert.equal(selectPollingPlayers(players,now,1)[0].puuid,'occasional');
+});
+
 test('discovery prioritizes activity within thin rank bands and bounds probes',()=>{
   const now=Date.parse('2026-10-03T12:00:00Z');
   const base={platform:'pc',last_played_at:'2026-10-03T00:00:00Z',games_7d:5};

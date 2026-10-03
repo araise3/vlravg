@@ -25,6 +25,9 @@ can wake an inactive account once, and its returned RR history determines the
 new interval. Existing history is retained. The daily job refreshes names for
 active/unassessed accounts; it no longer fetches RR for everyone. A focused
 manual `target_puuid` run still checks both identity and RR.
+At most 1,000 tracked accounts are polled per run. Due accounts are ordered by
+how overdue they are relative to their interval, then by frequency. This keeps
+sweeps bounded as discovery grows the pool and prevents permanent starvation.
 
 Up to 50 recent match rosters per collection run supply discovery evidence via
 `rr_candidate_games`. Only trusted match payloads are accepted; duplicate match
