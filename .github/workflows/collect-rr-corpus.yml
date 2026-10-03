@@ -1,0 +1,41 @@
+name: Collect act RR corpus
+
+on:
+  schedule:
+    - cron: '37 */4 * * *'
+  workflow_dispatch:
+    inputs:
+      detail_limit:
+        description: 'Maximum missing match feature rows per run (0–5000)'
+        default: '1500'
+
+# All Henrik jobs share the key. Historical backfill yields at short boundaries.
+concurrency:
+  group: refresh-rr-history
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Capture every tracked account, then fill match evidence
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_D1_DATABASE_ID: ${{ secrets.CF_D1_DATABASE_ID }}
+          SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg1.pages.dev' }}
+          DETAIL_LIMIT: ${{ inputs.detail_limit || '1500' }}
+        run: node .github/scripts/collect-rr-corpus.mjs
+      - name: Save corpus coverage and collection failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rr-corpus-coverage
+          path: .local/rr-corpus/collection-report.json
+          retention-days: 90

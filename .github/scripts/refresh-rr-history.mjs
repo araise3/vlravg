@@ -78,13 +78,27 @@ export async function refreshPlayer(player, { origin, fetchImpl = fetch, sleepIm
   // A failed name check must not prevent RR refreshes. The immutable PUUID
   // also lets RR continue working after a rename or a stale stored Riot ID.
   const region = name.ok ? name.data.region || player.region : player.region;
-  let rr = { ok: true, skipped: true };
-  if (region && player.platform) {
-    await sleepImpl(DELAY_MS);
-    rr = await requestJSON(`${origin}/api/mmr-history-by-puuid/${encodeURIComponent(region)}/${encodeURIComponent(player.platform)}/${id}`, fetchImpl, sleepImpl);
-    if (rr.ok && (!Array.isArray(rr.data.history) || rr.data.account?.puuid?.toLowerCase() !== player.puuid.toLowerCase())) {
-      rr.ok = false; rr.reason = 'invalid RR response';
+  let rr = { ok: false, reason: 'account region unavailable' };
+  if (region) {
+    // Older account-only observations have no platform. Probe both supported
+    // platforms rather than silently counting those accounts as refreshed.
+    // The proxy persists the successful platform alongside the RR entries.
+    const platforms = player.platform ? [player.platform] : ['pc', 'console'];
+    let emptyHistory;
+    for (const platform of platforms) {
+      await sleepImpl(DELAY_MS);
+      rr = await requestJSON(`${origin}/api/mmr-history-by-puuid/${encodeURIComponent(region)}/${encodeURIComponent(platform)}/${id}`, fetchImpl, sleepImpl);
+      if (rr.ok && (!Array.isArray(rr.data.history) || rr.data.account?.puuid?.toLowerCase() !== player.puuid.toLowerCase())) {
+        rr.ok = false; rr.reason = 'invalid RR response';
+      }
+      if (rr.ok) rr.platform = platform;
+      if (rr.ok && rr.data.history.length) break;
+      if (rr.ok) emptyHistory = rr;
+      // Quota/network failures must enter the deferred retry pass, not trigger
+      // another platform request or get concealed by an earlier empty result.
+      if (rr.retryable) break;
     }
+    if (!rr.ok && !rr.retryable && emptyHistory) rr = emptyHistory;
   }
   return { name, rr, ok: name.ok && rr.ok };
 }

@@ -95,6 +95,7 @@
 import { observeName, readNameHistory } from "../../lib/name-history.mjs";
 import { backfillState, saveBackfillPage, saveStoredBackfillPage, saveStoredMatchDetail, skipStoredMatchDetail } from "../../lib/name-backfill.mjs";
 import { beginCoverageScan, readCoverageScan, recordCoveragePage, finishCoverageScan } from "../../lib/match-coverage.mjs";
+import { collectRR, saveFeatures } from "../../lib/rr-corpus.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
 const PREFIX = "/api";
@@ -670,6 +671,16 @@ const GLIDE_CAP_MS = 4000;    // don't glide if the resulting spacing would be a
 // Public route -> real upstream HenrikDev path + this route's cache TTL.
 const ROUTES = [
   {
+    match: new RegExp(`^/rr-collect/(eu|na|ap|kr|latam|br)/(pc|console)/(${UUID})$`,'i'),
+    upstream: m=>`/valorant/v2/by-puuid/mmr-history/${m[1]}/${m[2]}/${m[3]}`,
+    rrCollect: true,
+  },
+  {
+    match: new RegExp(`^/rr-feature/(eu|na|ap|kr|latam|br)/(${UUID})/(${UUID})$`,'i'),
+    upstream: m=>`/valorant/v4/match/${m[1]}/${m[3]}`,
+    rrFeature: true,
+  },
+  {
     match: new RegExp(`^/history-by-puuid/([^/]+)/([^/]+)/(${UUID})$`, 'i'),
     upstream: m=>`/valorant/v4/by-puuid/matches/${m[1]}/${m[2]}/${m[3]}`,
     cacheTtl:150,
@@ -817,17 +828,17 @@ async function mergeRRHistory(env, bodyText, waitUntil, route) {
     // rather than failing the whole request over a persistence nice-to-have.
   }
 
-  let hasNew = false;
+  let hasChanges = false;
   for (const h of freshHistory) {
     if (!h?.match_id) continue;
-    if (!stored.has(h.match_id)) hasNew = true;
+    if (JSON.stringify(stored.get(h.match_id)) !== JSON.stringify(h)) hasChanges = true;
     stored.set(h.match_id, h); // fresh data wins on overlap — it's the more current read
   }
 
-  // Only write back when there's actually something new — most requests for
+  // Only write back when there's something new or corrected — most requests for
   // an already-seen player won't add anything, and skipping the write here
   // avoids hammering D1 with redundant writes every cache expiry.
-  if (hasNew) {
+  if (hasChanges) {
     // The whole block is guarded, not just the batch: building a statement
     // dereferences env.APP_DB, so with the binding absent this threw on
     // `.prepare` before the batch's own .catch() could ever apply. Because
@@ -988,6 +999,25 @@ export async function onRequestGet(context) {
     if (m) { route = r; match = m; break; }
   }
   if (!route) return json({ error: "Unknown route" }, 404);
+  if(route.rrCollect||route.rrFeature){
+    for(let i=1;i<match.length;i++)match[i]=match[i].toLowerCase();
+    url.search='';
+    if(!env.APP_DB)return json({error:'RR corpus storage unavailable'},503);
+    if(route.rrFeature){
+      try{
+        // Callers can only request trusted RR match IDs already in our database.
+        const known=await env.APP_DB.prepare('SELECT match_id FROM rr_history WHERE puuid=?1 AND match_id=?2').bind(match[2],match[3]).first();
+        if(!known)return json({error:'Unknown RR match'},404);
+        const saved=await env.APP_DB.prepare('SELECT match_id FROM rr_match_features WHERE puuid=?1 AND match_id=?2').bind(match[2],match[3]).first();
+        if(saved)return json({data:{puuid:match[2],match_id:match[3],saved:true}},200);
+        const archived=await env.APP_DB.prepare('SELECT payload FROM match_archive WHERE puuid=?1 AND match_id=?2').bind(match[2],match[3]).first();
+        if(archived){
+          await saveFeatures(env.APP_DB,await gunzipMatch(archived.payload),match[2]);
+          return json({data:{puuid:match[2],match_id:match[3],saved:true}},200);
+        }
+      }catch{return json({error:'RR feature storage unavailable'},503);}
+    }
+  }
   // The player ID selects trusted match rows for shared storage. It is never
   // sent to HenrikDev and never lets a caller supply match contents.
   const scanId=new RegExp(`^${UUID}$`,'i').test(url.searchParams.get('scan')||'')?url.searchParams.get('scan'):null;
@@ -1056,7 +1086,7 @@ export async function onRequestGet(context) {
 
   const cache = caches.default;
   const cacheKey = new Request(url.toString(), request);
-  const cached = route.nameBackfill || (route.nameHistory && !storedNameHistory.history.length)
+  const cached = route.rrCollect || route.rrFeature || route.nameBackfill || (route.nameHistory && !storedNameHistory.history.length)
     ? null : await cache.match(cacheKey);
   if (cached) {
     if(scanId){
@@ -1132,6 +1162,11 @@ export async function onRequestGet(context) {
 
   let bodyText = await upstream.text();
   const contentType = upstream.headers.get("Content-Type") || "application/json";
+  if(route.rrFeature&&upstream.status===404){
+    try{await env.APP_DB.prepare("INSERT INTO rr_feature_retry(puuid,match_id,next_attempt_at) VALUES(?1,?2,datetime('now','+1 day')) ON CONFLICT(puuid,match_id) DO UPDATE SET attempts=rr_feature_retry.attempts+1,next_attempt_at=datetime('now','+1 day')")
+      .bind(match[2],match[3]).run();}
+    catch{return json({error:'RR retry could not be saved'},503);}
+  }
 
   if (route.nameHistory && upstream.status >= 500 && storedNameHistory.history.length) {
     return savedNameHistoryResponse(storedNameHistory, 'SAVED-REFRESH-DEFERRED', true);
@@ -1212,6 +1247,23 @@ export async function onRequestGet(context) {
     });
   }
 
+  if(upstream.status===200&&(route.rrCollect||route.rrFeature)){
+    try{
+      const payload=JSON.parse(bodyText);
+      let data;
+      if(route.rrCollect)data=await collectRR(env.APP_DB,payload,{region:match[1],platform:match[2],puuid:match[3]});
+      else{
+        if(payload.data?.metadata?.match_id?.toLowerCase()!==match[3])throw new Error('Wrong match');
+        await saveFeatures(env.APP_DB,payload.data,match[2]);
+        data={puuid:match[2],match_id:match[3],saved:true};
+      }
+      const res=json({data},200);res.headers.set('Cache-Control','no-store');return res;
+    }catch{
+      console.error('RR corpus persistence failed');
+      return json({error:'RR corpus could not be saved'},503);
+    }
+  }
+
   const res = new Response(bodyText, {
     status: upstream.status,
     headers: { "Content-Type": contentType },
@@ -1222,7 +1274,7 @@ export async function onRequestGet(context) {
   // the whole point of this rewrite. The client only ever sees success or a
   // 429 with retryAfterMs in the body.
 
-  if (upstream.status === 200 && !route.nameBackfill) {
+  if (upstream.status === 200 && !route.nameBackfill && !route.rrCollect && !route.rrFeature) {
     const cacheRes = new Response(bodyText, {
       status: 200,
       headers: {

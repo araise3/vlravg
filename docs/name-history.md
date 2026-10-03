@@ -9,6 +9,10 @@ and spans acts.
 in `rr_players` by PUUID, then refreshes their RR by PUUID. The schedule is
 best-effort. A manual run accepts `max_players` for a small verification sample;
 scheduled runs always process everyone. Existing Cloudflare secrets are reused.
+Accounts without a saved platform are checked on PC and console, stopping once
+RR history is found. Missing regions and failed RR requests are reported as
+failures rather than successful skips. Corrected entries for existing match IDs
+are saved too, even when the refresh contains no new matches.
 
 Searches also check names, with a one-hour edge cache for account checks. The
 timeline itself is re-read from D1 so backfilled names appear immediately.
@@ -33,10 +37,11 @@ full-match and stored-archive phases have separate cursors.
 Progress and match evidence are saved atomically in one per-player cursor row.
 Subsequent jobs resume the cursor, and completed players are skipped before any API request. Pages rotate
 between players, with oldest-touched players first after a restart. Each run
-has a five-hour budget and dispatches its next run immediately when unfinished
+has a 30-minute budget and dispatches its next run immediately when unfinished
 work remains and progress was made. It stops with an error if remaining players
 cannot make progress. Daily refreshes share the workflow lock and take priority
-at continuation boundaries; afterward they resume the backfill.
+at continuation boundaries. Four-hour RR corpus capture also takes priority;
+the next scheduled backfill resumes the saved cursor if capture interrupts continuation.
 
 Only the earliest and latest observation of each consecutive Riot ID period
 are retained. This preserves displayed date ranges and one-match name changes
