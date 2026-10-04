@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
-import {collectRR,matchFeatures,saveFeatures} from '../lib/rr-corpus.mjs';
+import {collectRR,matchFeatures,saveFeatures,trackRRAccount} from '../lib/rr-corpus.mjs';
 import {collectPlayers,collectMatchFeatures,corpusReport} from '../.github/scripts/collect-rr-corpus.mjs';
 import {onRequestGet} from '../functions/api/[[path]].js';
 import {pollingPolicy,selectPollingPlayers,selectDiscoveryCandidates,discoverMatchPlayers} from '../lib/rr-activity.mjs';
@@ -95,6 +95,103 @@ test('collector storage failure returns 503 instead of an apparent saved payout'
   const response=await onRequestGet({request:new Request(`https://test/api/rr-collect/eu/pc/${puuid}`),
     env:{APP_DB:{...db,batch:async()=>{throw new Error('D1 full');}},HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});
   await Promise.all(jobs);assert.equal(response.status,503);
+});
+
+test('profile account lookups enrol visitors on cache misses and hits without ranked games',async t=>{
+  const {db,sql}=database(t),oldFetch=globalThis.fetch,oldCaches=globalThis.caches;
+  const account={puuid,name:'Alpha',tag:'EU',region:'eu'};
+  let upstreamCalls=0,cached=false;
+  globalThis.caches={default:{async match(){return cached?Response.json({data:account}):null;},async put(){}}};
+  globalThis.fetch=async()=>{upstreamCalls++;return Response.json({data:account});};
+  t.after(()=>{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;});
+  for(const path of ['account/Alpha/EU',`account-by-puuid/${puuid}`]){
+    const jobs=[];
+    const response=await onRequestGet({request:new Request(`https://test/api/${path}`),env:{APP_DB:db,HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});
+    assert.equal(response.status,200);
+    assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_players').get().n,1);
+    assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_history').get().n,0);
+    await Promise.all(jobs);
+    sql.exec('DELETE FROM rr_players');cached=true;
+  }
+  assert.equal(upstreamCalls,1);
+});
+
+test('cached account enrolment cannot overwrite a newer identity or invent ranked activity',async t=>{
+  const {db,sql}=database(t);
+  await trackRRAccount(db,{puuid:puuid.toUpperCase(),name:'Current',tag:'NEW',region:'eu'});
+  const original=sql.prepare('SELECT * FROM rr_players').get();
+  await trackRRAccount(db,{puuid,name:'Old',tag:'OLD',region:'na'});
+  assert.deepEqual(sql.prepare('SELECT * FROM rr_players').get(),original);
+  const query=async(_env,query,params=[])=>{const s=db.prepare(query);return (await s.bind(...params).all()).results;};
+  const [player]=await loadActivity({},[{puuid,region:'eu',platform:null}],query);
+  assert.equal(player.games_7d,0);assert.equal(player.last_played_at,null);
+  assert.equal(pollingPolicy(player).due,true);
+});
+
+test('public RR lookups atomically collect fresh windows and return all previously saved payouts',async t=>{
+  const {db,sql}=database(t),oldFetch=globalThis.fetch,oldCaches=globalThis.caches;
+  const earlier={...entry('earlier'),date:'2026-10-01T00:00:00Z'};
+  await collectRR(db,payload([earlier]),{puuid,region:'eu',platform:'pc'});
+  let fresh=[entry(),{...entry('previous'),date:'2026-10-02T00:00:00Z'}];
+  let cachedResponse=null,cachePuts=0,upstreamCalls=0;
+  globalThis.caches={default:{async match(){return null;},async put(_key,response){cachePuts++;cachedResponse=response.clone();}}};
+  globalThis.fetch=async()=>{upstreamCalls++;return Response.json(payload(fresh),{headers:{'x-ratelimit-remaining':'55'}});};
+  t.after(()=>{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;});
+  for(const path of ['mmr-history/eu/pc/Alpha/EU',`mmr-history-by-puuid/eu/pc/${puuid}`]){
+    const jobs=[];
+    const response=await onRequestGet({request:new Request(`https://test/api/${path}`),env:{APP_DB:db,HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});
+    assert.equal(response.status,200);assert.equal(response.headers.get('x-ratelimit-remaining'),null);
+    assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_history').get().n,3);
+    assert.equal(sql.prepare('SELECT previous_match_id FROM rr_predecessors WHERE match_id=?').get(mid).previous_match_id,'previous');
+    // The older database neighbour was not witnessed in this upstream window.
+    assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_predecessors WHERE match_id=?').get('previous').n,0);
+    assert.deepEqual((await response.json()).data.history.map(h=>h.match_id),[mid,'previous','earlier']);
+    await Promise.all(jobs);
+  }
+  assert.equal(sql.prepare('SELECT checks FROM rr_collection').get().checks,3);
+  // An accumulated cached response is display data, not a new rolling window.
+  globalThis.caches.default.match=async()=>cachedResponse.clone();
+  const response=await onRequestGet({request:new Request('https://test/api/mmr-history/eu/pc/Alpha/EU'),env:{APP_DB:db,HENRIK_KEY:'test'},waitUntil(){}});
+  assert.equal(response.status,200);assert.equal(upstreamCalls,2);assert.equal(cachePuts,2);
+  assert.equal(sql.prepare('SELECT checks FROM rr_collection').get().checks,3);
+});
+
+test('empty public RR windows enrol accounts and checkpoint successful checks',async t=>{
+  const {db,sql}=database(t),oldFetch=globalThis.fetch,oldCaches=globalThis.caches;
+  globalThis.caches={default:{async match(){return null;},async put(){}}};globalThis.fetch=async()=>Response.json(payload([]));
+  t.after(()=>{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;});
+  const jobs=[];
+  const response=await onRequestGet({request:new Request('https://test/api/mmr-history/eu/console/Alpha/EU'),env:{APP_DB:db,HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});
+  assert.equal(response.status,200);assert.equal(sql.prepare('SELECT platform FROM rr_players').get().platform,'console');
+  assert.equal(sql.prepare('SELECT checks FROM rr_collection').get().checks,1);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_history').get().n,0);await Promise.all(jobs);
+});
+
+test('profile persistence failures return 503 without caching success or committing partial RR',async t=>{
+  const {db,sql}=database(t),oldFetch=globalThis.fetch,oldCaches=globalThis.caches;let cachePuts=0;
+  globalThis.caches={default:{async match(){return null;},async put(){cachePuts++;}}};
+  globalThis.fetch=async url=>url.includes('/account/')?Response.json({data:{puuid,name:'Alpha',tag:'EU',region:'eu'}}):Response.json(payload([entry()]));
+  t.after(()=>{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;});
+  const broken={...db,prepare(query){if(query.startsWith('INSERT OR IGNORE INTO rr_players'))throw new Error('storage full');return db.prepare(query);},
+    async batch(){throw new Error('storage full');}};
+  for(const path of ['account/Alpha/EU','mmr-history/eu/pc/Alpha/EU']){
+    const jobs=[];
+    const response=await onRequestGet({request:new Request(`https://test/api/${path}`),env:{APP_DB:broken,HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});
+    assert.equal(response.status,503);await Promise.all(jobs);
+  }
+  assert.equal(cachePuts,0);assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_players').get().n,0);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_history').get().n,0);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_collection').get().n,0);
+});
+
+test('public PUUID lookup rejects mismatched upstream identity before saving evidence',async t=>{
+  const {db,sql}=database(t),oldFetch=globalThis.fetch,oldCaches=globalThis.caches;
+  globalThis.caches={default:{async match(){return null;},async put(){throw new Error('must not cache');}}};
+  globalThis.fetch=async()=>Response.json(payload([entry()]));
+  t.after(()=>{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;});
+  const jobs=[];
+  const response=await onRequestGet({request:new Request(`https://test/api/mmr-history-by-puuid/eu/pc/${season}`),env:{APP_DB:db,HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});
+  assert.equal(response.status,503);assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_history').get().n,0);await Promise.all(jobs);
 });
 
 test('upstream missing match returns a durable deferred receipt; repeat calls respect cooldown and retain RR',async t=>{

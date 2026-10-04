@@ -5,6 +5,23 @@ starting rank after an act. Pooling payouts across accounts alone would blend
 different hidden MMR states; large overall row counts are not sufficient.
 Existing frontend estimates remain in place while evidence accumulates.
 
+Opening a profile automatically enrols its permanent PUUID in `rr_players`
+through the server's account lookup, including edge-cache hits. No ranked
+games or successful RR lookup is required to enrol. Reopening a cached profile
+does not change its recorded identity or count as ranked-game activity.
+
+Fresh public `/api/mmr-history` and `/api/mmr-history-by-puuid` responses use
+the same atomic collector as scheduled capture: they save raw payouts,
+witnessed predecessors and the collection checkpoint before returning success
+or populating the edge cache. The browser still receives all saved RR history.
+Cached accumulated histories are never treated as fresh upstream windows;
+their database neighbours do not prove match adjacency. Storage failures with
+APP_DB bound return 503 and are not cached. Local development without the
+dashboard binding continues to show upstream data.
+
+The existing collection job includes these visitor-discovered accounts under
+the activity policy below and enriches saved payouts with trusted match details.
+
 `Collect act RR corpus` runs every four hours, reads the activity index for
 every tracked account, and captures only accounts due under the activity policy
 before slower match-detail work. Four workers

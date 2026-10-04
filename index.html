@@ -753,6 +753,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-movement-card{padding:20px;border:1px solid var(--surface-border);border-radius:10px;background:#141416;}
 .rr-movement-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;}
 .rr-movement-head h2{margin:0;font-size:18px;font-weight:650;}
+.rr-movement-controls{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px;}
 .rr-movement-count{color:#a1a1aa;font-size:12px;font-variant-numeric:tabular-nums;}
 .rr-movement-legend{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:12px 0 10px;color:#b4b4bd;font-size:11px;}
 .rr-movement-legend span{display:inline-flex;align-items:center;gap:6px;}
@@ -771,6 +772,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-movement-svg .trend-point.positive{stroke:#4ade80;}.rr-movement-svg .trend-point.negative{stroke:#f87171;}.rr-movement-svg .trend-point.neutral{stroke:#a1a1aa;}
 .rr-movement-svg .trend-point,.rr-movement-svg .payout-trend{pointer-events:none;}
 .rr-movement-svg .payout-trend{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;}
+.rr-movement-svg .payout-trend.limited{stroke-dasharray:6 5;}
 .rr-movement-svg .payout-trend.positive{stroke:#4ade80;}.rr-movement-svg .payout-trend.negative{stroke:#f87171;}
 .rr-movement-svg .estimate-hit-area{fill:transparent;stroke:none;pointer-events:all;cursor:help;}
 .rr-movement-svg .estimate-hit-area:focus-visible{stroke:#fff;stroke-width:1.5;outline:none;}
@@ -994,6 +996,12 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
       <section id="rr-movement-section" class="rr-movement-section" hidden aria-labelledby="rr-movement-title">
         <div class="rr-movement-card">
           <div class="rr-movement-head"><h2 id="rr-movement-title">Estimated RR payout by starting rank</h2><span id="rr-movement-count" class="rr-movement-count"></span></div>
+          <div class="rr-movement-controls">
+            <div class="party-size-options" role="radiogroup" aria-label="RR payout chart method">
+              <label><input type="radio" name="rr-movement-method" value="current" checked onchange="setRRMovementMethod(this.value)"><span>Current · 30 RR</span></label>
+              <label><input type="radio" name="rr-movement-method" value="gaussian" onchange="setRRMovementMethod(this.value)"><span>Gaussian · 80 RR</span></label>
+            </div>
+          </div>
           <div class="rr-movement-legend" aria-label="Chart legend">
             <span><i class="rr-legend-line win"></i>Estimated RR / win</span><span><i class="rr-legend-line loss"></i>Estimated RR / loss</span><span><i class="rr-legend-mark"></i>Individual match</span>
           </div>
@@ -5069,7 +5077,7 @@ function rrMovementRows(matches){
   // contribute to win/loss payout comparison. Rank Shield losses still carry
   // their normal last_change, so keep them as evidence for this estimate.
   return matches.filter(m=>
-    isRREligible(m)&&m.myPreRR!=null&&
+    isRREligible(m)&&Number.isFinite(m.myPreRR)&&Number.isFinite(m.myRR)&&
     (m.won===true||m.won===false)
   ).map(m=>{
     return{m,net:m.myRR,penalty:m.myPartyPenalty||0};
@@ -5119,13 +5127,66 @@ function rrPayoutEstimates(visibleRows,allRows,won){
   });
 }
 
-function rrPayoutSegments(estimates){
+// Gaussian 80 RR without an act-mean prior, as evaluated in
+// artifacts/rr-curve-analysis/report.md. Effective n = (sum w)^2 / sum(w^2).
+const RR_GAUSSIAN_BANDWIDTH=80;
+const RR_GAUSSIAN_GRID=5;
+let rrMovementMethod='current';
+let rrMovementMatches=[];
+
+function rrGaussianPayoutEstimates(visibleRows,allRows,won){
+  const pool=allRows.filter(row=>row.m.won===won&&!(row.penalty>0))
+    .sort((a,b)=>a.m.myPreRR-b.m.myPreRR);
+  if(pool.length<3||!visibleRows.length)return[];
+  const min=Math.max(pool[0].m.myPreRR,Math.min(...visibleRows.map(row=>row.m.myPreRR)));
+  const max=Math.min(pool.at(-1).m.myPreRR,Math.max(...visibleRows.map(row=>row.m.myPreRR)));
+  if(min>max)return[];
+  const axisOffset=visibleRows[0].m.myPreRR-visibleRows[0].axisRR;
+  const centers=new Set([min,max]);
+  for(let position=Math.ceil(min/RR_GAUSSIAN_GRID)*RR_GAUSSIAN_GRID;position<=max;position+=RR_GAUSSIAN_GRID)
+    centers.add(position);
+  const actMean=pool.reduce((sum,row)=>sum+Math.abs(row.net),0)/pool.length;
+  return [...centers].sort((a,b)=>a-b).map(position=>{
+    const base={position,axisPosition:position-axisOffset};
+    const averageOnly=pool.length<6;
+    const sample=averageOnly?pool:pool.filter(row=>Math.abs(row.m.myPreRR-position)<=3*RR_GAUSSIAN_BANDWIDTH);
+    let weightTotal=0,weightSquared=0,payoutTotal=0,nearbyN=0;
+    sample.forEach(row=>{
+      const distance=row.m.myPreRR-position;
+      const weight=averageOnly?1:Math.exp(-.5*(distance/RR_GAUSSIAN_BANDWIDTH)**2);
+      weightTotal+=weight;weightSquared+=weight*weight;payoutTotal+=weight*Math.abs(row.net);
+      if(Math.abs(distance)<=RR_GAUSSIAN_BANDWIDTH)nearbyN++;
+    });
+    const effectiveN=weightSquared?weightTotal*weightTotal/weightSquared:0;
+    // Roundoff at an exact effective-n boundary must not alternate styles.
+    if(!averageOnly&&(nearbyN<3||effectiveN+1e-9<5||weightTotal<1))return{...base,payout:null};
+    const dates=sample.map(row=>row.m.startedAtMs).filter(Number.isFinite);
+    return{...base,payout:averageOnly?actMean:payoutTotal/weightTotal,n:sample.length,nearbyN,effectiveN,
+      limited:averageOnly||effectiveN+1e-9<8,averageOnly,
+      min:sample[0].m.myPreRR,max:sample.at(-1).m.myPreRR,
+      minTier:sample[0].m.myPreTierId??sample[0].m.myTierId,
+      maxTier:sample.at(-1).m.myPreTierId??sample.at(-1).m.myTierId,
+      dateMin:dates.length?Math.min(...dates):null,dateMax:dates.length?Math.max(...dates):null};
+  });
+}
+
+function setRRMovementMethod(value){
+  if(!['current','gaussian'].includes(value))return;
+  rrMovementMethod=value;
+  document.querySelector(`input[name="rr-movement-method"][value="${value}"]`).checked=true;
+  renderRRMovement(rrMovementMatches);
+}
+
+function rrPayoutSegments(estimates,maxSpan=RR_ESTIMATE_MAX_SPAN,splitLimited=false){
   const segments=[];
   let current=[],previous=null;
   const flush=()=>{if(current.length)segments.push(current);current=[];};
   estimates.forEach(estimate=>{
     if(estimate.payout==null){flush();previous=null;return;}
-    if(previous!=null&&estimate.position-previous>RR_ESTIMATE_MAX_SPAN)flush();
+    if(previous!=null&&estimate.position-previous>maxSpan)flush();
+    if(splitLimited&&current.length&&!!current.at(-1).limited!==!!estimate.limited){
+      const boundary=current.at(-1);flush();current.push(boundary);
+    }
     current.push(estimate);
     previous=estimate.position;
   });
@@ -5134,6 +5195,7 @@ function rrPayoutSegments(estimates){
 }
 
 function renderRRMovement(matches){
+  rrMovementMatches=matches;
   const section=document.getElementById('rr-movement-section');
   const container=document.getElementById('rr-movement-chart');
   const allRows=rrMovementRows(matches);
@@ -5161,8 +5223,11 @@ function renderRRMovement(matches){
     const offsetPx=(index-(total-1)/2)*spacing;
     return{...row,plotRR:row.axisRR+offsetPx*(axis.max-axis.min)/(plotWidth-2*xInset)};
   });
-  const gainTrend=rrPayoutEstimates(rows,allRows,true),lossTrend=rrPayoutEstimates(rows,allRows,false);
+  const gaussian=rrMovementMethod==='gaussian';
+  const estimate=gaussian?rrGaussianPayoutEstimates:rrPayoutEstimates;
+  const gainTrend=estimate(rows,allRows,true),lossTrend=estimate(rows,allRows,false);
   document.getElementById('rr-movement-trend-note').textContent=
+    gaussian?'Smoothed from recorded payouts this act using Gaussian 80 RR weighting. Dashed lines mean limited data (or an act average with only 3–5 wins or losses); gaps mean insufficient local support. Faint dots are individual matches.':
     'Estimates use 3–5 nearby wins or losses within 30 RR, blended with the act average. Gaps mean sparse data; faint dots are individual matches.';
 
   const penalties=rows.filter(row=>row.penalty>0).length;
@@ -5305,19 +5370,23 @@ function renderRRMovement(matches){
     svg.appendChild(node('circle',{cx:x(row.plotRR),cy:y(Math.abs(row.net)),r:2.5,class:`trend-point ${pointClass}`,'aria-hidden':'true'}));
   });
   for(const [trend,kind,won] of [[gainTrend,'positive',true],[lossTrend,'negative',false]]){
-    rrPayoutSegments(trend).forEach(segment=>{
+    rrPayoutSegments(trend,gaussian?Infinity:RR_ESTIMATE_MAX_SPAN,gaussian).forEach(segment=>{
+      const trendClass=`payout-trend ${kind}${segment.at(-1).limited?' limited':''}`;
       if(segment.length>1){
         const path=segment.map(({axisPosition,payout},index)=>`${index?'L':'M'}${x(axisPosition).toFixed(1)},${y(payout).toFixed(1)}`).join(' ');
-        svg.appendChild(node('path',{d:path,class:`payout-trend ${kind}`,'aria-hidden':'true'}));
+        svg.appendChild(node('path',{d:path,class:trendClass,'aria-hidden':'true'}));
       }else{
         const estimate=segment[0],px=x(estimate.axisPosition),py=y(estimate.payout);
-        svg.appendChild(node('path',{d:`M${(px-3).toFixed(1)},${py.toFixed(1)} L${(px+3).toFixed(1)},${py.toFixed(1)}`,class:`payout-trend ${kind}`,'aria-hidden':'true'}));
+        svg.appendChild(node('path',{d:`M${(px-3).toFixed(1)},${py.toFixed(1)} L${(px+3).toFixed(1)},${py.toFixed(1)}`,class:trendClass,'aria-hidden':'true'}));
       }
     });
     trend.filter(estimate=>estimate.payout!=null).forEach(estimate=>{
       const rangeStart=rrPositionFromElo(estimate.min,estimate.minTier).label;
       const rangeEnd=rrPositionFromElo(estimate.max,estimate.maxTier).label;
-      const detail=`Estimated RR / ${won?'win':'loss'}: ${won?'+':'−'}${estimate.payout.toFixed(1)} RR. ${estimate.n} nearby ${won?'wins':'losses'} from ${rangeStart} to ${rangeEnd}. Act average: ${estimate.actMean.toFixed(1)} RR.`;
+      const dateRange=estimate.dateMin==null?'':` Recorded ${new Date(estimate.dateMin).toLocaleDateString()} to ${new Date(estimate.dateMax).toLocaleDateString()}.`;
+      const support=gaussian?`${estimate.averageOnly?'Act average':'Gaussian 80 RR mean'} from ${estimate.n} ${won?'wins':'losses'} from ${rangeStart} to ${rangeEnd}.${estimate.limited?' Limited data.':''}${dateRange}`:
+        `${estimate.n} nearby ${won?'wins':'losses'} from ${rangeStart} to ${rangeEnd}. Act average: ${estimate.actMean.toFixed(1)} RR.`;
+      const detail=`Estimated RR / ${won?'win':'loss'}: ${won?'+':'−'}${estimate.payout.toFixed(1)} RR. ${support}`;
       const hitArea=node('circle',{cx:x(estimate.axisPosition),cy:y(estimate.payout),r:6,class:'estimate-hit-area',tabindex:'0',role:'img','aria-label':detail});
       hitArea.appendChild(node('title',{},detail));
       svg.appendChild(hitArea);

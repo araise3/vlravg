@@ -34,8 +34,10 @@
  * per match — see mergeRRHistory), so the response — and what gets edge-
  * cached — grows to cover everything ever seen for that player, not just
  * today's rolling window. rr_players tracks identity (region/platform/
- * name/tag) per puuid so the 24h refresh job (refresh-rr-history.mjs) can
- * list who to re-ping without scanning rr_history itself.
+ * name/tag) per puuid. Profile account lookups enrol players even before RR
+ * loads; fresh RR windows commit corpus checkpoints and witnessed predecessors
+ * before a successful response can be cached. The activity-based corpus job
+ * continues capturing these players and enriching their match evidence.
  *
  * HIDDEN-MMR LIVE CALIBRATION: the /history route (flagged foldCalibration)
  * derives per-match payout-model rows from HenrikDev's own trusted response
@@ -95,7 +97,7 @@
 import { observeName, readNameHistory } from "../../lib/name-history.mjs";
 import { backfillState, saveBackfillPage, saveStoredBackfillPage, saveStoredMatchDetail, skipStoredMatchDetail } from "../../lib/name-backfill.mjs";
 import { beginCoverageScan, readCoverageScan, recordCoveragePage, finishCoverageScan } from "../../lib/match-coverage.mjs";
-import { collectRR, saveFeatures } from "../../lib/rr-corpus.mjs";
+import { collectRR, saveFeatures, trackRRAccount } from "../../lib/rr-corpus.mjs";
 import { discoverMatchPlayers } from "../../lib/rr-activity.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
@@ -716,12 +718,15 @@ const ROUTES = [
     match: /^\/account\/([^/]+)\/([^/]+)$/,
     upstream: (m) => `/valorant/v1/account/${m[1]}/${m[2]}`,
     cacheTtl: 86400, // name/tag -> puuid: only changes on a Riot ID rename
+    trackAccount: true,
   },
   {
     // /api/account-by-puuid/{puuid}
     match: /^\/account-by-puuid\/([^/]+)$/,
     upstream: (m) => `/valorant/v1/by-puuid/account/${m[1]}`,
     cacheTtl: 86400, // puuid -> name/tag: only changes on a Riot ID rename
+    trackAccount: true,
+    accountByPuuid: true,
   },
   {
     // /api/rank/{region}/{platform}/{name}/{tag}
@@ -799,94 +804,37 @@ async function putQuota(env, state) {
   }
 }
 
+// Successful profile resolution enrols the permanent account even when
+// the subsequent RR request is unavailable or the account has no games.
+async function trackAccountResponse(env,bodyText,route,match){
+  if(!env.APP_DB)return;
+  const account=JSON.parse(bodyText)?.data;
+  if(route.accountByPuuid&&account?.puuid?.toLowerCase()!==match[1].toLowerCase())throw new Error('Wrong account');
+  await trackRRAccount(env.APP_DB,account);
+}
+
 // Merges a fresh mmr-history response with whatever's already persisted in
 // APP_DB (table rr_history) for this player, returns the (possibly
-// rewritten) body text to send to both the client and the edge cache. Fails
-// open — any parsing surprise just returns the original upstream body
-// untouched, since this is a nice-to-have on top of an already-correct
-// response, not load-bearing.
-async function mergeRRHistory(env, bodyText, waitUntil, route) {
-  let parsed;
-  try {
-    parsed = JSON.parse(bodyText);
-  } catch (e) {
-    return bodyText;
-  }
-  const puuid = parsed?.data?.account?.puuid;
-  const freshHistory = parsed?.data?.history;
-  if (!puuid || !Array.isArray(freshHistory)) return bodyText;
+// rewritten) body text to send to both the client and the edge cache.
+// Only fresh upstream windows establish predecessor/collection evidence;
+// the accumulated response may contain gaps and must never be recollected.
+async function mergeRRHistory(env, bodyText, route) {
+  if(!env.APP_DB)return bodyText; // Local development without dashboard bindings.
+  const parsed=JSON.parse(bodyText);
+  const puuid=parsed?.data?.account?.puuid?.toLowerCase();
+  if(route.puuid&&puuid!==route.puuid)throw new Error('Wrong RR account');
+  await collectRR(env.APP_DB,parsed,{puuid,region:route.region,platform:route.platform});
 
-  let stored = new Map();
-  try {
-    const { results } = await env.APP_DB
+  const stored = new Map();
+  const { results } = await env.APP_DB
       .prepare("SELECT match_id, data FROM rr_history WHERE puuid=?1")
       .bind(puuid).all();
-    for (const r of results || []) {
-      try { stored.set(r.match_id, JSON.parse(r.data)); } catch (e) {}
-    }
-  } catch (e) {
-    // D1 unavailable/misconfigured — proceed as if nothing was stored yet
-    // rather than failing the whole request over a persistence nice-to-have.
-  }
-
-  let hasChanges = false;
-  for (const h of freshHistory) {
-    if (!h?.match_id) continue;
-    if (JSON.stringify(stored.get(h.match_id)) !== JSON.stringify(h)) hasChanges = true;
-    stored.set(h.match_id, h); // fresh data wins on overlap — it's the more current read
-  }
-
-  // Only write back when there's something new or corrected — most requests for
-  // an already-seen player won't add anything, and skipping the write here
-  // avoids hammering D1 with redundant writes every cache expiry.
-  if (hasChanges) {
-    // The whole block is guarded, not just the batch: building a statement
-    // dereferences env.APP_DB, so with the binding absent this threw on
-    // `.prepare` before the batch's own .catch() could ever apply. Because
-    // mergeRRHistory is awaited on the response path (unlike foldCalibration,
-    // which is fire-and-forget), that throw surfaced as a 500 on
-    // /api/mmr-history — the one route every per-match RR figure comes from,
-    // while /rank kept working, so current rank rendered and RR gains didn't.
-    // A local `wrangler pages dev` run hits this every time: D1 lives in the
-    // Cloudflare dashboard, so there's no APP_DB binding without one.
-    try {
-      const rowStmts = freshHistory
-        .filter((h) => h?.match_id)
-        .map((h) =>
-          env.APP_DB.prepare(
-            "INSERT INTO rr_history (puuid, match_id, data, date) VALUES (?1,?2,?3,?4) " +
-            "ON CONFLICT(puuid, match_id) DO UPDATE SET data=excluded.data, date=excluded.date " +
-            "WHERE rr_history.data<>excluded.data OR COALESCE(rr_history.date,'')<>COALESCE(excluded.date,'')"
-          ).bind(puuid, h.match_id, JSON.stringify(h), h.date || null)
-        );
-      waitUntil(
-        env.APP_DB.batch(rowStmts).catch(() => {
-          // Non-fatal — worst case this player's history doesn't grow this round.
-        })
-      );
-    } catch (e) {
-      // D1 unbound/unreachable — fail open exactly like the read above. The
-      // merged history returned below is assembled in memory, so the client
-      // still gets a complete, correct response; it just doesn't get persisted
-      // for next time.
-    }
-  }
-
-  // Enrol and retain the RR platform even for an empty/unchanged match list.
-  // Existing names are owned by the fresh account observations, never rolled
-  // back by possibly older MMR data. Pre-feature rows still get enrolled here.
-  try {
-    await env.APP_DB.prepare(
-      "INSERT INTO rr_players (puuid,region,platform,name,tag,updated_at) VALUES (?1,?2,?3,?4,?5,?6) " +
-      "ON CONFLICT(puuid) DO UPDATE SET platform=excluded.platform,region=COALESCE(rr_players.region,excluded.region)"
-    ).bind(puuid, route?.region || null, route?.platform || null,
-      parsed.data.account.name || route?.name || null, parsed.data.account.tag || route?.tag || null,
-      new Date().toISOString()).run();
-  } catch { /* RR fetching remains available if persistence is unavailable. */ }
+  for (const r of results || [])stored.set(r.match_id,JSON.parse(r.data));
+  // Keep this response current even if a D1 read replica trails the write.
+  for(const h of parsed.data.history)stored.set(h.match_id,h);
 
   // Always hand back the full accumulated set (could already be more than
-  // these ~20 from a prior visit), regardless of whether the write above has
-  // landed yet — it's built from the in-memory merge, not re-read from D1.
+  // these ~20 from a prior visit). The fresh window has already committed.
   parsed.data.history = [...stored.values()].sort(
     (a, b) => new Date(b.date || 0) - new Date(a.date || 0)
   );
@@ -1101,6 +1049,10 @@ export async function onRequestGet(context) {
   const cached = route.rrCollect || route.rrFeature || route.nameBackfill || (route.nameHistory && !storedNameHistory.history.length)
     ? null : await cache.match(cacheKey);
   if (cached) {
+    if(route.trackAccount){
+      try{await trackAccountResponse(env,await cached.clone().text(),route,match);}
+      catch{return json({error:'RR account could not be tracked'},503);}
+    }
     if(scanId){
       try{await observeCoverageResponse(env,scanId,route,match,url,await cached.clone().text());}
       catch{/* Never certify a page whose archive/evidence write failed. */}
@@ -1263,11 +1215,19 @@ export async function onRequestGet(context) {
   }
 
   if (upstream.status === 200 && route.persistRRHistory) {
-    // match[] is /mmr-history/{region}/{platform}/{name}/{tag}
-    bodyText = await mergeRRHistory(env, bodyText, context.waitUntil.bind(context), {
-      region: match[1], platform: match[2],
-      name: route.byPuuid ? null : decodeURIComponent(match[3]), tag: route.byPuuid ? null : decodeURIComponent(match[4]),
-    });
+    try{
+      bodyText = await mergeRRHistory(env, bodyText, {
+        region: match[1], platform: match[2],puuid:route.byPuuid?match[3].toLowerCase():null,
+      });
+    }catch{
+      console.error('Profile RR corpus persistence failed');
+      return json({error:'RR corpus could not be saved'},503);
+    }
+  }
+
+  if(upstream.status===200&&route.trackAccount){
+    try{await trackAccountResponse(env,bodyText,route,match);}
+    catch{return json({error:'RR account could not be tracked'},503);}
   }
 
   if(upstream.status===200&&(route.rrCollect||route.rrFeature)){
