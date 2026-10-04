@@ -55,13 +55,19 @@ No secrets or bindings are added. New tables:
 - `rr_match_features`: compact, trusted match context for every saved payout:
   outcome, act, rounds, starting-match tier, party size/penalty, performance,
   lobby tiers, patch, map, region and platform. Unknown fields remain unknown.
-- `rr_feature_retry`: unavailable match IDs get a day before their next attempt.
+- `rr_feature_retry`: upstream "Match not found" responses are durable deferrals,
+  with retries after 1, 3 and then 7 days. The endpoint respects cooldowns even
+  when called directly. Deferred details retain their raw RR and are reported
+  separately from unexpected request/storage errors.
 
 The detail queue joins saved RR to features, reuses existing gzip match archives
 first, and otherwise fetches match-by-ID. It prioritizes newest evidence from
-the last seven days and
+the last seven days plus due retries of older unavailable matches, and
 processes up to 1,500 missing rows per run. Only already-saved RR match IDs are
 accepted. No browser-supplied payout or feature data can enter the corpus.
+Expected upstream 404s do not fail a run; unexpected detail errors do. Retry
+rows remain eligible after the seven-day recent-match cutoff, so the longer
+backoff cannot silently strand an older payout without future enrichment.
 Compact feature rows avoid storing a full kill feed for every research sample.
 Payouts and feature evidence have no act-end expiry.
 

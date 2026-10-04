@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {collectRR,matchFeatures,saveFeatures} from '../lib/rr-corpus.mjs';
-import {collectPlayers,corpusReport} from '../.github/scripts/collect-rr-corpus.mjs';
+import {collectPlayers,collectMatchFeatures,corpusReport} from '../.github/scripts/collect-rr-corpus.mjs';
 import {onRequestGet} from '../functions/api/[[path]].js';
 import {pollingPolicy,selectPollingPlayers,selectDiscoveryCandidates,discoverMatchPlayers} from '../lib/rr-activity.mjs';
 import {loadActivity,loadCandidates} from '../.github/scripts/rr-activity-query.mjs';
@@ -95,6 +95,51 @@ test('collector storage failure returns 503 instead of an apparent saved payout'
   const response=await onRequestGet({request:new Request(`https://test/api/rr-collect/eu/pc/${puuid}`),
     env:{APP_DB:{...db,batch:async()=>{throw new Error('D1 full');}},HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});
   await Promise.all(jobs);assert.equal(response.status,503);
+});
+
+test('upstream missing match returns a durable deferred receipt; repeat calls respect cooldown and retain RR',async t=>{
+  const {db,sql}=database(t);
+  await collectRR(db,payload([entry()]),{puuid,region:'eu',platform:'pc'});
+  const oldFetch=globalThis.fetch,oldCaches=globalThis.caches;let calls=0;
+  globalThis.caches={default:{}};
+  globalThis.fetch=async()=>{calls++;return Response.json({errors:[{code:26,message:'Match not found'}]},{status:404});};
+  t.after(()=>{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;});
+  async function request(){const jobs=[];const response=await onRequestGet({request:new Request(`https://test/api/rr-feature/eu/${puuid}/${mid}`),
+    env:{APP_DB:db,HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});await Promise.all(jobs);return response;}
+  const first=await request();assert.equal(first.status,200);assert.equal((await first.json()).data.deferred,true);
+  const second=await request();assert.equal((await second.json()).data.saved,false);assert.equal(calls,1);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_history').get().n,1);
+  assert.equal(sql.prepare('SELECT attempts FROM rr_feature_retry').get().attempts,1);
+  // Once due again, repeated upstream absence backs off to three days.
+  sql.prepare("UPDATE rr_feature_retry SET next_attempt_at=datetime('now','-1 minute')").run();
+  await request();assert.equal(calls,2);
+  assert.equal(sql.prepare('SELECT attempts FROM rr_feature_retry').get().attempts,2);
+  assert.ok(sql.prepare("SELECT julianday(next_attempt_at)-julianday('now') AS days FROM rr_feature_retry").get().days>2.99);
+});
+
+test('a failure to persist the missing-match retry remains an actual storage error',async t=>{
+  const {db}=database(t);await collectRR(db,payload([entry()]),{puuid,region:'eu',platform:'pc'});
+  const oldFetch=globalThis.fetch,oldCaches=globalThis.caches;
+  globalThis.caches={default:{}};globalThis.fetch=async()=>Response.json({}, {status:404});
+  t.after(()=>{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;});
+  const broken={...db,prepare(query){if(query.startsWith('INSERT INTO rr_feature_retry'))throw new Error('storage full');return db.prepare(query);}};
+  const jobs=[];
+  const response=await onRequestGet({request:new Request(`https://test/api/rr-feature/eu/${puuid}/${mid}`),
+    env:{APP_DB:broken,HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});
+  await Promise.all(jobs);assert.equal(response.status,503);
+});
+
+test('feature sweep separates saved details, upstream deferrals and malformed errors',async()=>{
+  const rows=['saved','deferred','invalid'].map(match_id=>({puuid,region:'eu',match_id}));
+  const logs=[];
+  const result=await collectMatchFeatures(rows,{origin:'https://test',log:s=>logs.push(s),fetchImpl:async url=>{
+    const id=new URL(url).pathname.split('/').at(-1);
+    return Response.json({data:{puuid,match_id:id,saved:id==='saved',
+      ...(id==='deferred'?{deferred:true,reason:'upstream_match_not_found',retry_at:'2030-01-01 00:00:00'}:{})}});
+  }});
+  assert.deepEqual(result,{saved:1,deferred:1,failed:1});
+  assert.ok(logs.some(s=>s.includes('Detail deferred')&&s.includes('RR retained')));
+  assert.ok(logs.some(s=>s.includes('Detail FAILED')));
 });
 
 test('activity policy stops inactive accounts and assigns 4/12/24-hour intervals',()=>{
