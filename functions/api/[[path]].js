@@ -1020,6 +1020,13 @@ export async function onRequestGet(context) {
           if(match.discover)await discoverMatchPlayers(env.APP_DB,record,match.discoveryScope);
           return json({data:{puuid:match[2],match_id:match[3],saved:true}},200);
         }
+        const deferred=await env.APP_DB.prepare("SELECT next_attempt_at FROM rr_feature_retry WHERE puuid=?1 AND match_id=?2 AND julianday(next_attempt_at)>julianday('now')")
+          .bind(match[2],match[3]).first();
+        if(deferred){
+          const res=json({data:{puuid:match[2],match_id:match[3],saved:false,deferred:true,
+            reason:'upstream_match_not_found',retry_at:deferred.next_attempt_at}},200);
+          res.headers.set('Cache-Control','no-store');return res;
+        }
       }catch{return json({error:'RR feature storage unavailable'},503);}
     }
   }
@@ -1173,8 +1180,14 @@ export async function onRequestGet(context) {
     catch{return json({error:'RR discovery retry could not be saved'},503);}
   }
   if(route.rrFeature&&upstream.status===404){
-    try{await env.APP_DB.prepare("INSERT INTO rr_feature_retry(puuid,match_id,next_attempt_at) VALUES(?1,?2,datetime('now','+1 day')) ON CONFLICT(puuid,match_id) DO UPDATE SET attempts=rr_feature_retry.attempts+1,next_attempt_at=datetime('now','+1 day')")
-      .bind(match[2],match[3]).run();}
+    try{
+      await env.APP_DB.prepare("INSERT INTO rr_feature_retry(puuid,match_id,next_attempt_at) VALUES(?1,?2,datetime('now','+1 day')) ON CONFLICT(puuid,match_id) DO UPDATE SET attempts=rr_feature_retry.attempts+1,next_attempt_at=datetime('now',CASE WHEN rr_feature_retry.attempts=1 THEN '+3 days' ELSE '+7 days' END)")
+        .bind(match[2],match[3]).run();
+      const deferred=await env.APP_DB.prepare('SELECT next_attempt_at FROM rr_feature_retry WHERE puuid=?1 AND match_id=?2').bind(match[2],match[3]).first();
+      const res=json({data:{puuid:match[2],match_id:match[3],saved:false,deferred:true,
+        reason:'upstream_match_not_found',retry_at:deferred.next_attempt_at}},200);
+      res.headers.set('Cache-Control','no-store');return res;
+    }
     catch{return json({error:'RR retry could not be saved'},503);}
   }
 
