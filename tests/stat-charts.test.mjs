@@ -6,7 +6,7 @@ import {runInNewContext,Script} from 'node:vm';
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const teammate=html.slice(html.indexOf('function addTeammateChartStats('),html.indexOf('\nfunction renderTeammates('));
 const margins=html.slice(html.indexOf('function scoreMarginDistribution('),html.indexOf('\nfunction renderMatches('));
-const {addTeammateChartStats:add,teammatePerformanceValue:value,scoreMarginDistribution:distribution}=runInNewContext(teammate+'\n'+margins+'\n({addTeammateChartStats,teammatePerformanceValue,scoreMarginDistribution})');
+const {addTeammateChartStats:add,scoreMarginDistribution:distribution}=runInNewContext(teammate+'\n'+margins+'\n({addTeammateChartStats,scoreMarginDistribution})');
 
 test('RR means use recorded payouts, keeping shields and party penalties and excluding missing data and draws',()=>{
   const target={};
@@ -17,17 +17,6 @@ test('RR means use recorded payouts, keeping shields and party penalties and exc
   assert.equal(s.rrLosses,1);assert.equal(s.rrLossTotal,-18);
 });
 
-test('performance is the searched player’s weighted combat totals',()=>{
-  const target={};
-  add(target,{myStats:{kills:20,deaths:10,score:2000,rounds_played:10},players:[{_kills:99}]});
-  add(target,{myStats:{kills:10,deaths:20,score:9000,rounds_played:30}});
-  add(target,{myStats:{kills:null,deaths:1,score:null,rounds_played:20}});
-  assert.equal(value(target.chartStats,'kd'),1);
-  assert.equal(value(target.chartStats,'acs'),275);
-  assert.equal(target.chartStats.kdGames,2);assert.equal(target.chartStats.acsGames,2);
-  assert.equal(value({kills:12,deaths:0,rounds:0},'kd'),null);
-  assert.equal(value(undefined,'acs'),null);
-});
 
 test('score margins use actual scores without requiring ranks or RR, with explicit draws and outer buckets',()=>{
   const matches=[{myR:13,opR:11},{myR:11,opR:13},{myR:15,opR:15},{myR:13,opR:0},{myR:0,opR:14},
@@ -55,10 +44,10 @@ test('party aggregation attaches your stats only to your same-team party teammat
     document:{getElementById:()=>({style:{}})},computeEncounters:()=>[],
     renderTeammates:()=>{},renderEncounters:()=>{},renderWintradeSignals:()=>{},renderOverviewPreviews:()=>{},updateDetailPages:()=>{}};
   const start=html.indexOf('function buildTeammates('),end=html.indexOf('\nfunction renderEncounters(',start);
-  const helpers=teammate.slice(0,teammate.indexOf("\nlet teammatePerformanceMetric="));
+  const helpers=teammate.slice(0,teammate.indexOf("\nlet teammateChartsExpanded="));
   const rows=runInNewContext(helpers+'\n'+html.slice(start,end)+'\nbuildTeammates();allTeammates',context);
   assert.equal(rows.length,1);assert.equal(rows[0].key,'friend');
   assert.equal(rows[0].kills,99);
-  assert.equal(value(rows[0].chartStats,'kd'),0.5);
+  assert.equal(rows[0].chartStats.kills,undefined);
   assert.equal(rows[0].chartStats.rrWinTotal,21);
 });

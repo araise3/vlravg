@@ -721,7 +721,6 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-trend-head h2{margin:0;font-size:18px;font-weight:650;}
 .rr-trend-total{font-size:16px;font-weight:750;font-variant-numeric:tabular-nums;}
 .rr-trend-total.positive{color:#4ade80;}.rr-trend-total.negative{color:#f87171;}.rr-trend-total.neutral{color:#c4c4cc;}
-.rr-trend-summary-label{margin:18px 0 10px;color:#a1a1aa;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
 .rr-trend-card .rr-summary-stats{padding-bottom:18px;border-bottom:1px solid #303034;}
 .rr-trend-scroll{position:relative;margin-top:16px;overflow:hidden;}
 .rr-trend-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
@@ -780,14 +779,12 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .stat-chart-card{padding:20px;margin:20px 0;border:1px solid var(--surface-border);border-radius:10px;background:#141416;}
 .stat-chart-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
 .stat-chart-head h2{margin:0;font-size:18px;font-weight:650;}
-.stat-chart-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .stat-chart-button{padding:5px 9px;background:#222226;border:1px solid #414145;border-radius:5px;color:#c4c4cc;font:inherit;font-size:11px;cursor:pointer;}
 .stat-chart-button:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
 .stat-chart-legend{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:14px 0 8px;color:#a1a1aa;font-size:11px;}
 .stat-chart-legend span{display:inline-flex;align-items:center;gap:6px;}
 .stat-chart-key{width:16px;height:3px;border-radius:2px;background:#a1a1aa;}
-.stat-chart-key.win{background:#4ade80;}.stat-chart-key.loss{background:#f87171;}.stat-chart-key.draw{background:#facc15;}.stat-chart-key.you{background:#93c5fd;}
-.stat-chart-key.solo{height:0;border-top:1px dashed #e4e4e7;background:none;border-radius:0;}
+.stat-chart-key.win{background:#4ade80;}.stat-chart-key.loss{background:#f87171;}.stat-chart-key.draw{background:#facc15;}
 .stat-chart-scroll{position:relative;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
 .stat-chart-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
 .stat-chart-svg{display:block;width:100%;min-width:650px;height:auto;font-family:var(--font-body);}
@@ -796,8 +793,11 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .stat-chart-svg .value{fill:#e4e4e7;font-size:11px;font-variant-numeric:tabular-nums;}
 .stat-chart-svg .bar{fill:#93c5fd;}.stat-chart-svg .bar.win{fill:#4ade80;}.stat-chart-svg .bar.loss{fill:#f87171;}.stat-chart-svg .bar.draw{fill:#facc15;}
 .stat-chart-svg .bar:focus{outline:none;stroke:#fff;stroke-width:2;}
-.stat-chart-svg .solo-line{stroke:#e4e4e7;stroke-width:1.25;stroke-dasharray:5 5;pointer-events:none;}
 .stat-chart-note{margin:10px 0 0;color:#a1a1aa;font-size:12px;line-height:1.5;}
+#teammate-rr-chart-section{padding:14px 16px;margin:14px 0;}
+#teammate-rr-chart-section .stat-chart-head h2{font-size:16px;}
+#teammate-rr-chart-section .stat-chart-legend{margin:8px 0 4px;}
+#teammate-rr-chart-section .stat-chart-note{font-size:11px;margin-top:6px;}
 @media(max-width:640px){.stat-chart-card{padding:14px;}}
 @media(max-width:600px){
   .rank-table th,.rank-table td,.rank-table.duos-table th,.rank-table.duos-table td{padding-left:14px;padding-right:14px;}
@@ -927,18 +927,6 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
           <div id="teammate-rr-chart" class="stat-chart-scroll" role="region" aria-label="Your average recorded RR per win and loss with each teammate" tabindex="0"></div>
           <p id="teammate-rr-chart-note" class="stat-chart-note"></p>
         </section>
-        <section id="teammate-performance-chart-section" class="stat-chart-card" hidden aria-labelledby="teammate-performance-chart-title">
-          <div class="stat-chart-head"><h2 id="teammate-performance-chart-title">Your performance with teammates</h2><div class="stat-chart-actions">
-            <div class="party-size-options" role="radiogroup" aria-label="Your performance chart metric">
-              <label><input type="radio" name="teammate-performance-metric" value="kd" checked onchange="setTeammatePerformanceMetric(this.value)"><span>Your K/D</span></label>
-              <label><input type="radio" name="teammate-performance-metric" value="acs" onchange="setTeammatePerformanceMetric(this.value)"><span>Your ACS</span></label>
-            </div>
-            <button id="teammate-performance-show-all" class="stat-chart-button" type="button" onclick="toggleTeammateCharts()" hidden>Show all</button>
-          </div></div>
-          <div class="stat-chart-legend"><span><i class="stat-chart-key you"></i>Your performance</span><span><i class="stat-chart-key solo"></i><span id="teammate-solo-label">Solo average</span></span></div>
-          <div id="teammate-performance-chart" class="stat-chart-scroll" role="region" aria-label="Your own combat performance when playing with each teammate" tabindex="0"></div>
-          <p id="teammate-performance-chart-note" class="stat-chart-note"></p>
-        </section>
         <div class="s-card teammates-section" id="teammates-section" style="display:none">
           <div class="table-scroll" id="teammate-list" role="region" aria-label="Teammate comparison table" tabindex="0"></div>
         </div>
@@ -1027,7 +1015,6 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
           </div>
           <strong id="rr-trend-total" class="rr-trend-total"></strong>
         </div>
-        <p class="rr-trend-summary-label">RR summary · eligible games in selected range</p>
         <dl id="rr-summary-stats" class="rr-summary-stats" aria-label="RR summary for selected match range"></dl>
         <div id="rr-trend-chart" class="rr-trend-scroll" role="region" aria-label="RR trend across matches" tabindex="0"></div>
       </section>
@@ -1718,7 +1705,6 @@ function updateDetailPages(){
   const showCard=ready&&allTeammates.length>0;
   document.getElementById('teammates-section').style.display=showCard?'block':'none';
   document.getElementById('teammate-rr-chart-section').hidden=!ready||!allTeammates.some(t=>t.chartStats?.rrWins||t.chartStats?.rrLosses);
-  document.getElementById('teammate-performance-chart-section').hidden=!ready||!allTeammates.some(t=>teammatePerformanceValue(t.chartStats,teammatePerformanceMetric)!=null);
   document.getElementById('encounters-section').hidden=!ready||!allMatches.length;
   document.getElementById('wintrade-section').hidden=!ready||!allMatches.length;
   const empty=document.getElementById('duos-empty');
@@ -4741,37 +4727,15 @@ function renderOverviewPreviews(){
   },'No matches for this act.');
 }
 
-// Aggregate the searched player's stats, separately from their teammates'.
+// Aggregate the searched player's recorded payouts for each party teammate.
 function addTeammateChartStats(target,m){
-  const s=target.chartStats??={rrWins:0,rrLosses:0,rrWinTotal:0,rrLossTotal:0,kills:0,deaths:0,kdGames:0,score:0,rounds:0,acsGames:0};
-  if(Number.isFinite(m.myRR)){
-    if(m.won===true){s.rrWins++;s.rrWinTotal+=m.myRR;}
-    if(m.won===false){s.rrLosses++;s.rrLossTotal+=m.myRR;}
-  }
-  const p=m.myStats;
-  if(Number.isFinite(p?.kills)&&Number.isFinite(p?.deaths)&&p.kills>=0&&p.deaths>=0){
-    s.kills+=p.kills;s.deaths+=p.deaths;s.kdGames++;
-  }
-  if(Number.isFinite(p?.score)&&p.score>=0&&Number.isFinite(p?.rounds_played)&&p.rounds_played>0){
-    s.score+=p.score;s.rounds+=p.rounds_played;s.acsGames++;
-  }
+  const s=target.chartStats??={rrWins:0,rrLosses:0,rrWinTotal:0,rrLossTotal:0};
+  if(!Number.isFinite(m.myRR))return;
+  if(m.won===true){s.rrWins++;s.rrWinTotal+=m.myRR;}
+  if(m.won===false){s.rrLosses++;s.rrLossTotal+=m.myRR;}
 }
-
-function teammatePerformanceValue(stats,metric){
-  if(!stats)return null;
-  return metric==='acs'?(stats.rounds>0?stats.score/stats.rounds:null):
-    stats.deaths>0?stats.kills/stats.deaths:null;
-}
-
-let teammatePerformanceMetric='kd',teammateChartsExpanded=false;
-function setTeammatePerformanceMetric(value){
-  if(!['kd','acs'].includes(value))return;
-  teammatePerformanceMetric=value;
-  document.querySelector(`input[name="teammate-performance-metric"][value="${value}"]`).checked=true;
-  renderTeammateCharts();
-}
+let teammateChartsExpanded=false;
 function toggleTeammateCharts(){teammateChartsExpanded=!teammateChartsExpanded;renderTeammateCharts();}
-
 function statChartNode(tag,attrs={},text=null){
   const el=document.createElementNS('http://www.w3.org/2000/svg',tag);
   Object.entries(attrs).forEach(([key,value])=>el.setAttribute(key,String(value)));
@@ -4782,71 +4746,42 @@ function statChartBar(svg,attrs,detail){
   const bar=statChartNode('rect',{...attrs,tabindex:'0',role:'img','aria-label':detail});
   bar.appendChild(statChartNode('title',{},detail));svg.appendChild(bar);
 }
-
 function renderTeammateCharts(){
-  const rrRows=allTeammates.filter(t=>t.chartStats?.rrWins||t.chartStats?.rrLosses);
-  const perfRows=allTeammates.filter(t=>teammatePerformanceValue(t.chartStats,teammatePerformanceMetric)!=null);
-  const solo={};
-  statMatches.filter(m=>(m.partySize||1)===1).forEach(m=>addTeammateChartStats(solo,m));
-  const baseline=teammatePerformanceValue(solo.chartStats,teammatePerformanceMetric);
-  const format=value=>teammatePerformanceMetric==='kd'?value.toFixed(2):Math.round(value).toString();
-  const soloSamples=teammatePerformanceMetric==='kd'?solo.chartStats?.kdGames:solo.chartStats?.acsGames;
-  document.getElementById('teammate-solo-label').textContent=baseline==null?'Solo average unavailable':`Solo ${format(baseline)} · ${soloSamples} ${soloSamples===1?'match':'matches'}`;
-  for(const [kind,eligible] of [['rr',rrRows],['performance',perfRows]]){
-    const section=document.getElementById(`teammate-${kind}-chart-section`);
-    const container=document.getElementById(`teammate-${kind}-chart`);
-    const button=document.getElementById(`teammate-${kind}-show-all`);
-    section.hidden=!eligible.length;container.replaceChildren();
-    button.hidden=eligible.length<=10;button.textContent=teammateChartsExpanded?'Show top 10':`Show all (${eligible.length})`;
-    button.setAttribute('aria-expanded',String(teammateChartsExpanded));
-    const rows=teammateChartsExpanded?eligible:eligible.slice(0,10);
-    const note=document.getElementById(`teammate-${kind}-chart-note`);
-    const scope=eligible.length>10&&!teammateChartsExpanded?'Top 10 by shared match count. ':'Ordered by shared match count. ';
-    note.textContent=scope+(kind==='rr'?'Saved RR only; draws excluded. Includes actual party penalties and Rank Shield losses.':
-      'Your own stats, with the same act and placement filters as this page. K/D uses total kills ÷ deaths; ACS uses total score ÷ rounds. Games with multiple party teammates appear under each teammate.');
-    if(!rows.length)continue;
-    const width=900,left=kind==='rr'?300:225,right=105,top=32,rowHeight=48,bottom=34,height=top+rows.length*rowHeight+bottom;
-    const plotRight=width-right;
-    const svg=statChartNode('svg',{class:'stat-chart-svg',viewBox:`0 0 ${width} ${height}`,role:'group',
-      'aria-label':kind==='rr'?'Your recorded RR with each teammate':`Your ${teammatePerformanceMetric==='kd'?'K/D':'ACS'} with each teammate`});
-    let maxValue;
-    if(kind==='rr')maxValue=Math.max(5,...rows.flatMap(t=>{
-      const s=t.chartStats;return[s.rrWins?Math.abs(s.rrWinTotal/s.rrWins):0,s.rrLosses?Math.abs(s.rrLossTotal/s.rrLosses):0];
-    }));
-    else maxValue=Math.max(teammatePerformanceMetric==='kd'?1:100,baseline||0,...rows.map(t=>teammatePerformanceValue(t.chartStats,teammatePerformanceMetric)));
-    const max=maxValue*1.18;
-    const x=value=>kind==='rr'?left+(value+max)/(max*2)*(plotRight-left):left+value/max*(plotRight-left);
-    const ticks=kind==='rr'?[-maxValue,-maxValue/2,0,maxValue/2,maxValue]:[0,maxValue/2,maxValue];
-    ticks.forEach(value=>{
-      svg.appendChild(statChartNode('line',{x1:x(value),y1:top-8,x2:x(value),y2:height-bottom,class:value===0?'zero':'grid'}));
-      svg.appendChild(statChartNode('text',{x:x(value),y:16,'text-anchor':'middle',class:'tick'},kind==='rr'?rrSigned(value,1):format(value)));
-    });
-    rows.forEach((t,index)=>{
-      const mid=top+index*rowHeight+18,s=t.chartStats;
-      const name=t.name||'Unknown teammate';
-      const label=statChartNode('text',{x:4,y:mid-2,class:'label'},name.length>26?name.slice(0,25)+'…':name);
-      label.appendChild(statChartNode('title',{},`${name}#${t.tag||''}`));svg.appendChild(label);
-      const samples=kind==='rr'?`${s.rrWins+s.rrLosses} W/L with RR`: `${teammatePerformanceMetric==='kd'?s.kdGames:s.acsGames} with stats`;
-      svg.appendChild(statChartNode('text',{x:4,y:mid+13,class:'muted'},`#${t.tag||''} · ${t.games} shared · ${samples}`));
-      if(kind==='rr'){
-        for(const [total,n,outcome,py] of [[s.rrWinTotal,s.rrWins,'win',mid-13],[s.rrLossTotal,s.rrLosses,'loss',mid+2]]){
-          if(!n)continue;
-          const value=total/n,px=x(value);
-          const detail=`${name}#${t.tag||''}: your average RR / ${outcome} is ${rrSigned(value,1)} from ${n} ${outcome==='win'?'wins':'losses'} with saved RR, across ${t.games} shared matches.`;
-          statChartBar(svg,{x:Math.min(x(0),px),y:py,width:Math.max(1,Math.abs(px-x(0))),height:9,rx:2,class:`bar ${outcome}`},detail);
-          svg.appendChild(statChartNode('text',{x:px+(value<0?-5:5),y:py+8,'text-anchor':value<0?'end':'start',class:'value'},`${rrSigned(value,1)} (${n}${outcome==='win'?'W':'L'})`));
-        }
-      }else{
-        const value=teammatePerformanceValue(s,teammatePerformanceMetric);
-        const detail=`Your ${teammatePerformanceMetric==='kd'?'K/D':'ACS'} with ${name}#${t.tag||''}: ${format(value)}. ${samples}. ${baseline==null?'No solo baseline available.':`Solo average: ${format(baseline)} from ${soloSamples} matches.`}`;
-        statChartBar(svg,{x:left,y:mid-9,width:Math.max(1,x(value)-left),height:14,rx:3,class:'bar'},detail);
-        svg.appendChild(statChartNode('text',{x:x(value)+7,y:mid+2,class:'value'},format(value)));
-      }
-    });
-    if(kind==='performance'&&baseline!=null)svg.appendChild(statChartNode('line',{x1:x(baseline),y1:top-8,x2:x(baseline),y2:height-bottom,class:'solo-line','aria-hidden':'true'}));
-    svg.appendChild(statChartNode('text',{x:(left+plotRight)/2,y:height-8,'text-anchor':'middle',class:'muted'},kind==='rr'?'Your RR per result':`Your ${teammatePerformanceMetric==='kd'?'K/D':'ACS'}`));
-    container.appendChild(svg);
-  }
+  const eligible=allTeammates.filter(t=>t.chartStats?.rrWins||t.chartStats?.rrLosses);
+  const section=document.getElementById('teammate-rr-chart-section');
+  const container=document.getElementById('teammate-rr-chart');
+  const button=document.getElementById('teammate-rr-show-all');
+  section.hidden=!eligible.length;container.replaceChildren();
+  button.hidden=eligible.length<=10;button.textContent=teammateChartsExpanded?'Show top 10':`Show all (${eligible.length})`;
+  button.setAttribute('aria-expanded',String(teammateChartsExpanded));
+  document.getElementById('teammate-rr-chart-note').textContent='Saved RR only · draws excluded · actual party penalties and Rank Shield losses included.';
+  if(!eligible.length)return;
+  const rows=teammateChartsExpanded?eligible:eligible.slice(0,10);
+  const width=900,left=300,right=105,top=25,rowHeight=32,bottom=8,height=top+rows.length*rowHeight+bottom;
+  const plotRight=width-right;
+  const svg=statChartNode('svg',{class:'stat-chart-svg',viewBox:` 0 0 ${width} ${height}`,role:'group','aria-label':'Your recorded RR with each teammate, ordered by shared match count'});
+  const maxValue=Math.max(5,...rows.flatMap(t=>{
+    const s=t.chartStats;return[s.rrWins?Math.abs(s.rrWinTotal/s.rrWins):0,s.rrLosses?Math.abs(s.rrLossTotal/s.rrLosses):0];
+  }));
+  const max=maxValue*1.18,x=value=>left+(value+max)/(max*2)*(plotRight-left);
+  [-maxValue,0,maxValue].forEach(value=>{
+    svg.appendChild(statChartNode('line',{x1:x(value),y1:top-5,x2:x(value),y2:height-bottom,class:value===0?'zero':'grid'}));
+    svg.appendChild(statChartNode('text',{x:x(value),y:12,'text-anchor':'middle',class:'tick'},rrSigned(value,1)));
+  });
+  rows.forEach((t,index)=>{
+    const mid=top+index*rowHeight+14,s=t.chartStats,name=t.name||'Unknown teammate';
+    const label=statChartNode('text',{x:4,y:mid+3,class:'label'},name.length>22?name.slice(0,21)+'…':name);
+    label.appendChild(statChartNode('title',{},`${name}#${t.tag||''} · ${t.games} shared matches`));svg.appendChild(label);
+    svg.appendChild(statChartNode('text',{x:220,y:mid+3,'text-anchor':'end',class:'muted'},`${t.games} games`));
+    for(const [total,n,outcome,py] of [[s.rrWinTotal,s.rrWins,'win',mid-10],[s.rrLossTotal,s.rrLosses,'loss',mid+2]]){
+      if(!n)continue;
+      const value=total/n,px=x(value);
+      const detail=`${name}#${t.tag||''}: your average RR / ${outcome} is ${rrSigned(value,1)} from ${n} ${outcome==='win'?'wins':'losses'} with saved RR, across ${t.games} shared matches.`;
+      statChartBar(svg,{x:Math.min(x(0),px),y:py,width:Math.max(1,Math.abs(px-x(0))),height:7,rx:2,class:`bar ${outcome}`},detail);
+      svg.appendChild(statChartNode('text',{x:px+(value<0?-5:5),y:py+7,'text-anchor':value<0?'end':'start',class:'value'},`${rrSigned(value,1)} (${n}${outcome==='win'?'W':'L'})`));
+    }
+  });
+  container.appendChild(svg);
 }
 
 function renderTeammates(){
