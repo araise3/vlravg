@@ -6,6 +6,10 @@
  *
  * REQUIRED BINDINGS (Pages project → Settings → Variables and Secrets):
  *   HENRIK_KEY (Secret)       your HDEV-... key
+ *   HENRIK_WORKFLOW_KEY (Secret) separate HDEV-... key for GitHub Actions;
+ *                             save the same secret in GitHub Actions too.
+ *                             Optional for the public site. Authenticated jobs
+ *                             use their own quota row and bypass edge caching.
  *   APP_DB     (D1 database)  create a D1 database, run schema.sql against
  *                             it, bind it to APP_DB. Holds every piece of
  *                             persistent state this Function keeps: rate-
@@ -99,6 +103,7 @@ import { backfillState, saveBackfillPage, saveStoredBackfillPage, saveStoredMatc
 import { beginCoverageScan, readCoverageScan, recordCoveragePage, finishCoverageScan } from "../../lib/match-coverage.mjs";
 import { collectRR, saveFeatures, trackRRAccount } from "../../lib/rr-corpus.mjs";
 import { discoverMatchPlayers } from "../../lib/rr-activity.mjs";
+import { workflowAuthorized } from "../../lib/workflow-auth.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
 const PREFIX = "/api";
@@ -775,11 +780,19 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function getQuota(env) {
+async function getQuota(env, workflow=false) {
+  const table=workflow?'workflow_rate_quota':'rate_quota';
   try {
-    const row = await env.APP_DB.prepare(
-      "SELECT remaining, reset_at, last_request_at FROM rate_quota WHERE id=1"
-    ).first();
+    let row;
+    try {
+      row=await env.APP_DB.prepare(`SELECT remaining, reset_at, last_request_at FROM ${table} WHERE id=1`).first();
+    } catch(error) {
+      if(!workflow)throw error;
+      // Existing deployments need no manual schema migration. Only attempt
+      // this when the first read fails; normal requests do no schema writes.
+      await env.APP_DB.prepare("CREATE TABLE IF NOT EXISTS workflow_rate_quota (id INTEGER PRIMARY KEY CHECK (id=1), remaining INTEGER, reset_at INTEGER, last_request_at INTEGER)").run();
+      row=await env.APP_DB.prepare(`SELECT remaining, reset_at, last_request_at FROM ${table} WHERE id=1`).first();
+    }
     if (row) {
       return {
         remaining: row.remaining ?? null,
@@ -788,16 +801,19 @@ async function getQuota(env) {
       };
     }
   } catch (e) {
+    if(workflow)throw e;
     // D1 unavailable/misconfigured — fail open (treat as unknown quota)
     // rather than blocking every request.
   }
   return { remaining: null, resetAt: 0, lastRequestAt: 0 };
 }
 
-async function putQuota(env, state) {
+async function putQuota(env, state, workflow=false) {
   try {
     await env.APP_DB.prepare(
-      "UPDATE rate_quota SET remaining=?1, reset_at=?2, last_request_at=?3 WHERE id=1"
+      workflow
+        ? "INSERT INTO workflow_rate_quota (id,remaining,reset_at,last_request_at) VALUES(1,?1,?2,?3) ON CONFLICT(id) DO UPDATE SET remaining=excluded.remaining,reset_at=excluded.reset_at,last_request_at=excluded.last_request_at"
+        : "UPDATE rate_quota SET remaining=?1, reset_at=?2, last_request_at=?3 WHERE id=1"
     ).bind(state.remaining, state.resetAt, state.lastRequestAt).run();
   } catch (e) {
     // Non-fatal — worst case, pacing is a little less accurate next request.
@@ -908,6 +924,12 @@ function savedNameHistoryResponse(snapshot, source, refreshDeferred = false) {
 
 export async function onRequestGet(context) {
   const { request, env } = context;
+  const workflow=request.headers.has('X-Workflow-Key');
+  if(workflow){
+    if(!env.HENRIK_WORKFLOW_KEY)return json({error:'Workflow proxy misconfigured: HENRIK_WORKFLOW_KEY secret not set'},503);
+    if(!await workflowAuthorized(request,env.HENRIK_WORKFLOW_KEY))return json({error:'Unauthorized workflow request'},401);
+  }
+  const henrikKey=workflow?env.HENRIK_WORKFLOW_KEY:env.HENRIK_KEY;
   const url = new URL(request.url);
   const requestPath = url.pathname.slice(PREFIX.length);
   const coverageMatch=requestPath.match(MATCH_COVERAGE_ROUTE);
@@ -1037,7 +1059,7 @@ export async function onRequestGet(context) {
       }
     } catch { return json({error:'Name backfill storage unavailable'},503); }
   }
-  if (!env.HENRIK_KEY) return json({ error: "Proxy misconfigured: HENRIK_KEY secret not set" }, 500);
+  if (!henrikKey) return json({ error: "Proxy misconfigured: HENRIK_KEY secret not set" }, 500);
   // No hard-fail on a missing APP_DB binding — every function that touches it
   // (getQuota/putQuota/mergeRRHistory/foldCalibration/handleCalibModel) already
   // fails open on its own, so the proxy still works correctly without it, just
@@ -1045,8 +1067,9 @@ export async function onRequestGet(context) {
   // live calibration.
 
   const cache = caches.default;
-  const cacheKey = new Request(url.toString(), request);
-  const cached = route.rrCollect || route.rrFeature || route.nameBackfill || (route.nameHistory && !storedNameHistory.history.length)
+  // Never put workflow credentials in an edge-cache key or cached request.
+  const cacheKey = new Request(url.toString());
+  const cached = workflow || route.rrCollect || route.rrFeature || route.nameBackfill || (route.nameHistory && !storedNameHistory.history.length)
     ? null : await cache.match(cacheKey);
   if (cached) {
     if(route.trackAccount){
@@ -1079,7 +1102,9 @@ export async function onRequestGet(context) {
   // we're already out for this window, decline immediately with a plain
   // wait-time signal instead of burning a real upstream call we know will
   // just 429.
-  let quota = await getQuota(env);
+  let quota;
+  try{quota=await getQuota(env,workflow);}
+  catch{return json({error:'Workflow quota storage unavailable'},503);}
   if (quota.remaining != null && quota.remaining <= 0 && quota.resetAt > Date.now()) {
     if (route.nameHistory && storedNameHistory.history.length) {
       return savedNameHistoryResponse(storedNameHistory, 'SAVED-REFRESH-DEFERRED', true);
@@ -1095,7 +1120,7 @@ export async function onRequestGet(context) {
   let upstream;
   try {
     upstream = await fetch(upstreamUrl, {
-      headers: { Authorization: env.HENRIK_KEY, Accept: "application/json" },
+      headers: { Authorization: henrikKey, Accept: "application/json" },
     });
   } catch (e) {
     if (route.nameHistory && storedNameHistory.history.length) {
@@ -1112,7 +1137,7 @@ export async function onRequestGet(context) {
     resetAt: parsed.resetAt ?? quota.resetAt,
     lastRequestAt: Date.now(),
   };
-  context.waitUntil(putQuota(env, nextQuota));
+  context.waitUntil(putQuota(env, nextQuota, workflow));
 
   if (upstream.status === 429) {
     if (route.nameHistory && storedNameHistory.history.length) {
@@ -1253,12 +1278,12 @@ export async function onRequestGet(context) {
     headers: { "Content-Type": contentType },
   });
   res.headers.set("X-Proxy-Cache", "MISS");
-  if (route.nameHistory || route.nameBackfill) res.headers.set('Cache-Control','no-store');
+  if (workflow || route.nameHistory || route.nameBackfill) res.headers.set('Cache-Control','no-store');
   // Deliberately no rate-limit headers of any kind on the response — that's
   // the whole point of this rewrite. The client only ever sees success or a
   // 429 with retryAfterMs in the body.
 
-  if (upstream.status === 200 && !route.nameBackfill && !route.rrCollect && !route.rrFeature) {
+  if (upstream.status === 200 && !workflow && !route.nameBackfill && !route.rrCollect && !route.rrFeature) {
     const cacheRes = new Response(bodyText, {
       status: 200,
       headers: {

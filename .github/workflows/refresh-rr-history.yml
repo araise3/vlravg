@@ -10,6 +10,8 @@
 # in the same resumable historical name backfill as every other account.
 #
 # REQUIRED REPO SECRETS (Settings -> Secrets and variables -> Actions):
+#   HENRIK_WORKFLOW_KEY separate HenrikDev key; save the same secret in the
+#                       Cloudflare Pages production environment before deploy
 #   CF_API_TOKEN       Cloudflare API token with "D1: Read" on the account
 #                      that owns the database (see functions/api/[[path]].js's
 #                      header comment for the APP_DB binding)
@@ -64,6 +66,7 @@ jobs:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_D1_DATABASE_ID: ${{ secrets.CF_D1_DATABASE_ID }}
+          HENRIK_WORKFLOW_KEY: ${{ secrets.HENRIK_WORKFLOW_KEY }}
           SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg1.pages.dev' }}
           MAX_PLAYERS: ${{ inputs.max_players || '0' }}
           TARGET_PUUID: ${{ inputs.target_puuid || '' }}

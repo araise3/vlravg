@@ -40,13 +40,15 @@ export async function drainBackfill(players,{origin,fetchImpl=createRequestSched
 }
 
 export async function main(env=process.env){
-  for(const key of ['CF_API_TOKEN','CF_ACCOUNT_ID','CF_D1_DATABASE_ID'])if(!env[key])throw new Error(`Missing required secret: ${key}`);
+  for(const key of ['CF_API_TOKEN','CF_ACCOUNT_ID','CF_D1_DATABASE_ID','HENRIK_WORKFLOW_KEY'])if(!env[key])throw new Error(`Missing required secret: ${key}`);
   const minutes=Number(env.RUNTIME_MINUTES||300);
   if(!Number.isSafeInteger(minutes)||minutes<1||minutes>300)throw new Error('RUNTIME_MINUTES must be between 1 and 300');
   const deadline=Date.now()+minutes*60000;
   const players=await listPlayers(env);
   console.log(`Backfilling all ${players.length} tracked players from live and stored match indexes; four workers share a 60 request/minute ceiling and proxy cooldowns.`);
-  const result=await drainBackfill(players,{origin:new URL(env.SITE_ORIGIN||'https://vlravg1.pages.dev').origin,deadline});
+  const origin=new URL(env.SITE_ORIGIN||'https://vlravg1.pages.dev').origin;
+  const fetchImpl=createRequestScheduler({workflowKey:env.HENRIK_WORKFLOW_KEY,origin});
+  const result=await drainBackfill(players,{origin,deadline,fetchImpl});
   console.log(JSON.stringify(result));
   if(env.GITHUB_OUTPUT)appendFileSync(env.GITHUB_OUTPUT,`continue=${result.continue}\nremaining=${result.remaining}\n`);
   if(env.GITHUB_STEP_SUMMARY)appendFileSync(env.GITHUB_STEP_SUMMARY,

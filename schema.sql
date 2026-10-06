@@ -14,6 +14,15 @@ CREATE TABLE IF NOT EXISTS rate_quota (
 );
 INSERT OR IGNORE INTO rate_quota (id, remaining, reset_at, last_request_at) VALUES (1, NULL, 0, 0);
 
+-- Dedicated GitHub Actions Henrik key; also created lazily by the proxy for
+-- existing deployments. The public site's quota remains in rate_quota.
+CREATE TABLE IF NOT EXISTS workflow_rate_quota (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  remaining INTEGER,
+  reset_at INTEGER,
+  last_request_at INTEGER
+);
+
 -- RR-history persistence (was KV key "rrhist:{puuid}", one JSON blob per
 -- player). One row per match instead of one blob per player — a fresh
 -- upstream entry for an existing match_id just overwrites via ON CONFLICT,

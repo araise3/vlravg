@@ -714,9 +714,8 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-record-separator{color:var(--muted);font-weight:400;}
 .rr-score-heading{font-size:18px;font-weight:650;margin:30px 0 16px;}
 .rr-score-note{font-size:13px;line-height:1.6;color:#a1a1aa;margin:0 0 16px;max-width:760px;}
-.rr-score-empty{padding:20px;color:#a1a1aa;font-size:13px;}
 .rr-trend-card{margin:0 0 24px;padding:20px;border:1px solid var(--surface-border);border-radius:10px;background:#141416;}
-.rr-trend-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.rr-trend-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
 .rr-trend-head-main{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-width:0;}
 .rr-trend-head h2{margin:0;font-size:18px;font-weight:650;}
 .rr-trend-total{font-size:16px;font-weight:750;font-variant-numeric:tabular-nums;}
@@ -779,12 +778,15 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .stat-chart-card{padding:20px;margin:20px 0;border:1px solid var(--surface-border);border-radius:10px;background:#141416;}
 .stat-chart-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
 .stat-chart-head h2{margin:0;font-size:18px;font-weight:650;}
-.stat-chart-button{padding:5px 9px;background:#222226;border:1px solid #414145;border-radius:5px;color:#c4c4cc;font:inherit;font-size:11px;cursor:pointer;}
-.stat-chart-button:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
 .stat-chart-legend{display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin:14px 0 8px;color:#a1a1aa;font-size:11px;}
 .stat-chart-legend span{display:inline-flex;align-items:center;gap:6px;}
 .stat-chart-key{width:16px;height:3px;border-radius:2px;background:#a1a1aa;}
 .stat-chart-key.win{background:#4ade80;}.stat-chart-key.loss{background:#f87171;}.stat-chart-key.draw{background:#facc15;}
+.stat-chart-key.rr{width:8px;height:8px;border:2px solid #e4e4e7;border-radius:50%;background:#141416;}
+.stat-chart-svg .rr-average-line{fill:none;stroke:#e4e4e7;stroke-width:2;stroke-dasharray:4 4;pointer-events:none;}
+.stat-chart-svg .rr-average-point{fill:#141416;stroke:#e4e4e7;stroke-width:2;cursor:help;}
+.stat-chart-svg .rr-average-point:focus-visible{outline:none;stroke:#fff;stroke-width:4;}
+#score-margin-chart .bar{fill-opacity:.65;}
 .stat-chart-scroll{position:relative;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
 .stat-chart-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
 .stat-chart-svg{display:block;width:100%;min-width:650px;height:auto;font-family:var(--font-body);}
@@ -794,10 +796,6 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .stat-chart-svg .bar{fill:#93c5fd;}.stat-chart-svg .bar.win{fill:#4ade80;}.stat-chart-svg .bar.loss{fill:#f87171;}.stat-chart-svg .bar.draw{fill:#facc15;}
 .stat-chart-svg .bar:focus{outline:none;stroke:#fff;stroke-width:2;}
 .stat-chart-note{margin:10px 0 0;color:#a1a1aa;font-size:12px;line-height:1.5;}
-#teammate-rr-chart-section{padding:14px 16px;margin:14px 0;}
-#teammate-rr-chart-section .stat-chart-head h2{font-size:16px;}
-#teammate-rr-chart-section .stat-chart-legend{margin:8px 0 4px;}
-#teammate-rr-chart-section .stat-chart-note{font-size:11px;margin-top:6px;}
 @media(max-width:640px){.stat-chart-card{padding:14px;}}
 @media(max-width:600px){
   .rank-table th,.rank-table td,.rank-table.duos-table th,.rank-table.duos-table td{padding-left:14px;padding-right:14px;}
@@ -921,12 +919,6 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
       <div id="party-size-list" class="table-scroll" role="region" aria-label="Party size comparison table" tabindex="0"></div>
     </section>
     <div id="duos-card-host">
-        <section id="teammate-rr-chart-section" class="stat-chart-card" hidden aria-labelledby="teammate-rr-chart-title">
-          <div class="stat-chart-head"><h2 id="teammate-rr-chart-title">Your RR with teammates</h2><button id="teammate-rr-show-all" class="stat-chart-button" type="button" onclick="toggleTeammateCharts()" hidden>Show all</button></div>
-          <div class="stat-chart-legend"><span><i class="stat-chart-key win"></i>RR / win</span><span><i class="stat-chart-key loss"></i>RR / loss</span></div>
-          <div id="teammate-rr-chart" class="stat-chart-scroll" role="region" aria-label="Your average recorded RR per win and loss with each teammate" tabindex="0"></div>
-          <p id="teammate-rr-chart-note" class="stat-chart-note"></p>
-        </section>
         <div class="s-card teammates-section" id="teammates-section" style="display:none">
           <div class="table-scroll" id="teammate-list" role="region" aria-label="Teammate comparison table" tabindex="0"></div>
         </div>
@@ -1029,11 +1021,13 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
         </div>
       </section>
       <div class="s-card rr-table-card"><div id="rr-rank-table" class="table-scroll" role="region" aria-label="RR by player rank" tabindex="0"></div></div>
-      <section aria-labelledby="rr-score-title">
-        <h2 id="rr-score-title" class="rr-score-heading">RR by scoreline</h2>
-        <div class="s-card rr-table-card"><div id="rr-score-table" class="table-scroll" role="region" aria-label="RR by match scoreline" tabindex="0"></div></div>
-      </section>
     </div>
+    <section id="score-margin-chart-section" class="stat-chart-card" hidden aria-labelledby="score-margin-chart-title">
+      <div class="stat-chart-head"><h2 id="score-margin-chart-title">Score margin &amp; RR</h2><span id="score-margin-chart-count" class="rr-movement-count"></span></div>
+      <div class="stat-chart-legend"><span><i class="stat-chart-key loss"></i>Losses</span><span><i class="stat-chart-key draw"></i>Draws</span><span><i class="stat-chart-key win"></i>Wins</span><span><i class="stat-chart-key rr"></i>Average RR</span></div>
+      <div id="score-margin-chart" class="stat-chart-scroll" role="region" aria-label="Match counts and average RR by round margin" tabindex="0"></div>
+      <p class="stat-chart-note">Bars: all scored matches this act, including placements (left axis). Points: average recorded RR for eligible wins and losses, excluding placements, unrated ranks and 5-stacks (right axis). Hover or focus for exact scorelines and RR coverage. Overtime wins share the ±2 margin; draws sit at 0.</p>
+    </section>
     <div id="rr-empty" class="page-empty" role="status">Search for a player above to explore their RR breakdown.</div>
   </main>
   <main id="matches-page" class="detail-page" hidden aria-labelledby="matches-title">
@@ -1045,12 +1039,6 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
     <div id="matches-empty" class="page-empty" role="status">Search for a player above to explore their match history.</div>
     <div id="match-list-section" style="display:none">
       <div id="match-history-summary" class="mh-summary" aria-label="Match history summary"></div>
-      <section id="score-margin-chart-section" class="stat-chart-card" hidden aria-labelledby="score-margin-chart-title">
-        <div class="stat-chart-head"><h2 id="score-margin-chart-title">Score-margin distribution</h2><span id="score-margin-chart-count" class="rr-movement-count"></span></div>
-        <div class="stat-chart-legend"><span><i class="stat-chart-key loss"></i>Losses</span><span><i class="stat-chart-key draw"></i>Draws</span><span><i class="stat-chart-key win"></i>Wins</span></div>
-        <div id="score-margin-chart" class="stat-chart-scroll" role="region" aria-label="Match counts by winning or losing round margin" tabindex="0"></div>
-        <p class="stat-chart-note">Your rounds minus enemy rounds: close games are near zero; wider wins and losses are farther out. Includes all scored matches this act, including placements.</p>
-      </section>
       <div class="mh-list-heading"><span>Match log</span><span>Newest first · Select a match for the roster</span></div>
       <div id="matches-container"></div>
       <button class="load-more-btn" id="load-more-btn" style="display:none" onclick="loadMoreMatches()">Load More</button>
@@ -1666,8 +1654,10 @@ function updateDetailPages(){
   document.querySelector('.page-nav').hidden=!ready&&nameHistoryState!=='ready';
   const hasRR=ready&&allMatches.length>0&&rrHasData;
   document.getElementById('rr-tables').hidden=!hasRR;
+  const hasScores=ready&&scoreMarginDistribution(allMatches).total>0;
+  document.getElementById('score-margin-chart-section').hidden=!hasScores;
   const rrEmpty=document.getElementById('rr-empty');
-  rrEmpty.hidden=hasRR||analysisState==='error';
+  rrEmpty.hidden=hasRR||hasScores||analysisState==='error';
   rrEmpty.textContent=analysisState==='loading'?'Loading this player’s matches…':ready
     ?'No recorded RR changes found for this season. Try another act.'
     :'Search for a player above to explore their RR breakdown.';
@@ -1704,7 +1694,6 @@ function updateDetailPages(){
     :'Search for a player above to explore their match history.';
   const showCard=ready&&allTeammates.length>0;
   document.getElementById('teammates-section').style.display=showCard?'block':'none';
-  document.getElementById('teammate-rr-chart-section').hidden=!ready||!allTeammates.some(t=>t.chartStats?.rrWins||t.chartStats?.rrLosses);
   document.getElementById('encounters-section').hidden=!ready||!allMatches.length;
   document.getElementById('wintrade-section').hidden=!ready||!allMatches.length;
   const empty=document.getElementById('duos-empty');
@@ -4498,7 +4487,6 @@ function buildTeammates(){
       const key=p.puuid||`${p.name}#${p.tag}`;
       if(!tmap[key])tmap[key]={name:p.name,tag:p.tag,key,games:0,wins:0,kills:0,deaths:0,rankSum:0,rankCount:0,acsSum:0,acsCount:0,placeSum:0,placeCount:0,rrTotal:0,rrCount:0};
       tmap[key].games++;
-      addTeammateChartStats(tmap[key],m);
       if(m.won===true)tmap[key].wins++;
       if(Number.isFinite(m.myRR)){tmap[key].rrTotal+=m.myRR;tmap[key].rrCount++;}
       tmap[key].kills+=p._kills||0;
@@ -4727,15 +4715,6 @@ function renderOverviewPreviews(){
   },'No matches for this act.');
 }
 
-// Aggregate the searched player's recorded payouts for each party teammate.
-function addTeammateChartStats(target,m){
-  const s=target.chartStats??={rrWins:0,rrLosses:0,rrWinTotal:0,rrLossTotal:0};
-  if(!Number.isFinite(m.myRR))return;
-  if(m.won===true){s.rrWins++;s.rrWinTotal+=m.myRR;}
-  if(m.won===false){s.rrLosses++;s.rrLossTotal+=m.myRR;}
-}
-let teammateChartsExpanded=false;
-function toggleTeammateCharts(){teammateChartsExpanded=!teammateChartsExpanded;renderTeammateCharts();}
 function statChartNode(tag,attrs={},text=null){
   const el=document.createElementNS('http://www.w3.org/2000/svg',tag);
   Object.entries(attrs).forEach(([key,value])=>el.setAttribute(key,String(value)));
@@ -4746,46 +4725,7 @@ function statChartBar(svg,attrs,detail){
   const bar=statChartNode('rect',{...attrs,tabindex:'0',role:'img','aria-label':detail});
   bar.appendChild(statChartNode('title',{},detail));svg.appendChild(bar);
 }
-function renderTeammateCharts(){
-  const eligible=allTeammates.filter(t=>t.chartStats?.rrWins||t.chartStats?.rrLosses);
-  const section=document.getElementById('teammate-rr-chart-section');
-  const container=document.getElementById('teammate-rr-chart');
-  const button=document.getElementById('teammate-rr-show-all');
-  section.hidden=!eligible.length;container.replaceChildren();
-  button.hidden=eligible.length<=10;button.textContent=teammateChartsExpanded?'Show top 10':`Show all (${eligible.length})`;
-  button.setAttribute('aria-expanded',String(teammateChartsExpanded));
-  document.getElementById('teammate-rr-chart-note').textContent='Saved RR only · draws excluded · actual party penalties and Rank Shield losses included.';
-  if(!eligible.length)return;
-  const rows=teammateChartsExpanded?eligible:eligible.slice(0,10);
-  const width=900,left=300,right=105,top=25,rowHeight=32,bottom=8,height=top+rows.length*rowHeight+bottom;
-  const plotRight=width-right;
-  const svg=statChartNode('svg',{class:'stat-chart-svg',viewBox:` 0 0 ${width} ${height}`,role:'group','aria-label':'Your recorded RR with each teammate, ordered by shared match count'});
-  const maxValue=Math.max(5,...rows.flatMap(t=>{
-    const s=t.chartStats;return[s.rrWins?Math.abs(s.rrWinTotal/s.rrWins):0,s.rrLosses?Math.abs(s.rrLossTotal/s.rrLosses):0];
-  }));
-  const max=maxValue*1.18,x=value=>left+(value+max)/(max*2)*(plotRight-left);
-  [-maxValue,0,maxValue].forEach(value=>{
-    svg.appendChild(statChartNode('line',{x1:x(value),y1:top-5,x2:x(value),y2:height-bottom,class:value===0?'zero':'grid'}));
-    svg.appendChild(statChartNode('text',{x:x(value),y:12,'text-anchor':'middle',class:'tick'},rrSigned(value,1)));
-  });
-  rows.forEach((t,index)=>{
-    const mid=top+index*rowHeight+14,s=t.chartStats,name=t.name||'Unknown teammate';
-    const label=statChartNode('text',{x:4,y:mid+3,class:'label'},name.length>22?name.slice(0,21)+'…':name);
-    label.appendChild(statChartNode('title',{},`${name}#${t.tag||''} · ${t.games} shared matches`));svg.appendChild(label);
-    svg.appendChild(statChartNode('text',{x:220,y:mid+3,'text-anchor':'end',class:'muted'},`${t.games} games`));
-    for(const [total,n,outcome,py] of [[s.rrWinTotal,s.rrWins,'win',mid-10],[s.rrLossTotal,s.rrLosses,'loss',mid+2]]){
-      if(!n)continue;
-      const value=total/n,px=x(value);
-      const detail=`${name}#${t.tag||''}: your average RR / ${outcome} is ${rrSigned(value,1)} from ${n} ${outcome==='win'?'wins':'losses'} with saved RR, across ${t.games} shared matches.`;
-      statChartBar(svg,{x:Math.min(x(0),px),y:py,width:Math.max(1,Math.abs(px-x(0))),height:7,rx:2,class:`bar ${outcome}`},detail);
-      svg.appendChild(statChartNode('text',{x:px+(value<0?-5:5),y:py+7,'text-anchor':value<0?'end':'start',class:'value'},`${rrSigned(value,1)} (${n}${outcome==='win'?'W':'L'})`));
-    }
-  });
-  container.appendChild(svg);
-}
-
 function renderTeammates(){
-  renderTeammateCharts();
   const list=document.getElementById('teammate-list');
   list.replaceChildren();
   if(!allTeammates.length)return;
@@ -5670,6 +5610,7 @@ function renderRRSummary(matches){
     stat('Win rate',summary.winRate==null?'—':Math.round(summary.winRate)+'%');
 }
 function renderRRBreakdown(matches){
+  renderScoreMarginChart(allMatches);
   rrHasData=matches.some(m=>Number.isFinite(m.myRR));
   renderRRTrend(matches);
   renderRRSummary(rrTrendScopedMatches(matches));
@@ -5703,39 +5644,6 @@ function renderRRBreakdown(matches){
     {column:4,label:'win rate'},{column:5,label:'RR per win'},
   ]);
   initTableSorting(rankContainer,values);
-  renderRRByScore(matches);
-}
-
-function buildRRScoreRows(matches){
-  const groups=new Map();
-  matches.filter(isRREligible).forEach(m=>{
-    // Missing scores and draws cannot describe a winning or losing margin.
-    if(!Number.isInteger(m.myR)||!Number.isInteger(m.opR)||m.myR<0||m.opR<0||m.myR===m.opR)return;
-    if(m.won!==true&&m.won!==false)return;
-    if(m.won!==(m.myR>m.opR))return;
-    const high=Math.max(m.myR,m.opR),low=Math.min(m.myR,m.opR);
-    const key=high+'-'+low;
-    if(!groups.has(key))groups.set(key,{high,low,margin:high-low,matches:[]});
-    groups.get(key).matches.push(m);
-  });
-  return [...groups.values()].sort((a,b)=>a.margin-b.margin||a.high-b.high).map(g=>({
-    high:g.high,low:g.low,margin:g.margin,stats:computeRRStats(g.matches),
-  }));
-}
-
-function renderRRByScore(matches){
-  const container=document.getElementById('rr-score-table');
-  const rows=buildRRScoreRows(matches);
-  if(!rows.length){container.innerHTML='<p class="rr-score-empty">No wins or losses with both a recorded score and eligible RR yet.</p>';return;}
-  container.innerHTML=`<table class="rank-table"><caption class="rank-sr-only">Average RR by exact scoreline, grouped from closest to widest round margin. Only eligible wins and losses with recorded scores are included.</caption>
-    <thead><tr><th scope="col">Scoreline</th><th scope="col">Round margin</th><th scope="col">Wins</th><th scope="col">RR / Win</th><th scope="col">Losses</th><th scope="col">RR / Loss</th></tr></thead>
-    <tbody>${rows.map(({high,low,margin,stats:s})=>`<tr><th scope="row">${high}–${low}</th><td>${margin}</td><td>${s.wins}</td><td class="rank-positive">${s.avgGain==null?'—':rrSigned(s.avgGain,1)}</td><td>${s.losses}</td><td class="rank-negative">${s.avgLoss==null?'—':rrSigned(-s.avgLoss,1)}</td></tr>`).join('')}</tbody></table>`;
-  const values=rows.map(({high,low,margin,stats:s})=>[high*1000+low,margin,s.wins,s.avgGain,s.losses,s.avgLoss==null?null:-s.avgLoss]);
-  highlightTableMaxima(container.querySelector('table'),values,[
-    {column:2,label:'wins'},{column:3,label:'RR per win'},{column:4,label:'losses'},
-    {column:5,label:'RR retained on a loss'},
-  ]);
-  initTableSorting(container,values);
 }
 
 /* ── CLUTCHES (1v1–1v5) ─────────────────────────────────── */
@@ -6184,13 +6092,35 @@ function updateLoadMoreBtn(total){
 
 // Full rebuild — used for the initial render, since everything needs redoing.
 function scoreMarginDistribution(matches){
-  const bins=Array.from({length:27},(_,i)=>({margin:i-13,count:0}));
+  // Regulation: 13–0 through 13–11. Overtime wins are always by two;
+  // overtime draws have margin zero. There are no normal ±1 finishes.
+  // https://playvalorant.com/en-gb/news/game-updates/valorant-patch-notes-1-03/
+  // Keep unusual API scores (e.g. early endings) exact rather than clamping
+  // them into a valid margin or silently dropping recorded matches.
+  const emptyBin=margin=>({margin,count:0,rrTotal:0,rrCount:0,scorelines:new Map()});
+  const counts=new Map(Array.from({length:27},(_,i)=>i-13)
+    .filter(margin=>Math.abs(margin)!==1).map(margin=>[margin,emptyBin(margin)]));
   let total=0;
   for(const m of matches){
     if(!Number.isInteger(m.myR)||!Number.isInteger(m.opR)||m.myR<0||m.opR<0||m.myR+m.opR===0)continue;
-    const margin=Math.max(-13,Math.min(13,m.myR-m.opR));
-    bins[margin+13].count++;total++;
+    const margin=m.myR-m.opR;
+    if(!counts.has(margin))counts.set(margin,emptyBin(margin));
+    const bin=counts.get(margin),scoreline=`${m.myR}–${m.opR}`;
+    if(!bin.scorelines.has(scoreline))bin.scorelines.set(scoreline,{scoreline,myR:m.myR,opR:m.opR,count:0,rrTotal:0,rrCount:0});
+    const score=bin.scorelines.get(scoreline);
+    bin.count++;score.count++;total++;
+    // Keep the old scoreline table's payout scope and outcome consistency.
+    // Draws remain in the distribution but have no win/loss RR average.
+    if(margin!==0&&m.won===(margin>0)&&Number.isFinite(m.myRR)&&isRREligible(m)){
+      bin.rrTotal+=m.myRR;bin.rrCount++;
+      score.rrTotal+=m.myRR;score.rrCount++;
+    }
   }
+  const bins=[...counts.values()].sort((a,b)=>a.margin-b.margin).map(bin=>({
+    ...bin,avgRR:bin.rrCount?bin.rrTotal/bin.rrCount:null,
+    scorelines:[...bin.scorelines.values()].sort((a,b)=>a.myR-b.myR||a.opR-b.opR)
+      .map(score=>({...score,avgRR:score.rrCount?score.rrTotal/score.rrCount:null})),
+  }));
   return {bins,total};
 }
 function renderScoreMarginChart(matches){
@@ -6198,14 +6128,33 @@ function renderScoreMarginChart(matches){
   const section=document.getElementById('score-margin-chart-section');
   const container=document.getElementById('score-margin-chart');
   section.hidden=!total;container.replaceChildren();
-  document.getElementById('score-margin-chart-count').textContent=`${total} scored matches`;
+  const rrCount=bins.reduce((n,bin)=>n+bin.rrCount,0);
+  document.getElementById('score-margin-chart-count').textContent=`${total} scored matches · ${rrCount} with eligible RR`;
   if(!total)return;
-  const width=900,height=300,left=48,right=22,top=30,bottom=58;
+  const width=900,height=340,left=48,right=60,top=36,bottom=58;
   const plotWidth=width-left-right,plotBottom=height-bottom,plotHeight=plotBottom-top;
   const maxCount=Math.max(...bins.map(b=>b.count)),step=Math.max(1,Math.ceil(maxCount/4));
   const ceiling=Math.ceil(maxCount/step)*step,slot=plotWidth/bins.length;
   const y=count=>plotBottom-count/ceiling*plotHeight;
-  const svg=statChartNode('svg',{class:'stat-chart-svg',viewBox:`0 0 ${width} ${height}`,role:'group','aria-label':'Distribution of your winning and losing round margins'});
+  const rrMax=Math.max(10,Math.ceil(Math.max(...bins.map(bin=>Math.abs(bin.avgRR??0)))*1.15/10)*10);
+  const yRR=rr=>top+(rrMax-rr)/(2*rrMax)*plotHeight;
+  const svg=statChartNode('svg',{class:'stat-chart-svg',viewBox:`0 0 ${width} ${height}`,role:'group','aria-label':'Match counts and average recorded RR by round margin; left axis is matches, right axis is RR'});
+  svg.appendChild(statChartNode('text',{x:left,y:16,class:'muted'},'Matches'));
+  if(rrCount){
+    svg.appendChild(statChartNode('text',{x:width-right,y:16,'text-anchor':'end',class:'muted'},'Average RR'));
+    svg.appendChild(statChartNode('line',{x1:width-right,y1:top,x2:width-right,y2:plotBottom,class:'grid'}));
+    for(const rr of [-rrMax,-rrMax/2,0,rrMax/2,rrMax]){
+      svg.appendChild(statChartNode('line',{x1:width-right,y1:yRR(rr),x2:width-right+5,y2:yRR(rr),class:'grid'}));
+      svg.appendChild(statChartNode('text',{x:width-right+10,y:yRR(rr)+4,class:'tick'},rr===0?'0':rrSigned(rr,0)));
+    }
+  }
+  const rrDescription=(row)=>row.rrCount?`Average RR ${rrSigned(row.avgRR,1)} from ${row.rrCount}/${row.count} eligible matches`:'No eligible win/loss RR';
+  const binDescription=bin=>{
+    const margin=Math.abs(bin.margin);
+    const outcome=bin.margin===0?'Draws':`${bin.margin>0?'Wins':'Losses'} by ${margin} ${margin===1?'round':'rounds'}`;
+    const scores=bin.scorelines.map(score=>`${score.scoreline}: ${score.count} matches; ${rrDescription(score)}`).join('. ');
+    return `${outcome}: ${bin.count} matches (${(100*bin.count/total).toFixed(1)}%). ${rrDescription(bin)}. Scorelines (your rounds–enemy rounds): ${scores}.`;
+  };
   for(let count=0;count<=ceiling;count+=step){
     svg.appendChild(statChartNode('line',{x1:left,y1:y(count),x2:width-right,y2:y(count),class:count===0?'zero':'grid'}));
     svg.appendChild(statChartNode('text',{x:left-10,y:y(count)+4,'text-anchor':'end',class:'tick'},count));
@@ -6214,15 +6163,29 @@ function renderScoreMarginChart(matches){
     const center=left+(index+.5)*slot;
     if(bin.count){
       const outcome=bin.margin<0?'loss':bin.margin>0?'win':'draw';
-      const margin=Math.abs(bin.margin),description=margin===13?'13 or more':String(margin);
-      const detail=`${bin.margin===0?'Draws':`${bin.margin>0?'Wins':'Losses'} by ${description} rounds`}: ${bin.count} matches (${(100*bin.count/total).toFixed(1)}% of scored matches)`;
+      const detail=binDescription(bin);
       statChartBar(svg,{x:center-slot*.36,y:y(bin.count),width:slot*.72,height:plotBottom-y(bin.count),class:`bar ${outcome}`},detail);
       svg.appendChild(statChartNode('text',{x:center,y:y(bin.count)-7,'text-anchor':'middle',class:'value'},bin.count));
     }
-    if(bin.margin%3===0||Math.abs(bin.margin)===13){
-      const label=bin.margin===0?'0':`${bin.margin>0?'+':'−'}${Math.abs(bin.margin)}${Math.abs(bin.margin)===13?'+':''}`;
-      svg.appendChild(statChartNode('text',{x:center,y:plotBottom+22,'text-anchor':'middle',class:'tick'},label));
+    const label=bin.margin===0?'0':`${bin.margin>0?'+':'−'}${Math.abs(bin.margin)}`;
+    svg.appendChild(statChartNode('text',{x:center,y:plotBottom+22,'text-anchor':'middle',class:'tick'},label));
+  }
+  // Break the RR line at missing samples and between losses and wins.
+  // Draw all lines before the points so every point stays visible and focusable.
+  let previous=null;
+  const points=[];
+  for(const [index,bin] of bins.entries()){
+    if(bin.avgRR==null){previous=null;continue;}
+    const point={x:left+(index+.5)*slot,y:yRR(bin.avgRR),bin};
+    if(previous&&Math.sign(previous.bin.margin)===Math.sign(bin.margin)){
+      svg.appendChild(statChartNode('line',{x1:previous.x,y1:previous.y,x2:point.x,y2:point.y,class:'rr-average-line'}));
     }
+    points.push(point);previous=point;
+  }
+  for(const {x,y,bin} of points){
+    const detail=binDescription(bin);
+    const point=statChartNode('circle',{cx:x,cy:y,r:5,class:'rr-average-point',tabindex:'0',role:'img','aria-label':detail});
+    point.appendChild(statChartNode('title',{},detail));svg.appendChild(point);
   }
   svg.appendChild(statChartNode('text',{x:left+plotWidth/2,y:height-8,'text-anchor':'middle',class:'muted'},'Round margin · your rounds minus enemy rounds'));
   container.appendChild(svg);
@@ -6232,7 +6195,6 @@ function renderMatches(){
   const expandedIds=new Set([...container.querySelectorAll('.match-card.expanded')].map(card=>card.dataset.matchId));
   const focusedId=document.activeElement?.closest?.('.match-card')?.dataset.matchId;
   mhData=allMatches.slice().sort((a,b)=>(b.startedAtMs??0)-(a.startedAtMs??0));
-  renderScoreMarginChart(mhData);
   // Per-day avg lobby rank + total RR change, aggregated across the FULL set
   // (mhData) — not just whatever page is currently visible — so a day's
   // figures in the header stay correct and stable regardless of Load
