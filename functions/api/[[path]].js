@@ -59,44 +59,27 @@
  * calibration started folding on every /history page, and separately once
  * the 24h refresh job's rrhist writes grew past a few hundred tracked
  * players. D1's Free-plan cap is 100,000 rows written/day, and its UPDATEs
- * are atomic (no KV-style get-then-put race) — see CONSISTENCY CAVEAT below
- * for the one caveat that carries over.
+ * are atomic, allowing concurrent requests to reserve distinct upstream slots.
  *
- * RATE LIMITING — fully server-side now, nothing exposed to the browser:
- * HenrikDev's real rate-limit headers (remaining/reset/retry-after) used to
- * be forwarded straight to the client so it could pace itself. Two problems
- * with that: it leaks live details about this key's quota to anyone with
- * devtools open, and — worse — it's a usable DoS vector, since watching
- * `remaining` approach zero tells you exactly when to push it over the edge
- * for every other user of the app. Fixed by moving all quota awareness here:
- *   - Quota state {remaining, resetAt} is tracked in APP_DB (table
- *     rate_quota, a single row), read/written on every live (cache-miss)
- *     request — so pacing is coordinated across every concurrent user of
- *     the app hitting this one HenrikDev key, not just per browser tab.
- *   - Before making an upstream call, if that row says quota is already
- *     exhausted this window, the request is declined immediately (no
- *     upstream call at all) with a plain JSON body: {error, retryAfterMs}.
- *     No headers, no raw numbers — just how long to wait.
- *   - Otherwise, a small pacing delay may be applied server-side (same
- *     "glide only if it actually helps" logic the client used to do, just
- *     using shared state instead of one browser's private view) before the
- *     real upstream call, so concurrent users don't all burst at once.
- *   - After a live call, HenrikDev's real headers are parsed and written
- *     back to that row, but never forwarded to the response — the client
- *     only ever sees success, or a 429 with a retryAfterMs it should wait out.
+ * RATE LIMITING — fully server-side, nothing exposed to the browser:
+ * Both keys use atomic D1 admission immediately before real upstream calls.
+ * Public quota and scheduling live in rate_quota; workflows use the independent
+ * workflow_rate_quota pool. Cache hits and database-only routes bypass both.
+ * Workflow admissions retain a 2.1-second minimum for the 30/minute key.
+ * Public admissions use that key's remaining/reset headers to spread capacity
+ * with 5% timing headroom, a 150ms floor, and a conservative 2.1s fallback when
+ * its budget is unknown. No public key tier or allowance is assumed.
  *
- * CONSISTENCY CAVEAT: D1 has a primary instance plus read replicas (see D1's
- * read-replication docs), so a read immediately after another edge location's
- * write can still occasionally see slightly stale state — tighter than KV's
- * up-to-~60s propagation, but not an absolute guarantee. Under heavy
- * concurrent load from multiple edge locations, a real 429 from HenrikDev
- * can still occasionally slip through despite the quota-row check. That's
- * handled gracefully (relayed to the client as a computed retryAfterMs, same
- * as any other 429), so it degrades safely rather than breaking. For
- * airtight, race-free coordination a Durable Object would be the correct
- * upgrade — more setup (its own class + migration + binding) than felt
- * justified for a first pass, since "occasionally still gets a real 429, but
- * never leaks real quota to the browser" already satisfies the actual goal.
+ * Reservations subtract in-flight requests. Late responses cannot replenish
+ * newer reservations; even a late upstream 429 pauses its key's pool. An
+ * exhausted or busy gate returns only {error,retryAfterMs}; real quota headers
+ * are never forwarded. Failed gate storage blocks upstream work with 503.
+ * The next_start_at columns are added automatically for existing databases.
+ *
+ * Conditional writes, rather than preceding reads, authorize admissions:
+ * stale read hints can change wait time but cannot grant a duplicate slot.
+ * This coordinates this proxy's callers; independent software using these
+ * keys and network timing between admission and arrival can still cause 429s.
  */
 
 import { observeName, readNameHistory } from "../../lib/name-history.mjs";
@@ -105,7 +88,7 @@ import { beginCoverageScan, readCoverageScan, recordCoveragePage, finishCoverage
 import { collectRR, saveFeatures, trackRRAccount } from "../../lib/rr-corpus.mjs";
 import { discoverMatchPlayers } from "../../lib/rr-activity.mjs";
 import { workflowAuthorized } from "../../lib/workflow-auth.mjs";
-import { acquireWorkflowPermit, observeWorkflowQuota } from "../../lib/workflow-pacing.mjs";
+import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, observePublicQuota } from "../../lib/upstream-pacing.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
 const PREFIX = "/api";
@@ -671,13 +654,6 @@ async function foldCalibration(env, bodyText, routeInfo) {
   }
 }
 
-// Pacing tuning — mirrors the client's old planDelay() logic, just now
-// operating on state shared across every concurrent user instead of one
-// browser's private view.
-const MIN_SPACING_MS = 150;   // floor between any two upstream calls
-const GLIDE_BELOW = 10;       // only start spacing out once this few requests remain in the window
-const GLIDE_CAP_MS = 4000;    // don't glide if the resulting spacing would be absurdly long — just fire
-
 // Public route -> real upstream HenrikDev path + this route's cache TTL.
 const ROUTES = [
   {
@@ -778,37 +754,6 @@ const ROUTES = [
   },
 ];
 
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-async function getQuota(env) {
-  try {
-    const row=await env.APP_DB.prepare('SELECT remaining, reset_at, last_request_at FROM rate_quota WHERE id=1').first();
-    if (row) {
-      return {
-        remaining: row.remaining ?? null,
-        resetAt: row.reset_at ?? 0,
-        lastRequestAt: row.last_request_at ?? 0,
-      };
-    }
-  } catch (e) {
-    // D1 unavailable/misconfigured — fail open (treat as unknown quota)
-    // rather than blocking every request.
-  }
-  return { remaining: null, resetAt: 0, lastRequestAt: 0 };
-}
-
-async function putQuota(env, state) {
-  try {
-    await env.APP_DB.prepare(
-      "UPDATE rate_quota SET remaining=?1, reset_at=?2, last_request_at=?3 WHERE id=1"
-    ).bind(state.remaining, state.resetAt, state.lastRequestAt).run();
-  } catch (e) {
-    // Non-fatal — worst case, pacing is a little less accurate next request.
-  }
-}
-
 // Successful profile resolution enrols the permanent account even when
 // the subsequent RR request is unavailable or the account has no games.
 async function trackAccountResponse(env,bodyText,route,match){
@@ -873,20 +818,6 @@ function parseUpstreamQuota(headers) {
     remaining: Number.isNaN(remaining) ? null : remaining,
     resetAt: resetSeconds != null && !Number.isNaN(resetSeconds) ? Date.now() + resetSeconds * 1000 : null,
   };
-}
-
-// How long to wait before firing the upstream call, given shared quota
-// state — glide only when a handful of remaining requests, spaced out,
-// would roughly bridge to the reset; otherwise fire immediately, since
-// gliding wouldn't meaningfully help.
-function planDelay(quota) {
-  const since = Date.now() - (quota.lastRequestAt || 0);
-  let want = MIN_SPACING_MS;
-  if (quota.remaining != null && quota.remaining > 0 && quota.remaining <= GLIDE_BELOW && quota.resetAt > Date.now()) {
-    const spread = Math.floor((quota.resetAt - Date.now()) / quota.remaining);
-    if (spread <= GLIDE_CAP_MS) want = Math.max(spread, MIN_SPACING_MS);
-  }
-  return since >= want ? 0 : want - since;
 }
 
 const NAME_HISTORY_REFRESH_MS = 24 * 60 * 60 * 1000;
@@ -1056,11 +987,8 @@ async function handleGet(context,{workflow,henrikKey}){
     } catch { return json({error:'Name backfill storage unavailable'},503); }
   }
   if (!henrikKey) return json({ error: "Proxy misconfigured: HENRIK_KEY secret not set" }, 500);
-  // No hard-fail on a missing APP_DB binding — every function that touches it
-  // (getQuota/putQuota/mergeRRHistory/foldCalibration/handleCalibModel) already
-  // fails open on its own, so the proxy still works correctly without it, just
-  // without cross-request rate-limit coordination, RR-history persistence, or
-  // live calibration.
+  // Cache responses can still be served before consulting the gate. A cache
+  // miss requires APP_DB so an unavailable binding cannot send unpaced traffic.
 
   const cache = caches.default;
   // Never put workflow credentials in an edge-cache key or cached request.
@@ -1094,29 +1022,15 @@ async function handleGet(context,{workflow,henrikKey}){
     return res;
   }
 
-  // Quota check BEFORE touching HenrikDev at all — if the shared state says
-  // we're already out for this window, decline immediately with a plain
-  // wait-time signal instead of burning a real upstream call we know will
-  // just 429.
-  let quota,workflowPermit;
-  if(workflow){
-    try{workflowPermit=await acquireWorkflowPermit(env.APP_DB);}
-    catch{return json({error:'Workflow quota storage unavailable'},503);}
-    if(workflowPermit.retryAfterMs){
-      if(route.nameHistory&&storedNameHistory.history.length)return savedNameHistoryResponse(storedNameHistory,'SAVED-REFRESH-DEFERRED',true);
-      return json({error:'Rate limited',retryAfterMs:workflowPermit.retryAfterMs},429);
-    }
-    quota=workflowPermit.quota;
-  }else quota=await getQuota(env);
-  if (!workflow && quota.remaining != null && quota.remaining <= 0 && quota.resetAt > Date.now()) {
-    if (route.nameHistory && storedNameHistory.history.length) {
-      return savedNameHistoryResponse(storedNameHistory, 'SAVED-REFRESH-DEFERRED', true);
-    }
-    return json({ error: "Rate limited", retryAfterMs: quota.resetAt - Date.now() }, 429);
+  // Cache and D1-only responses have already returned. Reserve a distinct slot
+  // atomically for the selected key immediately before a real upstream call.
+  let permit;
+  try{permit=await (workflow?acquireWorkflowPermit:acquirePublicPermit)(env.APP_DB);}
+  catch{return json({error:'Upstream quota storage unavailable'},503);}
+  if(permit.retryAfterMs){
+    if(route.nameHistory&&storedNameHistory.history.length)return savedNameHistoryResponse(storedNameHistory,'SAVED-REFRESH-DEFERRED',true);
+    return json({error:'Rate limited',retryAfterMs:permit.retryAfterMs},429);
   }
-
-  const delay = workflow?0:planDelay(quota);
-  if (delay > 0) await sleep(delay);
 
   const upstreamUrl = UPSTREAM + route.upstream(match) + url.search;
   const observedAt = new Date().toISOString();
@@ -1135,27 +1049,18 @@ async function handleGet(context,{workflow,henrikKey}){
   // Learn from this call's real headers regardless of outcome, and persist
   // for every other concurrent/future request to read.
   const parsed = parseUpstreamQuota(upstream.headers);
-  const nextQuota = {
-    remaining: parsed.remaining ?? quota.remaining,
-    resetAt: parsed.resetAt ?? quota.resetAt,
-    lastRequestAt: Date.now(),
-  };
-  let workflowRetryMs=0;
-  if(workflow){
-    const retry=upstream.headers.get('retry-after');
-    const retryAfterMs=retry==null?0:/^\d+$/.test(retry)?Number(retry)*1000:Math.max(0,Date.parse(retry)-Date.now())||0;
-    try{workflowRetryMs=await observeWorkflowQuota(env.APP_DB,parsed,{startedAt:workflowPermit.startedAt,status:upstream.status,retryAfterMs});}
-    catch{return json({error:'Workflow quota update failed'},503);}
-  }else context.waitUntil(putQuota(env,nextQuota));
+  const retry=upstream.headers.get('retry-after');
+  const retryAfterMs=retry==null?0:/^\d+$/.test(retry)?Number(retry)*1000:Math.max(0,Date.parse(retry)-Date.now())||0;
+  let upstreamRetryMs=0;
+  try{upstreamRetryMs=await (workflow?observeWorkflowQuota:observePublicQuota)(env.APP_DB,parsed,
+    {startedAt:permit.startedAt,status:upstream.status,retryAfterMs});}
+  catch{return json({error:'Upstream quota update failed'},503);}
 
   if (upstream.status === 429) {
     if (route.nameHistory && storedNameHistory.history.length) {
       return savedNameHistoryResponse(storedNameHistory, 'SAVED-REFRESH-DEFERRED', true);
     }
-    const headerRetry = upstream.headers.get("retry-after");
-    const retryMs = headerRetry != null ? Math.max(parseInt(headerRetry, 10), 0) * 1000 : 0;
-    const resetMs = nextQuota.resetAt ? Math.max(0, nextQuota.resetAt - Date.now()) : 0;
-    return json({ error: "Rate limited", retryAfterMs: Math.max(workflowRetryMs,retryMs,resetMs,1000) }, 429);
+    return json({ error: "Rate limited", retryAfterMs: upstreamRetryMs }, 429);
   }
 
   let bodyText = await upstream.text();

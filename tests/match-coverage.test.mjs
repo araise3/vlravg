@@ -51,7 +51,8 @@ function fixture(t,{live=Array.from({length:23},(_,n)=>row(n)),stored=live}={}){
   t.after(()=>{globalThis.fetch=savedFetch;globalThis.caches=savedCaches;db.close();});
   const path=(region='eu',platform='pc',act=season)=>`match-coverage/${region}/${platform}/${puuid}/${act}`;
   const request=async(route,{body,failWrites=false}={})=>{
-    db.prepare('UPDATE rate_quota SET last_request_at=0 WHERE id=1').run();
+    // This fixture tests archive coverage; admission timing has its own tests.
+    db.prepare('UPDATE rate_quota SET last_request_at=0,next_start_at=0 WHERE id=1').run();
     const env={APP_DB:failWrites?{...binding,batch:async()=>{throw new Error('Write failed');}}:binding,HENRIK_KEY:'test'};
     const jobs=[];
     const request=new Request('https://example.test/api/'+route,body===undefined?{}:

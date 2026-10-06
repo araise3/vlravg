@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS rate_quota (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   remaining INTEGER,
   reset_at INTEGER,
-  last_request_at INTEGER
+  last_request_at INTEGER,
+  next_start_at INTEGER NOT NULL DEFAULT 0
 );
 INSERT OR IGNORE INTO rate_quota (id, remaining, reset_at, last_request_at) VALUES (1, NULL, 0, 0);
 
