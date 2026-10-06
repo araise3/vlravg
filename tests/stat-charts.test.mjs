@@ -5,8 +5,10 @@ import {runInNewContext,Script} from 'node:vm';
 
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const margins=html.slice(html.indexOf('function scoreMarginDistribution('),html.indexOf('\nfunction renderMatches('));
-const eligibility=html.slice(html.indexOf('function isRREligible('),html.indexOf('\nfunction computeRRStats('));
-const {scoreMarginDistribution:distribution,scoreMarginRREstimates:estimates}=runInNewContext(eligibility+'\n'+margins+'\n({scoreMarginDistribution,scoreMarginRREstimates})');
+const distribution=runInNewContext(margins+'\nscoreMarginDistribution');
+const stats=html.slice(html.indexOf('function rrBucketStats('),html.indexOf('// ── Column renderer'));
+const table=html.slice(html.indexOf('function buildRRScoreRows('),html.indexOf('/* ── CLUTCHES'));
+const scoreRows=runInNewContext(stats+'\n'+table+'\nbuildRRScoreRows');
 test('score margins use actual scores without requiring ranks or RR, with draws and exact unusual margins',()=>{
   const matches=[{myR:13,opR:11},{myR:11,opR:13},{myR:15,opR:15},{myR:13,opR:0},{myR:0,opR:14},
     {myR:13,opR:11},{myR:'13',opR:10},{myR:0,opR:0},{myR:-1,opR:13},{myR:13},{myR:1.5,opR:13}];
@@ -41,46 +43,27 @@ test('one-round margins are added only if actually recorded',()=>{
   assert.equal(distribution([]).bins.length,25);
 });
 
-test('combined chart averages only eligible recorded payouts and retains counts and exact overtime scores',()=>{
+test('result table keeps regulation and overtime separate with eligible actual payouts',()=>{
   const win={myR:13,opR:11,myTierId:10,won:true,myRR:20};
   const matches=[win,{...win,myR:14,opR:12,myRR:10},
     {...win,myRR:100,actPlacement:true},{...win,myRR:100,partySize:5},
     {...win,myRR:100,myTierId:0},{...win,myRR:null},{...win,myRR:Infinity},
     {...win,myRR:100,won:false},
     {...win,myR:11,opR:13,myRR:-24,won:false,was_derank_protected:true},
-    {...win,myR:13,opR:13,myRR:0,won:null}];
-  const {bins,total}=distribution(matches);
-  const wins=bins.find(b=>b.margin===2),losses=bins.find(b=>b.margin===-2),draws=bins.find(b=>b.margin===0);
-  assert.equal(total,10);
-  assert.equal(wins.count,8);assert.equal(wins.rrCount,2);assert.equal(wins.avgRR,15);
-  assert.equal(wins.scorelines.length,2);
-  assert.equal(wins.scorelines.find(s=>s.scoreline==='13–11').avgRR,20);
-  assert.equal(wins.scorelines.find(s=>s.scoreline==='14–12').avgRR,10);
-  assert.equal(losses.avgRR,-24);assert.equal(losses.rrCount,1);
-  assert.equal(draws.count,1);assert.equal(draws.avgRR,null);
-  assert.equal(bins.find(b=>b.margin===3).avgRR,null);
+    {...win,myR:13,opR:13,myRR:0,won:null},
+    {...win,opR:10,myRR:0}];
+  const rows=scoreRows(matches);
+  assert.equal(rows.length,3);
+  assert.deepEqual(Array.from(rows,r=>[r.high,r.low]),[[13,11],[14,12],[13,10]]);
+  assert.equal(rows[0].stats.avgGain,20);assert.equal(rows[0].stats.avgLoss,24);
+  assert.equal(rows[0].stats.wins,1);assert.equal(rows[0].stats.losses,1);
+  assert.equal(rows[1].stats.avgGain,10);assert.equal(rows[1].stats.losses,0);
+  assert.equal(rows[2].stats.avgGain,0);
+  assert.equal(distribution(matches).total,11,'distribution still includes all scored games');
+  assert.equal(scoreRows([]).length,0);
 });
 
-test('zero payout remains a real RR sample instead of a missing value',()=>{
-  const {bins}=distribution([{myR:13,opR:10,myRR:0,won:true,myTierId:10}]);
-  assert.equal(bins.find(b=>b.margin===3).rrCount,1);
-  assert.equal(bins.find(b=>b.margin===3).avgRR,0);
-});
-
-test('RR trend separates outcomes, uses all tied samples and leaves unsupported regions empty',()=>{
-  const win=(margin,rr)=>({myR:13,opR:13-margin,myRR:rr,won:true,myTierId:10});
-  const matches=[win(2,20),win(3,20),win(3,20),win(12,20),win(12,20),win(12,20),
-    {myR:11,opR:13,myRR:-24,won:false,myTierId:10}];
-  const trend=estimates(distribution(matches).bins,true);
-  assert.equal(trend[0].position,2);assert.equal(trend.at(-1).position,12);
-  assert.equal(trend[0].n,3);
-  assert.ok(trend.some(point=>point.position===7&&point.payout===null));
-  assert.ok(trend.filter(point=>point.payout!=null).every(point=>Math.abs(point.payout-20)<1e-10&&point.n>=3));
-  assert.ok(estimates(distribution(matches).bins,false).every(point=>point.payout===null));
-  assert.equal(JSON.stringify(estimates(distribution(matches.slice().reverse()).bins,true)),JSON.stringify(trend));
-});
-
-test('combined chart renders raw payouts and supported trend paths with separate count and RR axes',()=>{
+test('distribution renders counts with accessible exact scores independently of RR',()=>{
   const element=()=>({attrs:{},children:[],textContent:'',hidden:false,
     setAttribute(key,value){this.attrs[key]=value;},
     appendChild(child){this.children.push(child);},
@@ -91,28 +74,18 @@ test('combined chart renders raw payouts and supported trend paths with separate
     if(!elements.has(id))elements.set(id,element());return elements.get(id);
   }};
   const helpers=html.slice(html.indexOf('function statChartNode('),html.indexOf('function renderTeammates('));
-  const render=runInNewContext(helpers+'\n'+eligibility+'\n'+margins+'\nrenderScoreMarginChart',{
-    document,rrSigned:(n,d)=>`${n<0?'−':'+'}${Math.abs(n).toFixed(d)}`,
-  });
-  const win={myR:13,opR:11,myRR:20,won:true,myTierId:10};
-  render([win,{...win,opR:10,myRR:0},{...win,opR:9,myRR:null},{...win,opR:8,myRR:26},
-    {...win,myR:11,opR:13,myRR:-24,won:false}]);
+  const render=runInNewContext(helpers+'\n'+margins+'\nrenderScoreMarginChart',{document});
+  render([{myR:13,opR:11},{myR:14,opR:12},{myR:11,opR:13},{myR:13,opR:13}]);
   const svg=elements.get('score-margin-chart').children[0];
-  const points=svg.children.filter(n=>n.attrs.class?.startsWith('rr-payout-sample'));
-  assert.equal(points.length,4);
-  assert.equal(svg.children.filter(n=>n.attrs.class==='rr-payout-trend win').length,1);
-  assert.equal(svg.children.filter(n=>n.attrs.class==='rr-payout-trend loss').length,0);
-  assert.ok(points.some(point=>point.attrs.cy==='159'),'zero payout has a real dot at zero RR');
   assert.ok(svg.children.some(n=>n.textContent==='Matches'));
-  assert.ok(svg.children.some(n=>n.textContent==='RR payout'));
-  const focus=svg.children.find(n=>n.attrs.class==='rr-estimate-hit');
-  assert.equal(focus.attrs.tabindex,'0');
-  assert.match(focus.attrs['aria-label'],/Estimated RR \/ win/);
-  assert.match(focus.attrs['aria-label'],/13–10/);
-  assert.match(elements.get('score-margin-chart-count').textContent,/5 scored matches · 4 with eligible RR/);
-  render([{myR:13,opR:11}]);
-  assert.equal(elements.get('score-margin-chart-section').hidden,false);
-  assert.equal(elements.get('score-margin-chart').children[0].children.some(n=>n.attrs.class?.startsWith('rr-payout-trend')),false);
+  assert.equal(svg.children.some(n=>n.textContent==='RR payout'),false);
+  const bars=svg.children.filter(n=>n.attrs.class?.startsWith('bar '));
+  assert.equal(bars.length,3);
+  const win=bars.find(n=>n.attrs.class==='bar win');
+  assert.equal(win.attrs.tabindex,'0');
+  assert.match(win.attrs['aria-label'],/13–11: 1 matches/);
+  assert.match(win.attrs['aria-label'],/14–12: 1 matches/);
+  assert.equal(elements.get('score-margin-chart-count').textContent,'4 scored matches');
   render([]);
   assert.equal(elements.get('score-margin-chart-section').hidden,true);
   assert.equal(elements.get('score-margin-chart').children.length,0);

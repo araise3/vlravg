@@ -714,6 +714,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-record-separator{color:var(--muted);font-weight:400;}
 .rr-score-heading{font-size:18px;font-weight:650;margin:30px 0 16px;}
 .rr-score-note{font-size:13px;line-height:1.6;color:#a1a1aa;margin:0 0 16px;max-width:760px;}
+.rr-score-empty{padding:20px;color:#a1a1aa;font-size:13px;}
 .rr-trend-card{margin:0 0 24px;padding:20px;border:1px solid var(--surface-border);border-radius:10px;background:#141416;}
 .rr-trend-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
 .rr-trend-head-main{display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-width:0;}
@@ -735,17 +736,20 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rr-trend-svg .result-point.loss{fill:#f87171;}
 .rr-trend-svg .result-point.draw{fill:#facc15;}
 .rr-trend-svg .cursor-band{fill:var(--brand);fill-opacity:.12;pointer-events:none;}
-.rr-trend-svg .cursor-line{stroke:var(--brand);stroke-width:1;pointer-events:none;}
-.rr-trend-svg .cursor-point{fill:#e4e4e7;stroke:#141416;stroke-width:2;pointer-events:none;}
+.rr-trend-svg .cursor-line{stroke:#e4e4e7;stroke-width:1;stroke-dasharray:3 3;pointer-events:none;}
+.rr-trend-svg .cursor-point{fill:#141416;stroke:#fff;stroke-width:2.5;pointer-events:none;}
 .rr-trend-svg [hidden],.rr-trend-tooltip[hidden]{display:none;}
 .rr-trend-svg g[tabindex]:focus{outline:none;}
 .rr-trend-tooltip{position:absolute;z-index:2;top:8px;min-width:150px;max-width:calc(100% - 16px);padding:10px 12px;border:1px solid #43434b;border-radius:8px;background:#202024;box-shadow:0 8px 24px #0008;color:#e8eaf0;font-size:12px;line-height:1.4;pointer-events:none;}
 .rr-trend-tooltip-date{color:#a1a1aa;font-size:11px;}
+.rr-trend-tooltip-match{margin-top:3px;font-weight:600;}
 .rr-trend-tooltip-change{margin:3px 0 6px;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;}
 .rr-trend-tooltip-change.positive{color:#4ade80;}.rr-trend-tooltip-change.negative{color:#f87171;}
 .rr-trend-tooltip-party{margin-bottom:6px;color:#93c5fd;}
 .rr-trend-tooltip-rank{display:flex;align-items:center;gap:7px;white-space:nowrap;}
 .rr-trend-tooltip-rank img{width:22px;height:22px;}
+.rr-trend-scroll.tooltip-below{padding-bottom:164px;}
+.rr-trend-scroll.tooltip-below .rr-trend-tooltip{top:202px;left:8px;right:8px;min-width:0;}
 .rr-trend-empty{padding:28px 0;color:#a1a1aa;font-size:13px;}
 .rr-movement-section{margin:0 0 24px;}
 .rr-movement-card{padding:20px;border:1px solid var(--surface-border);border-radius:10px;background:#141416;}
@@ -782,15 +786,6 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .stat-chart-legend span{display:inline-flex;align-items:center;gap:6px;}
 .stat-chart-key{width:16px;height:3px;border-radius:2px;background:#a1a1aa;}
 .stat-chart-key.win{background:#4ade80;}.stat-chart-key.loss{background:#f87171;}.stat-chart-key.draw{background:#facc15;}
-.stat-chart-key.rr{background:linear-gradient(to right,#f87171 50%,#4ade80 50%);}
-.stat-chart-key.rr-sample{width:6px;height:6px;border:1px solid #a1a1aa;border-radius:50%;background:#141416;}
-.stat-chart-svg .rr-payout-trend{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;}
-.stat-chart-svg .rr-payout-trend.win{stroke:#4ade80;}.stat-chart-svg .rr-payout-trend.loss{stroke:#f87171;}
-.stat-chart-svg .rr-payout-sample{fill:#141416;stroke-width:1.25;opacity:.35;pointer-events:none;}
-.stat-chart-svg .rr-payout-sample.win{stroke:#4ade80;}.stat-chart-svg .rr-payout-sample.loss{stroke:#f87171;}
-.stat-chart-svg .rr-estimate-hit{fill:transparent;stroke:none;cursor:help;}
-.stat-chart-svg .rr-estimate-hit:focus-visible{outline:none;stroke:#fff;stroke-width:1.5;}
-#score-margin-chart .bar{fill-opacity:.45;}
 .stat-chart-scroll{position:relative;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
 .stat-chart-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
 .stat-chart-svg{display:block;width:100%;min-width:650px;height:auto;font-family:var(--font-body);}
@@ -1025,12 +1020,17 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
         </div>
       </section>
       <div class="s-card rr-table-card"><div id="rr-rank-table" class="table-scroll" role="region" aria-label="RR by player rank" tabindex="0"></div></div>
+      <section aria-labelledby="rr-score-title">
+        <h2 id="rr-score-title" class="rr-score-heading">RR by result</h2>
+        <p class="rr-score-note">Average recorded RR by exact scoreline. Regulation and overtime results stay separate. Excludes placements, unrated ranks and full 5-stacks.</p>
+        <div class="s-card rr-table-card"><div id="rr-score-table" class="table-scroll" role="region" aria-label="RR by match scoreline" tabindex="0"></div></div>
+      </section>
     </div>
     <section id="score-margin-chart-section" class="stat-chart-card" hidden aria-labelledby="score-margin-chart-title">
-      <div class="stat-chart-head"><h2 id="score-margin-chart-title">Score margin &amp; RR</h2><span id="score-margin-chart-count" class="rr-movement-count"></span></div>
-      <div class="stat-chart-legend"><span><i class="stat-chart-key loss"></i>Losses</span><span><i class="stat-chart-key draw"></i>Draws</span><span><i class="stat-chart-key win"></i>Wins</span><span><i class="stat-chart-key rr"></i>Estimated RR trend</span><span><i class="stat-chart-key rr-sample"></i>Recorded RR</span></div>
-      <div id="score-margin-chart" class="stat-chart-scroll" role="region" aria-label="Match counts and estimated RR by round margin" tabindex="0"></div>
-      <p class="stat-chart-note">Bars: all scored matches this act (left axis). Lines: estimated RR for eligible wins and losses; faint dots: recorded payouts (right axis). Trends blend nearby margins within 2 rounds with your act's win/loss average; gaps mean fewer than 3 nearby samples. Hover or focus for exact scorelines and RR coverage. Regulation 13–11 and overtime share ±2; draws sit at 0.</p>
+      <div class="stat-chart-head"><h2 id="score-margin-chart-title">Score-margin distribution</h2><span id="score-margin-chart-count" class="rr-movement-count"></span></div>
+      <div class="stat-chart-legend"><span><i class="stat-chart-key loss"></i>Losses</span><span><i class="stat-chart-key draw"></i>Draws</span><span><i class="stat-chart-key win"></i>Wins</span></div>
+      <div id="score-margin-chart" class="stat-chart-scroll" role="region" aria-label="Match counts by round margin" tabindex="0"></div>
+      <p class="stat-chart-note">Your rounds minus enemy rounds, for all scored matches this act, including placements. Regulation 13–11 and overtime share ±2; draws sit at 0. Hover or focus for exact scorelines.</p>
     </section>
     <div id="rr-empty" class="page-empty" role="status">Search for a player above to explore their RR breakdown.</div>
   </main>
@@ -5447,6 +5447,8 @@ function renderRRTrend(matches){
 
   const left=42,right=12,top=18,bottom=178,height=194;
   const width=Math.max(left+right+2,Math.round(container.clientWidth)||872);
+  container.classList.toggle('tooltip-below',width<700);
+  container.style.paddingBottom='';
   rrTrendRenderedWidth=Math.round(container.clientWidth);
   const values=points.map(p=>p.value);
   const low=Math.min(...values),high=Math.max(...values);
@@ -5538,19 +5540,22 @@ function renderRRTrend(matches){
   const dateLabel=m=>Number.isFinite(m.startedAtMs)?new Date(m.startedAtMs).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'Date unavailable';
   const cursorBand=el('rect',{class:'cursor-band',x:0,y:top,width:Math.min(24,Math.max(12,spacing*.6)),height:bottom-top,hidden:''});
   const cursorLine=el('line',{class:'cursor-line',x1:0,y1:top,x2:0,y2:bottom,hidden:''});
-  const cursorPoint=el('circle',{class:'cursor-point',cx:0,cy:0,r:4,hidden:''});
+  const cursorPoint=el('circle',{class:'cursor-point',cx:0,cy:0,r:6,hidden:''});
   svg.append(cursorBand,cursorLine,cursorPoint);
   const tooltip=document.createElement('div');
   tooltip.className='rr-trend-tooltip';
   tooltip.hidden=true;
   const tipDate=document.createElement('div');tipDate.className='rr-trend-tooltip-date';
+  const tipMatch=document.createElement('div');tipMatch.className='rr-trend-tooltip-match';
   const tipChange=document.createElement('div');tipChange.className='rr-trend-tooltip-change';
   const tipParty=document.createElement('div');tipParty.className='rr-trend-tooltip-party';
   const tipRank=document.createElement('div');tipRank.className='rr-trend-tooltip-rank';
   const tipIcon=document.createElement('img');tipIcon.alt='';
   const tipRankText=document.createElement('span');
   tipRank.append(tipIcon,tipRankText);
-  tooltip.append(tipDate,tipChange,tipParty,tipRank);
+  tooltip.append(tipDate,tipMatch,tipChange,tipParty,tipRank);
+  if(width>=700)tooltip.style.maxWidth=`${Math.floor(width/2)-24}px`;
+  const matchLabel=m=>[m.map,Number.isInteger(m.myR)&&Number.isInteger(m.opR)?`${m.myR}–${m.opR}`:null].filter(Boolean).join(' · ');
   const show=i=>{
     const {match,value}=points[i],rank=rrPositionFromElo(value,match.myPostTierId);
     const xx=x(i),change=rrSigned(match.myRR,0);
@@ -5559,7 +5564,8 @@ function renderRRTrend(matches){
     cursorLine.setAttribute('x1',xx);cursorLine.setAttribute('x2',xx);
     cursorPoint.setAttribute('cx',xx);cursorPoint.setAttribute('cy',y(value));
     [cursorBand,cursorLine,cursorPoint].forEach(item=>item.removeAttribute('hidden'));
-    tipDate.textContent=dateLabel(match);
+    tipDate.textContent=`Match ${i+1} of ${points.length} · ${dateLabel(match)}`;
+    tipMatch.textContent=matchLabel(match);tipMatch.hidden=!tipMatch.textContent;
     tipChange.textContent=`${match.myRR>0?'RR gain':match.myRR<0?'RR loss':'RR change'} ${change}`;
     tipChange.className=`rr-trend-tooltip-change ${match.myRR>0?'positive':match.myRR<0?'negative':''}`;
     tipParty.hidden=!duo;
@@ -5568,33 +5574,37 @@ function renderRRTrend(matches){
     tipIcon.hidden=!RANK_ICONS[rank.tier];
     tipRankText.textContent=`${avgLabel(rank.tier)} · ${rank.rr} RR`;
     tooltip.hidden=false;
-    tooltip.style.left=`${Math.max(8,Math.min(xx+12,width-tooltip.offsetWidth-8))}px`;
+    if(width>=700){
+      // Flip before the edge instead of clamping the tooltip over its point.
+      const tipWidth=tooltip.offsetWidth;
+      tooltip.style.left=`${xx+12+tipWidth<=width-8?xx+12:xx-tipWidth-12}px`;
+    }else container.style.paddingBottom=`${Math.max(164,tooltip.offsetHeight+16)}px`;
   };
   const hide=()=>{
     [cursorBand,cursorLine,cursorPoint].forEach(item=>item.setAttribute('hidden',''));
     tooltip.hidden=true;
   };
+  let focusedIndex=null;
   points.forEach(({match,value},i)=>{
     const change=rrSigned(match.myRR,0);
     const rank=rrPositionFromElo(value,match.myPostTierId);
     const duo=duoInfos[i],run=duoRunAt[i];
     const result=match.won===true?'Win':match.won===false?'Loss':'Draw';
-    const label=`Match ${i+1} of ${points.length}, ${dateLabel(match)}, ${result}: ${avgLabel(rank.tier)} · ${rank.rr} RR after ${change} RR change${duo?`; ${duo.label}${run?`, ${rrSigned(run.net,0)} RR across ${run.count} games`:''}`:''}`;
+    const label=`Match ${i+1} of ${points.length}, ${dateLabel(match)}, ${matchLabel(match)}, ${result}: ${avgLabel(rank.tier)} · ${rank.rr} RR after ${change} RR change${duo?`; ${duo.label}${run?`, ${rrSigned(run.net,0)} RR across ${run.count} games`:''}`:''}`;
     const group=el('g',{tabindex:'0','aria-label':label});
     group.appendChild(el('circle',{cx:x(i),cy:y(value),r:Math.min(11,Math.max(3,spacing/2)),fill:'transparent'}));
-    group.addEventListener('focus',()=>show(i));
-    group.addEventListener('blur',hide);
+    group.addEventListener('focus',()=>{focusedIndex=i;show(i);});
+    group.addEventListener('blur',()=>{focusedIndex=null;hide();});
     svg.appendChild(group);
   });
   svg.addEventListener('pointermove',event=>{
-    if(document.activeElement?.closest?.('.rr-trend-svg'))return;
     const bounds=svg.getBoundingClientRect();
     const plotX=(event.clientX-bounds.left)*width/bounds.width;
     if(plotX<left||plotX>width-right){hide();return;}
     show(points.length===1?0:Math.max(0,Math.min(points.length-1,Math.round((plotX-left)/spacing))));
   });
   svg.addEventListener('pointerleave',()=>{
-    if(!document.activeElement?.closest?.('.rr-trend-svg'))hide();
+    if(focusedIndex!=null)show(focusedIndex);else hide();
   });
   container.append(svg,tooltip);
 }
@@ -5615,6 +5625,7 @@ function renderRRSummary(matches){
 }
 function renderRRBreakdown(matches){
   renderScoreMarginChart(allMatches);
+  renderRRByScore(matches);
   rrHasData=matches.some(m=>Number.isFinite(m.myRR));
   renderRRTrend(matches);
   renderRRSummary(rrTrendScopedMatches(matches));
@@ -5648,6 +5659,35 @@ function renderRRBreakdown(matches){
     {column:4,label:'win rate'},{column:5,label:'RR per win'},
   ]);
   initTableSorting(rankContainer,values);
+}
+
+function buildRRScoreRows(matches){
+  const groups=new Map();
+  matches.filter(m=>isRREligible(m)&&Number.isFinite(m.myRR)).forEach(m=>{
+    if(!Number.isInteger(m.myR)||!Number.isInteger(m.opR)||m.myR<0||m.opR<0||m.myR===m.opR)return;
+    if(m.won!==true&&m.won!==false)return;
+    if(m.won!==(m.myR>m.opR))return;
+    const high=Math.max(m.myR,m.opR),low=Math.min(m.myR,m.opR),key=high+'-'+low;
+    if(!groups.has(key))groups.set(key,{high,low,margin:high-low,matches:[]});
+    groups.get(key).matches.push(m);
+  });
+  return [...groups.values()].sort((a,b)=>a.margin-b.margin||a.high-b.high).map(g=>({
+    high:g.high,low:g.low,margin:g.margin,stats:computeRRStats(g.matches),
+  }));
+}
+
+function renderRRByScore(matches){
+  const container=document.getElementById('rr-score-table'),rows=buildRRScoreRows(matches);
+  if(!rows.length){container.innerHTML='<p class="rr-score-empty">No wins or losses with both a recorded score and eligible RR yet.</p>';return;}
+  container.innerHTML=`<table class="rank-table"><caption class="rank-sr-only">Average recorded RR by exact scoreline, grouped from closest to widest round margin. Scorelines show the winning team's rounds first.</caption>
+    <thead><tr><th scope="col">Scoreline</th><th scope="col">Round margin</th><th scope="col">Wins</th><th scope="col">RR / Win</th><th scope="col">Losses</th><th scope="col">RR / Loss</th></tr></thead>
+    <tbody>${rows.map(({high,low,margin,stats:s})=>`<tr><th scope="row">${high}–${low}</th><td>${margin}</td><td>${s.wins}</td><td class="rank-positive">${s.avgGain==null?'—':rrSigned(s.avgGain,1)}</td><td>${s.losses}</td><td class="rank-negative">${s.avgLoss==null?'—':rrSigned(-s.avgLoss,1)}</td></tr>`).join('')}</tbody></table>`;
+  const values=rows.map(({high,low,margin,stats:s})=>[high*1000+low,margin,s.wins,s.avgGain,s.losses,s.avgLoss==null?null:-s.avgLoss]);
+  highlightTableMaxima(container.querySelector('table'),values,[
+    {column:2,label:'wins'},{column:3,label:'RR per win'},{column:4,label:'losses'},
+    {column:5,label:'RR retained on a loss'},
+  ]);
+  initTableSorting(container,values);
 }
 
 /* ── CLUTCHES (1v1–1v5) ─────────────────────────────────── */
@@ -6101,7 +6141,7 @@ function scoreMarginDistribution(matches){
   // https://playvalorant.com/en-gb/news/game-updates/valorant-patch-notes-1-03/
   // Keep unusual API scores (e.g. early endings) exact rather than clamping
   // them into a valid margin or silently dropping recorded matches.
-  const emptyBin=margin=>({margin,count:0,rrTotal:0,rrCount:0,rrSamples:[],scorelines:new Map()});
+  const emptyBin=margin=>({margin,count:0,scorelines:new Map()});
   const counts=new Map(Array.from({length:27},(_,i)=>i-13)
     .filter(margin=>Math.abs(margin)!==1).map(margin=>[margin,emptyBin(margin)]));
   let total=0;
@@ -6110,84 +6150,35 @@ function scoreMarginDistribution(matches){
     const margin=m.myR-m.opR;
     if(!counts.has(margin))counts.set(margin,emptyBin(margin));
     const bin=counts.get(margin),scoreline=`${m.myR}–${m.opR}`;
-    if(!bin.scorelines.has(scoreline))bin.scorelines.set(scoreline,{scoreline,myR:m.myR,opR:m.opR,count:0,rrTotal:0,rrCount:0});
+    if(!bin.scorelines.has(scoreline))bin.scorelines.set(scoreline,{scoreline,myR:m.myR,opR:m.opR,count:0});
     const score=bin.scorelines.get(scoreline);
     bin.count++;score.count++;total++;
-    // Keep the old scoreline table's payout scope and outcome consistency.
-    // Draws remain in the distribution but have no win/loss RR average.
-    if(margin!==0&&m.won===(margin>0)&&Number.isFinite(m.myRR)&&isRREligible(m)){
-      bin.rrTotal+=m.myRR;bin.rrCount++;
-      bin.rrSamples.push(m.myRR);
-      score.rrTotal+=m.myRR;score.rrCount++;
-    }
   }
   const bins=[...counts.values()].sort((a,b)=>a.margin-b.margin).map(bin=>({
-    ...bin,avgRR:bin.rrCount?bin.rrTotal/bin.rrCount:null,
-    scorelines:[...bin.scorelines.values()].sort((a,b)=>a.myR-b.myR||a.opR-b.opR)
-      .map(score=>({...score,avgRR:score.rrCount?score.rrTotal/score.rrCount:null})),
+    ...bin,
+    scorelines:[...bin.scorelines.values()].sort((a,b)=>a.myR-b.myR||a.opR-b.opR),
   }));
   return {bins,total};
-}
-function scoreMarginRREstimates(bins,won){
-  const pool=bins.filter(bin=>bin.rrCount&&Math.sign(bin.margin)===(won?1:-1));
-  if(!pool.length)return[];
-  const outcomeMean=pool.reduce((sum,bin)=>sum+bin.rrTotal,0)/pool.reduce((sum,bin)=>sum+bin.rrCount,0);
-  const min=Math.min(...pool.map(bin=>bin.margin)),max=Math.max(...pool.map(bin=>bin.margin));
-  const estimates=[];
-  // A descriptive smoother for this player's act, not a corpus-trained model.
-  // Use every nearby payout (including ties) so input order cannot select a
-  // different sample. The same eight-match prior as the rank chart stabilizes
-  // sparse neighborhoods; the two-round span is specific to this margin axis.
-  for(let position=min;position<=max;position+=.25){
-    const nearby=pool.filter(bin=>Math.abs(bin.margin-position)<=2);
-    const n=nearby.reduce((sum,bin)=>sum+bin.rrCount,0);
-    if(n<3){estimates.push({position,payout:null});continue;}
-    let weight=0,total=0;
-    for(const bin of nearby){
-      const w=Math.exp(-.5*(bin.margin-position)**2);
-      weight+=w*bin.rrCount;total+=w*bin.rrTotal;
-    }
-    estimates.push({position,payout:(total+8*outcomeMean)/(weight+8),n,outcomeMean,
-      min:Math.min(...nearby.map(bin=>bin.margin)),max:Math.max(...nearby.map(bin=>bin.margin))});
-  }
-  return estimates;
 }
 function renderScoreMarginChart(matches){
   const {bins,total}=scoreMarginDistribution(matches);
   const section=document.getElementById('score-margin-chart-section');
   const container=document.getElementById('score-margin-chart');
   section.hidden=!total;container.replaceChildren();
-  const rrCount=bins.reduce((n,bin)=>n+bin.rrCount,0);
-  document.getElementById('score-margin-chart-count').textContent=`${total} scored matches · ${rrCount} with eligible RR`;
+  document.getElementById('score-margin-chart-count').textContent=`${total} scored matches`;
   if(!total)return;
-  const width=900,height=340,left=48,right=60,top=36,bottom=58;
+  const width=900,height=300,left=48,right=22,top=30,bottom=58;
   const plotWidth=width-left-right,plotBottom=height-bottom,plotHeight=plotBottom-top;
   const maxCount=Math.max(...bins.map(b=>b.count)),step=Math.max(1,Math.ceil(maxCount/4));
   const ceiling=Math.ceil(maxCount/step)*step,slot=plotWidth/bins.length;
   const y=count=>plotBottom-count/ceiling*plotHeight;
-  const rrMax=Math.max(10,Math.ceil(Math.max(...bins.flatMap(bin=>bin.rrSamples.map(Math.abs)))*1.15/10)*10);
-  const yRR=rr=>top+(rrMax-rr)/(2*rrMax)*plotHeight;
-  const xMargin=position=>{
-    const index=bins.findIndex(bin=>bin.margin>=position);
-    if(index===0||bins[index].margin===position)return left+(index+.5)*slot;
-    return left+(index-.5+(position-bins[index-1].margin)/(bins[index].margin-bins[index-1].margin))*slot;
-  };
-  const svg=statChartNode('svg',{class:'stat-chart-svg',viewBox:`0 0 ${width} ${height}`,role:'group','aria-label':'Match counts, estimated RR trends and recorded payouts by round margin; left axis is matches, right axis is RR'});
+  const svg=statChartNode('svg',{class:'stat-chart-svg',viewBox:`0 0 ${width} ${height}`,role:'group','aria-label':'Match counts by round margin'});
   svg.appendChild(statChartNode('text',{x:left,y:16,class:'muted'},'Matches'));
-  if(rrCount){
-    svg.appendChild(statChartNode('text',{x:width-right,y:16,'text-anchor':'end',class:'muted'},'RR payout'));
-    svg.appendChild(statChartNode('line',{x1:width-right,y1:top,x2:width-right,y2:plotBottom,class:'grid'}));
-    for(const rr of [-rrMax,-rrMax/2,0,rrMax/2,rrMax]){
-      svg.appendChild(statChartNode('line',{x1:width-right,y1:yRR(rr),x2:width-right+5,y2:yRR(rr),class:'grid'}));
-      svg.appendChild(statChartNode('text',{x:width-right+10,y:yRR(rr)+4,class:'tick'},rr===0?'0':rrSigned(rr,0)));
-    }
-  }
-  const rrDescription=(row)=>row.rrCount?`Average RR ${rrSigned(row.avgRR,1)} from ${row.rrCount}/${row.count} eligible matches`:'No eligible win/loss RR';
   const binDescription=bin=>{
     const margin=Math.abs(bin.margin);
     const outcome=bin.margin===0?'Draws':`${bin.margin>0?'Wins':'Losses'} by ${margin} ${margin===1?'round':'rounds'}`;
-    const scores=bin.scorelines.map(score=>`${score.scoreline}: ${score.count} matches; ${rrDescription(score)}`).join('. ');
-    return `${outcome}: ${bin.count} matches (${(100*bin.count/total).toFixed(1)}%). ${rrDescription(bin)}. Scorelines (your rounds–enemy rounds): ${scores}.`;
+    const scores=bin.scorelines.map(score=>`${score.scoreline}: ${score.count} matches`).join('. ');
+    return `${outcome}: ${bin.count} matches (${(100*bin.count/total).toFixed(1)}%). Scorelines (your rounds–enemy rounds): ${scores}.`;
   };
   for(let count=0;count<=ceiling;count+=step){
     svg.appendChild(statChartNode('line',{x1:left,y1:y(count),x2:width-right,y2:y(count),class:count===0?'zero':'grid'}));
@@ -6203,29 +6194,6 @@ function renderScoreMarginChart(matches){
     }
     const label=bin.margin===0?'0':`${bin.margin>0?'+':'−'}${Math.abs(bin.margin)}`;
     svg.appendChild(statChartNode('text',{x:center,y:plotBottom+22,'text-anchor':'middle',class:'tick'},label));
-  }
-  for(const bin of bins){
-    const samples=bin.rrSamples.slice().sort((a,b)=>a-b),spacing=Math.min(2.5,12/Math.max(1,samples.length-1));
-    samples.forEach((rr,index)=>svg.appendChild(statChartNode('circle',{
-      cx:xMargin(bin.margin)+(index-(samples.length-1)/2)*spacing,cy:yRR(rr),r:2.5,
-      class:`rr-payout-sample ${bin.margin>0?'win':'loss'}`,'aria-hidden':'true'})));
-  }
-  for(const won of [false,true]){
-    const estimates=scoreMarginRREstimates(bins,won),outcome=won?'win':'loss';
-    let segment=[];
-    const flush=()=>{
-      if(!segment.length)return;
-      const path=segment.length===1?`M${(xMargin(segment[0].position)-3).toFixed(1)},${yRR(segment[0].payout).toFixed(1)} h6`:
-        segment.map((point,index)=>`${index?'L':'M'}${xMargin(point.position).toFixed(1)},${yRR(point.payout).toFixed(1)}`).join(' ');
-      svg.appendChild(statChartNode('path',{d:path,class:`rr-payout-trend ${outcome}`,'aria-hidden':'true'}));segment=[];
-    };
-    estimates.forEach(point=>{if(point.payout==null)flush();else segment.push(point);});flush();
-    for(const estimate of estimates.filter(point=>point.payout!=null&&Number.isInteger(point.position))){
-      const bin=bins.find(bin=>bin.margin===estimate.position);
-      const detail=`Estimated RR / ${outcome}: ${rrSigned(estimate.payout,1)}. ${estimate.n} nearby eligible ${won?'wins':'losses'} within 2 rounds, blended with your act's ${outcome} average (${rrSigned(estimate.outcomeMean,1)}). ${binDescription(bin)}`;
-      const hit=statChartNode('circle',{cx:xMargin(estimate.position),cy:yRR(estimate.payout),r:6,class:'rr-estimate-hit',tabindex:'0',role:'img','aria-label':detail});
-      hit.appendChild(statChartNode('title',{},detail));svg.appendChild(hit);
-    }
   }
   svg.appendChild(statChartNode('text',{x:left+plotWidth/2,y:height-8,'text-anchor':'middle',class:'muted'},'Round margin · your rounds minus enemy rounds'));
   container.appendChild(svg);
