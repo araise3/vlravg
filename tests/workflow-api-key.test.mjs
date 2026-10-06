@@ -61,6 +61,41 @@ test('public requests retain their key and cache even if workflow quota is exhau
   assert.equal(f.sql.prepare('SELECT remaining FROM rate_quota').get().remaining,7);
 });
 
+test('public cache hits and D1-only routes bypass exhausted quota without advancing its slot',async t=>{
+  const f=fixture(t);
+  f.sql.prepare('UPDATE rate_quota SET remaining=0,reset_at=?,next_start_at=?').run(Date.now()+60000,Date.now()+30000);
+  const before=f.sql.prepare('SELECT * FROM rate_quota').get();
+  globalThis.caches.default.match=async()=>Response.json({data:{cached:true}});
+  const cached=await f.request();
+  assert.equal(cached.status,200);assert.equal(cached.headers.get('X-Proxy-Cache'),'HIT');
+  assert.equal((await f.request(undefined,origin+'/api/calib-model')).status,200);
+  assert.deepEqual(f.sql.prepare('SELECT * FROM rate_quota').get(),before);
+  assert.equal(f.upstream.length,0);
+});
+
+test('public exhaustion and failed gate storage never issue an upstream request',async t=>{
+  const f=fixture(t);
+  f.sql.prepare('UPDATE rate_quota SET remaining=0,reset_at=?').run(Date.now()+60000);
+  const response=await f.request(),body=await response.json();
+  assert.equal(response.status,429);assert.ok(body.retryAfterMs>0);
+  assert.deepEqual(Object.keys(body).sort(),['error','retryAfterMs']);
+  assert.equal(response.headers.get('ratelimit'),null);
+  f.env.APP_DB={prepare(){throw new Error('D1 unavailable');}};
+  assert.equal((await f.request()).status,503);
+  assert.equal(f.upstream.length,0);
+});
+
+test('real public 429 with HTTP-date Retry-After pauses only the public pool and hides headers',async t=>{
+  const f=fixture(t);const retryAt=Math.ceil(Date.now()/1000)*1000+90000;
+  t.mock.method(globalThis,'fetch',async()=>Response.json({error:'upstream'},
+    {status:429,headers:{'Retry-After':new Date(retryAt).toUTCString(),'x-ratelimit-remaining':'0'}}));
+  const response=await f.request(),body=await response.json();
+  assert.equal(response.status,429);assert.ok(body.retryAfterMs>85000);
+  for(const header of ['ratelimit','x-ratelimit-remaining','x-ratelimit-reset','retry-after'])assert.equal(response.headers.get(header),null);
+  assert.equal(f.sql.prepare('SELECT remaining,reset_at FROM rate_quota').get().reset_at,retryAt);
+  assert.equal(f.sql.prepare('SELECT * FROM workflow_rate_quota').get(),undefined);
+});
+
 test('exhausted workflow quota returns only retryAfterMs without contacting upstream',async t=>{
   const f=fixture(t);
   f.sql.prepare('INSERT INTO workflow_rate_quota (id,remaining,reset_at,last_request_at) VALUES(1,0,?,0)').run(Date.now()+60000);

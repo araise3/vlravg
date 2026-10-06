@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
+import { DatabaseSync } from 'node:sqlite';
 import { onRequestGet } from '../functions/api/[[path]].js';
 
 const puuid='11111111-1111-4111-8111-111111111111';
@@ -9,6 +10,12 @@ const season='22222222-2222-4222-8222-222222222222';
 
 test('stored routes fix archive page size and fetch full detail by match ID',async t=>{
   const urls=[];
+  const sql=new DatabaseSync(':memory:');
+  sql.exec(readFileSync(new URL('../schema.sql',import.meta.url),'utf8'));
+  t.after(()=>sql.close());
+  const APP_DB={prepare(query){let values=[];const s={bind(...v){values=v;return s;},
+    async first(){return sql.prepare(query).get(...values)||null;},
+    async run(){return sql.prepare(query).run(...values);}};return s;}};
   const oldFetch=globalThis.fetch,oldCaches=globalThis.caches;
   globalThis.caches={default:{async match(){return null;},async put(){}}};
   globalThis.fetch=async url=>{
@@ -17,9 +24,11 @@ test('stored routes fix archive page size and fetch full detail by match ID',asy
   };
   t.after(()=>{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;});
   const request=async path=>{
+    // Routing assertions are independent of admission timing, tested separately.
+    sql.prepare('UPDATE rate_quota SET next_start_at=0').run();
     const jobs=[];
     const response=await onRequestGet({request:new Request(`https://example.test/api/${path}`),
-      env:{HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});
+      env:{APP_DB,HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});
     await Promise.all(jobs);
     return response;
   };
