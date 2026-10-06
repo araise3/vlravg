@@ -782,11 +782,15 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .stat-chart-legend span{display:inline-flex;align-items:center;gap:6px;}
 .stat-chart-key{width:16px;height:3px;border-radius:2px;background:#a1a1aa;}
 .stat-chart-key.win{background:#4ade80;}.stat-chart-key.loss{background:#f87171;}.stat-chart-key.draw{background:#facc15;}
-.stat-chart-key.rr{width:8px;height:8px;border:2px solid #e4e4e7;border-radius:50%;background:#141416;}
-.stat-chart-svg .rr-average-line{fill:none;stroke:#e4e4e7;stroke-width:2;stroke-dasharray:4 4;pointer-events:none;}
-.stat-chart-svg .rr-average-point{fill:#141416;stroke:#e4e4e7;stroke-width:2;cursor:help;}
-.stat-chart-svg .rr-average-point:focus-visible{outline:none;stroke:#fff;stroke-width:4;}
-#score-margin-chart .bar{fill-opacity:.65;}
+.stat-chart-key.rr{background:linear-gradient(to right,#f87171 50%,#4ade80 50%);}
+.stat-chart-key.rr-sample{width:6px;height:6px;border:1px solid #a1a1aa;border-radius:50%;background:#141416;}
+.stat-chart-svg .rr-payout-trend{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;pointer-events:none;}
+.stat-chart-svg .rr-payout-trend.win{stroke:#4ade80;}.stat-chart-svg .rr-payout-trend.loss{stroke:#f87171;}
+.stat-chart-svg .rr-payout-sample{fill:#141416;stroke-width:1.25;opacity:.35;pointer-events:none;}
+.stat-chart-svg .rr-payout-sample.win{stroke:#4ade80;}.stat-chart-svg .rr-payout-sample.loss{stroke:#f87171;}
+.stat-chart-svg .rr-estimate-hit{fill:transparent;stroke:none;cursor:help;}
+.stat-chart-svg .rr-estimate-hit:focus-visible{outline:none;stroke:#fff;stroke-width:1.5;}
+#score-margin-chart .bar{fill-opacity:.45;}
 .stat-chart-scroll{position:relative;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
 .stat-chart-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
 .stat-chart-svg{display:block;width:100%;min-width:650px;height:auto;font-family:var(--font-body);}
@@ -1024,9 +1028,9 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
     </div>
     <section id="score-margin-chart-section" class="stat-chart-card" hidden aria-labelledby="score-margin-chart-title">
       <div class="stat-chart-head"><h2 id="score-margin-chart-title">Score margin &amp; RR</h2><span id="score-margin-chart-count" class="rr-movement-count"></span></div>
-      <div class="stat-chart-legend"><span><i class="stat-chart-key loss"></i>Losses</span><span><i class="stat-chart-key draw"></i>Draws</span><span><i class="stat-chart-key win"></i>Wins</span><span><i class="stat-chart-key rr"></i>Average RR</span></div>
-      <div id="score-margin-chart" class="stat-chart-scroll" role="region" aria-label="Match counts and average RR by round margin" tabindex="0"></div>
-      <p class="stat-chart-note">Bars: all scored matches this act, including placements (left axis). Points: average recorded RR for eligible wins and losses, excluding placements, unrated ranks and 5-stacks (right axis). Hover or focus for exact scorelines and RR coverage. Overtime wins share the ±2 margin; draws sit at 0.</p>
+      <div class="stat-chart-legend"><span><i class="stat-chart-key loss"></i>Losses</span><span><i class="stat-chart-key draw"></i>Draws</span><span><i class="stat-chart-key win"></i>Wins</span><span><i class="stat-chart-key rr"></i>Estimated RR trend</span><span><i class="stat-chart-key rr-sample"></i>Recorded RR</span></div>
+      <div id="score-margin-chart" class="stat-chart-scroll" role="region" aria-label="Match counts and estimated RR by round margin" tabindex="0"></div>
+      <p class="stat-chart-note">Bars: all scored matches this act (left axis). Lines: estimated RR for eligible wins and losses; faint dots: recorded payouts (right axis). Trends blend nearby margins within 2 rounds with your act's win/loss average; gaps mean fewer than 3 nearby samples. Hover or focus for exact scorelines and RR coverage. Regulation 13–11 and overtime share ±2; draws sit at 0.</p>
     </section>
     <div id="rr-empty" class="page-empty" role="status">Search for a player above to explore their RR breakdown.</div>
   </main>
@@ -6097,7 +6101,7 @@ function scoreMarginDistribution(matches){
   // https://playvalorant.com/en-gb/news/game-updates/valorant-patch-notes-1-03/
   // Keep unusual API scores (e.g. early endings) exact rather than clamping
   // them into a valid margin or silently dropping recorded matches.
-  const emptyBin=margin=>({margin,count:0,rrTotal:0,rrCount:0,scorelines:new Map()});
+  const emptyBin=margin=>({margin,count:0,rrTotal:0,rrCount:0,rrSamples:[],scorelines:new Map()});
   const counts=new Map(Array.from({length:27},(_,i)=>i-13)
     .filter(margin=>Math.abs(margin)!==1).map(margin=>[margin,emptyBin(margin)]));
   let total=0;
@@ -6113,6 +6117,7 @@ function scoreMarginDistribution(matches){
     // Draws remain in the distribution but have no win/loss RR average.
     if(margin!==0&&m.won===(margin>0)&&Number.isFinite(m.myRR)&&isRREligible(m)){
       bin.rrTotal+=m.myRR;bin.rrCount++;
+      bin.rrSamples.push(m.myRR);
       score.rrTotal+=m.myRR;score.rrCount++;
     }
   }
@@ -6122,6 +6127,30 @@ function scoreMarginDistribution(matches){
       .map(score=>({...score,avgRR:score.rrCount?score.rrTotal/score.rrCount:null})),
   }));
   return {bins,total};
+}
+function scoreMarginRREstimates(bins,won){
+  const pool=bins.filter(bin=>bin.rrCount&&Math.sign(bin.margin)===(won?1:-1));
+  if(!pool.length)return[];
+  const outcomeMean=pool.reduce((sum,bin)=>sum+bin.rrTotal,0)/pool.reduce((sum,bin)=>sum+bin.rrCount,0);
+  const min=Math.min(...pool.map(bin=>bin.margin)),max=Math.max(...pool.map(bin=>bin.margin));
+  const estimates=[];
+  // A descriptive smoother for this player's act, not a corpus-trained model.
+  // Use every nearby payout (including ties) so input order cannot select a
+  // different sample. The same eight-match prior as the rank chart stabilizes
+  // sparse neighborhoods; the two-round span is specific to this margin axis.
+  for(let position=min;position<=max;position+=.25){
+    const nearby=pool.filter(bin=>Math.abs(bin.margin-position)<=2);
+    const n=nearby.reduce((sum,bin)=>sum+bin.rrCount,0);
+    if(n<3){estimates.push({position,payout:null});continue;}
+    let weight=0,total=0;
+    for(const bin of nearby){
+      const w=Math.exp(-.5*(bin.margin-position)**2);
+      weight+=w*bin.rrCount;total+=w*bin.rrTotal;
+    }
+    estimates.push({position,payout:(total+8*outcomeMean)/(weight+8),n,outcomeMean,
+      min:Math.min(...nearby.map(bin=>bin.margin)),max:Math.max(...nearby.map(bin=>bin.margin))});
+  }
+  return estimates;
 }
 function renderScoreMarginChart(matches){
   const {bins,total}=scoreMarginDistribution(matches);
@@ -6136,12 +6165,17 @@ function renderScoreMarginChart(matches){
   const maxCount=Math.max(...bins.map(b=>b.count)),step=Math.max(1,Math.ceil(maxCount/4));
   const ceiling=Math.ceil(maxCount/step)*step,slot=plotWidth/bins.length;
   const y=count=>plotBottom-count/ceiling*plotHeight;
-  const rrMax=Math.max(10,Math.ceil(Math.max(...bins.map(bin=>Math.abs(bin.avgRR??0)))*1.15/10)*10);
+  const rrMax=Math.max(10,Math.ceil(Math.max(...bins.flatMap(bin=>bin.rrSamples.map(Math.abs)))*1.15/10)*10);
   const yRR=rr=>top+(rrMax-rr)/(2*rrMax)*plotHeight;
-  const svg=statChartNode('svg',{class:'stat-chart-svg',viewBox:`0 0 ${width} ${height}`,role:'group','aria-label':'Match counts and average recorded RR by round margin; left axis is matches, right axis is RR'});
+  const xMargin=position=>{
+    const index=bins.findIndex(bin=>bin.margin>=position);
+    if(index===0||bins[index].margin===position)return left+(index+.5)*slot;
+    return left+(index-.5+(position-bins[index-1].margin)/(bins[index].margin-bins[index-1].margin))*slot;
+  };
+  const svg=statChartNode('svg',{class:'stat-chart-svg',viewBox:`0 0 ${width} ${height}`,role:'group','aria-label':'Match counts, estimated RR trends and recorded payouts by round margin; left axis is matches, right axis is RR'});
   svg.appendChild(statChartNode('text',{x:left,y:16,class:'muted'},'Matches'));
   if(rrCount){
-    svg.appendChild(statChartNode('text',{x:width-right,y:16,'text-anchor':'end',class:'muted'},'Average RR'));
+    svg.appendChild(statChartNode('text',{x:width-right,y:16,'text-anchor':'end',class:'muted'},'RR payout'));
     svg.appendChild(statChartNode('line',{x1:width-right,y1:top,x2:width-right,y2:plotBottom,class:'grid'}));
     for(const rr of [-rrMax,-rrMax/2,0,rrMax/2,rrMax]){
       svg.appendChild(statChartNode('line',{x1:width-right,y1:yRR(rr),x2:width-right+5,y2:yRR(rr),class:'grid'}));
@@ -6170,22 +6204,28 @@ function renderScoreMarginChart(matches){
     const label=bin.margin===0?'0':`${bin.margin>0?'+':'−'}${Math.abs(bin.margin)}`;
     svg.appendChild(statChartNode('text',{x:center,y:plotBottom+22,'text-anchor':'middle',class:'tick'},label));
   }
-  // Break the RR line at missing samples and between losses and wins.
-  // Draw all lines before the points so every point stays visible and focusable.
-  let previous=null;
-  const points=[];
-  for(const [index,bin] of bins.entries()){
-    if(bin.avgRR==null){previous=null;continue;}
-    const point={x:left+(index+.5)*slot,y:yRR(bin.avgRR),bin};
-    if(previous&&Math.sign(previous.bin.margin)===Math.sign(bin.margin)){
-      svg.appendChild(statChartNode('line',{x1:previous.x,y1:previous.y,x2:point.x,y2:point.y,class:'rr-average-line'}));
-    }
-    points.push(point);previous=point;
+  for(const bin of bins){
+    const samples=bin.rrSamples.slice().sort((a,b)=>a-b),spacing=Math.min(2.5,12/Math.max(1,samples.length-1));
+    samples.forEach((rr,index)=>svg.appendChild(statChartNode('circle',{
+      cx:xMargin(bin.margin)+(index-(samples.length-1)/2)*spacing,cy:yRR(rr),r:2.5,
+      class:`rr-payout-sample ${bin.margin>0?'win':'loss'}`,'aria-hidden':'true'})));
   }
-  for(const {x,y,bin} of points){
-    const detail=binDescription(bin);
-    const point=statChartNode('circle',{cx:x,cy:y,r:5,class:'rr-average-point',tabindex:'0',role:'img','aria-label':detail});
-    point.appendChild(statChartNode('title',{},detail));svg.appendChild(point);
+  for(const won of [false,true]){
+    const estimates=scoreMarginRREstimates(bins,won),outcome=won?'win':'loss';
+    let segment=[];
+    const flush=()=>{
+      if(!segment.length)return;
+      const path=segment.length===1?`M${(xMargin(segment[0].position)-3).toFixed(1)},${yRR(segment[0].payout).toFixed(1)} h6`:
+        segment.map((point,index)=>`${index?'L':'M'}${xMargin(point.position).toFixed(1)},${yRR(point.payout).toFixed(1)}`).join(' ');
+      svg.appendChild(statChartNode('path',{d:path,class:`rr-payout-trend ${outcome}`,'aria-hidden':'true'}));segment=[];
+    };
+    estimates.forEach(point=>{if(point.payout==null)flush();else segment.push(point);});flush();
+    for(const estimate of estimates.filter(point=>point.payout!=null&&Number.isInteger(point.position))){
+      const bin=bins.find(bin=>bin.margin===estimate.position);
+      const detail=`Estimated RR / ${outcome}: ${rrSigned(estimate.payout,1)}. ${estimate.n} nearby eligible ${won?'wins':'losses'} within 2 rounds, blended with your act's ${outcome} average (${rrSigned(estimate.outcomeMean,1)}). ${binDescription(bin)}`;
+      const hit=statChartNode('circle',{cx:xMargin(estimate.position),cy:yRR(estimate.payout),r:6,class:'rr-estimate-hit',tabindex:'0',role:'img','aria-label':detail});
+      hit.appendChild(statChartNode('title',{},detail));svg.appendChild(hit);
+    }
   }
   svg.appendChild(statChartNode('text',{x:left+plotWidth/2,y:height-8,'text-anchor':'middle',class:'muted'},'Round margin · your rounds minus enemy rounds'));
   container.appendChild(svg);
