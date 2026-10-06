@@ -1506,7 +1506,7 @@ function currentActId(){
 
 // Pages share one search/data flow and one placement filter. Their result
 // sections stay mounted so navigation preserves loaded data and open matches.
-let activePage='overview',analysisState='idle',rrHasData=false;
+let activePage='overview',analysisState='idle';
 let headerRevealPending=false;
 let nameHistoryRows=[],nameHistoryState='idle';
 let nameHistoryBackfill=null,nameBackfillBusy=false,nameBackfillError=false;
@@ -1656,14 +1656,14 @@ function updateDetailPages(){
   const ready=analysisState==='ready';
   // Account names can load before (or without) the selected season's matches.
   document.querySelector('.page-nav').hidden=!ready&&nameHistoryState!=='ready';
-  const hasRR=ready&&allMatches.length>0&&rrHasData;
+  const hasRR=ready&&allMatches.length>0;
   document.getElementById('rr-tables').hidden=!hasRR;
   const hasScores=ready&&scoreMarginDistribution(allMatches).total>0;
   document.getElementById('score-margin-chart-section').hidden=!hasScores;
   const rrEmpty=document.getElementById('rr-empty');
   rrEmpty.hidden=hasRR||hasScores||analysisState==='error';
   rrEmpty.textContent=analysisState==='loading'?'Loading this player’s matches…':ready
-    ?'No recorded RR changes found for this season. Try another act.'
+    ?'No matches found for this season. Try another act.'
     :'Search for a player above to explore their RR breakdown.';
   document.getElementById('party-size-section').style.display=ready&&allMatches.length>0&&partySizeData.length>0?'block':'none';
   document.getElementById('duos-filter-host').hidden=!ready;
@@ -5626,33 +5626,34 @@ function renderRRSummary(matches){
 function renderRRBreakdown(matches){
   renderScoreMarginChart(allMatches);
   renderRRByScore(matches);
-  rrHasData=matches.some(m=>Number.isFinite(m.myRR));
   renderRRTrend(matches);
   renderRRSummary(rrTrendScopedMatches(matches));
   renderRRMovement(matches);
-  const columns=`<th scope="col">K/D</th><th scope="col" title="Average combat score">ACS</th><th scope="col" title="Wins divided by wins plus losses; draws excluded">WR%</th><th scope="col">RR / Win</th><th scope="col">RR / Loss</th>`;
+  const columns=`<th scope="col">K/D</th><th scope="col" title="Average combat score">ACS</th><th scope="col" title="Wins divided by wins plus losses across all games; draws excluded">WR%</th><th scope="col" title="Average recorded RR from eligible wins; excludes placements, unrated ranks and full 5-stacks">RR / Win</th><th scope="col" title="Average recorded RR from eligible losses; excludes placements, unrated ranks and full 5-stacks">RR / Loss</th>`;
   const winRateClass=rate=>rate==null||Math.round(rate)===50?'':Math.round(rate)>50?'rank-positive':'rank-negative';
   const cells=s=>`<td>${s.n}</td><td class="${s.kd==null||s.kd===1?'':s.kd>1?'rank-positive':'rank-negative'}">${s.kd==null?'—':s.kd.toFixed(2)}</td><td>${s.acs==null?'—':Math.round(s.acs)}</td><td class="${winRateClass(s.winRate)}">${s.winRate==null?'—':Math.round(s.winRate)+'%'}</td><td class="rank-positive">${s.avgGain==null?'—':rrSigned(s.avgGain,1)}</td><td class="rank-negative">${s.avgLoss==null?'—':rrSigned(-s.avgLoss,1)}</td>`;
-  const scope='RR matches in this act, excluding placements, unrated ranks and full 5-stacks.';
+  const scope='Games, K/D, ACS and win rate include all matches in this act. RR averages use eligible recorded payouts, excluding placements, unrated ranks and full 5-stacks.';
   const groups=new Map();
   matches.forEach(m=>{
     if(!groups.has(m.myTierId))groups.set(m.myTierId,[]);
     groups.get(m.myTierId).push(m);
   });
   const rows=[...groups].sort((a,b)=>a[0]-b[0]).map(([tier,group])=>{
-    // Keep performance figures scoped to the same matches as the RR averages.
-    const performance=group.filter(isRREligible).map(m=>m.myStats).filter(Boolean);
+    const performance=group.map(m=>m.myStats).filter(Boolean);
     const kdMatches=performance.filter(s=>s.kills!=null&&s.deaths!=null);
     const kills=kdMatches.reduce((sum,s)=>sum+s.kills,0);
     const deaths=kdMatches.reduce((sum,s)=>sum+s.deaths,0);
     const acsMatches=performance.filter(s=>s.acs!=null);
-    return{tier,stats:{...computeRRStats(group),
+    const wins=group.filter(m=>m.won===true).length,losses=group.filter(m=>m.won===false).length;
+    return{tier,stats:{...computeRRStats(group.filter(m=>Number.isFinite(m.myRR))),
+      n:group.length,
+      winRate:wins+losses?wins/(wins+losses)*100:null,
       kd:deaths>0?kills/deaths:kills>0?kills:null,
       acs:acsMatches.length?acsMatches.reduce((sum,s)=>sum+s.acs,0)/acsMatches.length:null,
     }};
-  }).filter(row=>row.stats.n);
+  });
   const rankContainer=document.getElementById('rr-rank-table');
-  rankContainer.innerHTML=`<table class="rank-table"><caption class="rank-sr-only">RR gains and losses grouped by your rank in each match. ${scope}</caption><thead><tr><th scope="col">Player rank</th><th scope="col">Games</th>${columns}</tr></thead><tbody>${rows.map(({tier,stats})=>`<tr><th scope="row"><div class="rank-row-identity">${rankIcon(tier,24)}<span>${avgLabel(tier)}</span></div></th>${cells(stats)}</tr>`).join('')}</tbody></table>`;
+  rankContainer.innerHTML=`<table class="rank-table"><caption class="rank-sr-only">Matches grouped by your rank in each match. ${scope}</caption><thead><tr><th scope="col">Player rank</th><th scope="col" title="All matches in this act, including games without RR payouts">Games</th>${columns}</tr></thead><tbody>${rows.map(({tier,stats})=>`<tr><th scope="row"><div class="rank-row-identity">${rankIcon(tier,24)}<span>${avgLabel(tier)}</span></div></th>${cells(stats)}</tr>`).join('')}</tbody></table>`;
   const values=rows.map(({tier,stats:s})=>[tier,s.n,s.kd,s.acs,s.winRate,s.avgGain,s.avgLoss==null?null:-s.avgLoss]);
   highlightTableMaxima(rankContainer.querySelector('table'),values,[
     {column:2,label:'K/D'},{column:3,label:'ACS'},

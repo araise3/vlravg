@@ -63,6 +63,55 @@ test('result table keeps regulation and overtime separate with eligible actual p
   assert.equal(scoreRows([]).length,0);
 });
 
+test('player-rank table includes every game and performance while preserving eligible RR averages',()=>{
+  const base={myTierId:24,won:true,myRR:18,myStats:{kills:10,deaths:5,acs:200}};
+  const matches=[base,{...base,won:false,myRR:-22},
+    {...base,myRR:null,myStats:{kills:20,deaths:10,acs:300}},
+    {...base,won:false,myRR:-90,actPlacement:true},
+    {...base,myRR:90,partySize:5},
+    {...base,won:null,myRR:null,myStats:null},
+    {...base,myTierId:25,won:false,myRR:null},
+    {...base,myTierId:0,won:null,myRR:null,myStats:null}];
+  const container={innerHTML:'',querySelector:()=>({})};
+  let values;
+  const render=runInNewContext(stats+'\n'+html.slice(html.indexOf('function renderRRBreakdown('),html.indexOf('function buildRRScoreRows('))+'\nrenderRRBreakdown',{
+    allMatches:matches,document:{getElementById:()=>container},
+    renderScoreMarginChart:()=>{},renderRRByScore:()=>{},renderRRTrend:()=>{},
+    renderRRSummary:()=>{},rrTrendScopedMatches:m=>m,renderRRMovement:()=>{},
+    rankIcon:()=>'',avgLabel:tier=>String(tier),rrSigned:(n,d)=>`${n<0?'−':'+'}${Math.abs(n).toFixed(d)}`,
+    highlightTableMaxima:()=>{},initTableSorting:(_,rows)=>{values=rows;},
+  });
+  render(matches);
+  assert.equal(values.reduce((n,row)=>n+row[1],0),matches.length);
+  const immortal=values.find(row=>row[0]===24);
+  assert.equal(immortal[1],6);
+  assert.equal(immortal[2],2);assert.equal(immortal[3],220);
+  assert.equal(immortal[4],60,'all wins and losses count, with draws excluded');
+  assert.equal(immortal[5],18);assert.equal(immortal[6],-22);
+  const noRR=values.find(row=>row[0]===25);
+  assert.equal(noRR[1],1);assert.equal(noRR[4],0);
+  assert.equal(noRR[5],null);assert.equal(noRR[6],null);
+  assert.equal(values.find(row=>row[0]===0)[1],1,'unrated game remains visible');
+  render(matches.filter(m=>m.myRR==null));
+  assert.equal(values.reduce((n,row)=>n+row[1],0),4);
+  assert.ok(values.every(row=>row[5]===null&&row[6]===null));
+});
+
+test('RR breakdown remains visible for a loaded act containing only games without RR',()=>{
+  const elements=new Map();
+  const document={querySelector:()=>({}),getElementById:id=>{
+    if(!elements.has(id))elements.set(id,{});return elements.get(id);
+  }};
+  const start=html.indexOf('function updateDetailPages(');
+  const end=html.indexOf("  document.getElementById('party-size-section')",start);
+  runInNewContext(html.slice(start,end)+'}\nupdateDetailPages();',{
+    document,analysisState:'ready',allMatches:[{myRR:null}],nameHistoryState:'idle',
+    scoreMarginDistribution:()=>({total:0}),
+  });
+  assert.equal(elements.get('rr-tables').hidden,false);
+  assert.equal(elements.get('rr-empty').hidden,true);
+});
+
 test('distribution renders counts with accessible exact scores independently of RR',()=>{
   const element=()=>({attrs:{},children:[],textContent:'',hidden:false,
     setAttribute(key,value){this.attrs[key]=value;},
