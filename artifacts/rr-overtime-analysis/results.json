@@ -1,0 +1,2250 @@
+{
+  "audit": {
+    "raw_payouts": 80632,
+    "missing_match_features": 64040,
+    "rank_coordinate_discrepancy": 934,
+    "draw_or_missing_outcome": 186,
+    "starting_rank_not_witnessed": 1339,
+    "party_penalty_or_five_stack": 1240,
+    "invalid_rank_or_payout": 93,
+    "act_transition": 63,
+    "nonstandard_outcome": 6,
+    "eligible": 12731
+  },
+  "comparison_exclusions": {
+    "not_two_round_margin": 9851,
+    "nonstandard_finish_or_inconsistent_score": 8
+  },
+  "n": 2872,
+  "players": 726,
+  "unique_matches": 2419,
+  "acts": {
+    "e11a5": 2872
+  },
+  "dates": [
+    "2026-09-28T20:31:13.724Z",
+    "2026-10-06T18:05:36.648Z"
+  ],
+  "outcomes": {
+    "wins": {
+      "regulation": {
+        "n": 789,
+        "players": 448,
+        "unique_matches": 687,
+        "mean": 17.784537389100127,
+        "median": 17.0,
+        "sd": 3.9407688439446495
+      },
+      "overtime": {
+        "n": 686,
+        "players": 405,
+        "unique_matches": 610,
+        "mean": 17.690962099125365,
+        "median": 17.0,
+        "sd": 3.6981913048176103
+      },
+      "raw_difference": -0.09357528997476194,
+      "paired": {
+        "players": 256,
+        "difference": 0.10486886160714297,
+        "bootstrap_95": [
+          -0.33006126767113086,
+          0.5364306640624987
+        ],
+        "method": "Equal player weights; within player/act/outcome OT minus regulation means; 5000 permanent-player bootstrap draws. Shared matches may still couple players."
+      },
+      "rank_adjusted": {
+        "n": 979,
+        "players": 256,
+        "unique_matches": 872,
+        "groups": 256,
+        "difference": 0.187717447424222,
+        "se": 0.19721172833018705,
+        "approximate_95": [
+          -0.19881754010294458,
+          0.5742524349513886
+        ],
+        "controls": [
+          "player/act fixed effects",
+          "witnessed starting rank + RR"
+        ],
+        "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+      },
+      "adjusted": {
+        "n": 979,
+        "players": 256,
+        "unique_matches": 872,
+        "groups": 256,
+        "difference": 0.11660376618791923,
+        "se": 0.18328540981547603,
+        "approximate_95": [
+          -0.2426356370504138,
+          0.47584316942625227
+        ],
+        "controls": [
+          "player/act fixed effects",
+          "witnessed starting rank + RR",
+          "within-match standardized ACS",
+          "lobby rank gap",
+          "linear date",
+          "party size"
+        ],
+        "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+      }
+    },
+    "losses": {
+      "regulation": {
+        "n": 722,
+        "players": 430,
+        "unique_matches": 650,
+        "mean": 17.642659279778393,
+        "median": 18.0,
+        "sd": 3.5404941187593075
+      },
+      "overtime": {
+        "n": 675,
+        "players": 408,
+        "unique_matches": 596,
+        "mean": 18.167407407407406,
+        "median": 19.0,
+        "sd": 3.7305545213864706
+      },
+      "raw_difference": 0.5247481276290138,
+      "paired": {
+        "players": 255,
+        "difference": 0.17170401493930906,
+        "bootstrap_95": [
+          -0.22319549486461251,
+          0.5665037348272638
+        ],
+        "method": "Equal player weights; within player/act/outcome OT minus regulation means; 5000 permanent-player bootstrap draws. Shared matches may still couple players."
+      },
+      "rank_adjusted": {
+        "n": 924,
+        "players": 255,
+        "unique_matches": 857,
+        "groups": 255,
+        "difference": 0.13022776260661378,
+        "se": 0.1927424580353041,
+        "approximate_95": [
+          -0.24754745514258225,
+          0.5080029803558098
+        ],
+        "controls": [
+          "player/act fixed effects",
+          "witnessed starting rank + RR"
+        ],
+        "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+      },
+      "adjusted": {
+        "n": 924,
+        "players": 255,
+        "unique_matches": 857,
+        "groups": 255,
+        "difference": 0.02993494566835395,
+        "se": 0.17822993164376838,
+        "approximate_95": [
+          -0.31939572035343206,
+          0.37926561169014
+        ],
+        "controls": [
+          "player/act fixed effects",
+          "witnessed starting rank + RR",
+          "within-match standardized ACS",
+          "lobby rank gap",
+          "linear date",
+          "party size"
+        ],
+        "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+      }
+    }
+  },
+  "sensitivities": {
+    "solo_only": {
+      "wins": {
+        "regulation": {
+          "n": 274,
+          "players": 208,
+          "unique_matches": 270,
+          "mean": 17.682481751824817,
+          "median": 17.0,
+          "sd": 4.2120427002176735
+        },
+        "overtime": {
+          "n": 259,
+          "players": 187,
+          "unique_matches": 256,
+          "mean": 17.637065637065636,
+          "median": 17.0,
+          "sd": 4.22794513189454
+        },
+        "raw_difference": -0.04541611475918117,
+        "paired": {
+          "players": 77,
+          "difference": 0.7497835497835498,
+          "bootstrap_95": [
+            0.0031872294372294573,
+            1.5344480519480512
+          ],
+          "method": "Equal player weights; within player/act/outcome OT minus regulation means; 5000 permanent-player bootstrap draws. Shared matches may still couple players."
+        },
+        "rank_adjusted": {
+          "n": 239,
+          "players": 77,
+          "unique_matches": 238,
+          "groups": 77,
+          "difference": 0.812509405059453,
+          "se": 0.4236453560262832,
+          "approximate_95": [
+            -0.017835492752062088,
+            1.6428543028709681
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        },
+        "adjusted": {
+          "n": 239,
+          "players": 77,
+          "unique_matches": 238,
+          "groups": 77,
+          "difference": 0.65058066691014,
+          "se": 0.35931223877292334,
+          "approximate_95": [
+            -0.05367132108478967,
+            1.3548326549050698
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR",
+            "within-match standardized ACS",
+            "lobby rank gap",
+            "linear date",
+            "party size"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        }
+      },
+      "losses": {
+        "regulation": {
+          "n": 303,
+          "players": 220,
+          "unique_matches": 298,
+          "mean": 17.67986798679868,
+          "median": 18.0,
+          "sd": 3.468852509239789
+        },
+        "overtime": {
+          "n": 240,
+          "players": 180,
+          "unique_matches": 238,
+          "mean": 18.345833333333335,
+          "median": 19.0,
+          "sd": 4.053148904130171
+        },
+        "raw_difference": 0.6659653465346551,
+        "paired": {
+          "players": 88,
+          "difference": 0.7151515151515152,
+          "bootstrap_95": [
+            0.08066287878787869,
+            1.4083570075757574
+          ],
+          "method": "Equal player weights; within player/act/outcome OT minus regulation means; 5000 permanent-player bootstrap draws. Shared matches may still couple players."
+        },
+        "rank_adjusted": {
+          "n": 259,
+          "players": 88,
+          "unique_matches": 258,
+          "groups": 88,
+          "difference": 0.5726731692008165,
+          "se": 0.3832143781386484,
+          "approximate_95": [
+            -0.17842701195093436,
+            1.3237733503525673
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        },
+        "adjusted": {
+          "n": 259,
+          "players": 88,
+          "unique_matches": 258,
+          "groups": 88,
+          "difference": 0.44483755453491447,
+          "se": 0.3597496721732985,
+          "approximate_95": [
+            -0.2602718029247506,
+            1.1499469119945795
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR",
+            "within-match standardized ACS",
+            "lobby rank gap",
+            "linear date",
+            "party size"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        }
+      }
+    },
+    "pc_only": {
+      "wins": {
+        "regulation": {
+          "n": 789,
+          "players": 448,
+          "unique_matches": 687,
+          "mean": 17.784537389100127,
+          "median": 17.0,
+          "sd": 3.9407688439446495
+        },
+        "overtime": {
+          "n": 686,
+          "players": 405,
+          "unique_matches": 610,
+          "mean": 17.690962099125365,
+          "median": 17.0,
+          "sd": 3.6981913048176103
+        },
+        "raw_difference": -0.09357528997476194,
+        "paired": {
+          "players": 256,
+          "difference": 0.10486886160714297,
+          "bootstrap_95": [
+            -0.33006126767113086,
+            0.5364306640624987
+          ],
+          "method": "Equal player weights; within player/act/outcome OT minus regulation means; 5000 permanent-player bootstrap draws. Shared matches may still couple players."
+        },
+        "rank_adjusted": {
+          "n": 979,
+          "players": 256,
+          "unique_matches": 872,
+          "groups": 256,
+          "difference": 0.187717447424222,
+          "se": 0.19721172833018705,
+          "approximate_95": [
+            -0.19881754010294458,
+            0.5742524349513886
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        },
+        "adjusted": {
+          "n": 979,
+          "players": 256,
+          "unique_matches": 872,
+          "groups": 256,
+          "difference": 0.11660376618791923,
+          "se": 0.18328540981547603,
+          "approximate_95": [
+            -0.2426356370504138,
+            0.47584316942625227
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR",
+            "within-match standardized ACS",
+            "lobby rank gap",
+            "linear date",
+            "party size"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        }
+      },
+      "losses": {
+        "regulation": {
+          "n": 722,
+          "players": 430,
+          "unique_matches": 650,
+          "mean": 17.642659279778393,
+          "median": 18.0,
+          "sd": 3.5404941187593075
+        },
+        "overtime": {
+          "n": 675,
+          "players": 408,
+          "unique_matches": 596,
+          "mean": 18.167407407407406,
+          "median": 19.0,
+          "sd": 3.7305545213864706
+        },
+        "raw_difference": 0.5247481276290138,
+        "paired": {
+          "players": 255,
+          "difference": 0.17170401493930906,
+          "bootstrap_95": [
+            -0.22319549486461251,
+            0.5665037348272638
+          ],
+          "method": "Equal player weights; within player/act/outcome OT minus regulation means; 5000 permanent-player bootstrap draws. Shared matches may still couple players."
+        },
+        "rank_adjusted": {
+          "n": 924,
+          "players": 255,
+          "unique_matches": 857,
+          "groups": 255,
+          "difference": 0.13022776260661378,
+          "se": 0.1927424580353041,
+          "approximate_95": [
+            -0.24754745514258225,
+            0.5080029803558098
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        },
+        "adjusted": {
+          "n": 924,
+          "players": 255,
+          "unique_matches": 857,
+          "groups": 255,
+          "difference": 0.02993494566835395,
+          "se": 0.17822993164376838,
+          "approximate_95": [
+            -0.31939572035343206,
+            0.37926561169014
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR",
+            "within-match standardized ACS",
+            "lobby rank gap",
+            "linear date",
+            "party size"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        }
+      }
+    },
+    "below_immortal": {
+      "wins": {
+        "regulation": {
+          "n": 400,
+          "players": 247,
+          "unique_matches": 356,
+          "mean": 17.67,
+          "median": 17.0,
+          "sd": 4.462722232484426
+        },
+        "overtime": {
+          "n": 287,
+          "players": 207,
+          "unique_matches": 262,
+          "mean": 17.975609756097562,
+          "median": 17.0,
+          "sd": 4.735238110070635
+        },
+        "raw_difference": 0.30560975609756014,
+        "paired": {
+          "players": 122,
+          "difference": 0.19275956284152995,
+          "bootstrap_95": [
+            -0.6777390710382514,
+            1.0805191256830595
+          ],
+          "method": "Equal player weights; within player/act/outcome OT minus regulation means; 5000 permanent-player bootstrap draws. Shared matches may still couple players."
+        },
+        "rank_adjusted": {
+          "n": 409,
+          "players": 122,
+          "unique_matches": 368,
+          "groups": 122,
+          "difference": 0.34733581046560824,
+          "se": 0.47119461745148916,
+          "approximate_95": [
+            -0.5762056397393105,
+            1.270877260670527
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        },
+        "adjusted": {
+          "n": 409,
+          "players": 122,
+          "unique_matches": 368,
+          "groups": 122,
+          "difference": 0.21307584183307085,
+          "se": 0.3808821498666307,
+          "approximate_95": [
+            -0.5334531719055253,
+            0.959604855571667
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR",
+            "within-match standardized ACS",
+            "lobby rank gap",
+            "linear date",
+            "party size"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        }
+      },
+      "losses": {
+        "regulation": {
+          "n": 354,
+          "players": 233,
+          "unique_matches": 317,
+          "mean": 17.180790960451976,
+          "median": 17.0,
+          "sd": 4.122222432888236
+        },
+        "overtime": {
+          "n": 310,
+          "players": 210,
+          "unique_matches": 278,
+          "mean": 17.674193548387098,
+          "median": 18.0,
+          "sd": 4.759624399932962
+        },
+        "raw_difference": 0.4934025879351225,
+        "paired": {
+          "players": 117,
+          "difference": 0.20078347578347572,
+          "bootstrap_95": [
+            -0.6293482905982906,
+            1.0064939458689457
+          ],
+          "method": "Equal player weights; within player/act/outcome OT minus regulation means; 5000 permanent-player bootstrap draws. Shared matches may still couple players."
+        },
+        "rank_adjusted": {
+          "n": 374,
+          "players": 117,
+          "unique_matches": 342,
+          "groups": 117,
+          "difference": 0.13865436100350972,
+          "se": 0.47580866792749904,
+          "approximate_95": [
+            -0.7939306281343884,
+            1.071239350141408
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        },
+        "adjusted": {
+          "n": 374,
+          "players": 117,
+          "unique_matches": 342,
+          "groups": 117,
+          "difference": -0.12741586292997603,
+          "se": 0.40859741802407024,
+          "approximate_95": [
+            -0.9282668022571536,
+            0.6734350763972017
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR",
+            "within-match standardized ACS",
+            "lobby rank gap",
+            "linear date",
+            "party size"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        }
+      }
+    },
+    "immortal_plus": {
+      "wins": {
+        "regulation": {
+          "n": 389,
+          "players": 204,
+          "unique_matches": 332,
+          "mean": 17.902313624678662,
+          "median": 17.0,
+          "sd": 3.3213957745316613
+        },
+        "overtime": {
+          "n": 399,
+          "players": 200,
+          "unique_matches": 348,
+          "mean": 17.48621553884712,
+          "median": 17.0,
+          "sd": 2.706624195624663
+        },
+        "raw_difference": -0.4160980858315426,
+        "paired": {
+          "players": 132,
+          "difference": 0.037220418470418494,
+          "bootstrap_95": [
+            -0.08147749819624821,
+            0.1542349837662337
+          ],
+          "method": "Equal player weights; within player/act/outcome OT minus regulation means; 5000 permanent-player bootstrap draws. Shared matches may still couple players."
+        },
+        "rank_adjusted": {
+          "n": 563,
+          "players": 132,
+          "unique_matches": 497,
+          "groups": 132,
+          "difference": 0.07368679694377032,
+          "se": 0.06344930728328886,
+          "approximate_95": [
+            -0.05067384533147584,
+            0.1980474392190165
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        },
+        "adjusted": {
+          "n": 563,
+          "players": 132,
+          "unique_matches": 497,
+          "groups": 132,
+          "difference": 0.0755434976215747,
+          "se": 0.06288676758711481,
+          "approximate_95": [
+            -0.04771456684917033,
+            0.19880156209231972
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR",
+            "within-match standardized ACS",
+            "lobby rank gap",
+            "linear date",
+            "party size"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        }
+      },
+      "losses": {
+        "regulation": {
+          "n": 368,
+          "players": 202,
+          "unique_matches": 333,
+          "mean": 18.08695652173913,
+          "median": 18.0,
+          "sd": 2.8067733330398483
+        },
+        "overtime": {
+          "n": 365,
+          "players": 200,
+          "unique_matches": 318,
+          "mean": 18.586301369863012,
+          "median": 19.0,
+          "sd": 2.480988983751866
+        },
+        "raw_difference": 0.4993448481238829,
+        "paired": {
+          "players": 139,
+          "difference": 0.16038026721479956,
+          "bootstrap_95": [
+            0.03632793764988011,
+            0.28573484069886945
+          ],
+          "method": "Equal player weights; within player/act/outcome OT minus regulation means; 5000 permanent-player bootstrap draws. Shared matches may still couple players."
+        },
+        "rank_adjusted": {
+          "n": 544,
+          "players": 139,
+          "unique_matches": 509,
+          "groups": 139,
+          "difference": 0.13144158710627196,
+          "se": 0.06859641836286128,
+          "approximate_95": [
+            -0.003007392884936122,
+            0.26589056709748005
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        },
+        "adjusted": {
+          "n": 544,
+          "players": 139,
+          "unique_matches": 509,
+          "groups": 139,
+          "difference": 0.11005844701553313,
+          "se": 0.06686124826092933,
+          "approximate_95": [
+            -0.020989599575888362,
+            0.24110649360695463
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR",
+            "within-match standardized ACS",
+            "lobby rank gap",
+            "linear date",
+            "party size"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        }
+      }
+    }
+  },
+  "overtime_lengths": {
+    "14-12": {
+      "wins": {
+        "regulation": {
+          "n": 789,
+          "players": 448,
+          "unique_matches": 687,
+          "mean": 17.784537389100127,
+          "median": 17.0,
+          "sd": 3.9407688439446495
+        },
+        "overtime": {
+          "n": 409,
+          "players": 283,
+          "unique_matches": 365,
+          "mean": 17.74572127139364,
+          "median": 17.0,
+          "sd": 3.7825563939087994
+        },
+        "raw_difference": -0.03881611770648519,
+        "paired": {
+          "players": 185,
+          "difference": 0.06922136422136424,
+          "bootstrap_95": [
+            -0.43040926640926647,
+            0.5857406692406676
+          ],
+          "method": "Equal player weights; within player/act/outcome OT minus regulation means; 5000 permanent-player bootstrap draws. Shared matches may still couple players."
+        },
+        "rank_adjusted": {
+          "n": 660,
+          "players": 185,
+          "unique_matches": 595,
+          "groups": 185,
+          "difference": 0.12136443194015463,
+          "se": 0.2276957856826339,
+          "approximate_95": [
+            -0.3249193079978078,
+            0.5676481718781171
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        },
+        "adjusted": {
+          "n": 660,
+          "players": 185,
+          "unique_matches": 595,
+          "groups": 185,
+          "difference": 0.05747409464942183,
+          "se": 0.21488267217003224,
+          "approximate_95": [
+            -0.3636959428038413,
+            0.47864413210268497
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR",
+            "within-match standardized ACS",
+            "lobby rank gap",
+            "linear date",
+            "party size"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        }
+      },
+      "losses": {
+        "regulation": {
+          "n": 722,
+          "players": 430,
+          "unique_matches": 650,
+          "mean": 17.642659279778393,
+          "median": 18.0,
+          "sd": 3.5404941187593075
+        },
+        "overtime": {
+          "n": 382,
+          "players": 280,
+          "unique_matches": 338,
+          "mean": 17.897905759162303,
+          "median": 18.0,
+          "sd": 4.015396328649853
+        },
+        "raw_difference": 0.25524647938391,
+        "paired": {
+          "players": 184,
+          "difference": -0.0173460144927536,
+          "bootstrap_95": [
+            -0.49775588768115947,
+            0.4654970561594202
+          ],
+          "method": "Equal player weights; within player/act/outcome OT minus regulation means; 5000 permanent-player bootstrap draws. Shared matches may still couple players."
+        },
+        "rank_adjusted": {
+          "n": 611,
+          "players": 184,
+          "unique_matches": 572,
+          "groups": 184,
+          "difference": -0.04549755402912652,
+          "se": 0.2628020490120904,
+          "approximate_95": [
+            -0.5605895700928237,
+            0.4695944620345707
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        },
+        "adjusted": {
+          "n": 611,
+          "players": 184,
+          "unique_matches": 572,
+          "groups": 184,
+          "difference": -0.1505537919704342,
+          "se": 0.23893299019929434,
+          "approximate_95": [
+            -0.6188624527610511,
+            0.31775486882018267
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR",
+            "within-match standardized ACS",
+            "lobby rank gap",
+            "linear date",
+            "party size"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        }
+      }
+    },
+    "15-13": {
+      "wins": {
+        "regulation": {
+          "n": 789,
+          "players": 448,
+          "unique_matches": 687,
+          "mean": 17.784537389100127,
+          "median": 17.0,
+          "sd": 3.9407688439446495
+        },
+        "overtime": {
+          "n": 170,
+          "players": 150,
+          "unique_matches": 151,
+          "mean": 17.3,
+          "median": 17.0,
+          "sd": 3.533190053289339
+        },
+        "raw_difference": -0.4845373891001259,
+        "paired": {
+          "players": 98,
+          "difference": 0.15796890184645285,
+          "bootstrap_95": [
+            -0.5051305879494654,
+            0.8381675170068025
+          ],
+          "method": "Equal player weights; within player/act/outcome OT minus regulation means; 5000 permanent-player bootstrap draws. Shared matches may still couple players."
+        },
+        "rank_adjusted": {
+          "n": 325,
+          "players": 98,
+          "unique_matches": 301,
+          "groups": 98,
+          "difference": 0.16937370197419466,
+          "se": 0.39355375908501306,
+          "approximate_95": [
+            -0.6019916658324309,
+            0.9407390697808202
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        },
+        "adjusted": {
+          "n": 325,
+          "players": 98,
+          "unique_matches": 301,
+          "groups": 98,
+          "difference": 0.17059430920407168,
+          "se": 0.33702308618032356,
+          "approximate_95": [
+            -0.48997093970936245,
+            0.8311595581175059
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR",
+            "within-match standardized ACS",
+            "lobby rank gap",
+            "linear date",
+            "party size"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        }
+      },
+      "losses": {
+        "regulation": {
+          "n": 722,
+          "players": 430,
+          "unique_matches": 650,
+          "mean": 17.642659279778393,
+          "median": 18.0,
+          "sd": 3.5404941187593075
+        },
+        "overtime": {
+          "n": 195,
+          "players": 170,
+          "unique_matches": 170,
+          "mean": 18.435897435897434,
+          "median": 19.0,
+          "sd": 3.3274465597486436
+        },
+        "raw_difference": 0.7932381561190418,
+        "paired": {
+          "players": 107,
+          "difference": 0.5569314641744548,
+          "bootstrap_95": [
+            0.11765965732087233,
+            0.9724299065420562
+          ],
+          "method": "Equal player weights; within player/act/outcome OT minus regulation means; 5000 permanent-player bootstrap draws. Shared matches may still couple players."
+        },
+        "rank_adjusted": {
+          "n": 332,
+          "players": 107,
+          "unique_matches": 314,
+          "groups": 107,
+          "difference": 0.5051099370870049,
+          "se": 0.23767955141970507,
+          "approximate_95": [
+            0.03925801630438297,
+            0.9709618578696269
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        },
+        "adjusted": {
+          "n": 332,
+          "players": 107,
+          "unique_matches": 314,
+          "groups": 107,
+          "difference": 0.4393589011891557,
+          "se": 0.19870286947996932,
+          "approximate_95": [
+            0.049901277008415845,
+            0.8288165253698956
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR",
+            "within-match standardized ACS",
+            "lobby rank gap",
+            "linear date",
+            "party size"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        }
+      }
+    },
+    "16-14": {
+      "wins": {
+        "regulation": {
+          "n": 789,
+          "players": 448,
+          "unique_matches": 687,
+          "mean": 17.784537389100127,
+          "median": 17.0,
+          "sd": 3.9407688439446495
+        },
+        "overtime": {
+          "n": 81,
+          "players": 75,
+          "unique_matches": 69,
+          "mean": 18.22222222222222,
+          "median": 18.0,
+          "sd": 3.9749213828703582
+        },
+        "raw_difference": 0.43768483312209483,
+        "paired": {
+          "players": 53,
+          "difference": 0.6927672955974843,
+          "bootstrap_95": [
+            -0.32328616352201245,
+            1.7648113207547165
+          ],
+          "method": "Equal player weights; within player/act/outcome OT minus regulation means; 5000 permanent-player bootstrap draws. Shared matches may still couple players."
+        },
+        "rank_adjusted": {
+          "n": 176,
+          "players": 53,
+          "unique_matches": 163,
+          "groups": 53,
+          "difference": 0.7616888661157585,
+          "se": 0.5402937663603745,
+          "approximate_95": [
+            -0.29728691595057566,
+            1.8206646481820927
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        },
+        "adjusted": {
+          "n": 176,
+          "players": 53,
+          "unique_matches": 163,
+          "groups": 53,
+          "difference": 0.5998344060042872,
+          "se": 0.508821883344131,
+          "approximate_95": [
+            -0.3974564853502096,
+            1.597125297358784
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR",
+            "within-match standardized ACS",
+            "lobby rank gap",
+            "linear date",
+            "party size"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        }
+      },
+      "losses": {
+        "regulation": {
+          "n": 722,
+          "players": 430,
+          "unique_matches": 650,
+          "mean": 17.642659279778393,
+          "median": 18.0,
+          "sd": 3.5404941187593075
+        },
+        "overtime": {
+          "n": 72,
+          "players": 65,
+          "unique_matches": 64,
+          "mean": 18.680555555555557,
+          "median": 19.0,
+          "sd": 3.5158650044142017
+        },
+        "raw_difference": 1.0378962757771646,
+        "paired": {
+          "players": 43,
+          "difference": -0.17771317829457375,
+          "bootstrap_95": [
+            -1.6473982558139537,
+            0.866283914728682
+          ],
+          "method": "Equal player weights; within player/act/outcome OT minus regulation means; 5000 permanent-player bootstrap draws. Shared matches may still couple players."
+        },
+        "rank_adjusted": {
+          "n": 135,
+          "players": 43,
+          "unique_matches": 131,
+          "groups": 43,
+          "difference": -0.12227193027758658,
+          "se": 0.6291834740083843,
+          "approximate_95": [
+            -1.3554715393340198,
+            1.1109276787788467
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        },
+        "adjusted": {
+          "n": 135,
+          "players": 43,
+          "unique_matches": 131,
+          "groups": 43,
+          "difference": -0.25485621308179435,
+          "se": 0.6987363198621351,
+          "approximate_95": [
+            -1.6243794000115792,
+            1.1146669738479904
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR",
+            "within-match standardized ACS",
+            "lobby rank gap",
+            "linear date",
+            "party size"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        }
+      }
+    },
+    "17-15_or_longer": {
+      "wins": {
+        "regulation": {
+          "n": 789,
+          "players": 448,
+          "unique_matches": 687,
+          "mean": 17.784537389100127,
+          "median": 17.0,
+          "sd": 3.9407688439446495
+        },
+        "overtime": {
+          "n": 26,
+          "players": 25,
+          "unique_matches": 25,
+          "mean": 17.73076923076923,
+          "median": 18.0,
+          "sd": 2.0699312511809143
+        },
+        "raw_difference": -0.053768158330896654,
+        "paired": {
+          "players": 15,
+          "difference": 0.3333333333333334,
+          "bootstrap_95": [
+            -0.04999999999999976,
+            0.7166666666666668
+          ],
+          "method": "Equal player weights; within player/act/outcome OT minus regulation means; 5000 permanent-player bootstrap draws. Shared matches may still couple players."
+        },
+        "rank_adjusted": {
+          "n": 55,
+          "players": 15,
+          "unique_matches": 53,
+          "groups": 15,
+          "difference": 0.26310809754983705,
+          "se": 0.22594581311211936,
+          "approximate_95": [
+            -0.17974569614991692,
+            0.7059618912495911
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        },
+        "adjusted": {
+          "n": 55,
+          "players": 15,
+          "unique_matches": 53,
+          "groups": 15,
+          "difference": 0.2641397595771545,
+          "se": 0.20365956148163766,
+          "approximate_95": [
+            -0.13503298092685528,
+            0.6633125000811644
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR",
+            "within-match standardized ACS",
+            "lobby rank gap",
+            "linear date",
+            "party size"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        }
+      },
+      "losses": {
+        "regulation": {
+          "n": 722,
+          "players": 430,
+          "unique_matches": 650,
+          "mean": 17.642659279778393,
+          "median": 18.0,
+          "sd": 3.5404941187593075
+        },
+        "overtime": {
+          "n": 26,
+          "players": 26,
+          "unique_matches": 24,
+          "mean": 18.692307692307693,
+          "median": 19.0,
+          "sd": 2.3961507593510185
+        },
+        "raw_difference": 1.0496484125293009,
+        "paired": {
+          "players": 17,
+          "difference": 0.6764705882352942,
+          "bootstrap_95": [
+            0.20588235294117646,
+            1.088235294117647
+          ],
+          "method": "Equal player weights; within player/act/outcome OT minus regulation means; 5000 permanent-player bootstrap draws. Shared matches may still couple players."
+        },
+        "rank_adjusted": {
+          "n": 51,
+          "players": 17,
+          "unique_matches": 51,
+          "groups": 17,
+          "difference": 0.6087054317776242,
+          "se": 0.36897102988223424,
+          "approximate_95": [
+            -0.11447778679155496,
+            1.3318886503468033
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        },
+        "adjusted": {
+          "n": 51,
+          "players": 17,
+          "unique_matches": 51,
+          "groups": 17,
+          "difference": 0.5309498926643482,
+          "se": 0.34927670377719694,
+          "approximate_95": [
+            -0.15363244673895782,
+            1.2155322320676543
+          ],
+          "controls": [
+            "player/act fixed effects",
+            "witnessed starting rank + RR",
+            "within-match standardized ACS",
+            "lobby rank gap",
+            "linear date",
+            "party size"
+          ],
+          "uncertainty": "Approximate normal interval; covariance clustered by permanent player and match ID, allowing multiple accounts from the same game."
+        }
+      }
+    }
+  },
+  "starting_rank_coverage": [
+    {
+      "starting_tier": 3,
+      "won": true,
+      "regulation": {
+        "n": 4,
+        "players": 3,
+        "unique_matches": 4,
+        "mean": 24.5,
+        "median": 23.0,
+        "sd": 5.972157622389639
+      },
+      "overtime": {
+        "n": 5,
+        "players": 3,
+        "unique_matches": 5,
+        "mean": 21.2,
+        "median": 16.0,
+        "sd": 11.189280584559492
+      }
+    },
+    {
+      "starting_tier": 3,
+      "won": false,
+      "regulation": {
+        "n": 4,
+        "players": 3,
+        "unique_matches": 4,
+        "mean": 14.0,
+        "median": 15.0,
+        "sd": 7.831560082980487
+      },
+      "overtime": {
+        "n": 2,
+        "players": 2,
+        "unique_matches": 2,
+        "mean": 16.5,
+        "median": 16.5,
+        "sd": 6.363961030678928
+      }
+    },
+    {
+      "starting_tier": 4,
+      "won": true,
+      "regulation": {
+        "n": 18,
+        "players": 15,
+        "unique_matches": 16,
+        "mean": 18.72222222222222,
+        "median": 17.5,
+        "sd": 8.470054903326158
+      },
+      "overtime": {
+        "n": 10,
+        "players": 9,
+        "unique_matches": 9,
+        "mean": 24.1,
+        "median": 23.0,
+        "sd": 7.723700897597961
+      }
+    },
+    {
+      "starting_tier": 4,
+      "won": false,
+      "regulation": {
+        "n": 10,
+        "players": 8,
+        "unique_matches": 10,
+        "mean": 17.1,
+        "median": 18.0,
+        "sd": 5.1305187088853135
+      },
+      "overtime": {
+        "n": 13,
+        "players": 9,
+        "unique_matches": 13,
+        "mean": 16.23076923076923,
+        "median": 16.0,
+        "sd": 7.693653728385994
+      }
+    },
+    {
+      "starting_tier": 5,
+      "won": true,
+      "regulation": {
+        "n": 31,
+        "players": 21,
+        "unique_matches": 31,
+        "mean": 18.774193548387096,
+        "median": 18.0,
+        "sd": 6.380750621566687
+      },
+      "overtime": {
+        "n": 17,
+        "players": 12,
+        "unique_matches": 17,
+        "mean": 19.0,
+        "median": 17.0,
+        "sd": 6.819090848492928
+      }
+    },
+    {
+      "starting_tier": 5,
+      "won": false,
+      "regulation": {
+        "n": 21,
+        "players": 15,
+        "unique_matches": 20,
+        "mean": 14.523809523809524,
+        "median": 14.0,
+        "sd": 6.954272410677106
+      },
+      "overtime": {
+        "n": 17,
+        "players": 16,
+        "unique_matches": 16,
+        "mean": 14.235294117647058,
+        "median": 15.0,
+        "sd": 7.677315707367272
+      }
+    },
+    {
+      "starting_tier": 6,
+      "won": true,
+      "regulation": {
+        "n": 9,
+        "players": 9,
+        "unique_matches": 9,
+        "mean": 19.0,
+        "median": 16.0,
+        "sd": 8.0156097709407
+      },
+      "overtime": {
+        "n": 17,
+        "players": 15,
+        "unique_matches": 17,
+        "mean": 16.941176470588236,
+        "median": 17.0,
+        "sd": 6.407715937009986
+      }
+    },
+    {
+      "starting_tier": 6,
+      "won": false,
+      "regulation": {
+        "n": 16,
+        "players": 15,
+        "unique_matches": 16,
+        "mean": 15.125,
+        "median": 14.0,
+        "sd": 7.7276559619762235
+      },
+      "overtime": {
+        "n": 16,
+        "players": 12,
+        "unique_matches": 16,
+        "mean": 17.25,
+        "median": 18.5,
+        "sd": 9.132360045464699
+      }
+    },
+    {
+      "starting_tier": 7,
+      "won": true,
+      "regulation": {
+        "n": 8,
+        "players": 8,
+        "unique_matches": 8,
+        "mean": 18.5,
+        "median": 17.0,
+        "sd": 6.324555320336759
+      },
+      "overtime": {
+        "n": 8,
+        "players": 8,
+        "unique_matches": 8,
+        "mean": 18.625,
+        "median": 15.0,
+        "sd": 9.89859297360705
+      }
+    },
+    {
+      "starting_tier": 7,
+      "won": false,
+      "regulation": {
+        "n": 12,
+        "players": 10,
+        "unique_matches": 12,
+        "mean": 16.416666666666668,
+        "median": 16.0,
+        "sd": 7.537281078784715
+      },
+      "overtime": {
+        "n": 12,
+        "players": 10,
+        "unique_matches": 12,
+        "mean": 17.75,
+        "median": 18.0,
+        "sd": 6.956030738601119
+      }
+    },
+    {
+      "starting_tier": 8,
+      "won": true,
+      "regulation": {
+        "n": 12,
+        "players": 10,
+        "unique_matches": 12,
+        "mean": 19.5,
+        "median": 18.5,
+        "sd": 3.729489363048366
+      },
+      "overtime": {
+        "n": 7,
+        "players": 4,
+        "unique_matches": 7,
+        "mean": 14.857142857142858,
+        "median": 13.0,
+        "sd": 5.669467095138408
+      }
+    },
+    {
+      "starting_tier": 8,
+      "won": false,
+      "regulation": {
+        "n": 6,
+        "players": 6,
+        "unique_matches": 6,
+        "mean": 15.833333333333334,
+        "median": 15.5,
+        "sd": 3.6560452221856705
+      },
+      "overtime": {
+        "n": 7,
+        "players": 6,
+        "unique_matches": 7,
+        "mean": 15.857142857142858,
+        "median": 16.0,
+        "sd": 7.380798769522881
+      }
+    },
+    {
+      "starting_tier": 9,
+      "won": true,
+      "regulation": {
+        "n": 31,
+        "players": 22,
+        "unique_matches": 31,
+        "mean": 16.258064516129032,
+        "median": 15.0,
+        "sd": 5.483111901925061
+      },
+      "overtime": {
+        "n": 17,
+        "players": 13,
+        "unique_matches": 17,
+        "mean": 17.11764705882353,
+        "median": 16.0,
+        "sd": 6.613266524014215
+      }
+    },
+    {
+      "starting_tier": 9,
+      "won": false,
+      "regulation": {
+        "n": 17,
+        "players": 12,
+        "unique_matches": 17,
+        "mean": 17.705882352941178,
+        "median": 17.0,
+        "sd": 7.226381406713467
+      },
+      "overtime": {
+        "n": 25,
+        "players": 21,
+        "unique_matches": 24,
+        "mean": 18.32,
+        "median": 18.0,
+        "sd": 5.7642576856579435
+      }
+    },
+    {
+      "starting_tier": 10,
+      "won": true,
+      "regulation": {
+        "n": 16,
+        "players": 11,
+        "unique_matches": 16,
+        "mean": 17.8125,
+        "median": 17.5,
+        "sd": 5.153882032022076
+      },
+      "overtime": {
+        "n": 10,
+        "players": 9,
+        "unique_matches": 10,
+        "mean": 17.7,
+        "median": 20.0,
+        "sd": 4.164666186436128
+      }
+    },
+    {
+      "starting_tier": 10,
+      "won": false,
+      "regulation": {
+        "n": 20,
+        "players": 15,
+        "unique_matches": 20,
+        "mean": 16.7,
+        "median": 17.0,
+        "sd": 3.404331606088121
+      },
+      "overtime": {
+        "n": 13,
+        "players": 11,
+        "unique_matches": 13,
+        "mean": 18.46153846153846,
+        "median": 19.0,
+        "sd": 5.253814243248814
+      }
+    },
+    {
+      "starting_tier": 11,
+      "won": true,
+      "regulation": {
+        "n": 9,
+        "players": 8,
+        "unique_matches": 9,
+        "mean": 16.22222222222222,
+        "median": 13.0,
+        "sd": 6.741249472052228
+      },
+      "overtime": {
+        "n": 11,
+        "players": 9,
+        "unique_matches": 11,
+        "mean": 17.09090909090909,
+        "median": 16.0,
+        "sd": 3.6456699097572027
+      }
+    },
+    {
+      "starting_tier": 11,
+      "won": false,
+      "regulation": {
+        "n": 9,
+        "players": 6,
+        "unique_matches": 9,
+        "mean": 19.11111111111111,
+        "median": 19.0,
+        "sd": 4.342938073598461
+      },
+      "overtime": {
+        "n": 9,
+        "players": 8,
+        "unique_matches": 9,
+        "mean": 16.88888888888889,
+        "median": 19.0,
+        "sd": 6.450667493454543
+      }
+    },
+    {
+      "starting_tier": 12,
+      "won": true,
+      "regulation": {
+        "n": 18,
+        "players": 12,
+        "unique_matches": 18,
+        "mean": 15.38888888888889,
+        "median": 16.0,
+        "sd": 4.060409844409203
+      },
+      "overtime": {
+        "n": 12,
+        "players": 11,
+        "unique_matches": 12,
+        "mean": 19.25,
+        "median": 19.0,
+        "sd": 4.864061153921783
+      }
+    },
+    {
+      "starting_tier": 12,
+      "won": false,
+      "regulation": {
+        "n": 15,
+        "players": 11,
+        "unique_matches": 15,
+        "mean": 17.733333333333334,
+        "median": 17.0,
+        "sd": 2.840187787218772
+      },
+      "overtime": {
+        "n": 12,
+        "players": 9,
+        "unique_matches": 12,
+        "mean": 17.416666666666668,
+        "median": 16.5,
+        "sd": 4.581749037477309
+      }
+    },
+    {
+      "starting_tier": 13,
+      "won": true,
+      "regulation": {
+        "n": 13,
+        "players": 11,
+        "unique_matches": 13,
+        "mean": 17.692307692307693,
+        "median": 16.0,
+        "sd": 4.308607961291276
+      },
+      "overtime": {
+        "n": 12,
+        "players": 9,
+        "unique_matches": 12,
+        "mean": 19.666666666666668,
+        "median": 19.5,
+        "sd": 2.461829819586655
+      }
+    },
+    {
+      "starting_tier": 13,
+      "won": false,
+      "regulation": {
+        "n": 14,
+        "players": 12,
+        "unique_matches": 14,
+        "mean": 16.642857142857142,
+        "median": 16.5,
+        "sd": 3.5432957899313258
+      },
+      "overtime": {
+        "n": 9,
+        "players": 9,
+        "unique_matches": 9,
+        "mean": 16.88888888888889,
+        "median": 17.0,
+        "sd": 4.28498671072748
+      }
+    },
+    {
+      "starting_tier": 14,
+      "won": true,
+      "regulation": {
+        "n": 20,
+        "players": 15,
+        "unique_matches": 18,
+        "mean": 19.35,
+        "median": 18.5,
+        "sd": 5.070814322644524
+      },
+      "overtime": {
+        "n": 13,
+        "players": 11,
+        "unique_matches": 13,
+        "mean": 18.0,
+        "median": 19.0,
+        "sd": 4.08248290463863
+      }
+    },
+    {
+      "starting_tier": 14,
+      "won": false,
+      "regulation": {
+        "n": 18,
+        "players": 15,
+        "unique_matches": 18,
+        "mean": 16.944444444444443,
+        "median": 17.0,
+        "sd": 3.0577235327305803
+      },
+      "overtime": {
+        "n": 24,
+        "players": 15,
+        "unique_matches": 22,
+        "mean": 17.458333333333332,
+        "median": 18.0,
+        "sd": 3.230010992936828
+      }
+    },
+    {
+      "starting_tier": 15,
+      "won": true,
+      "regulation": {
+        "n": 27,
+        "players": 17,
+        "unique_matches": 25,
+        "mean": 18.40740740740741,
+        "median": 19.0,
+        "sd": 3.399765368140066
+      },
+      "overtime": {
+        "n": 13,
+        "players": 11,
+        "unique_matches": 13,
+        "mean": 19.615384615384617,
+        "median": 19.0,
+        "sd": 3.2541886223363865
+      }
+    },
+    {
+      "starting_tier": 15,
+      "won": false,
+      "regulation": {
+        "n": 19,
+        "players": 11,
+        "unique_matches": 19,
+        "mean": 18.31578947368421,
+        "median": 18.0,
+        "sd": 3.6674640281345385
+      },
+      "overtime": {
+        "n": 18,
+        "players": 14,
+        "unique_matches": 18,
+        "mean": 17.77777777777778,
+        "median": 17.5,
+        "sd": 2.414552828056807
+      }
+    },
+    {
+      "starting_tier": 16,
+      "won": true,
+      "regulation": {
+        "n": 22,
+        "players": 15,
+        "unique_matches": 22,
+        "mean": 19.09090909090909,
+        "median": 19.0,
+        "sd": 2.4281894275578866
+      },
+      "overtime": {
+        "n": 11,
+        "players": 9,
+        "unique_matches": 11,
+        "mean": 17.90909090909091,
+        "median": 18.0,
+        "sd": 3.6456699097572027
+      }
+    },
+    {
+      "starting_tier": 16,
+      "won": false,
+      "regulation": {
+        "n": 14,
+        "players": 10,
+        "unique_matches": 14,
+        "mean": 16.571428571428573,
+        "median": 16.0,
+        "sd": 3.412968158121556
+      },
+      "overtime": {
+        "n": 16,
+        "players": 11,
+        "unique_matches": 16,
+        "mean": 17.125,
+        "median": 16.0,
+        "sd": 3.5378901433858383
+      }
+    },
+    {
+      "starting_tier": 17,
+      "won": true,
+      "regulation": {
+        "n": 22,
+        "players": 16,
+        "unique_matches": 20,
+        "mean": 18.59090909090909,
+        "median": 18.0,
+        "sd": 2.174726932154295
+      },
+      "overtime": {
+        "n": 16,
+        "players": 12,
+        "unique_matches": 14,
+        "mean": 19.375,
+        "median": 20.0,
+        "sd": 1.4548768561863463
+      }
+    },
+    {
+      "starting_tier": 17,
+      "won": false,
+      "regulation": {
+        "n": 34,
+        "players": 16,
+        "unique_matches": 30,
+        "mean": 16.91176470588235,
+        "median": 17.0,
+        "sd": 1.8646251887374452
+      },
+      "overtime": {
+        "n": 15,
+        "players": 11,
+        "unique_matches": 15,
+        "mean": 17.133333333333333,
+        "median": 17.0,
+        "sd": 2.5875158154566122
+      }
+    },
+    {
+      "starting_tier": 18,
+      "won": true,
+      "regulation": {
+        "n": 25,
+        "players": 16,
+        "unique_matches": 25,
+        "mean": 16.24,
+        "median": 16.0,
+        "sd": 2.5540817005987364
+      },
+      "overtime": {
+        "n": 20,
+        "players": 14,
+        "unique_matches": 20,
+        "mean": 16.4,
+        "median": 16.5,
+        "sd": 2.643761275949575
+      }
+    },
+    {
+      "starting_tier": 18,
+      "won": false,
+      "regulation": {
+        "n": 18,
+        "players": 16,
+        "unique_matches": 17,
+        "mean": 17.944444444444443,
+        "median": 18.5,
+        "sd": 2.31293605675003
+      },
+      "overtime": {
+        "n": 16,
+        "players": 12,
+        "unique_matches": 16,
+        "mean": 18.1875,
+        "median": 18.0,
+        "sd": 1.7211914478058505
+      }
+    },
+    {
+      "starting_tier": 19,
+      "won": true,
+      "regulation": {
+        "n": 18,
+        "players": 14,
+        "unique_matches": 17,
+        "mean": 16.333333333333332,
+        "median": 16.5,
+        "sd": 3.3781303565555834
+      },
+      "overtime": {
+        "n": 12,
+        "players": 11,
+        "unique_matches": 11,
+        "mean": 17.416666666666668,
+        "median": 17.0,
+        "sd": 2.937479851639476
+      }
+    },
+    {
+      "starting_tier": 19,
+      "won": false,
+      "regulation": {
+        "n": 22,
+        "players": 11,
+        "unique_matches": 21,
+        "mean": 17.681818181818183,
+        "median": 17.0,
+        "sd": 2.1018441706627344
+      },
+      "overtime": {
+        "n": 9,
+        "players": 8,
+        "unique_matches": 9,
+        "mean": 19.333333333333332,
+        "median": 20.0,
+        "sd": 2.23606797749979
+      }
+    },
+    {
+      "starting_tier": 20,
+      "won": true,
+      "regulation": {
+        "n": 11,
+        "players": 9,
+        "unique_matches": 11,
+        "mean": 17.818181818181817,
+        "median": 18.0,
+        "sd": 2.136266922375657
+      },
+      "overtime": {
+        "n": 12,
+        "players": 8,
+        "unique_matches": 12,
+        "mean": 17.166666666666668,
+        "median": 16.0,
+        "sd": 3.688639397672346
+      }
+    },
+    {
+      "starting_tier": 20,
+      "won": false,
+      "regulation": {
+        "n": 12,
+        "players": 10,
+        "unique_matches": 12,
+        "mean": 16.833333333333332,
+        "median": 16.0,
+        "sd": 2.6571800956288345
+      },
+      "overtime": {
+        "n": 8,
+        "players": 5,
+        "unique_matches": 8,
+        "mean": 16.875,
+        "median": 17.0,
+        "sd": 1.6420805617960927
+      }
+    },
+    {
+      "starting_tier": 21,
+      "won": true,
+      "regulation": {
+        "n": 38,
+        "players": 22,
+        "unique_matches": 35,
+        "mean": 17.026315789473685,
+        "median": 17.0,
+        "sd": 1.173740661656158
+      },
+      "overtime": {
+        "n": 18,
+        "players": 14,
+        "unique_matches": 18,
+        "mean": 17.444444444444443,
+        "median": 17.5,
+        "sd": 1.1991282236408358
+      }
+    },
+    {
+      "starting_tier": 21,
+      "won": false,
+      "regulation": {
+        "n": 32,
+        "players": 22,
+        "unique_matches": 32,
+        "mean": 17.9375,
+        "median": 18.0,
+        "sd": 1.1341473989656923
+      },
+      "overtime": {
+        "n": 20,
+        "players": 15,
+        "unique_matches": 19,
+        "mean": 18.2,
+        "median": 18.0,
+        "sd": 1.1964860832322377
+      }
+    },
+    {
+      "starting_tier": 22,
+      "won": true,
+      "regulation": {
+        "n": 30,
+        "players": 17,
+        "unique_matches": 28,
+        "mean": 16.666666666666668,
+        "median": 17.0,
+        "sd": 1.1244411127720089
+      },
+      "overtime": {
+        "n": 23,
+        "players": 16,
+        "unique_matches": 22,
+        "mean": 16.869565217391305,
+        "median": 17.0,
+        "sd": 1.423962072595237
+      }
+    },
+    {
+      "starting_tier": 22,
+      "won": false,
+      "regulation": {
+        "n": 23,
+        "players": 16,
+        "unique_matches": 23,
+        "mean": 18.08695652173913,
+        "median": 18.0,
+        "sd": 1.3788349323798652
+      },
+      "overtime": {
+        "n": 27,
+        "players": 16,
+        "unique_matches": 25,
+        "mean": 19.555555555555557,
+        "median": 19.0,
+        "sd": 1.9871381302561604
+      }
+    },
+    {
+      "starting_tier": 23,
+      "won": true,
+      "regulation": {
+        "n": 18,
+        "players": 15,
+        "unique_matches": 18,
+        "mean": 16.666666666666668,
+        "median": 17.0,
+        "sd": 1.2366938848016846
+      },
+      "overtime": {
+        "n": 23,
+        "players": 16,
+        "unique_matches": 23,
+        "mean": 16.695652173913043,
+        "median": 17.0,
+        "sd": 1.222322030499761
+      }
+    },
+    {
+      "starting_tier": 23,
+      "won": false,
+      "regulation": {
+        "n": 18,
+        "players": 15,
+        "unique_matches": 18,
+        "mean": 19.22222222222222,
+        "median": 19.0,
+        "sd": 1.5550886320704589
+      },
+      "overtime": {
+        "n": 22,
+        "players": 17,
+        "unique_matches": 22,
+        "mean": 19.09090909090909,
+        "median": 19.0,
+        "sd": 1.1087999050492519
+      }
+    },
+    {
+      "starting_tier": 24,
+      "won": true,
+      "regulation": {
+        "n": 63,
+        "players": 41,
+        "unique_matches": 58,
+        "mean": 18.26984126984127,
+        "median": 17.0,
+        "sd": 4.69456222565293
+      },
+      "overtime": {
+        "n": 55,
+        "players": 35,
+        "unique_matches": 55,
+        "mean": 16.763636363636362,
+        "median": 16.0,
+        "sd": 2.2604787788794454
+      }
+    },
+    {
+      "starting_tier": 24,
+      "won": false,
+      "regulation": {
+        "n": 57,
+        "players": 39,
+        "unique_matches": 56,
+        "mean": 18.666666666666668,
+        "median": 19.0,
+        "sd": 2.8990967394624665
+      },
+      "overtime": {
+        "n": 51,
+        "players": 32,
+        "unique_matches": 51,
+        "mean": 19.11764705882353,
+        "median": 19.0,
+        "sd": 1.0704589450049808
+      }
+    },
+    {
+      "starting_tier": 25,
+      "won": true,
+      "regulation": {
+        "n": 32,
+        "players": 23,
+        "unique_matches": 31,
+        "mean": 18.9375,
+        "median": 18.0,
+        "sd": 4.585654348776368
+      },
+      "overtime": {
+        "n": 30,
+        "players": 22,
+        "unique_matches": 29,
+        "mean": 16.866666666666667,
+        "median": 16.0,
+        "sd": 3.104316609045443
+      }
+    },
+    {
+      "starting_tier": 25,
+      "won": false,
+      "regulation": {
+        "n": 35,
+        "players": 27,
+        "unique_matches": 35,
+        "mean": 17.02857142857143,
+        "median": 18.0,
+        "sd": 4.13369023488495
+      },
+      "overtime": {
+        "n": 36,
+        "players": 27,
+        "unique_matches": 36,
+        "mean": 17.555555555555557,
+        "median": 18.0,
+        "sd": 3.384371175561016
+      }
+    },
+    {
+      "starting_tier": 26,
+      "won": true,
+      "regulation": {
+        "n": 113,
+        "players": 62,
+        "unique_matches": 106,
+        "mean": 18.98230088495575,
+        "median": 18.0,
+        "sd": 3.3030891949943606
+      },
+      "overtime": {
+        "n": 121,
+        "players": 67,
+        "unique_matches": 117,
+        "mean": 19.206611570247933,
+        "median": 18.0,
+        "sd": 3.2065489116595454
+      }
+    },
+    {
+      "starting_tier": 26,
+      "won": false,
+      "regulation": {
+        "n": 113,
+        "players": 70,
+        "unique_matches": 109,
+        "mean": 16.884955752212388,
+        "median": 18.0,
+        "sd": 2.978351090996315
+      },
+      "overtime": {
+        "n": 114,
+        "players": 72,
+        "unique_matches": 110,
+        "mean": 17.30701754385965,
+        "median": 18.0,
+        "sd": 2.7655503796431473
+      }
+    },
+    {
+      "starting_tier": 27,
+      "won": true,
+      "regulation": {
+        "n": 181,
+        "players": 97,
+        "unique_matches": 159,
+        "mean": 16.917127071823206,
+        "median": 17.0,
+        "sd": 1.9575450982137865
+      },
+      "overtime": {
+        "n": 193,
+        "players": 91,
+        "unique_matches": 170,
+        "mean": 16.70984455958549,
+        "median": 17.0,
+        "sd": 1.7849943034117604
+      }
+    },
+    {
+      "starting_tier": 27,
+      "won": false,
+      "regulation": {
+        "n": 163,
+        "players": 88,
+        "unique_matches": 151,
+        "mean": 18.94478527607362,
+        "median": 19.0,
+        "sd": 1.764714273177023
+      },
+      "overtime": {
+        "n": 164,
+        "players": 92,
+        "unique_matches": 140,
+        "mean": 19.536585365853657,
+        "median": 20.0,
+        "sd": 1.8045281962532123
+      }
+    }
+  ],
+  "definition": "Regulation: exactly 13-11 or 11-13. OT: winner at least 14, loser at least 12, margin exactly 2. Draws, incomplete/abnormal scores excluded. RR is absolute last_change; loss differences above zero mean a larger cost.",
+  "limitations": [
+    "Observed cohort, not a causal estimate of Riot overtime rules.",
+    "MMR is unobserved and can change within a player/act; performance and lobby ranks are imperfect proxies.",
+    "Only records with witnessed starting rank, trusted scores, known parties and consistent payout coordinates enter the primary comparison.",
+    "Missing match detail coverage can select the cohort; all clean comparisons here come from the acts reported above.",
+    "Pooled or within-player averages do not prove identical payouts for every rank, player or overtime length."
+  ],
+  "snapshot_sha256": "3b3949d9d8321d7a7e990b5a7fb93c8be91d54c2db6fb93e33d202498dbc0bf3",
+  "analyzed_utc": "2026-10-06T22:51:57.900799+00:00"
+}

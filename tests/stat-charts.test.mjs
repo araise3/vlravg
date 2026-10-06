@@ -6,7 +6,7 @@ import {runInNewContext,Script} from 'node:vm';
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const margins=html.slice(html.indexOf('function scoreMarginDistribution('),html.indexOf('\nfunction renderMatches('));
 const eligibility=html.slice(html.indexOf('function isRREligible('),html.indexOf('\nfunction computeRRStats('));
-const {scoreMarginDistribution:distribution}=runInNewContext(eligibility+'\n'+margins+'\n({scoreMarginDistribution})');
+const {scoreMarginDistribution:distribution,scoreMarginRREstimates:estimates}=runInNewContext(eligibility+'\n'+margins+'\n({scoreMarginDistribution,scoreMarginRREstimates})');
 test('score margins use actual scores without requiring ranks or RR, with draws and exact unusual margins',()=>{
   const matches=[{myR:13,opR:11},{myR:11,opR:13},{myR:15,opR:15},{myR:13,opR:0},{myR:0,opR:14},
     {myR:13,opR:11},{myR:'13',opR:10},{myR:0,opR:0},{myR:-1,opR:13},{myR:13},{myR:1.5,opR:13}];
@@ -67,7 +67,20 @@ test('zero payout remains a real RR sample instead of a missing value',()=>{
   assert.equal(bins.find(b=>b.margin===3).avgRR,0);
 });
 
-test('combined chart renders separate count and RR axes and breaks RR lines at missing data',()=>{
+test('RR trend separates outcomes, uses all tied samples and leaves unsupported regions empty',()=>{
+  const win=(margin,rr)=>({myR:13,opR:13-margin,myRR:rr,won:true,myTierId:10});
+  const matches=[win(2,20),win(3,20),win(3,20),win(12,20),win(12,20),win(12,20),
+    {myR:11,opR:13,myRR:-24,won:false,myTierId:10}];
+  const trend=estimates(distribution(matches).bins,true);
+  assert.equal(trend[0].position,2);assert.equal(trend.at(-1).position,12);
+  assert.equal(trend[0].n,3);
+  assert.ok(trend.some(point=>point.position===7&&point.payout===null));
+  assert.ok(trend.filter(point=>point.payout!=null).every(point=>Math.abs(point.payout-20)<1e-10&&point.n>=3));
+  assert.ok(estimates(distribution(matches).bins,false).every(point=>point.payout===null));
+  assert.equal(JSON.stringify(estimates(distribution(matches.slice().reverse()).bins,true)),JSON.stringify(trend));
+});
+
+test('combined chart renders raw payouts and supported trend paths with separate count and RR axes',()=>{
   const element=()=>({attrs:{},children:[],textContent:'',hidden:false,
     setAttribute(key,value){this.attrs[key]=value;},
     appendChild(child){this.children.push(child);},
@@ -85,17 +98,21 @@ test('combined chart renders separate count and RR axes and breaks RR lines at m
   render([win,{...win,opR:10,myRR:0},{...win,opR:9,myRR:null},{...win,opR:8,myRR:26},
     {...win,myR:11,opR:13,myRR:-24,won:false}]);
   const svg=elements.get('score-margin-chart').children[0];
-  const points=svg.children.filter(n=>n.attrs.class==='rr-average-point');
+  const points=svg.children.filter(n=>n.attrs.class?.startsWith('rr-payout-sample'));
   assert.equal(points.length,4);
-  assert.equal(svg.children.filter(n=>n.attrs.class==='rr-average-line').length,1);
+  assert.equal(svg.children.filter(n=>n.attrs.class==='rr-payout-trend win').length,1);
+  assert.equal(svg.children.filter(n=>n.attrs.class==='rr-payout-trend loss').length,0);
+  assert.ok(points.some(point=>point.attrs.cy==='159'),'zero payout has a real dot at zero RR');
   assert.ok(svg.children.some(n=>n.textContent==='Matches'));
-  assert.ok(svg.children.some(n=>n.textContent==='Average RR'));
-  assert.equal(points[0].attrs.tabindex,'0');
-  assert.match(points[0].attrs['aria-label'],/11–13/);
+  assert.ok(svg.children.some(n=>n.textContent==='RR payout'));
+  const focus=svg.children.find(n=>n.attrs.class==='rr-estimate-hit');
+  assert.equal(focus.attrs.tabindex,'0');
+  assert.match(focus.attrs['aria-label'],/Estimated RR \/ win/);
+  assert.match(focus.attrs['aria-label'],/13–10/);
   assert.match(elements.get('score-margin-chart-count').textContent,/5 scored matches · 4 with eligible RR/);
   render([{myR:13,opR:11}]);
   assert.equal(elements.get('score-margin-chart-section').hidden,false);
-  assert.equal(elements.get('score-margin-chart').children[0].children.some(n=>n.attrs.class==='rr-average-point'),false);
+  assert.equal(elements.get('score-margin-chart').children[0].children.some(n=>n.attrs.class?.startsWith('rr-payout-trend')),false);
   render([]);
   assert.equal(elements.get('score-margin-chart-section').hidden,true);
   assert.equal(elements.get('score-margin-chart').children.length,0);
