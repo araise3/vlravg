@@ -6,32 +6,16 @@ import {drainBackfill} from '../.github/scripts/backfill-all-names.mjs';
 const player=(id,extra={})=>({puuid:id,region:'eu',platform:'pc',next_start:0,backfill_complete:0,...extra});
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 
-test('concurrent request starts share one gate below the 30/minute allowance',async()=>{
-  let clock=0;const starts=[];
-  const scheduled=createRequestScheduler({now:()=>clock,sleepImpl:async ms=>{await tick();clock+=ms;},fetchImpl:async()=>{
-    starts.push(clock);return Response.json({data:{}});
+test('proxy requests run immediately and a throttled upstream request does not block saved-data reads',async()=>{
+  const calls=[];
+  const scheduled=createRequestScheduler({fetchImpl:async url=>{
+    calls.push(url);return url.endsWith('upstream')?Response.json({retryAfterMs:60000},{status:429}):Response.json({data:{}});
   }});
-  await Promise.all(Array.from({length:4},()=>scheduled('https://example.test')));
-  assert.deepEqual(starts,[0,2100,4200,6300]);
-});
-
-test('a 429 pauses every subsequent worker for the proxy reset duration',async()=>{
-  let clock=0;let calls=0;const starts=[];
-  const scheduled=createRequestScheduler({now:()=>clock,sleepImpl:async ms=>{await tick();clock+=ms;},fetchImpl:async()=>{
-    starts.push(clock);return ++calls===1?Response.json({retryAfterMs:7000},{status:429}):Response.json({data:{}});
-  }});
-  await scheduled('https://example.test');
-  await Promise.all([scheduled('https://example.test'),scheduled('https://example.test')]);
-  assert.deepEqual(starts,[0,7000,9100]);
-});
-
-test('a rolling minute never starts more than 29 requests, even with a large concurrent queue',async()=>{
-  let clock=0;const starts=[];
-  const scheduled=createRequestScheduler({now:()=>clock,sleepImpl:async ms=>{await tick();clock+=ms;},fetchImpl:async()=>{
-    starts.push(clock);return Response.json({data:{}});
-  }});
-  await Promise.all(Array.from({length:70},()=>scheduled('https://example.test')));
-  for(const start of starts)assert.ok(starts.filter(time=>time>=start&&time<start+60000).length<=29);
+  const throttled=await scheduled('https://example.test/upstream');
+  assert.equal(throttled.status,429);
+  const saved=await scheduled('https://example.test/saved');
+  assert.equal(saved.status,200);
+  assert.deepEqual(calls,['https://example.test/upstream','https://example.test/saved']);
 });
 
 test('pages run round-robin, completed players are skipped and all remaining players finish',async()=>{

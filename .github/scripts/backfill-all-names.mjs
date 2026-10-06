@@ -45,7 +45,7 @@ export async function main(env=process.env){
   if(!Number.isSafeInteger(minutes)||minutes<1||minutes>300)throw new Error('RUNTIME_MINUTES must be between 1 and 300');
   const deadline=Date.now()+minutes*60000;
   const players=await listPlayers(env);
-  console.log(`Backfilling all ${players.length} tracked players from live and stored match indexes; four workers share a 30 request/minute ceiling and proxy cooldowns.`);
+  console.log(`Backfilling all ${players.length} tracked players from live and stored match indexes; Cloudflare gates actual Henrik calls below 30/minute while saved data reads run immediately.`);
   const origin=new URL(env.SITE_ORIGIN||'https://vlravg1.pages.dev').origin;
   const fetchImpl=createRequestScheduler({workflowKey:env.HENRIK_WORKFLOW_KEY,origin});
   const result=await drainBackfill(players,{origin,deadline,fetchImpl});

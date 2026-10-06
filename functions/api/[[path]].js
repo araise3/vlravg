@@ -9,7 +9,8 @@
  *   HENRIK_WORKFLOW_KEY (Secret) separate HDEV-... key for GitHub Actions;
  *                             save the same secret in GitHub Actions too.
  *                             Optional for the public site. Authenticated jobs
- *                             use their own quota row and bypass edge caching.
+ *                             use their own atomic D1 admission gate, paced at
+ *                             >=2.1s per real upstream call, and bypass caching.
  *   APP_DB     (D1 database)  create a D1 database, run schema.sql against
  *                             it, bind it to APP_DB. Holds every piece of
  *                             persistent state this Function keeps: rate-
@@ -104,6 +105,7 @@ import { beginCoverageScan, readCoverageScan, recordCoveragePage, finishCoverage
 import { collectRR, saveFeatures, trackRRAccount } from "../../lib/rr-corpus.mjs";
 import { discoverMatchPlayers } from "../../lib/rr-activity.mjs";
 import { workflowAuthorized } from "../../lib/workflow-auth.mjs";
+import { acquireWorkflowPermit, observeWorkflowQuota } from "../../lib/workflow-pacing.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
 const PREFIX = "/api";
@@ -780,19 +782,9 @@ function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-async function getQuota(env, workflow=false) {
-  const table=workflow?'workflow_rate_quota':'rate_quota';
+async function getQuota(env) {
   try {
-    let row;
-    try {
-      row=await env.APP_DB.prepare(`SELECT remaining, reset_at, last_request_at FROM ${table} WHERE id=1`).first();
-    } catch(error) {
-      if(!workflow)throw error;
-      // Existing deployments need no manual schema migration. Only attempt
-      // this when the first read fails; normal requests do no schema writes.
-      await env.APP_DB.prepare("CREATE TABLE IF NOT EXISTS workflow_rate_quota (id INTEGER PRIMARY KEY CHECK (id=1), remaining INTEGER, reset_at INTEGER, last_request_at INTEGER)").run();
-      row=await env.APP_DB.prepare(`SELECT remaining, reset_at, last_request_at FROM ${table} WHERE id=1`).first();
-    }
+    const row=await env.APP_DB.prepare('SELECT remaining, reset_at, last_request_at FROM rate_quota WHERE id=1').first();
     if (row) {
       return {
         remaining: row.remaining ?? null,
@@ -801,19 +793,16 @@ async function getQuota(env, workflow=false) {
       };
     }
   } catch (e) {
-    if(workflow)throw e;
     // D1 unavailable/misconfigured — fail open (treat as unknown quota)
     // rather than blocking every request.
   }
   return { remaining: null, resetAt: 0, lastRequestAt: 0 };
 }
 
-async function putQuota(env, state, workflow=false) {
+async function putQuota(env, state) {
   try {
     await env.APP_DB.prepare(
-      workflow
-        ? "INSERT INTO workflow_rate_quota (id,remaining,reset_at,last_request_at) VALUES(1,?1,?2,?3) ON CONFLICT(id) DO UPDATE SET remaining=excluded.remaining,reset_at=excluded.reset_at,last_request_at=excluded.last_request_at"
-        : "UPDATE rate_quota SET remaining=?1, reset_at=?2, last_request_at=?3 WHERE id=1"
+      "UPDATE rate_quota SET remaining=?1, reset_at=?2, last_request_at=?3 WHERE id=1"
     ).bind(state.remaining, state.resetAt, state.lastRequestAt).run();
   } catch (e) {
     // Non-fatal — worst case, pacing is a little less accurate next request.
@@ -930,6 +919,13 @@ export async function onRequestGet(context) {
     if(!await workflowAuthorized(request,env.HENRIK_WORKFLOW_KEY))return json({error:'Unauthorized workflow request'},401);
   }
   const henrikKey=workflow?env.HENRIK_WORKFLOW_KEY:env.HENRIK_KEY;
+  const response=await handleGet(context,{workflow,henrikKey});
+  if(workflow)response.headers.set('X-Workflow-Pacing','upstream-v1');
+  return response;
+}
+
+async function handleGet(context,{workflow,henrikKey}){
+  const {request,env}=context;
   const url = new URL(request.url);
   const requestPath = url.pathname.slice(PREFIX.length);
   const coverageMatch=requestPath.match(MATCH_COVERAGE_ROUTE);
@@ -1102,17 +1098,24 @@ export async function onRequestGet(context) {
   // we're already out for this window, decline immediately with a plain
   // wait-time signal instead of burning a real upstream call we know will
   // just 429.
-  let quota;
-  try{quota=await getQuota(env,workflow);}
-  catch{return json({error:'Workflow quota storage unavailable'},503);}
-  if (quota.remaining != null && quota.remaining <= 0 && quota.resetAt > Date.now()) {
+  let quota,workflowPermit;
+  if(workflow){
+    try{workflowPermit=await acquireWorkflowPermit(env.APP_DB);}
+    catch{return json({error:'Workflow quota storage unavailable'},503);}
+    if(workflowPermit.retryAfterMs){
+      if(route.nameHistory&&storedNameHistory.history.length)return savedNameHistoryResponse(storedNameHistory,'SAVED-REFRESH-DEFERRED',true);
+      return json({error:'Rate limited',retryAfterMs:workflowPermit.retryAfterMs},429);
+    }
+    quota=workflowPermit.quota;
+  }else quota=await getQuota(env);
+  if (!workflow && quota.remaining != null && quota.remaining <= 0 && quota.resetAt > Date.now()) {
     if (route.nameHistory && storedNameHistory.history.length) {
       return savedNameHistoryResponse(storedNameHistory, 'SAVED-REFRESH-DEFERRED', true);
     }
     return json({ error: "Rate limited", retryAfterMs: quota.resetAt - Date.now() }, 429);
   }
 
-  const delay = planDelay(quota);
+  const delay = workflow?0:planDelay(quota);
   if (delay > 0) await sleep(delay);
 
   const upstreamUrl = UPSTREAM + route.upstream(match) + url.search;
@@ -1137,7 +1140,13 @@ export async function onRequestGet(context) {
     resetAt: parsed.resetAt ?? quota.resetAt,
     lastRequestAt: Date.now(),
   };
-  context.waitUntil(putQuota(env, nextQuota, workflow));
+  let workflowRetryMs=0;
+  if(workflow){
+    const retry=upstream.headers.get('retry-after');
+    const retryAfterMs=retry==null?0:/^\d+$/.test(retry)?Number(retry)*1000:Math.max(0,Date.parse(retry)-Date.now())||0;
+    try{workflowRetryMs=await observeWorkflowQuota(env.APP_DB,parsed,{startedAt:workflowPermit.startedAt,status:upstream.status,retryAfterMs});}
+    catch{return json({error:'Workflow quota update failed'},503);}
+  }else context.waitUntil(putQuota(env,nextQuota));
 
   if (upstream.status === 429) {
     if (route.nameHistory && storedNameHistory.history.length) {
@@ -1146,7 +1155,7 @@ export async function onRequestGet(context) {
     const headerRetry = upstream.headers.get("retry-after");
     const retryMs = headerRetry != null ? Math.max(parseInt(headerRetry, 10), 0) * 1000 : 0;
     const resetMs = nextQuota.resetAt ? Math.max(0, nextQuota.resetAt - Date.now()) : 0;
-    return json({ error: "Rate limited", retryAfterMs: Math.max(retryMs, resetMs, 1000) }, 429);
+    return json({ error: "Rate limited", retryAfterMs: Math.max(workflowRetryMs,retryMs,resetMs,1000) }, 429);
   }
 
   let bodyText = await upstream.text();

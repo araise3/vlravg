@@ -23,13 +23,30 @@ redirects. The credential never appears in query strings or cache keys.
 
 Workflow requests bypass edge caching so collection sees fresh upstream data.
 They still use all existing RR, name-history, and match persistence. Their quota
-state lives in `workflow_rate_quota`; visitors keep using `rate_quota`. The new
-table is created automatically on first upstream workflow use in existing D1
-deployments, so no manual migration is required.
+and atomic admission schedule live in `workflow_rate_quota`; visitors keep using
+`rate_quota`. The table and its `next_start_at` column are created or upgraded
+automatically on first upstream workflow use, so no manual migration is required.
 
 The workflow concurrency lock and request scheduler remain shared between the
-three Henrik jobs. The key's 30 requests/minute allowance is paced at one start
-every 2.1 seconds, at most 29 starts per rolling minute. Limited manual refresh
-runs (`max_players` greater than zero) do not launch a full historical backfill.
-Upstream quota headers stay server-side; clients only receive
-the existing `retryAfterMs` body on a 429.
+three Henrik jobs. Cloudflare atomically reserves a slot immediately before each
+real Henrik call, with at least 2.1 seconds between admissions (at most 29 per
+rolling minute). Known remaining quota is reserved for in-flight calls, and
+headers can stretch spacing or pause the gate until reset. Late responses cannot
+restore capacity already reserved by newer calls; a real 429 pauses all upstream
+callers even when its response arrives late.
+
+The workflow client has no fixed wait or global cooldown. D1-only responses run
+immediately, including during an upstream cooldown. Each throttled request retries
+using `retryAfterMs`. Cloudflare waits for a slot for up to eight seconds before
+returning that retry signal; quota exhaustion returns it immediately. Failed gate
+storage returns 503 without making an upstream call. Limited manual refresh runs
+(`max_players` greater than zero) do not launch a full historical backfill.
+
+Before sending work, each client performs one authenticated, D1-only readiness
+probe and requires `X-Workflow-Pacing: upstream-v1`. It fails safely if the new
+proxy is not deployed yet, rather than sending unpaced traffic to an old version.
+
+Upstream quota headers stay server-side; clients only receive the existing
+`retryAfterMs` body on a 429. Atomic D1 admission coordinates workflow callers;
+it does not control other software independently using the same Henrik key or
+eliminate network timing variation between admission and upstream arrival.

@@ -1,13 +1,10 @@
-const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-// All workers share this gate. Overlap network latency without multiplying the
-// start rate. A proxy 429 pauses the whole queue, not just one player.
-// The workflow key allows 30 requests/minute. 2.1s spacing leaves headroom
-// (at most 29 starts in a rolling minute), including concurrent backfill workers.
-export function createRequestScheduler({fetchImpl=fetch,sleepImpl=sleep,now=Date.now,intervalMs=2100,workflowKey,origin}={}) {
+// Cloudflare schedules actual upstream calls atomically. This wrapper only
+// authenticates proxy requests and sets their timeout: D1-only reads have no
+// client delay. requestJSON retries individual 429s using the proxy wait time.
+export function createRequestScheduler({fetchImpl=fetch,workflowKey,origin}={}) {
   if(workflowKey&&!origin)throw new Error('Workflow requests require SITE_ORIGIN');
   const workflowOrigin=workflowKey?new URL(origin).origin:null;
-  let gate=Promise.resolve(),nextStart=0,blockedUntil=0;
+  let readiness;
   return async (url,options) => {
     let requestOptions=options;
     if(workflowKey){
@@ -19,24 +16,19 @@ export function createRequestScheduler({fetchImpl=fetch,sleepImpl=sleep,now=Date
       headers.set('X-Workflow-Key',workflowKey);
       // Refuse redirects so a changed origin can never receive this secret.
       requestOptions={...options,headers,redirect:'error'};
+      // One shared, D1-only probe prevents a new client from sending unpaced
+      // traffic to an older proxy while a Pages deployment is still building.
+      readiness??=(async()=>{
+        const response=await fetchImpl(`${workflowOrigin}/api/calib-model`,{
+          headers:new Headers({'X-Workflow-Key':workflowKey,Accept:'application/json'}),
+          redirect:'error',signal:AbortSignal.timeout(45000),
+        });
+        const ready=response.ok&&response.headers.get('X-Workflow-Pacing')==='upstream-v1';
+        await response.body?.cancel();
+        if(!ready)throw new Error(`Central workflow pacing is not ready (HTTP ${response.status}); deploy the updated Pages Function first`);
+      })();
+      await readiness;
     }
-    const turn=gate.then(async()=>{
-      for(;;){
-        const wait=Math.max(nextStart,blockedUntil)-now();
-        if(wait<=0)break;
-        await sleepImpl(wait);
-      }
-      nextStart=now()+intervalMs;
-    });
-    gate=turn.catch(()=>{});
-    await turn;
-    // Start the network timeout after acquiring the rate-limit gate.
-    const response=await fetchImpl(url,{...requestOptions,signal:AbortSignal.timeout(45000)});
-    if(response.status===429){
-      const body=await response.clone().json().catch(()=>null);
-      const wait=Number.isFinite(body?.retryAfterMs)?Math.max(1000,Math.min(body.retryAfterMs,120000)):60000;
-      blockedUntil=Math.max(blockedUntil,now()+wait);
-    }
-    return response;
+    return fetchImpl(url,{...requestOptions,signal:AbortSignal.timeout(45000)});
   };
 }
