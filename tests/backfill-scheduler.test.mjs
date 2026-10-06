@@ -6,13 +6,13 @@ import {drainBackfill} from '../.github/scripts/backfill-all-names.mjs';
 const player=(id,extra={})=>({puuid:id,region:'eu',platform:'pc',next_start:0,backfill_complete:0,...extra});
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 
-test('concurrent request starts share one 60/minute gate',async()=>{
+test('concurrent request starts share one gate below the 30/minute allowance',async()=>{
   let clock=0;const starts=[];
   const scheduled=createRequestScheduler({now:()=>clock,sleepImpl:async ms=>{await tick();clock+=ms;},fetchImpl:async()=>{
     starts.push(clock);return Response.json({data:{}});
   }});
   await Promise.all(Array.from({length:4},()=>scheduled('https://example.test')));
-  assert.deepEqual(starts,[0,1000,2000,3000]);
+  assert.deepEqual(starts,[0,2100,4200,6300]);
 });
 
 test('a 429 pauses every subsequent worker for the proxy reset duration',async()=>{
@@ -22,7 +22,16 @@ test('a 429 pauses every subsequent worker for the proxy reset duration',async()
   }});
   await scheduled('https://example.test');
   await Promise.all([scheduled('https://example.test'),scheduled('https://example.test')]);
-  assert.deepEqual(starts,[0,7000,8000]);
+  assert.deepEqual(starts,[0,7000,9100]);
+});
+
+test('a rolling minute never starts more than 29 requests, even with a large concurrent queue',async()=>{
+  let clock=0;const starts=[];
+  const scheduled=createRequestScheduler({now:()=>clock,sleepImpl:async ms=>{await tick();clock+=ms;},fetchImpl:async()=>{
+    starts.push(clock);return Response.json({data:{}});
+  }});
+  await Promise.all(Array.from({length:70},()=>scheduled('https://example.test')));
+  for(const start of starts)assert.ok(starts.filter(time=>time>=start&&time<start+60000).length<=29);
 });
 
 test('pages run round-robin, completed players are skipped and all remaining players finish',async()=>{

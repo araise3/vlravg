@@ -2,7 +2,9 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 // All workers share this gate. Overlap network latency without multiplying the
 // start rate. A proxy 429 pauses the whole queue, not just one player.
-export function createRequestScheduler({fetchImpl=fetch,sleepImpl=sleep,now=Date.now,intervalMs=1000,workflowKey,origin}={}) {
+// The workflow key allows 30 requests/minute. 2.1s spacing leaves headroom
+// (at most 29 starts in a rolling minute), including concurrent backfill workers.
+export function createRequestScheduler({fetchImpl=fetch,sleepImpl=sleep,now=Date.now,intervalMs=2100,workflowKey,origin}={}) {
   if(workflowKey&&!origin)throw new Error('Workflow requests require SITE_ORIGIN');
   const workflowOrigin=workflowKey?new URL(origin).origin:null;
   let gate=Promise.resolve(),nextStart=0,blockedUntil=0;

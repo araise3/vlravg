@@ -84,7 +84,7 @@ export async function main(env=process.env){
   const players=selectPollingPlayers(tracked);
   const candidates=selectDiscoveryCandidates(await loadCandidates(env),tracked,25);
   console.log(`Polling ${players.length}/${tracked.length} tracked accounts due by activity; scouting ${candidates.length} recent roster candidates.`);
-  const fetchImpl=createRequestScheduler({intervalMs:1500,workflowKey:env.HENRIK_WORKFLOW_KEY,origin});
+  const fetchImpl=createRequestScheduler({workflowKey:env.HENRIK_WORKFLOW_KEY,origin});
   // Capture the irreplaceable rolling payout window before slower detail work.
   const refresh=await collectPlayers(players,{origin,fetchImpl});
   const scouting=await collectPlayers(candidates,{origin,fetchImpl});
