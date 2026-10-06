@@ -75,7 +75,8 @@ jobs:
   continue-backfill:
     needs: refresh
     # Historical backfill can proceed even if one daily player check still fails.
-    if: ${{ always() && (needs.refresh.result == 'success' || needs.refresh.result == 'failure') }}
+    # A limited manual verification run must not launch an unlimited backfill.
+    if: ${{ always() && (needs.refresh.result == 'success' || needs.refresh.result == 'failure') && (github.event_name != 'workflow_dispatch' || inputs.max_players == '0' || inputs.max_players == '') }}
     runs-on: ubuntu-latest
     permissions:
       actions: write

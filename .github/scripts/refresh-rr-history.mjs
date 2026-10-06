@@ -192,7 +192,7 @@ export async function main(env = process.env) {
   if(target && !selected.length)throw new Error('Target player is not tracked or in the pro library');
   const players = maxPlayers ? selected.slice(0, maxPlayers) : selected;
   console.log(`Checking names for ${players.length} active/unassessed account(s); RR polling is managed by the activity-based corpus collector.`);
-  const fetchImpl = createRequestScheduler({ intervalMs: 1500, workflowKey:env.HENRIK_WORKFLOW_KEY, origin });
+  const fetchImpl = createRequestScheduler({ workflowKey:env.HENRIK_WORKFLOW_KEY, origin });
   const refresh = await refreshTrackedPlayers(players, { origin, fetchImpl, rrEnabled:Boolean(target) });
   let failed = refresh.failed;
   console.log(`Done: ${players.length - failed} succeeded, ${failed} failed.`);

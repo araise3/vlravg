@@ -28,5 +28,8 @@ table is created automatically on first upstream workflow use in existing D1
 deployments, so no manual migration is required.
 
 The workflow concurrency lock and request scheduler remain shared between the
-three Henrik jobs. Upstream quota headers stay server-side; clients only receive
+three Henrik jobs. The key's 30 requests/minute allowance is paced at one start
+every 2.1 seconds, at most 29 starts per rolling minute. Limited manual refresh
+runs (`max_players` greater than zero) do not launch a full historical backfill.
+Upstream quota headers stay server-side; clients only receive
 the existing `retryAfterMs` body on a 429.
