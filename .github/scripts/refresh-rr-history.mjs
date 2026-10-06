@@ -1,5 +1,5 @@
-// Both calls go through the site's proxy: no HenrikDev key is needed here,
-// and daily checks share the live site's quota pacing and persistence.
+// Calls go through the site's proxy to retain persistence, authenticated with
+// HENRIK_WORKFLOW_KEY so jobs use their dedicated upstream key and quota.
 import { pathToFileURL } from 'node:url';
 import { readFile } from 'node:fs/promises';
 import { createRequestScheduler } from './request-scheduler.mjs';
@@ -175,7 +175,7 @@ export async function refreshTrackedPlayers(players, { origin, fetchImpl, sleepI
 }
 
 export async function main(env = process.env) {
-  for (const key of ['CF_API_TOKEN', 'CF_ACCOUNT_ID', 'CF_D1_DATABASE_ID']) {
+  for (const key of ['CF_API_TOKEN', 'CF_ACCOUNT_ID', 'CF_D1_DATABASE_ID', 'HENRIK_WORKFLOW_KEY']) {
     if (!env[key]) throw new Error(`Missing required secret: ${key}`);
   }
   const origin = new URL(env.SITE_ORIGIN || 'https://vlravg1.pages.dev').origin;
@@ -192,9 +192,7 @@ export async function main(env = process.env) {
   if(target && !selected.length)throw new Error('Target player is not tracked or in the pro library');
   const players = maxPlayers ? selected.slice(0, maxPlayers) : selected;
   console.log(`Checking names for ${players.length} active/unassessed account(s); RR polling is managed by the activity-based corpus collector.`);
-  // The public site shares this Henrik key. Leave headroom below its nominal
-  // 60 requests/minute ceiling instead of consuming the entire budget here.
-  const fetchImpl = createRequestScheduler({ intervalMs: 1500 });
+  const fetchImpl = createRequestScheduler({ intervalMs: 1500, workflowKey:env.HENRIK_WORKFLOW_KEY, origin });
   const refresh = await refreshTrackedPlayers(players, { origin, fetchImpl, rrEnabled:Boolean(target) });
   let failed = refresh.failed;
   console.log(`Done: ${players.length - failed} succeeded, ${failed} failed.`);

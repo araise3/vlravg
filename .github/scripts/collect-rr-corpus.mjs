@@ -76,6 +76,7 @@ export async function corpusReport(env,query=d1Query){
 }
 
 export async function main(env=process.env){
+  if(!env.HENRIK_WORKFLOW_KEY)throw new Error('Missing required secret: HENRIK_WORKFLOW_KEY');
   const origin=new URL(env.SITE_ORIGIN||'https://vlravg1.pages.dev').origin;
   const limit=Number(env.DETAIL_LIMIT||1500);
   if(!Number.isSafeInteger(limit)||limit<0||limit>5000)throw new Error('Invalid DETAIL_LIMIT');
@@ -83,7 +84,7 @@ export async function main(env=process.env){
   const players=selectPollingPlayers(tracked);
   const candidates=selectDiscoveryCandidates(await loadCandidates(env),tracked,25);
   console.log(`Polling ${players.length}/${tracked.length} tracked accounts due by activity; scouting ${candidates.length} recent roster candidates.`);
-  const fetchImpl=createRequestScheduler({intervalMs:1500});
+  const fetchImpl=createRequestScheduler({intervalMs:1500,workflowKey:env.HENRIK_WORKFLOW_KEY,origin});
   // Capture the irreplaceable rolling payout window before slower detail work.
   const refresh=await collectPlayers(players,{origin,fetchImpl});
   const scouting=await collectPlayers(candidates,{origin,fetchImpl});
