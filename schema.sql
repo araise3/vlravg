@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS workflow_rate_quota (
   id INTEGER PRIMARY KEY CHECK (id = 1),
   remaining INTEGER,
   reset_at INTEGER,
-  last_request_at INTEGER
+  last_request_at INTEGER,
+  next_start_at INTEGER NOT NULL DEFAULT 0
 );
 
 -- RR-history persistence (was KV key "rrhist:{puuid}", one JSON blob per

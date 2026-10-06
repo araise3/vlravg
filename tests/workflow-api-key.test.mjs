@@ -26,9 +26,9 @@ function fixture(t){
     upstream.push({target,options});
     return Response.json({data:{}},{headers:{'x-ratelimit-remaining':'7','x-ratelimit-reset':'60'}});
   });
-  async function request(key){
+  async function request(key,target=url){
     const jobs=[];
-    const response=await onRequestGet({env,request:new Request(url,{headers:key===undefined?{}:{'X-Workflow-Key':key}}),waitUntil:p=>jobs.push(p)});
+    const response=await onRequestGet({env,request:new Request(target,{headers:key===undefined?{}:{'X-Workflow-Key':key}}),waitUntil:p=>jobs.push(p)});
     await Promise.all(jobs);return response;
   }
   return {sql,env,upstream,cacheReads,cacheWrites,request};
@@ -43,6 +43,7 @@ test('authenticated workflows use the dedicated upstream key, bypass caches, and
   assert.equal(f.upstream[0].options.headers['X-Workflow-Key'],undefined);
   assert.equal(f.cacheReads.length,0);assert.equal(f.cacheWrites.length,0);
   assert.equal(response.headers.get('Cache-Control'),'no-store');
+  assert.equal(response.headers.get('X-Workflow-Pacing'),'upstream-v1');
   assert.equal(response.headers.get('x-ratelimit-remaining'),null);
   assert.equal(f.sql.prepare('SELECT remaining FROM rate_quota').get().remaining,0);
   assert.equal(f.sql.prepare('SELECT remaining FROM workflow_rate_quota').get().remaining,7);
@@ -50,7 +51,7 @@ test('authenticated workflows use the dedicated upstream key, bypass caches, and
 
 test('public requests retain their key and cache even if workflow quota is exhausted',async t=>{
   const f=fixture(t);
-  f.sql.prepare('INSERT INTO workflow_rate_quota VALUES(1,0,?,0)').run(Date.now()+60000);
+  f.sql.prepare('INSERT INTO workflow_rate_quota (id,remaining,reset_at,last_request_at) VALUES(1,0,?,0)').run(Date.now()+60000);
   const response=await f.request();
   assert.equal(response.status,200);
   assert.equal(f.upstream[0].options.headers.Authorization,publicKey);
@@ -62,7 +63,7 @@ test('public requests retain their key and cache even if workflow quota is exhau
 
 test('exhausted workflow quota returns only retryAfterMs without contacting upstream',async t=>{
   const f=fixture(t);
-  f.sql.prepare('INSERT INTO workflow_rate_quota VALUES(1,0,?,0)').run(Date.now()+60000);
+  f.sql.prepare('INSERT INTO workflow_rate_quota (id,remaining,reset_at,last_request_at) VALUES(1,0,?,0)').run(Date.now()+60000);
   const response=await f.request(workflowKey),body=await response.json();
   assert.equal(response.status,429);assert.ok(body.retryAfterMs>0);
   assert.deepEqual(Object.keys(body).sort(),['error','retryAfterMs']);
@@ -74,6 +75,15 @@ test('workflow quota storage is created automatically for existing databases',as
   const f=fixture(t);f.sql.exec('DROP TABLE workflow_rate_quota');
   assert.equal((await f.request(workflowKey)).status,200);
   assert.equal(f.sql.prepare('SELECT remaining FROM workflow_rate_quota').get().remaining,7);
+});
+
+test('D1-only routes bypass an exhausted workflow gate without advancing its next slot',async t=>{
+  const f=fixture(t);
+  f.sql.prepare('INSERT INTO workflow_rate_quota VALUES(1,0,?,0,?)').run(Date.now()+60000,Date.now()+30000);
+  const before=f.sql.prepare('SELECT * FROM workflow_rate_quota').get();
+  assert.equal((await f.request(workflowKey,origin+'/api/calib-model')).status,200);
+  assert.deepEqual(f.sql.prepare('SELECT * FROM workflow_rate_quota').get(),before);
+  assert.equal(f.upstream.length,0);
 });
 
 test('bad or unconfigured credentials are rejected before any storage, cache or upstream access',async t=>{
@@ -93,17 +103,37 @@ test('workflows never fall back to the site key when quota storage fails',async 
 
 test('the scheduler sends credentials only to its HTTPS API origin and refuses redirects',async()=>{
   const calls=[];
-  const fetchImpl=createRequestScheduler({workflowKey,origin,intervalMs:0,fetchImpl:async(url,options)=>{
-    calls.push({url,options});return Response.json({data:{}});
+  const fetchImpl=createRequestScheduler({workflowKey,origin,fetchImpl:async(url,options)=>{
+    calls.push({url,options});return Response.json({data:{}},{headers:{'X-Workflow-Pacing':'upstream-v1'}});
   }});
   await fetchImpl(url,{headers:{Accept:'application/json'}});
   assert.equal(calls[0].options.headers.get('X-Workflow-Key'),workflowKey);
-  assert.equal(calls[0].options.headers.get('Accept'),'application/json');
+  assert.equal(calls[1].options.headers.get('Accept'),'application/json');
   assert.equal(calls[0].options.redirect,'error');
+  assert.equal(calls[0].url,origin+'/api/calib-model');
   for(const target of ['https://other.test/api/test','http://site.test/api/test',origin+'/not-api']){
     await assert.rejects(fetchImpl(target),/Workflow key may only be sent/);
   }
-  assert.equal(calls.length,1);
+  assert.equal(calls.length,2);
+});
+
+test('an older proxy cannot receive unpaced workflow requests',async()=>{
+  const calls=[];
+  const scheduled=createRequestScheduler({workflowKey,origin,fetchImpl:async target=>{
+    calls.push(target);return Response.json({data:{}});
+  }});
+  await assert.rejects(scheduled(url),/Central workflow pacing is not ready/);
+  assert.deepEqual(calls,[origin+'/api/calib-model']);
+});
+
+test('concurrent workflow callers share one readiness probe and then proceed without client pacing',async()=>{
+  const calls=[];
+  const scheduled=createRequestScheduler({workflowKey,origin,fetchImpl:async target=>{
+    calls.push(target);return Response.json({data:{}},{headers:{'X-Workflow-Pacing':'upstream-v1'}});
+  }});
+  await Promise.all([scheduled(url),scheduled(url),scheduled(url)]);
+  assert.equal(calls.filter(target=>target.endsWith('/api/calib-model')).length,1);
+  assert.equal(calls.filter(target=>target===url).length,3);
 });
 
 test('all Henrik workflows require the new secret before doing any network work',async()=>{
