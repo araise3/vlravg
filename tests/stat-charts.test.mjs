@@ -64,7 +64,7 @@ test('result table keeps regulation and overtime separate with eligible actual p
 });
 
 test('player-rank table includes every game and performance while preserving eligible RR averages',()=>{
-  const base={myTierId:24,won:true,myRR:18,myStats:{kills:10,deaths:5,acs:200}};
+  const base={myTierId:24,won:true,myRR:18,myStats:{kills:10,deaths:5,acs:200,performanceScore:0}};
   const matches=[base,{...base,won:false,myRR:-22},
     {...base,myRR:null,myStats:{kills:20,deaths:10,acs:300}},
     {...base,won:false,myRR:-90,actPlacement:true},
@@ -86,15 +86,16 @@ test('player-rank table includes every game and performance while preserving eli
   const immortal=values.find(row=>row[0]===24);
   assert.equal(immortal[1],6);
   assert.equal(immortal[2],2);assert.equal(immortal[3],220);
-  assert.equal(immortal[4],60,'all wins and losses count, with draws excluded');
-  assert.equal(immortal[5],18);assert.equal(immortal[6],-22);
+  assert.equal(immortal[4],0);
+  assert.equal(immortal[5],60,'all wins and losses count, with draws excluded');
+  assert.equal(immortal[6],18);assert.equal(immortal[7],-22);
   const noRR=values.find(row=>row[0]===25);
-  assert.equal(noRR[1],1);assert.equal(noRR[4],0);
-  assert.equal(noRR[5],null);assert.equal(noRR[6],null);
+  assert.equal(noRR[1],1);assert.equal(noRR[5],0);
+  assert.equal(noRR[6],null);assert.equal(noRR[7],null);
   assert.equal(values.find(row=>row[0]===0)[1],1,'unrated game remains visible');
   render(matches.filter(m=>m.myRR==null));
   assert.equal(values.reduce((n,row)=>n+row[1],0),4);
-  assert.ok(values.every(row=>row[5]===null&&row[6]===null));
+  assert.ok(values.every(row=>row[6]===null&&row[7]===null));
 });
 
 test('RR breakdown remains visible for a loaded act containing only games without RR',()=>{
@@ -146,7 +147,7 @@ test('inline application scripts remain syntactically valid',()=>{
 
 test('party aggregation attaches your stats only to your same-team party teammates',()=>{
   const me={puuid:'me',name:'Me',team_id:'Blue',party_id:'party'};
-  const friend={puuid:'friend',name:'Friend',tag:'EU',team_id:'Blue',party_id:'party',_kills:99,_deaths:1};
+  const friend={puuid:'friend',name:'Friend',tag:'EU',team_id:'Blue',party_id:'party',_kills:99,_deaths:1,_performanceScore:312.5};
   const stranger={puuid:'stranger',name:'Stranger',team_id:'Blue',party_id:'other'};
   const opponent={puuid:'opponent',name:'Opponent',team_id:'Red',party_id:'party'};
   const context={PUUID:'me',PLAYER:'Me',TAG:'EU',allMatches:[],
@@ -158,6 +159,7 @@ test('party aggregation attaches your stats only to your same-team party teammat
   const rows=runInNewContext(html.slice(start,end)+'\nbuildTeammates();allTeammates',context);
   assert.equal(rows.length,1);assert.equal(rows[0].key,'friend');
   assert.equal(rows[0].kills,99);
+  assert.equal(rows[0].performanceSum,312.5);assert.equal(rows[0].performanceCount,1);
   assert.equal(rows[0].chartStats,undefined);
   assert.equal(rows[0].rrTotal,21);
 });
