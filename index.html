@@ -1068,13 +1068,14 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
         <div class="stat-chart-head performance-dna-head">
           <div><h2 id="performance-dna-title">Performance DNA</h2><p>Two scores. One lobby. See where they agree — and where they split.</p></div>
           <div class="party-size-options" role="radiogroup" aria-label="Performance DNA match range">
-            <label><input type="radio" name="performance-dna-range" value="all" checked onchange="setPerformanceDnaRange(this.value)"><span id="performance-dna-all-label">All time (0)</span></label>
+            <label><input type="radio" name="performance-dna-range" value="all" checked onchange="setPerformanceDnaRange(this.value)"><span id="performance-dna-all-label">All (0)</span></label>
             <label id="performance-dna-50-option" hidden><input type="radio" name="performance-dna-range" value="50" aria-label="50 most recent matches" onchange="setPerformanceDnaRange(this.value)"><span>50</span></label>
             <label><input type="radio" name="performance-dna-range" value="30" aria-label="30 most recent matches" onchange="setPerformanceDnaRange(this.value)"><span>30</span></label>
             <label><input type="radio" name="performance-dna-range" value="20" aria-label="20 most recent matches" onchange="setPerformanceDnaRange(this.value)"><span>20</span></label>
           </div>
         </div>
         <div class="stat-chart-legend"><span><i class="performance-dna-key"></i>ACS</span><span><i class="performance-dna-key ps"></i>Performance Score</span><span id="performance-dna-coverage"></span></div>
+        <p id="performance-dna-scope" class="stat-chart-note" hidden></p>
         <div id="performance-dna-chart" class="stat-chart-scroll" role="region" aria-label="ACS and Performance Score lobby percentiles by game, oldest to newest" tabindex="0"></div>
         <div id="performance-dna-detail" class="performance-dna-detail" aria-live="polite" aria-atomic="true"></div>
         <p class="stat-chart-note">Both strands use lobby percentile: 100 is highest, 0 is lowest, ties share a position. Players missing either score are excluded from both rankings. Each link joins your two scores in one game; a higher PS strand means PS ranks above ACS, with the gap in percentile points. Hover, tap, or focus for raw scores. Includes placements; missing data leaves gaps.</p>
@@ -6258,9 +6259,23 @@ function performanceDnaPath(rows,field,x,y){
   return path;
 }
 
+// Ignore older islands of PS coverage separated from the recent period by
+// at least five consecutive games without a valid comparison. Short gaps
+// remain visible; this scopes only the chart, never the underlying statistics.
+function performanceDnaCoverageRows(rows){
+  let start=0,lastComparable=-1;
+  rows.forEach((row,index)=>{
+    if(row.gap==null)return;
+    if(lastComparable<0||index-lastComparable-1>=5)start=index;
+    lastComparable=index;
+  });
+  return lastComparable<0?[]:rows.slice(start);
+}
+
 let performanceDnaRange='all',performanceDnaSelectedId=null;
 function setPerformanceDnaRange(value){
-  if(!['20','30','50','all'].includes(value)||(value==='50'&&allMatches.length<=50))return;
+  if(!['20','30','50','all'].includes(value)||
+    (value==='50'&&performanceDnaCoverageRows(performanceComparisonRows(allMatches)).length<=50))return;
   performanceDnaRange=value;
   const input=document.querySelector(`input[name="performance-dna-range"][value="${value}"]`);
   if(input)input.checked=true;
@@ -6268,12 +6283,18 @@ function setPerformanceDnaRange(value){
   renderPerformanceDna(allMatches);
 }
 function renderPerformanceDna(matches){
-  const rows=performanceComparisonRows(matches);
+  const historyRows=performanceComparisonRows(matches);
+  const rows=performanceDnaCoverageRows(historyRows);
   const section=document.getElementById('performance-dna-section');
   const container=document.getElementById('performance-dna-chart');
   const detail=document.getElementById('performance-dna-detail');
   section.hidden=!rows.length;container.replaceChildren();detail.replaceChildren();
-  document.getElementById('performance-dna-all-label').textContent=`All time (${rows.length})`;
+  document.getElementById('performance-dna-all-label').textContent=`All (${rows.length})`;
+  const scope=document.getElementById('performance-dna-scope');
+  const omitted=historyRows.length-rows.length;
+  scope.hidden=!rows.length||!omitted;
+  scope.textContent=rows.length&&omitted?`Recent PS coverage · games ${rows[0].game}–${rows[rows.length-1].game} · ${omitted} older games omitted.`:'';
+  scope.title='Older isolated PS results are excluded after a gap of five or more consecutive games without a valid comparison.';
   document.getElementById('performance-dna-50-option').hidden=rows.length<=50;
   if(performanceDnaRange==='50'&&rows.length<=50){
     performanceDnaRange='all';
@@ -6283,10 +6304,12 @@ function renderPerformanceDna(matches){
   const visible=performanceDnaRange==='all'?rows:rows.slice(-Number(performanceDnaRange));
   const paired=visible.filter(row=>row.gap!=null);
   document.getElementById('performance-dna-coverage').textContent=`${paired.length}/${visible.length} games comparable`;
-  const width=1000,height=310,left=64,right=30,top=30,bottom=246;
+  const width=Math.max(1000,visible.length*22+94),height=310,left=64,right=30,top=30,bottom=246;
   const slot=(width-left-right)/Math.max(visible.length,1);
   const x=index=>left+slot*(index+.5),y=value=>bottom-(bottom-top)*value/100;
   const svg=statChartNode('svg',{class:'performance-dna-svg',viewBox:`0 0 ${width} ${height}`,role:'group','aria-label':'Performance DNA: both scores ranked within each game lobby'});
+  // Keep individual games readable in All; long coverage periods can scroll.
+  svg.style.minWidth=`${Math.max(640,visible.length*18)}px`;
   for(const value of [0,25,50,75,100]){
     svg.appendChild(statChartNode('line',{x1:left,y1:y(value),x2:width-right,y2:y(value),class:value===50?'grid midline':'grid'}));
     svg.appendChild(statChartNode('text',{x:left-12,y:y(value)+4,'text-anchor':'end',class:'tick'},String(value)));
