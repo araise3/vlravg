@@ -76,7 +76,7 @@ test('player-rank table includes every game and performance while preserving eli
   let values;
   const render=runInNewContext(stats+'\n'+html.slice(html.indexOf('function renderRRBreakdown('),html.indexOf('function buildRRScoreRows('))+'\nrenderRRBreakdown',{
     allMatches:matches,document:{getElementById:()=>container},
-    renderScoreMarginChart:()=>{},renderRRByScore:()=>{},renderRRTrend:()=>{},
+    renderPerformanceDna:()=>{},renderScoreMarginChart:()=>{},renderRRByScore:()=>{},renderRRTrend:()=>{},
     renderRRSummary:()=>{},rrTrendScopedMatches:m=>m,renderRRMovement:()=>{},
     rankIcon:()=>'',avgLabel:tier=>String(tier),rrSigned:(n,d)=>`${n<0?'−':'+'}${Math.abs(n).toFixed(d)}`,
     highlightTableMaxima:()=>{},initTableSorting:(_,rows)=>{values=rows;},

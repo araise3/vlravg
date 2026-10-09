@@ -794,11 +794,9 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .stat-chart-svg .bar{fill:#93c5fd;}.stat-chart-svg .bar.win{fill:#4ade80;}.stat-chart-svg .bar.loss{fill:#f87171;}.stat-chart-svg .bar.draw{fill:#facc15;}
 .stat-chart-svg .bar:focus{outline:none;stroke:#fff;stroke-width:2;}
 .stat-chart-note{margin:10px 0 0;color:#a1a1aa;font-size:12px;line-height:1.5;}
-.performance-dna-head{align-items:flex-start;}
-.performance-dna-head p{margin:6px 0 0;color:#a1a1aa;font-size:12px;line-height:1.5;}
 .performance-dna-key{width:18px;height:3px;border-radius:2px;background:#67e8f9;}
 .performance-dna-key.ps{background:#c4b5fd;}
-.performance-dna-svg{display:block;width:100%;min-width:640px;height:auto;font-family:var(--font-body);}
+.performance-dna-svg{display:block;width:100%;min-width:640px;height:194px;font-family:var(--font-body);}
 .performance-dna-svg .grid{stroke:#29292f;stroke-width:1;}
 .performance-dna-svg .midline{stroke:#555560;stroke-dasharray:3 5;}
 .performance-dna-svg .tick{fill:#a1a1aa;font-size:10px;}
@@ -809,12 +807,14 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .performance-dna-svg .dna-game .dna-hit{fill:transparent;}
 .performance-dna-svg .dna-game.selected .dna-hit,.performance-dna-svg .dna-game:focus .dna-hit{fill:rgba(255,255,255,.045);}
 .performance-dna-svg .dna-game:focus .dna-point{stroke:#fff;}
-.performance-dna-detail{display:flex;align-items:center;gap:20px;flex-wrap:wrap;min-height:68px;padding:16px 0 0;border-top:1px solid #29292f;font-size:12px;font-variant-numeric:tabular-nums;}
-.performance-dna-game{margin-right:auto;color:#e4e4e7;}.performance-dna-game small{display:block;color:#a1a1aa;margin-top:5px;}
-.performance-dna-metric{display:flex;flex-direction:column;gap:5px;color:#a1a1aa;}
-.performance-dna-metric strong{color:#67e8f9;font-size:15px;}.performance-dna-metric.ps strong{color:#c4b5fd;}
-.performance-dna-gap{color:#e4e4e7;max-width:220px;line-height:1.5;}
-@media(max-width:600px){.performance-dna-head{gap:16px;}.performance-dna-detail{gap:16px;}.performance-dna-game{width:100%;}.performance-dna-gap{max-width:none;}}
+.performance-dna-scroll{position:relative;}
+.performance-dna-scroll .performance-dna-tooltip{min-width:170px;max-width:240px;top:8px;}
+.performance-dna-tooltip strong{display:block;margin-bottom:4px;}
+.performance-dna-tooltip .acs{color:#67e8f9;}.performance-dna-tooltip .ps{color:#c4b5fd;}
+.overview-performance-dna{grid-column:1/-1;}
+.overview-performance-dna h2 small{margin-left:8px;font-size:11px;font-weight:400;color:#a1a1aa;}
+.overview-performance-dna .performance-dna-svg{min-width:0;height:160px;}
+.overview-performance-dna .dna-game{cursor:default;}
 @media(max-width:640px){.stat-chart-card{padding:14px;}}
 @media(max-width:600px){
   .rank-table th,.rank-table td,.rank-table.duos-table th,.rank-table.duos-table td{padding-left:14px;padding-right:14px;}
@@ -1030,6 +1030,21 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
         <dl id="rr-summary-stats" class="rr-summary-stats" aria-label="RR summary for selected match range"></dl>
         <div id="rr-trend-chart" class="rr-trend-scroll" role="region" aria-label="RR trend across matches" tabindex="0"></div>
       </section>
+      <section id="performance-dna-section" class="rr-trend-card" aria-labelledby="performance-dna-title" hidden>
+        <div class="rr-trend-head">
+          <div class="rr-trend-head-main">
+          <h2 id="performance-dna-title">Performance DNA</h2>
+          <div class="party-size-options" role="radiogroup" aria-label="Performance DNA match range">
+            <label><input type="radio" name="performance-dna-range" value="all" checked onchange="setPerformanceDnaRange(this.value)"><span id="performance-dna-all-label">All (0)</span></label>
+            <label id="performance-dna-50-option" hidden><input type="radio" name="performance-dna-range" value="50" aria-label="50 most recent matches" onchange="setPerformanceDnaRange(this.value)"><span>50</span></label>
+            <label><input type="radio" name="performance-dna-range" value="30" aria-label="30 most recent matches" onchange="setPerformanceDnaRange(this.value)"><span>30</span></label>
+            <label><input type="radio" name="performance-dna-range" value="20" aria-label="20 most recent matches" onchange="setPerformanceDnaRange(this.value)"><span>20</span></label>
+          </div>
+          </div>
+        </div>
+        <div class="stat-chart-legend"><span><i class="performance-dna-key"></i>ACS</span><span><i class="performance-dna-key ps"></i>PS</span><span id="performance-dna-coverage"></span></div>
+        <div id="performance-dna-chart" class="stat-chart-scroll performance-dna-scroll" role="region" aria-label="ACS and PS lobby percentiles by game, oldest to newest" tabindex="0"></div>
+      </section>
       <section id="rr-movement-section" class="rr-movement-section" hidden aria-labelledby="rr-movement-title">
         <div class="rr-movement-card">
           <div class="rr-movement-head"><h2 id="rr-movement-title">Estimated RR payout by starting rank</h2><span id="rr-movement-count" class="rr-movement-count"></span></div>
@@ -1064,22 +1079,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
     <div id="matches-empty" class="page-empty" role="status">Search for a player above to explore their match history.</div>
     <div id="match-list-section" style="display:none">
       <div id="match-history-summary" class="mh-summary" aria-label="Match history summary"></div>
-      <section id="performance-dna-section" class="stat-chart-card" aria-labelledby="performance-dna-title" hidden>
-        <div class="stat-chart-head performance-dna-head">
-          <div><h2 id="performance-dna-title">Performance DNA</h2><p>Two scores. One lobby. See where they agree — and where they split.</p></div>
-          <div class="party-size-options" role="radiogroup" aria-label="Performance DNA match range">
-            <label><input type="radio" name="performance-dna-range" value="all" checked onchange="setPerformanceDnaRange(this.value)"><span id="performance-dna-all-label">All (0)</span></label>
-            <label id="performance-dna-50-option" hidden><input type="radio" name="performance-dna-range" value="50" aria-label="50 most recent matches" onchange="setPerformanceDnaRange(this.value)"><span>50</span></label>
-            <label><input type="radio" name="performance-dna-range" value="30" aria-label="30 most recent matches" onchange="setPerformanceDnaRange(this.value)"><span>30</span></label>
-            <label><input type="radio" name="performance-dna-range" value="20" aria-label="20 most recent matches" onchange="setPerformanceDnaRange(this.value)"><span>20</span></label>
-          </div>
-        </div>
-        <div class="stat-chart-legend"><span><i class="performance-dna-key"></i>ACS</span><span><i class="performance-dna-key ps"></i>Performance Score</span><span id="performance-dna-coverage"></span></div>
-        <p id="performance-dna-scope" class="stat-chart-note" hidden></p>
-        <div id="performance-dna-chart" class="stat-chart-scroll" role="region" aria-label="ACS and Performance Score lobby percentiles by game, oldest to newest" tabindex="0"></div>
-        <div id="performance-dna-detail" class="performance-dna-detail" aria-live="polite" aria-atomic="true"></div>
-        <p class="stat-chart-note">Both strands use lobby percentile: 100 is highest, 0 is lowest, ties share a position. Players missing either score are excluded from both rankings. Each link joins your two scores in one game; a higher PS strand means PS ranks above ACS, with the gap in percentile points. Hover, tap, or focus for raw scores. Includes placements; missing data leaves gaps.</p>
-      </section>
+
       <div class="mh-list-heading"><span>Match log</span><span>Newest first · Select a match for the roster</span></div>
       <div id="matches-container"></div>
       <button class="load-more-btn" id="load-more-btn" style="display:none" onclick="loadMoreMatches()">Load More</button>
@@ -1127,6 +1127,11 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
         </section>
       </div>
       <div class="overview-previews">
+        <section id="overview-performance-dna-section" class="overview-preview overview-performance-dna" aria-labelledby="overview-performance-dna-title" hidden>
+          <a class="overview-preview-heading" href="/rr" data-page="rr"><h2 id="overview-performance-dna-title">Performance DNA <small>Last 20</small></h2><span aria-hidden="true">↗</span></a>
+          <div class="stat-chart-legend"><span><i class="performance-dna-key"></i>ACS</span><span><i class="performance-dna-key ps"></i>PS</span></div>
+          <div id="overview-performance-dna-chart" role="img" aria-label="ACS and PS lobby percentiles in the last 20 games"></div>
+        </section>
         <section class="overview-preview" aria-labelledby="overview-lobbies-title">
           <a class="overview-preview-heading" href="/lobbyrank" data-page="lobby-rank"><h2 id="overview-lobbies-title">Most-played lobbies</h2><span aria-hidden="true">↗</span></a>
           <div id="overview-lobbies"></div>
@@ -2511,7 +2516,7 @@ function runAnalysis(searchOverride,{fromUrl=false,initialAct=null}={}){
   CURRENT_TIER_ID=null;
   CURRENT_RR=null;
   allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;mhDayStats={};
-  performanceDnaRange='all';performanceDnaSelectedId=null;
+  performanceDnaRange='all';
   document.querySelector('input[name="performance-dna-range"][value="all"]').checked=true;
   _rrChangeByMatchId={};_preRRByMatchId={};_preTierByMatchId={};_postRRByMatchId={};_postTierByMatchId={};_refundedRRByMatchId={};_derankProtectedByMatchId={};
   allTeammates=[];allEncounters=[];serverData=[];serverPartySize=0;serverFilteredMatchCount=0;lobbyRankPartySize=0;lobbyRankFilteredMatchCount=0;rrMovementZoomTier=null;
@@ -4751,6 +4756,7 @@ function overviewRecentMatches(matches){
 }
 
 function renderOverviewPreviews(){
+  renderPerformanceDna(allMatches,{overview:true});
   const rated=statMatches.filter(m=>m.avgRank!=null);
   const placements=allMatches.some(m=>m.postReset);
   document.getElementById('overview-lobby-context').textContent=`${rated.length} rated lobbies${placements?' · Placements '+(mhIncludeReset?'included':'excluded'):''}`;
@@ -5708,6 +5714,7 @@ function renderRRSummary(matches){
     stat('Win rate',summary.winRate==null?'—':Math.round(summary.winRate)+'%');
 }
 function renderRRBreakdown(matches){
+  renderPerformanceDna(allMatches);
   renderScoreMarginChart(allMatches);
   renderRRByScore(matches);
   renderRRTrend(matches);
@@ -6272,44 +6279,44 @@ function performanceDnaCoverageRows(rows){
   return lastComparable<0?[]:rows.slice(start);
 }
 
-let performanceDnaRange='all',performanceDnaSelectedId=null;
+let performanceDnaRange='all';
 function setPerformanceDnaRange(value){
   if(!['20','30','50','all'].includes(value)||
     (value==='50'&&performanceDnaCoverageRows(performanceComparisonRows(allMatches)).length<=50))return;
   performanceDnaRange=value;
   const input=document.querySelector(`input[name="performance-dna-range"][value="${value}"]`);
   if(input)input.checked=true;
-  performanceDnaSelectedId=null;
   renderPerformanceDna(allMatches);
 }
-function renderPerformanceDna(matches){
+function renderPerformanceDna(matches,{overview=false}={}){
   const historyRows=performanceComparisonRows(matches);
   const rows=performanceDnaCoverageRows(historyRows);
-  const section=document.getElementById('performance-dna-section');
-  const container=document.getElementById('performance-dna-chart');
-  const detail=document.getElementById('performance-dna-detail');
-  section.hidden=!rows.length;container.replaceChildren();detail.replaceChildren();
-  document.getElementById('performance-dna-all-label').textContent=`All (${rows.length})`;
-  const scope=document.getElementById('performance-dna-scope');
-  const omitted=historyRows.length-rows.length;
-  scope.hidden=!rows.length||!omitted;
-  scope.textContent=rows.length&&omitted?`Recent PS coverage · games ${rows[0].game}–${rows[rows.length-1].game} · ${omitted} older games omitted.`:'';
-  scope.title='Older isolated PS results are excluded after a gap of five or more consecutive games without a valid comparison.';
-  document.getElementById('performance-dna-50-option').hidden=rows.length<=50;
-  if(performanceDnaRange==='50'&&rows.length<=50){
-    performanceDnaRange='all';
-    document.querySelector('input[name="performance-dna-range"][value="all"]').checked=true;
+  const prefix=overview?'overview-performance-dna':'performance-dna';
+  const section=document.getElementById(prefix+'-section');
+  const container=document.getElementById(prefix+'-chart');
+  section.hidden=!rows.length;container.replaceChildren();
+  if(!overview){
+    const allLabel=document.getElementById('performance-dna-all-label');
+    allLabel.textContent=`All (${rows.length})`;
+    const omitted=historyRows.length-rows.length;
+    allLabel.title=omitted?`${omitted} older games omitted before the recent PS coverage period, after a gap of five or more games without a valid comparison.`:'All games in the PS coverage period';
+    document.getElementById('performance-dna-50-option').hidden=rows.length<=50;
+    if(performanceDnaRange==='50'&&rows.length<=50){
+      performanceDnaRange='all';
+      document.querySelector('input[name="performance-dna-range"][value="all"]').checked=true;
+    }
   }
   if(!rows.length)return;
-  const visible=performanceDnaRange==='all'?rows:rows.slice(-Number(performanceDnaRange));
+  const visible=overview?rows.slice(-20):performanceDnaRange==='all'?rows:rows.slice(-Number(performanceDnaRange));
   const paired=visible.filter(row=>row.gap!=null);
-  document.getElementById('performance-dna-coverage').textContent=`${paired.length}/${visible.length} games comparable`;
-  const width=Math.max(1000,visible.length*22+94),height=310,left=64,right=30,top=30,bottom=246;
+  if(!overview)document.getElementById('performance-dna-coverage').textContent=`${paired.length}/${visible.length} games`;
+  const width=Math.max(1000,visible.length*22+94),height=220,left=64,right=30,top=24,bottom=174;
   const slot=(width-left-right)/Math.max(visible.length,1);
   const x=index=>left+slot*(index+.5),y=value=>bottom-(bottom-top)*value/100;
   const svg=statChartNode('svg',{class:'performance-dna-svg',viewBox:`0 0 ${width} ${height}`,role:'group','aria-label':'Performance DNA: both scores ranked within each game lobby'});
   // Keep individual games readable in All; long coverage periods can scroll.
-  svg.style.minWidth=`${Math.max(640,visible.length*18)}px`;
+  svg.style.minWidth=overview?'0':`${Math.max(640,visible.length*18)}px`;
+  svg.setAttribute('preserveAspectRatio','none');
   for(const value of [0,25,50,75,100]){
     svg.appendChild(statChartNode('line',{x1:left,y1:y(value),x2:width-right,y2:y(value),class:value===50?'grid midline':'grid'}));
     svg.appendChild(statChartNode('text',{x:left-12,y:y(value)+4,'text-anchor':'end',class:'tick'},String(value)));
@@ -6328,26 +6335,26 @@ function renderPerformanceDna(matches){
   const date=row=>Number.isFinite(row.m.startedAtMs)?new Date(row.m.startedAtMs).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}):'Date unavailable';
   const groups=[];
   const tickStep=Math.max(1,Math.ceil(visible.length/20));
+  const detail=overview?null:document.createElement('div');
+  if(detail){
+    detail.className='rr-trend-tooltip performance-dna-tooltip';detail.hidden=true;
+    detail.setAttribute('aria-live','polite');
+  }
   const select=row=>{
-    performanceDnaSelectedId=row.m.matchId;
+    if(!detail)return;
     groups.forEach(({group,game})=>group.classList.toggle('selected',game===row.game));
-    // Match names are API data; use textContent for the whole detail panel.
-    const game=document.createElement('div');game.className='performance-dna-game';
-    const name=document.createElement('strong');name.textContent=`Game ${row.game} · ${row.m.mapName||'Unknown map'}`;
-    const when=document.createElement('small');when.textContent=`${date(row)} · ${row.m.won===true?'Win':row.m.won===false?'Loss':'Draw'}`;
-    game.append(name,when);
-    const metric=(label,score,percentile,count,ps)=>{
-      const block=document.createElement('div');block.className='performance-dna-metric'+(ps?' ps':'');
-      const value=document.createElement('strong');value.textContent=`${label} ${format(score)}`;
-      const rank=document.createElement('span');rank.textContent=percentile==null?'Lobby position unavailable':`${format(percentile)} percentile · ${count} players`;
-      block.append(value,rank);return block;
-    };
-    const gap=document.createElement('div');gap.className='performance-dna-gap';gap.textContent=describeGap(row);
-    detail.replaceChildren(game,metric('ACS',row.acs,row.acsPercentile,row.acsCount,false),metric('PS',row.ps,row.psPercentile,row.psCount,true),gap);
+    const game=document.createElement('strong');game.textContent=`${row.m.mapName||'Unknown map'} · ${date(row)}`;
+    const acs=document.createElement('div');acs.className='acs';acs.textContent=`ACS ${format(row.acs)} · ${format(row.acsPercentile)} percentile`;
+    const ps=document.createElement('div');ps.className='ps';ps.textContent=`PS ${format(row.ps)} · ${format(row.psPercentile)} percentile`;
+    detail.replaceChildren(game,acs,ps);detail.hidden=false;
+    const point=groups.find(entry=>entry.game===row.game)?.group;
+    const box=container.getBoundingClientRect(),pointBox=point?.getBoundingClientRect();
+    const left=pointBox?pointBox.left-box.left:8;
+    detail.style.left=`${container.scrollLeft+Math.max(8,Math.min(container.clientWidth-detail.offsetWidth-8,left))}px`;
   };
   visible.forEach((row,index)=>{
     const description=`Game ${row.game}, ${row.m.mapName||'Unknown map'}, ${date(row)}. ACS ${format(row.acs)}, lobby percentile ${format(row.acsPercentile)} among ${row.acsCount} players. Performance Score ${format(row.ps)}, lobby percentile ${format(row.psPercentile)} among ${row.psCount} players. ${describeGap(row)}.`;
-    const group=statChartNode('g',{class:'dna-game',tabindex:'0',role:'img','aria-label':description});
+    const group=statChartNode('g',{class:'dna-game',...(overview?{}:{tabindex:'0'}),role:'img','aria-label':description});
     group.appendChild(statChartNode('title',{},description));
     group.appendChild(statChartNode('rect',{x:x(index)-slot/2,y:top-8,width:slot,height:bottom-top+44,class:'dna-hit',rx:5}));
     for(const [value,color] of [[row.acsPercentile,acsColor],[row.psPercentile,psColor]]){
@@ -6356,13 +6363,16 @@ function renderPerformanceDna(matches){
     if(row.acsPercentile==null&&row.psPercentile==null){
       group.appendChild(statChartNode('text',{x:x(index),y:y(50)+3,'text-anchor':'middle',class:'tick'},'—'));
     }
-    group.addEventListener('pointerenter',()=>select(row));
-    group.addEventListener('focus',()=>select(row));
-    group.addEventListener('click',()=>select(row));
-    group.addEventListener('keydown',event=>{
-      if(event.key!=='ArrowLeft'&&event.key!=='ArrowRight')return;
-      event.preventDefault();groups[index+(event.key==='ArrowRight'?1:-1)]?.group.focus();
-    });
+    if(!overview){
+      group.addEventListener('pointerenter',()=>select(row));
+      group.addEventListener('focus',()=>select(row));
+      group.addEventListener('click',()=>select(row));
+      group.addEventListener('keydown',event=>{
+        if(event.key==='Escape'){detail.hidden=true;return;}
+        if(event.key!=='ArrowLeft'&&event.key!=='ArrowRight')return;
+        event.preventDefault();groups[index+(event.key==='ArrowRight'?1:-1)]?.group.focus();
+      });
+    }
     groups.push({group,game:row.game});svg.appendChild(group);
     if(index%tickStep===0||index===visible.length-1){
       svg.appendChild(statChartNode('text',{x:x(index),y:bottom+22,'text-anchor':'middle',class:'tick'},`#${row.game}`));
@@ -6370,7 +6380,11 @@ function renderPerformanceDna(matches){
   });
   svg.appendChild(statChartNode('text',{x:(left+width-right)/2,y:height-12,'text-anchor':'middle',class:'tick'},'Games · oldest → newest'));
   container.appendChild(svg);
-  select(visible.find(row=>row.m.matchId===performanceDnaSelectedId)||[...visible].reverse().find(row=>row.gap!=null)||visible[visible.length-1]);
+  if(detail){
+    container.appendChild(detail);
+    container.onpointerleave=()=>{detail.hidden=true;};
+    container.onfocusout=event=>{if(!container.contains(event.relatedTarget))detail.hidden=true;};
+  }
 }
 
 function scoreMarginDistribution(matches){
@@ -6437,7 +6451,6 @@ function renderScoreMarginChart(matches){
   container.appendChild(svg);
 }
 function renderMatches(){
-  renderPerformanceDna(allMatches);
   const container=document.getElementById('matches-container');
   const expandedIds=new Set([...container.querySelectorAll('.match-card.expanded')].map(card=>card.dataset.matchId));
   const focusedId=document.activeElement?.closest?.('.match-card')?.dataset.matchId;
