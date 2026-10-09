@@ -4464,7 +4464,7 @@ function renderServers(matches){
   if(!serverData.length)return;
   const table=document.createElement('table');
   table.className='rank-table';
-  table.innerHTML='<caption class="rank-sr-only">Match results and performance grouped by game server; match share is the percentage of matches with a known server</caption><thead><tr><th scope="col">Server</th><th scope="col">Matches</th><th scope="col">Avg Lobby</th><th scope="col">K/D</th><th scope="col" title="Average combat score">Avg ACS</th><th scope="col" title="Avg PS across matches with available data">Avg PS</th><th scope="col" title="Wins divided by wins plus losses; draws excluded">Win rate</th></tr></thead><tbody></tbody>';
+  table.innerHTML='<caption class="rank-sr-only">Match results and performance grouped by game server; match share is the percentage of matches with a known server</caption><thead><tr><th scope="col">Server</th><th scope="col">Matches</th><th scope="col">Avg Lobby</th><th scope="col">K/D</th><th scope="col" title="Average combat score">ACS</th><th scope="col" title="Avg PS across matches with available data">PS</th><th scope="col" title="Wins divided by wins plus losses; draws excluded">Win rate</th></tr></thead><tbody></tbody>';
   const tbody=table.tBodies[0];
   serverData.forEach(row=>{
     const tr=document.createElement('tr');
@@ -4719,7 +4719,7 @@ function renderWintradeSignals(){
     list.appendChild(empty);return;
   }
   const table=document.createElement('table');table.className='rank-table wintrade-table';
-  table.innerHTML='<caption class="rank-sr-only">Heuristic wintrading signals; percentages are not calibrated probabilities</caption><thead><tr><th scope="col">Opponent</th><th scope="col">Likelihood signal</th><th scope="col">Enemy games</th><th scope="col">Low games</th><th scope="col">Avg ACS</th><th scope="col" title="Avg PS across matches with available data">Avg PS</th><th scope="col">K/D</th><th scope="col">Your wins</th><th scope="col">Party games</th></tr></thead><tbody></tbody>';
+  table.innerHTML='<caption class="rank-sr-only">Heuristic wintrading signals; percentages are not calibrated probabilities</caption><thead><tr><th scope="col">Opponent</th><th scope="col">Likelihood signal</th><th scope="col">Enemy games</th><th scope="col">Low games</th><th scope="col">ACS</th><th scope="col" title="Avg PS across matches with available data">PS</th><th scope="col">K/D</th><th scope="col">Your wins</th><th scope="col">Party games</th></tr></thead><tbody></tbody>';
   rows.forEach(r=>{
     const tr=document.createElement('tr');
     tr.innerHTML='<th scope="row"><a class="duo-player-name encounter-link"><span class="duo-name"></span><span class="duo-tag"></span></a></th><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>';
@@ -4816,7 +4816,7 @@ function renderTeammates(){
   const table=document.createElement('table');
   table.className='rank-table duos-table';
   table.innerHTML=`<caption class="rank-sr-only">Party teammates, including their K/D, average ACS, Avg PS, and your total recorded RR change together</caption>
-    <thead><tr><th scope="col">Teammate</th><th scope="col">Matches</th><th scope="col">Avg Lobby</th><th scope="col" title="Teammate K/D">K/D</th><th scope="col" title="Teammate average ACS">Avg ACS</th><th scope="col" title="Avg PS across matches with available data">Avg PS</th><th scope="col">Win rate</th><th scope="col" title="Your net RR change in matches with this teammate">Total RR</th></tr></thead><tbody></tbody>`;
+    <thead><tr><th scope="col">Teammate</th><th scope="col">Matches</th><th scope="col">Avg Lobby</th><th scope="col" title="Teammate K/D">K/D</th><th scope="col" title="Teammate average ACS">ACS</th><th scope="col" title="Avg PS across matches with available data">PS</th><th scope="col">Win rate</th><th scope="col" title="Your net RR change in matches with this teammate">Total RR</th></tr></thead><tbody></tbody>`;
   const tbody=table.querySelector('tbody');
   const teammateRows=allTeammates.map(t=>({
     ...t,
@@ -5712,7 +5712,7 @@ function renderRRBreakdown(matches){
   renderRRTrend(matches);
   renderRRSummary(rrTrendScopedMatches(matches));
   renderRRMovement(matches);
-  const columns=`<th scope="col">K/D</th><th scope="col" title="Average combat score">ACS</th><th scope="col" title="Avg PS across matches with available data">Avg PS</th><th scope="col" title="Wins divided by wins plus losses across all games; draws excluded">WR%</th><th scope="col" title="Average recorded RR from eligible wins; excludes placements, unrated ranks and full 5-stacks">RR / Win</th><th scope="col" title="Average recorded RR from eligible losses; excludes placements, unrated ranks and full 5-stacks">RR / Loss</th>`;
+  const columns=`<th scope="col">K/D</th><th scope="col" title="Average combat score">ACS</th><th scope="col" title="Avg PS across matches with available data">PS</th><th scope="col" title="Wins divided by wins plus losses across all games; draws excluded">WR%</th><th scope="col" title="Average recorded RR from eligible wins; excludes placements, unrated ranks and full 5-stacks">RR / Win</th><th scope="col" title="Average recorded RR from eligible losses; excludes placements, unrated ranks and full 5-stacks">RR / Loss</th>`;
   const winRateClass=rate=>rate==null||Math.round(rate)===50?'':Math.round(rate)>50?'rank-positive':'rank-negative';
   const cells=s=>`<td>${s.n}</td><td class="${s.kd==null||s.kd===1?'':s.kd>1?'rank-positive':'rank-negative'}">${s.kd==null?'—':s.kd.toFixed(2)}</td><td>${s.acs==null?'—':Math.round(s.acs)}</td><td>${s.performanceScore==null?'—':Math.round(s.performanceScore)}</td><td class="${winRateClass(s.winRate)}">${s.winRate==null?'—':Math.round(s.winRate)+'%'}</td><td class="rank-positive">${s.avgGain==null?'—':rrSigned(s.avgGain,1)}</td><td class="rank-negative">${s.avgLoss==null?'—':rrSigned(-s.avgLoss,1)}</td>`;
   const scope='Games, K/D, ACS and win rate include all matches in this act. Performance Score averages only matches with reported scores. RR averages use eligible recorded payouts, excluding placements, unrated ranks and full 5-stacks.';
@@ -5887,7 +5887,7 @@ function renderPerformanceTable(containerId,rows,party){
   const table=document.createElement('table');
   table.className='rank-table'+(party?' duos-table':'');
   table.innerHTML=`<caption class="rank-sr-only">Your performance grouped by ${party?'party size, including your total recorded RR change':'average lobby rank'}</caption>
-    <thead><tr><th scope="col">${party?'Party size':'Lobby rank'}</th><th scope="col">Matches</th>${party?'<th scope="col">Avg Lobby</th>':''}<th scope="col">K/D</th><th scope="col">Avg ACS</th><th scope="col" title="Avg PS across matches with available data">Avg PS</th><th scope="col">Win rate</th>${party?'<th scope="col" title="Your net RR change for this party size">Total RR</th>':''}</tr></thead><tbody></tbody>`;
+    <thead><tr><th scope="col">${party?'Party size':'Lobby rank'}</th><th scope="col">Matches</th>${party?'<th scope="col">Avg Lobby</th>':''}<th scope="col">K/D</th><th scope="col">ACS</th><th scope="col" title="Avg PS across matches with available data">PS</th><th scope="col">Win rate</th>${party?'<th scope="col" title="Your net RR change for this party size">Total RR</th>':''}</tr></thead><tbody></tbody>`;
   const tbody=table.querySelector('tbody');
   rows.forEach(b=>{
     const kd=b.totalDeaths>0?b.totalKills/b.totalDeaths:b.totalKills>0?b.totalKills:null;
