@@ -613,24 +613,24 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
 #name-backfill-progress{flex-basis:100%;width:100%;height:6px;accent-color:var(--brand);}
 #name-backfill-progress[hidden]{display:none;}
 #sg-rank-overview,.table-scroll{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
-#sg-rank-overview .rank-table{min-width:650px;}
-#lobby-teams-table .rank-table{min-width:640px;}
+#sg-rank-overview .rank-table{min-width:0;}
+#lobby-teams-table .rank-table{min-width:0;}
 #sg-rank-overview:focus-visible,.table-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:-2px;}
 .duo-player-name{display:inline-flex;align-items:baseline;gap:3px;max-width:240px;position:relative;}
 .duo-player-name .duo-name{overflow:hidden;text-overflow:ellipsis;min-width:0;white-space:nowrap;}
 .duo-player-name .duo-tag{color:#a1a1aa;font-size:12px;flex-shrink:0;}
 .rank-table .table-lobby-value{justify-content:flex-end;font-size:13px;}
-.rank-table{width:100%;min-width:620px;border-collapse:separate;border-spacing:0;text-align:right;font-family:var(--font-display);font-variant-numeric:tabular-nums;}
-.rank-table.duos-table{min-width:680px;}
-#teammate-list .duos-table{min-width:800px;}
-#party-size-list .duos-table{min-width:800px;}
+.rank-table{width:100%;min-width:0;table-layout:fixed;border-collapse:separate;border-spacing:0;text-align:right;font-family:var(--font-display);font-variant-numeric:tabular-nums;}
+.rank-table.duos-table{min-width:0;}
+#teammate-list .duos-table{min-width:0;}
+#party-size-list .duos-table{min-width:0;}
 .rank-table.duos-table th,.rank-table.duos-table td{padding-left:16px;padding-right:16px;}
 .duos-table th:first-child{width:25%;}
 .duos-table th:nth-child(3){width:28%;}
 .encounters-section{margin-top:24px;}
 .encounters-section h2{margin:0 0 8px;font-size:18px;font-weight:650;}
 .encounters-section p{margin:0 0 14px;color:#a1a1aa;font-size:12px;line-height:1.6;}
-.encounters-table{min-width:620px;}
+.encounters-table{min-width:0;}
 a.duo-player-name{color:var(--text);text-decoration:none;}
 a.duo-player-name:hover,a.duo-player-name:hover .duo-tag{color:var(--brand);}
 a.duo-player-name:hover::after{content:'';position:absolute;left:0;right:0;bottom:-2px;height:1px;background:var(--brand);}
@@ -639,7 +639,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .wintrade-section{margin-top:28px;}
 .wintrade-section h2{margin:0 0 8px;font-size:18px;font-weight:650;}
 .wintrade-section>p{margin:0 0 14px;color:#a1a1aa;font-size:12px;line-height:1.6;max-width:850px;}
-.wintrade-table{min-width:900px;}
+.wintrade-table{min-width:0;}
 .wintrade-score{font-weight:700;color:#e4e4e7;}
 .wintrade-score.medium{color:#facc15;}
 .wintrade-score.high{color:#f87171;}
@@ -673,6 +673,34 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .rank-positive{color:#4ade80;}.rank-negative{color:#f87171;}
 .rank-table td.rank-positive{color:#72e6a0;}.rank-table td.rank-negative{color:#ff9999;}
 .rank-table td.table-best{background:rgba(var(--brand-rgb),.15);font-weight:700;}
+/* Fit every column inside the panel; long names and rank labels can wrap. */
+.table-scroll .rank-table,#sg-rank-overview .rank-table{min-width:0;}
+.rank-table th,.rank-table td,.rank-table.duos-table th,.rank-table.duos-table td{padding-left:8px;padding-right:8px;white-space:normal;overflow-wrap:anywhere;}
+.rank-table thead th{overflow-wrap:normal;}
+.rank-table .table-sort-btn{padding:10px 6px 10px 16px;white-space:normal;}
+.rank-table .duo-player-name{max-width:100%;flex-wrap:wrap;}
+.rank-table .rank-row-identity{min-width:0;gap:6px;font-size:12px;}
+.rank-table .table-lobby-value span{min-width:0;}
+.rank-table.duos-table th:first-child{width:24%;}
+.rank-table.duos-table th:nth-child(3){width:24%;}
+.servers-table-card .rank-table th:first-child{min-width:0;width:24%;}
+@media(max-width:700px){
+  .rank-table{display:block;}
+  .rank-table thead,.rank-table tbody{display:block;}
+  .rank-table thead tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));}
+  .rank-table thead th,.rank-table.duos-table thead th{width:auto!important;position:static!important;box-shadow:none!important;}
+  .rank-table thead .table-sort-btn{justify-content:flex-start;text-align:left;}
+  .rank-table tbody tr{display:grid;grid-template-columns:minmax(0,1fr);padding:10px 0;border-bottom:1px solid #323236;}
+  .rank-table tbody tr:last-child{border-bottom:0;}
+  .rank-table tbody th,.rank-table.duos-table tbody th{width:auto!important;position:static!important;box-shadow:none!important;}
+  .rank-table tbody th:first-child{padding:10px 14px;font-size:14px;}
+  .rank-table tbody td{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:34px;height:auto;padding:7px 14px;border:0;}
+  .rank-table tbody td::before{content:attr(data-label);color:#a1a1aa;font-size:11px;text-align:left;flex-shrink:0;}
+  .rank-table tbody th{height:auto;border:0;}
+  .rank-table tr>*+*{border-left:0;}
+  .rank-table .rank-row-identity{justify-content:flex-start;}
+  .rank-table .table-lobby-value{justify-content:flex-end;}
+}
 .rank-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 #party-size-section{margin-bottom:24px;}
 .rr-table-card{padding:0;overflow:hidden;margin-bottom:24px;}
@@ -687,8 +715,8 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .server-summary-stat small{display:block;margin-top:5px;color:#a1a1aa;font-size:11px;line-height:1.4;}
 .server-summary-stat:first-child small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .server-summary-stat:nth-child(-n+2) dd{overflow:visible;text-overflow:clip;white-space:normal;overflow-wrap:break-word;}
-.servers-table-card .rank-table{min-width:760px;}
-.servers-table-card .rank-table th:first-child{min-width:215px;white-space:normal;}
+.servers-table-card .rank-table{min-width:0;}
+.servers-table-card .rank-table th:first-child{min-width:0;white-space:normal;}
 .server-match-share{margin-left:6px;color:inherit;font-size:inherit;white-space:nowrap;}
 .detail-filter-row{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
 .detail-filter-row[hidden]{display:none;}
@@ -4858,6 +4886,9 @@ function initTableSorting(container,values){
   const headers=[...table.tHead.rows[0].cells];
   const tbody=table.tBodies[0];
   const entries=[...tbody.rows].map((row,index)=>({row,values:values[index],index}));
+  entries.forEach(({row})=>[...row.cells].forEach((cell,column)=>{
+    cell.dataset.label=headers[column]?.textContent.trim()||'';
+  }));
   const collator=new Intl.Collator(undefined,{numeric:true,sensitivity:'base'});
   const applySort=state=>{
     const {column,direction}=state;
@@ -6123,7 +6154,7 @@ function buildMatchCard(m){
         '<span class="mc-expand-icon"><span class="mc-expand-label">Roster</span><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 7.5 5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>'+
       '<span class="mc-performance"><span class="mc-performance-stat"><span class="mc-performance-lbl">K / D / A</span><span class="mc-performance-val">'+kdaHtml+'</span></span>'+
       '<span class="mc-performance-stat"><span class="mc-performance-lbl">ACS</span><span class="mc-performance-val">'+acs+'</span></span>'+
-      '<span class="mc-performance-stat"><span class="mc-performance-lbl">Performance Score</span><span class="mc-performance-val">'+performanceScore+'</span></span>'+
+      '<span class="mc-performance-stat" title="'+(myStats?.performanceScore==null?'Performance Score is not provided in this match’s API data':'Performance Score')+'"><span class="mc-performance-lbl">PS</span><span class="mc-performance-val">'+performanceScore+'</span></span>'+
       '<span class="mc-performance-stat" title="'+matchHtml(rankTitle)+'"><span class="mc-performance-lbl">Avg lobby</span><span class="mc-performance-val mc-lobby-value">'+rankLabel+(rank?' ('+rank.rr+' RR)':'')+'</span></span>'+
       '<span class="mc-performance-stat mc-rr-stat"><span class="mc-performance-lbl">RR change</span><span class="match-rr-change '+(myRR!=null?(myRR>=0?'gain':'loss'):'')+(shielded?' shielded':'')+'" title="'+(myRR==null?'No RR data for this match':shielded?'Rank Shield protected your displayed rank; this recorded RR loss still applied':'Recorded RR change for this match')+'">'+shieldIcon+(myRR!=null?(myRR>=0?'+':'')+myRR:'—')+'</span></span></span></span></button>';
   const trigger=card.querySelector('button');
