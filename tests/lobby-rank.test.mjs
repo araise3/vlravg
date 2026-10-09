@@ -9,10 +9,11 @@ const extract=(start,end)=>{
   assert.ok(from>=0&&to>from);
   return html.slice(from,to);
 };
-const {ratedTeamRank,buildKdRankBuckets}=runInNewContext(
+const {ratedTeamRank,buildKdRankBuckets,decidedWinRate}=runInNewContext(
+  extract('function decidedWinRate(', '\nfunction renderOverviewPreviews(')+
   extract('function ratedTeamRank(', '\nfunction processMatch(')+
   extract('function buildKdRankBuckets(', '\n/* ── RR GAINS')+
-  '\n({ratedTeamRank,buildKdRankBuckets})');
+  '\n({ratedTeamRank,buildKdRankBuckets,decidedWinRate})');
 
 test('team rank uses rated players on the correct side',()=>{
   const players=[
@@ -33,4 +34,15 @@ test('lobby rank groups average each match team rank equally',()=>{
   assert.equal(rows.length,1);
   assert.equal(rows[0].teamRankSum/rows[0].teamRankCount,10);
   assert.equal(rows[0].enemyRankSum/rows[0].enemyRankCount,14);
+});
+
+test('draws count as games but are excluded from win rate',()=>{
+  const matches=[true,false,undefined].map(won=>({myStats:{kills:1,deaths:1},won}));
+  const [row]=buildKdRankBuckets(()=>({tier:12,label:'Gold 1'}),{matches});
+  assert.equal(row.total,3);
+  assert.equal(row.decided,2);
+  assert.equal(decidedWinRate(row.wins,row.decided),50);
+  const [draws]=buildKdRankBuckets(()=>({tier:12,label:'Gold 1'}),{matches:matches.slice(2)});
+  assert.equal(draws.total,1);
+  assert.equal(decidedWinRate(draws.wins,draws.decided),null);
 });

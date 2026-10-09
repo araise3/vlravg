@@ -1,0 +1,422 @@
+[
+  {
+    "width": 320,
+    "data": "demo",
+    "page": "overview",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "77",
+    "scroll": 305,
+    "viewport": 305
+  },
+  {
+    "width": 320,
+    "data": "demo",
+    "page": "matches",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "54",
+    "scroll": 305,
+    "viewport": 305
+  },
+  {
+    "width": 320,
+    "data": "demo",
+    "page": "duos",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "73",
+    "scroll": 305,
+    "viewport": 305
+  },
+  {
+    "width": 320,
+    "data": "demo",
+    "page": "lobbyrank",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "77",
+    "scroll": 305,
+    "viewport": 305
+  },
+  {
+    "width": 320,
+    "data": "demo",
+    "page": "servers",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "65",
+    "scroll": 305,
+    "viewport": 305
+  },
+  {
+    "width": 320,
+    "data": "demo",
+    "page": "rr",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "70",
+    "scroll": 305,
+    "viewport": 305
+  },
+  {
+    "width": 320,
+    "data": "demo",
+    "page": "names",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "54",
+    "scroll": 305,
+    "viewport": 305
+  },
+  {
+    "width": 320,
+    "data": "worst",
+    "page": "overview",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "117",
+    "scroll": 305,
+    "viewport": 305
+  },
+  {
+    "width": 320,
+    "data": "worst",
+    "page": "matches",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "71",
+    "scroll": 305,
+    "viewport": 305
+  },
+  {
+    "width": 320,
+    "data": "worst",
+    "page": "duos",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "80",
+    "scroll": 305,
+    "viewport": 305
+  },
+  {
+    "width": 320,
+    "data": "worst",
+    "page": "lobbyrank",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "89",
+    "scroll": 305,
+    "viewport": 305
+  },
+  {
+    "width": 320,
+    "data": "worst",
+    "page": "servers",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "93",
+    "scroll": 305,
+    "viewport": 305
+  },
+  {
+    "width": 320,
+    "data": "worst",
+    "page": "rr",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "107",
+    "scroll": 305,
+    "viewport": 305
+  },
+  {
+    "width": 320,
+    "data": "worst",
+    "page": "names",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "94",
+    "scroll": 305,
+    "viewport": 305
+  },
+  {
+    "width": 1180,
+    "data": "demo",
+    "page": "overview",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "65",
+    "scroll": 1165,
+    "viewport": 1165
+  },
+  {
+    "width": 1180,
+    "data": "demo",
+    "page": "matches",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "53",
+    "scroll": 1165,
+    "viewport": 1165
+  },
+  {
+    "width": 1180,
+    "data": "demo",
+    "page": "duos",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "55",
+    "scroll": 1165,
+    "viewport": 1165
+  },
+  {
+    "width": 1180,
+    "data": "demo",
+    "page": "lobbyrank",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "57",
+    "scroll": 1165,
+    "viewport": 1180
+  },
+  {
+    "width": 1180,
+    "data": "demo",
+    "page": "servers",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "50",
+    "scroll": 1165,
+    "viewport": 1180
+  },
+  {
+    "width": 1180,
+    "data": "demo",
+    "page": "rr",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "74",
+    "scroll": 1165,
+    "viewport": 1165
+  },
+  {
+    "width": 1180,
+    "data": "demo",
+    "page": "names",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "44",
+    "scroll": 1165,
+    "viewport": 1165
+  },
+  {
+    "width": 1180,
+    "data": "worst",
+    "page": "overview",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "72",
+    "scroll": 1165,
+    "viewport": 1165
+  },
+  {
+    "width": 1180,
+    "data": "worst",
+    "page": "matches",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "53",
+    "scroll": 1165,
+    "viewport": 1165
+  },
+  {
+    "width": 1180,
+    "data": "worst",
+    "page": "duos",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "75",
+    "scroll": 1165,
+    "viewport": 1165
+  },
+  {
+    "width": 1180,
+    "data": "worst",
+    "page": "lobbyrank",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "80",
+    "scroll": 1165,
+    "viewport": 1180
+  },
+  {
+    "width": 1180,
+    "data": "worst",
+    "page": "servers",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "58",
+    "scroll": 1165,
+    "viewport": 1180
+  },
+  {
+    "width": 1180,
+    "data": "worst",
+    "page": "rr",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "66",
+    "scroll": 1165,
+    "viewport": 1165
+  },
+  {
+    "width": 1180,
+    "data": "worst",
+    "page": "names",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "52",
+    "scroll": 1165,
+    "viewport": 1165
+  },
+  {
+    "width": 2560,
+    "data": "demo",
+    "page": "overview",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "46",
+    "scroll": 2545,
+    "viewport": 2545
+  },
+  {
+    "width": 2560,
+    "data": "demo",
+    "page": "matches",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "47",
+    "scroll": 2545,
+    "viewport": 2545
+  },
+  {
+    "width": 2560,
+    "data": "demo",
+    "page": "duos",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "51",
+    "scroll": 2545,
+    "viewport": 2545
+  },
+  {
+    "width": 2560,
+    "data": "demo",
+    "page": "lobbyrank",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "51",
+    "scroll": 2545,
+    "viewport": 2560
+  },
+  {
+    "width": 2560,
+    "data": "demo",
+    "page": "servers",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "48",
+    "scroll": 2545,
+    "viewport": 2560
+  },
+  {
+    "width": 2560,
+    "data": "demo",
+    "page": "rr",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "51",
+    "scroll": 2545,
+    "viewport": 2545
+  },
+  {
+    "width": 2560,
+    "data": "demo",
+    "page": "names",
+    "cards": 12,
+    "emptyNameWidths": 0,
+    "renderMs": "44",
+    "scroll": 2545,
+    "viewport": 2545
+  },
+  {
+    "width": 2560,
+    "data": "worst",
+    "page": "overview",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "60",
+    "scroll": 2545,
+    "viewport": 2545
+  },
+  {
+    "width": 2560,
+    "data": "worst",
+    "page": "matches",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "47",
+    "scroll": 2545,
+    "viewport": 2545
+  },
+  {
+    "width": 2560,
+    "data": "worst",
+    "page": "duos",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "66",
+    "scroll": 2545,
+    "viewport": 2545
+  },
+  {
+    "width": 2560,
+    "data": "worst",
+    "page": "lobbyrank",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "76",
+    "scroll": 2545,
+    "viewport": 2560
+  },
+  {
+    "width": 2560,
+    "data": "worst",
+    "page": "servers",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "64",
+    "scroll": 2545,
+    "viewport": 2560
+  },
+  {
+    "width": 2560,
+    "data": "worst",
+    "page": "rr",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "85",
+    "scroll": 2545,
+    "viewport": 2545
+  },
+  {
+    "width": 2560,
+    "data": "worst",
+    "page": "names",
+    "cards": 15,
+    "emptyNameWidths": 0,
+    "renderMs": "73",
+    "scroll": 2545,
+    "viewport": 2545
+  }
+]

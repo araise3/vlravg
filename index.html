@@ -413,6 +413,14 @@ a.player-name-wrap:focus-visible{outline:2px solid var(--brand);outline-offset:2
 .player-acs.acs-null{color:var(--muted);}
 .player-kd{font-size:11px;font-weight:700;color:var(--text);flex-shrink:0;min-width:38px;text-align:right;font-variant-numeric:tabular-nums;}
 .player-kd.kd-null{color:var(--muted);}
+@media(max-width:600px){
+  .player-row,.team-col-header{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;}
+  .player-name-wrap,.team-col-header .team-label{grid-column:1 / -1;}
+  .player-name-wrap{flex-wrap:wrap;align-items:baseline;}
+  .player-row .player-name{white-space:normal;overflow:visible;overflow-wrap:anywhere;}
+  .player-row .player-acs,.player-row .player-kd,.player-row .player-rank-txt,.team-col-header .col-hdr{min-width:0;text-align:right;}
+  .player-rank-txt{line-height:1.4;}
+}
 /* Placement-week games after a total reset: greyed in history, marked with a tag */
 .match-card.post-reset{opacity:.7;}
 .match-card.post-reset:hover,.match-card.post-reset.expanded{opacity:.85;}
@@ -493,6 +501,12 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
 .overview-preview-score{color:var(--text);font-variant-numeric:tabular-nums;}
 .overview-match-values{display:grid;grid-template-columns:5ch 6ch;column-gap:8px;align-items:center;text-align:right;}
 .overview-teammate-values{display:grid;grid-template-columns:8ch 9ch;column-gap:10px;align-items:center;text-align:right;}
+@media(max-width:600px){
+  #overview-duos .overview-preview-row{align-items:flex-start;flex-direction:column;gap:6px;padding:10px 0;}
+  #overview-duos .overview-preview-name{width:100%;white-space:normal;overflow:visible;overflow-wrap:anywhere;}
+  #overview-duos .overview-preview-tag{white-space:nowrap;}
+  #overview-duos .overview-teammate-values{width:100%;grid-template-columns:1fr 1fr;}
+}
 .overview-match-result{width:3px;height:20px;border-radius:2px;flex-shrink:0;}
 #overview-matches{max-height:320px;overflow-y:auto;scrollbar-width:thin;}
 #overview-matches:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
@@ -4569,8 +4583,9 @@ function buildTeammates(){
       // Only count players who were in the same party (duo/trio/5-stack)
       if(!m.myPartyId||p.party_id!==m.myPartyId)return;
       const key=p.puuid||`${p.name}#${p.tag}`;
-      if(!tmap[key])tmap[key]={name:p.name,tag:p.tag,key,games:0,wins:0,kills:0,deaths:0,rankSum:0,rankCount:0,acsSum:0,acsCount:0,performanceSum:0,performanceCount:0,placeSum:0,placeCount:0,rrTotal:0,rrCount:0};
+      if(!tmap[key])tmap[key]={name:p.name,tag:p.tag,key,games:0,wins:0,decided:0,kills:0,deaths:0,rankSum:0,rankCount:0,acsSum:0,acsCount:0,performanceSum:0,performanceCount:0,placeSum:0,placeCount:0,rrTotal:0,rrCount:0};
       tmap[key].games++;
+      if(m.won===true||m.won===false)tmap[key].decided++;
       if(m.won===true)tmap[key].wins++;
       if(Number.isFinite(m.myRR)){tmap[key].rrTotal+=m.myRR;tmap[key].rrCount++;}
       tmap[key].kills+=p._kills||0;
@@ -4755,6 +4770,7 @@ function overviewRecentMatches(matches){
   return [...matches].sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0)).slice(0,OVERVIEW_RECENT_MATCH_LIMIT);
 }
 
+function decidedWinRate(wins,decided){return decided>0?wins/decided*100:null;}
 function renderOverviewPreviews(){
   renderPerformanceDna(allMatches,{overview:true});
   const rated=statMatches.filter(m=>m.avgRank!=null);
@@ -4795,6 +4811,7 @@ function renderOverviewPreviews(){
     row.innerHTML=`<a class="overview-preview-name" href="${playerRouteUrl(t.name,t.tag)}"><span class="overview-teammate-name"></span><span class="overview-preview-tag"></span></a><span class="overview-preview-value overview-teammate-values"><span title="Teammate K/D: ${t.kills} kills / ${t.deaths} deaths"><span class="${kdColor}">${kd.toFixed(2)}</span> K/D</span><span>${t.games} ${t.games===1?'match':'matches'}</span></span>`;
     row.querySelector('.overview-teammate-name').textContent=t.name;
     row.querySelector('.overview-preview-tag').textContent=' #'+t.tag;
+    row.querySelector('a').title=t.name+'#'+t.tag;
   },'No party teammates in these matches.');
   fill('overview-matches',overviewRecentMatches(allMatches),(row,m)=>{
     const outcome=m.won===true?'Win':m.won===false?'Loss':'Draw';
@@ -4830,10 +4847,10 @@ function renderTeammates(){
     acs:t.acsCount?t.acsSum/t.acsCount:null,
     performanceScore:t.performanceCount?t.performanceSum/t.performanceCount:null,
     lobby:t.rankCount?t.rankSum/t.rankCount:null,
-    wr:t.wins/t.games*100,
+    wr:decidedWinRate(t.wins,t.decided),
   }));
   teammateRows.forEach(t=>{
-    const wr=Math.round(t.wr);
+    const wr=t.wr==null?null:Math.round(t.wr);
     const row=document.createElement('tr');
     row.innerHTML=`<th scope="row"><a class="duo-player-name" href="${playerRouteUrl(t.name,t.tag)}"><span class="duo-name"></span><span class="duo-tag"></span></a></th>
       <td>${t.games}</td>
@@ -4841,7 +4858,7 @@ function renderTeammates(){
       <td class="${t.kd===1?'':t.kd>1?'rank-positive':'rank-negative'}" title="${t.kills} kills / ${t.deaths} deaths">${t.kd.toFixed(2)}</td>
       <td>${t.acs==null?'—':Math.round(t.acs)}</td>
       <td title="${t.performanceCount} of ${t.games} shared matches have Performance Score data">${t.performanceScore==null?'—':Math.round(t.performanceScore)}</td>
-      <td class="${wr===50?'':wr>50?'rank-positive':'rank-negative'}">${wr}%</td>
+      <td class="${wr==null||wr===50?'':wr>50?'rank-positive':'rank-negative'}" title="Wins divided by wins plus losses; draws excluded">${wr==null?'—':wr+'%'}</td>
       <td class="${!t.rrCount||t.rrTotal===0?'':t.rrTotal>0?'rank-positive':'rank-negative'}" title="${t.rrCount} of ${t.games} shared matches have recorded RR change">${t.rrCount?rrSigned(t.rrTotal,0):'—'}</td>`;
     row.querySelector('.duo-player-name').title=t.name+'#'+t.tag;
     row.querySelector('.duo-name').textContent=t.name;
@@ -4989,8 +5006,9 @@ function buildKdRankBuckets(bucketFn,{includeLobby,matches=statMatches}={}){
     const info=bucketFn(m);
     if(!info)return;
     const t=info.tier;
-    if(!rb[t])rb[t]={totalKills:0,totalDeaths:0,wins:0,total:0,label:info.label,icon:info.icon,acsSum:0,acsCount:0,performanceSum:0,performanceCount:0,lobbySum:0,lobbyCount:0,teamRankSum:0,teamRankCount:0,enemyRankSum:0,enemyRankCount:0,rrTotal:0,rrCount:0};
+    if(!rb[t])rb[t]={totalKills:0,totalDeaths:0,wins:0,decided:0,total:0,label:info.label,icon:info.icon,acsSum:0,acsCount:0,performanceSum:0,performanceCount:0,lobbySum:0,lobbyCount:0,teamRankSum:0,teamRankCount:0,enemyRankSum:0,enemyRankCount:0,rrTotal:0,rrCount:0};
     rb[t].total++;
+    if(m.won===true||m.won===false)rb[t].decided++;
     if(Number.isFinite(m.myRR)){rb[t].rrTotal+=m.myRR;rb[t].rrCount++;}
     if(includeLobby&&m.avgRank!=null){rb[t].lobbySum+=m.avgRank;rb[t].lobbyCount++;}
     if(m.avgTeamRank!=null){rb[t].teamRankSum+=m.avgTeamRank;rb[t].teamRankCount++;}
@@ -5899,7 +5917,8 @@ function renderPerformanceTable(containerId,rows,party){
   const tbody=table.querySelector('tbody');
   rows.forEach(b=>{
     const kd=b.totalDeaths>0?b.totalKills/b.totalDeaths:b.totalKills>0?b.totalKills:null;
-    const wr=Math.round(b.wins/b.total*100);
+    const rate=decidedWinRate(b.wins,b.decided);
+    const wr=rate==null?null:Math.round(rate);
     const row=document.createElement('tr');
     row.innerHTML=`<th scope="row"><div class="rank-row-identity">${party?b.icon:rankIcon(b.tier,24)}<span class="rank-row-name"></span></div></th>
       <td>${b.total}</td>
@@ -5907,7 +5926,7 @@ function renderPerformanceTable(containerId,rows,party){
       <td class="${kd==null||kd===1?'':kd>1?'rank-positive':'rank-negative'}" title="${b.totalKills} kills / ${b.totalDeaths} deaths">${kd==null?'—':kd.toFixed(2)}</td>
       <td>${b.acsCount?Math.round(b.acsSum/b.acsCount):'—'}</td>
       <td title="${b.performanceCount} of ${b.total} matches have Performance Score data">${b.performanceCount?Math.round(b.performanceSum/b.performanceCount):'—'}</td>
-      <td class="${wr===50?'':wr>50?'rank-positive':'rank-negative'}">${wr}%</td>
+      <td class="${wr==null||wr===50?'':wr>50?'rank-positive':'rank-negative'}" title="Wins divided by wins plus losses; draws excluded">${wr==null?'—':wr+'%'}</td>
       ${party?`<td class="${!b.rrCount||b.rrTotal===0?'':b.rrTotal>0?'rank-positive':'rank-negative'}" title="${b.rrCount} of ${b.total} matches have recorded RR change">${b.rrCount?rrSigned(b.rrTotal,0):'—'}</td>`:''}`;
     row.querySelector('.rank-row-name').textContent=b.label||rName(b.tier);
     tbody.appendChild(row);
@@ -5917,7 +5936,7 @@ function renderPerformanceTable(containerId,rows,party){
     b.totalDeaths>0?b.totalKills/b.totalDeaths:b.totalKills>0?b.totalKills:null,
     b.acsCount?b.acsSum/b.acsCount:null,
     b.performanceCount?b.performanceSum/b.performanceCount:null,
-    b.wins/b.total*100,
+    decidedWinRate(b.wins,b.decided),
     ...(party?[b.rrCount?b.rrTotal:null]:[]),
   ]);
   highlightTableMaxima(table,values,party?[
@@ -6008,7 +6027,7 @@ function buildPlayersGrid(m){
     const kdVal=p._kd!=null?p._kd.toFixed(2):'—';
     const kdCls=p._kd!=null?'player-kd':'player-kd kd-null';
     const playerLabel=matchHtml(`${p.name||''}#${p.tag||''}`);
-    const playerContent=`<span class="${nameClass}">${matchHtml(p.name)}</span><span class="player-tag">#${matchHtml(p.tag)}</span>`;
+    const playerContent=`<span class="${nameClass}">${matchHtml(p.name||'Unknown player')}</span>${p.tag?`<span class="player-tag">#${matchHtml(p.tag)}</span>`:''}`;
     const playerIdentity=p.name&&p.tag
       ?`<a class="player-name-wrap" href="${matchHtml(playerRouteUrl(p.name,p.tag))}" title="Search ${playerLabel}">${playerContent}</a>`
       :`<span class="player-name-wrap">${playerContent}</span>`;
@@ -6078,11 +6097,13 @@ function matchAward(m){
 }
 function renderMatchHistorySummary(){
   const n=mhData.length,wins=mhData.filter(m=>m.won===true).length;
+  const decided=mhData.filter(m=>m.won===true||m.won===false).length;
+  const winRate=decidedWinRate(wins,decided);
   let matchMvps=0,teamMvps=0;
   for(const m of mhData){const award=matchAward(m);if(award==='match')matchMvps++;else if(award==='team')teamMvps++;}
   document.getElementById('match-history-summary').innerHTML=[
     [n.toLocaleString(),'Matches',''],
-    [n?Math.round(wins/n*100)+'%':'—','Win rate',''],
+    [winRate==null?'—':Math.round(winRate)+'%','Win rate',''],
     [matchMvps,'Match MVP','mvp-match'],
     [teamMvps,'Team MVP','mvp-team'],
   ].map(([value,label,cls])=>'<div class="mh-summary-item '+cls+'"><span class="mh-summary-value">'+value+'</span><span class="mh-summary-label">'+label+'</span></div>').join('');
@@ -6280,6 +6301,7 @@ function performanceDnaCoverageRows(rows){
 }
 
 let performanceDnaRange='all';
+let overviewPerformanceDnaWidth=0,overviewPerformanceDnaObserver=null;
 function setPerformanceDnaRange(value){
   if(!['20','30','50','all'].includes(value)||
     (value==='50'&&performanceDnaCoverageRows(performanceComparisonRows(allMatches)).length<=50))return;
@@ -6294,6 +6316,16 @@ function renderPerformanceDna(matches,{overview=false}={}){
   const prefix=overview?'overview-performance-dna':'performance-dna';
   const section=document.getElementById(prefix+'-section');
   const container=document.getElementById(prefix+'-chart');
+  if(overview){
+    overviewPerformanceDnaWidth=container.clientWidth;
+    if(!overviewPerformanceDnaObserver){
+      overviewPerformanceDnaObserver=new ResizeObserver(()=>{
+        const width=container.clientWidth;
+        if(width>0&&width!==overviewPerformanceDnaWidth)renderPerformanceDna(allMatches,{overview:true});
+      });
+      overviewPerformanceDnaObserver.observe(container);
+    }
+  }
   section.hidden=!rows.length;container.replaceChildren();
   if(!overview){
     const allLabel=document.getElementById('performance-dna-all-label');
@@ -6310,7 +6342,10 @@ function renderPerformanceDna(matches,{overview=false}={}){
   const visible=overview?rows.slice(-20):performanceDnaRange==='all'?rows:rows.slice(-Number(performanceDnaRange));
   const paired=visible.filter(row=>row.gap!=null);
   if(!overview)document.getElementById('performance-dna-coverage').textContent=`${paired.length}/${visible.length} games`;
-  const width=Math.max(1000,visible.length*22+94),height=220,left=64,right=30,top=24,bottom=174;
+  // Overview uses its actual content width so labels and points keep their size.
+  // Detail charts retain their scrollable canvas for long histories.
+  const width=overview?Math.max(120,overviewPerformanceDnaWidth||640):Math.max(1000,visible.length*22+94);
+  const height=overview?160:220,left=overview?38:64,right=overview?12:30,top=24,bottom=overview?116:174;
   const slot=(width-left-right)/Math.max(visible.length,1);
   const x=index=>left+slot*(index+.5),y=value=>bottom-(bottom-top)*value/100;
   const svg=statChartNode('svg',{class:'performance-dna-svg',viewBox:`0 0 ${width} ${height}`,role:'group','aria-label':'Performance DNA: both scores ranked within each game lobby'});
@@ -6334,7 +6369,8 @@ function renderPerformanceDna(matches,{overview=false}={}){
   const describeGap=row=>row.gap==null?'Comparison unavailable':Math.abs(row.gap)<.05?'Both scores rank equally':`${row.gap>0?'PS':'ACS'} ranks ${Math.abs(row.gap).toFixed(1)} percentile points higher`;
   const date=row=>Number.isFinite(row.m.startedAtMs)?new Date(row.m.startedAtMs).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}):'Date unavailable';
   const groups=[];
-  const tickStep=Math.max(1,Math.ceil(visible.length/20));
+  const tickCount=overview?Math.max(2,Math.floor((width-left-right)/44)):20;
+  const tickStep=Math.max(1,Math.ceil(visible.length/tickCount));
   const detail=overview?null:document.createElement('div');
   if(detail){
     detail.className='rr-trend-tooltip performance-dna-tooltip';detail.hidden=true;
@@ -6358,7 +6394,7 @@ function renderPerformanceDna(matches,{overview=false}={}){
     group.appendChild(statChartNode('title',{},description));
     group.appendChild(statChartNode('rect',{x:x(index)-slot/2,y:top-8,width:slot,height:bottom-top+44,class:'dna-hit',rx:5}));
     for(const [value,color] of [[row.acsPercentile,acsColor],[row.psPercentile,psColor]]){
-      if(value!=null)group.appendChild(statChartNode('circle',{cx:x(index),cy:y(value),r:4.5,fill:color,class:'dna-point'}));
+      if(value!=null)group.appendChild(statChartNode('circle',{cx:x(index),cy:y(value),r:overview?Math.min(3,slot/4):4.5,fill:color,class:'dna-point'}));
     }
     if(row.acsPercentile==null&&row.psPercentile==null){
       group.appendChild(statChartNode('text',{x:x(index),y:y(50)+3,'text-anchor':'middle',class:'tick'},'—'));

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>vlravg · UI stress preview</title>
+<style>
+body{margin:0;background:#202024;color:white;font:13px system-ui}iframe{display:block;border:0;margin:0 auto;height:calc(100vh - 100px);background:#08090c}nav{position:fixed;bottom:10px;left:50%;transform:translateX(-50%);background:#555;border-radius:8px;padding:8px;display:flex;gap:6px;flex-wrap:wrap;width:max-content;max-width:95vw}button,select{font:inherit;border:0;border-radius:5px;padding:7px;background:#ddd;color:#222}button[aria-pressed=true]{background:white}p{margin:8px;text-align:center}label{display:flex;gap:4px;align-items:center}
+</style>
+<p>Local fixture preview · existing frontend/parser · no live account API · scroll inside the preview</p>
+<iframe title="vlravg fixture preview"></iframe>
+<nav aria-label="Fixture controls"></nav>
+<script>
+const params=new URLSearchParams(location.search),nav=document.querySelector('nav'),frame=document.querySelector('iframe');
+for(const [key,choices] of Object.entries({data:['demo','worst','empty','one','15','16','1000','draws','loading','error','malformed'],page:['overview','matches','duos','lobbyrank','servers','rr','names'],width:['1180','320','2560'],zoom:['1','2']})){
+  if(!params.has(key))params.set(key,choices[0]);
+  if(key==='data')for(const value of choices){const button=document.createElement('button');button.textContent=value==='demo'?'Demo data':value==='worst'?'Worst case':value;button.setAttribute('aria-pressed',String(params.get(key)===value));button.onclick=()=>change(key,value);nav.append(button);}
+  else{const label=document.createElement('label');label.textContent=key;const select=document.createElement('select');for(const value of choices){const option=new Option(key==='zoom'?value+'00%':value,value);select.add(option);}select.value=params.get(key);select.onchange=()=>change(key,select.value);label.append(select);nav.append(label);}
+}
+function change(key,value){params.set(key,value);location.search=params.toString();}
+const zoom=Number(params.get('zoom'));frame.style.width=(Number(params.get('width'))/zoom)+'px';frame.style.zoom=zoom;
+function fitPreview(){frame.style.height=(Math.max(180,innerHeight-nav.offsetHeight-document.querySelector('p').offsetHeight-30)/zoom)+'px';}
+fitPreview();addEventListener('resize',fitPreview);
+const path=params.get('page')==='overview'?'/':'/'+params.get('page');frame.src=path+'?data='+encodeURIComponent(params.get('data'));
+</script></html>
