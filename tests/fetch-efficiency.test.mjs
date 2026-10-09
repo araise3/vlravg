@@ -266,6 +266,22 @@ test('verified repeat searches refresh only new pages and retain all matches',as
   assert.equal(client.context.allMatches.length,203);
 });
 
+test('old-format archive refresh scans once, then explicit null PS retains incremental loading',async()=>{
+  const client=analysisClient({count:50});
+  await client.loadAll();
+  const key='eu:pc:'+season;
+  client.backend.archives.set(key,client.state.rows.map(row=>({...row,_performanceRefreshNeeded:true})));
+  client.state.rows=client.state.rows.map(row=>({...row,players:[{puuid,performance:null}]}));
+  client.urls.length=0;
+  await client.loadAll();
+  assert.ok(client.urls.filter(url=>url.includes('/history-by-puuid/')).length>=5,
+    'saved coverage must not stop before old-format payloads have been refreshed');
+  client.urls.length=0;
+  await client.loadAll();
+  assert.equal(client.urls.filter(url=>url.includes('/history-by-puuid/')).length,2,
+    'genuinely unavailable scores must not trigger another full scan');
+});
+
 test('partial scans and a region transfer cannot enable incremental early stopping',async()=>{
   const client=analysisClient({count:30,storedFailure:true});
   await client.loadAll();
