@@ -143,22 +143,48 @@ async function saveMatchArchivePage(env, bodyText, puuid) {
   const ids = [...new Set(eligible.map(row => row.metadata.match_id))];
   const placeholders = ids.map(() => '?').join(',');
   const { results: existing } = await env.APP_DB.prepare(
-    `SELECT match_id FROM match_archive WHERE puuid=? AND match_id IN (${placeholders})`
+    `SELECT match_id, payload FROM match_archive WHERE puuid=? AND match_id IN (${placeholders})`
   ).bind(puuid, ...ids).all();
-  const known = new Set((existing || []).map(row => row.match_id));
+  const known = new Map((existing || []).map(row => [row.match_id, row.payload]));
+  const seen = new Set();
   const statements = [];
   for (const row of eligible) {
     const meta = row?.metadata;
     const matchId = meta?.match_id;
     const seasonId = meta?.season?.id || meta?.season_id;
-    if (known.has(matchId)) continue;
-    known.add(matchId);
-    const payload = await gzipMatch(row);
+    if (seen.has(matchId)) continue;
+    seen.add(matchId);
+    let enriched = row;
+    const previousPayload = known.get(matchId);
+    if (previousPayload) {
+      const saved = await gunzipMatch(previousPayload);
+      const fresh = new Map(row.players.filter(p => p.puuid && Object.hasOwn(p, 'performance'))
+        .map(p => [p.puuid.toLowerCase(), p.performance]));
+      let changed = false;
+      const players = (saved.players || []).map(p => {
+        const key = p.puuid?.toLowerCase();
+        if (!fresh.has(key) || Number.isFinite(p.performance?.score)) return p;
+        const performance = fresh.get(key);
+        if (Object.hasOwn(p, 'performance') && !Number.isFinite(performance?.score)) return p;
+        changed = true;
+        return { ...p, performance };
+      });
+      if (!changed) continue;
+      enriched = { ...saved, players };
+    }
+    const payload = await gzipMatch(enriched);
     // D1 caps a row at 2 MB. An oversized match still reaches the caller.
     if (payload.byteLength >= 1900000) continue;
-    statements.push(env.APP_DB.prepare(
-      'INSERT OR IGNORE INTO match_archive (puuid,season_id,match_id,started_at,payload) VALUES (?1,?2,?3,?4,?5)'
-    ).bind(puuid, seasonId.toLowerCase(), matchId, meta.started_at || null, payload));
+    if (previousPayload) {
+      // Compare-and-swap prevents concurrent refreshes from erasing newer PS.
+      statements.push(env.APP_DB.prepare(
+        'UPDATE match_archive SET payload=?1 WHERE puuid=?2 AND match_id=?3 AND payload=?4'
+      ).bind(payload, puuid, matchId, previousPayload));
+    } else {
+      statements.push(env.APP_DB.prepare(
+        'INSERT OR IGNORE INTO match_archive (puuid,season_id,match_id,started_at,payload) VALUES (?1,?2,?3,?4,?5)'
+      ).bind(puuid, seasonId.toLowerCase(), matchId, meta.started_at || null, payload));
+    }
   }
   if (statements.length) await env.APP_DB.batch(statements);
 }
@@ -181,6 +207,9 @@ async function readMatchArchive(env, puuid, seasonId, start, size) {
     // The first row always makes progress even if it exceeds the page budget.
     for (const row of results || []) {
       const match = await gunzipMatch(row.payload);
+      // Missing property means a pre-4.10 payload; explicit null means the
+      // current API checked this player and has no score to supply.
+      match._performanceRefreshNeeded = (match.players || []).some(p => !Object.hasOwn(p, 'performance'));
       const bytes = new TextEncoder().encode(JSON.stringify(match)).byteLength;
       if (size !== MATCH_ARCHIVE_PAGE_SIZE && matches.length && jsonBytes + bytes > MATCH_ARCHIVE_JSON_BUDGET) break;
       matches.push(match);
@@ -992,7 +1021,11 @@ async function handleGet(context,{workflow,henrikKey}){
 
   const cache = caches.default;
   // Never put workflow credentials in an edge-cache key or cached request.
-  const cacheKey = new Request(url.toString());
+  const cacheUrl = new URL(url);
+  // Old details were cached for a day and lists for 150s. Change the namespace
+  // once for the new schema; callers cannot supply a cache-bypass token.
+  if (route.matchDetail || route.foldCalibration) cacheUrl.searchParams.set('_payload', 'performance-v1');
+  const cacheKey = new Request(cacheUrl.toString());
   const cached = workflow || route.rrCollect || route.rrFeature || route.nameBackfill || (route.nameHistory && !storedNameHistory.history.length)
     ? null : await cache.match(cacheKey);
   if (cached) {

@@ -17,7 +17,9 @@ test('stored routes fix archive page size and fetch full detail by match ID',asy
     async first(){return sql.prepare(query).get(...values)||null;},
     async run(){return sql.prepare(query).run(...values);}};return s;}};
   const oldFetch=globalThis.fetch,oldCaches=globalThis.caches;
-  globalThis.caches={default:{async match(){return null;},async put(){}}};
+  const cache=new Map([[`https://example.test/api/match-detail/eu/${puuid}`,Response.json({data:{legacy:true}})]]);
+  globalThis.caches={default:{async match(key){return cache.get(key.url)?.clone();},
+    async put(key,response){cache.set(key.url,response.clone());}}};
   globalThis.fetch=async url=>{
     urls.push(url);
     return Response.json({data:[]});
@@ -38,6 +40,10 @@ test('stored routes fix archive page size and fetch full detail by match ID',asy
   assert.equal(urls.length,1);
   assert.equal((await request(`match-detail/eu/${puuid}?page=999`)).status,200);
   assert.equal(urls[1],`https://api.henrikdev.xyz/valorant/v4/match/eu/${puuid}`);
+  assert.ok(cache.has(`https://example.test/api/match-detail/eu/${puuid}?_payload=performance-v1`),
+    'new schema bypasses the old day-long detail cache once');
+  assert.equal((await request(`match-detail/eu/${puuid}?_payload=anything&force=1`)).headers.get('X-Proxy-Cache'),'HIT');
+  assert.equal(urls.length,2,'caller query strings must not force repeated upstream refreshes');
 });
 
 test('archive recovery fetches full details only for missing matches in the selected season',async()=>{
