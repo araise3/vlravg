@@ -11,21 +11,25 @@
 <meta property="og:description" content="See the true skill level of your Valorant lobbies — average lobby rank, K/D breakdowns, duos, and playtime.">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#3b82f6">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   color-scheme:dark;
-  --bg:#0b0c10;--bg2:#101116;--bg3:#191a20;
-  --border:#272930;--border2:#353840;
-  --accent:#3b82f6;--accent-rgb:59,130,246;--text:#f2f3f7;--muted:#a3a8b3;
+  --bg:#09090b;--bg2:#0a0a0a;--bg3:#111111;
+  --border:#222222;--border2:#303030;
+  --accent:#3b82f6;--accent-rgb:59,130,246;--text:#e8eaf0;--muted:#9aa3af;
   --win:#22c55e;--loss:#ef4444;--draw:#f59e0b;
-  --font-body:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-  --font-display:var(--font-body);
-  --font-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-  --surface:#191a20;--surface-hover:#23252d;
-  --surface-border:#30323b;
-  --radius-xs:6px;--radius-sm:9px;--radius-md:14px;--radius-lg:22px;
-  --chrome:rgba(28,30,38,.86);
-  --ease-settle:cubic-bezier(.2,.75,.25,1);
+  --font-body:'Geist',Geist,system-ui,sans-serif;
+  --font-display:'Geist',system-ui,sans-serif;
+  /* Geist Mono is Geist's own monospace companion — same skeleton and
+     x-height, so formula strips sit next to body copy without looking
+     like a different document. */
+  --font-mono:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --surface:#171717;--surface-hover:#222222;
+  --surface-border:#303030;
+  --radius-xs:4px;--radius-sm:7px;--radius-md:11px;--radius-lg:18px;
   --brand:#60a5fa;--brand-rgb:96,165,250;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -37,10 +41,10 @@ body{
   background:
     radial-gradient(circle at 50% -18%,rgba(59,130,246,.11),transparent 34rem),
     var(--bg);
-  color:var(--text);font-family:var(--font-body);font-size:16px;line-height:1.5;font-optical-sizing:auto;min-height:100vh;
+  color:var(--text);font-family:var(--font-body);font-size:16px;min-height:100vh;
   position:relative;isolation:isolate;
 }
-body::before{content:none;}
+body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.22;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:48px 48px;mask-image:linear-gradient(to bottom,black,transparent 70%);}
 .wrap{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:2.5rem 1.5rem 5rem;}
 
 /* header */
@@ -861,72 +865,6 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
   .mc-rr-stat .match-rr-change{font-size:17px;}
 }
 @media(max-width:480px){.page-nav{gap:0;flex-wrap:wrap;}.page-nav a{padding:0 10px;font-size:13px;}}
-
-/* Quiet surfaces, platform typography and a floating wayfinding layer. */
-h1,.page-heading h1{font-weight:700;letter-spacing:-.035em;line-height:1.12;}
-.search-intro h1{letter-spacing:-.035em;line-height:1.08;}
-.page-heading h1{font-size:clamp(1.75rem,3vw,2rem);}
-.search-intro p,.page-heading p{color:var(--muted);line-height:1.65;}
-body.has-analysis .input-section,body.detail-view .input-section{background:var(--bg2);border-color:var(--border);border-radius:var(--radius-lg);padding:16px;}
-.search-bar{background:var(--bg);border-radius:var(--radius-md);}
-.search-bar:focus-within{box-shadow:0 0 0 3px rgba(var(--brand-rgb),.14);}
-.page-nav{position:sticky;top:12px;z-index:90;justify-content:flex-start;flex-wrap:nowrap;gap:4px;padding:5px;margin:-8px 0 28px;border:1px solid rgba(255,255,255,.1);border-radius:18px;background:var(--chrome);backdrop-filter:blur(24px) saturate(140%);-webkit-backdrop-filter:blur(24px) saturate(140%);box-shadow:0 8px 28px rgba(0,0,0,.22);overflow-x:auto;scrollbar-width:thin;scrollbar-color:#535762 transparent;scroll-padding:6px;}
-.page-nav a{flex:1 0 auto;justify-content:center;min-height:44px;padding:0 12px;border:0;border-radius:13px;color:#b5bac6;font-size:.8125rem;font-weight:550;white-space:nowrap;transition:background-color 140ms,color 140ms;}
-.page-nav a:hover{background:rgba(255,255,255,.05);}
-.page-nav a[aria-current="page"]{color:#fff;background:#414550;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 2px 6px rgba(0,0,0,.15);}
-.page-nav a:focus-visible{outline-offset:-2px;border-radius:13px;}
-.s-card,.chart-container,.overview-preview,.overview-basic-stats,.overview-clutches,.stat-chart-card,.rr-trend-card,.rr-movement-card{border-radius:var(--radius-lg);border-color:var(--surface-border);box-shadow:inset 0 1px 0 rgba(255,255,255,.035),0 8px 24px rgba(0,0,0,.08);}
-.s-card,.chart-container{border-top-width:1px;}
-.card-title,.section-title{border-left:0;padding-left:0;letter-spacing:0;text-transform:none;font-size:.875rem;font-weight:650;opacity:1;height:auto;line-height:1.4;}
-.overview-preview-heading h2{font-size:.9375rem;font-weight:650;letter-spacing:-.015em;}
-.overview-hero .avg-rank-name{font-weight:700;letter-spacing:-.03em;}
-.overview-basic-stats dd,.overview-rr-values strong{font-weight:650;letter-spacing:-.035em;}
-.overview-basic-stats dt{font-size:.75rem;}
-.overview-party-lobbies{border-radius:12px;}
-.overview-hero-footer a{color:var(--brand);}
-.match-card{background:var(--surface);border-radius:var(--radius-lg);border-color:var(--surface-border);}
-.match-card.expanded{border-color:#546378;}
-.match-row{border-radius:inherit;transition:background-color 120ms;}
-.match-row:active{background:rgba(255,255,255,.055);transition:none;}
-.match-card .players-grid{background:var(--bg2);}
-.mc-expand-icon svg{transition:none;}
-.page-empty{border-style:solid;background:var(--bg2);border-radius:var(--radius-lg);}
-.load-more-btn{min-height:44px;text-transform:none;letter-spacing:0;font-weight:600;background:var(--surface);color:var(--text);}
-.pro-library,.season-popup{background:var(--chrome);border:1px solid rgba(255,255,255,.14);border-radius:18px;backdrop-filter:blur(24px) saturate(140%);-webkit-backdrop-filter:blur(24px) saturate(140%);transform-origin:top right;}
-.pro-library-head,.season-option-games{color:#b5bac6;font-weight:500;}
-.pro-library-trigger,.season-trigger,.page-btn,.load-more-btn,.card-nav,.tracker-pill{touch-action:manipulation;transition:background-color 140ms,border-color 140ms,color 140ms,transform 180ms var(--ease-settle);}
-.pro-library-trigger:active,#season-trigger:active,.page-btn:active,.load-more-btn:active,.card-nav:active,.tracker-pill:active{transform:scale(.98);transition:transform 60ms ease-out;}
-.page-nav a:active,.table-sort-btn:active,.pro-result-main:active,.season-option:active{background:rgba(255,255,255,.1);transition:none;}
-.player-card-byline .stat-box,.result-panel .tracker-pill{animation:header-pill-settle 180ms ease-out both;}
-@keyframes header-pill-settle{from{opacity:0;}to{opacity:1;}}
-.pb-dot{transition:background 120ms,transform 180ms var(--ease-settle),opacity 120ms;}
-.pb-dot::before{content:'';position:absolute;inset:-10px;}
-.pb-dot{position:relative;}
-.pb-dots{gap:18px;}
-.card-nav{width:32px;height:32px;}
-:is(.detail-page,.overview-grid){scroll-margin-top:90px;}
-@media(max-width:700px){
-  .page-nav{top:8px;gap:4px;border-radius:16px;margin-bottom:24px;}
-  .page-nav a{flex:0 0 auto;padding:0 13px;font-size:.8125rem;}
-  #pro-library-trigger,#season-trigger{min-height:44px;}
-  .overview-grid{gap:16px;}
-  .overview-preview{padding:20px;}
-}
-@media(hover:hover){.match-card:hover{border-color:#50545f;}}
-@media(prefers-reduced-motion:reduce){
-  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}
-  .pro-library-trigger:active,#season-trigger:active,.page-btn:active,.load-more-btn:active,.card-nav:active,.tracker-pill:active{transform:none;}
-  .progress-wrap.indeterminate .progress-fill{width:100%!important;opacity:.65;}
-}
-@media(prefers-reduced-transparency:reduce){
-  .page-nav,.pro-library,.season-popup{background:#22242d;backdrop-filter:none;-webkit-backdrop-filter:none;}
-}
-@media(prefers-contrast:more){
-  :root{--muted:#d2d5dd;--surface-border:#777d8b;--border:#777d8b;--border2:#777d8b;}
-  .page-nav,.pro-library,.season-popup{background:#191a20;backdrop-filter:none;-webkit-backdrop-filter:none;border-color:#9aa3b4;}
-  .page-nav a,.page-heading p,.overview-preview-value,.overview-basic-stats dt,.mc-performance-lbl,.col-hdr,.team-label{color:#d2d5dd;}
-  .page-nav a[aria-current="page"]{background:#454b59;color:#fff;outline:1px solid #b5bfd0;outline-offset:-1px;}
-}
 </style>
 </head>
 <body>
@@ -1901,25 +1839,15 @@ function applyPage(focus=false){
     if(link.dataset.page===activePage)link.setAttribute('aria-current','page');
     else link.removeAttribute('aria-current');
   });
-  // Keep the selected destination in view without moving the document.
-  requestAnimationFrame(keepActivePageVisible);
   const resetToggle=document.getElementById('reset-toggle');
   if(activePage!=='overview'&&activePage!=='names')document.getElementById(activePage+'-filter-host').appendChild(resetToggle);
   else document.getElementById('overview-filter-host').appendChild(resetToggle);
   updateDetailPages();
   if(focus){
-    document.getElementById(activePage==='overview'?'summary-grid':activePage+'-page')?.scrollIntoView({block:'start',behavior:'instant'});
     if(activePage!=='overview')document.getElementById(activePage+'-title').focus({preventScroll:true});
     else document.querySelector('.page-nav a[aria-current]').focus({preventScroll:true});
   }
 }
-function keepActivePageVisible(){
-  const nav=document.querySelector('.page-nav'),current=nav.querySelector('[aria-current="page"]');
-  if(!current||nav.hidden||!nav.clientWidth)return;
-  const navBounds=nav.getBoundingClientRect(),currentBounds=current.getBoundingClientRect();
-  nav.scrollLeft+=currentBounds.left-navBounds.left-(nav.clientWidth-currentBounds.width)/2;
-}
-new ResizeObserver(keepActivePageVisible).observe(document.querySelector('.page-nav'));
 document.addEventListener('click',event=>{
   const link=event.target.closest('a[data-page]');
   if(!link||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
@@ -4314,14 +4242,23 @@ function paginateRows(containerEl,dotsEl,rows,pageSize,skipHeightLock,afterRende
       return;
     }
     if(idx===currentIdx)return;
+    const dir=idx>currentIdx?1:-1;
     currentIdx=idx;
     [...dotsEl.querySelectorAll('.pb-dot:not(.dot-removing)')].forEach((d,i)=>d.classList.toggle('active',i===idx));
-    // Content responds immediately; rapid paging always leaves the latest page.
-    containerEl.getAnimations().forEach(animation=>animation.cancel());
-    containerEl.replaceChildren();
-    rows.slice(idx*pageSize,idx*pageSize+pageSize).forEach(r=>containerEl.appendChild(r));
-    if(afterRender)afterRender();
-    if(!disclosureMotionPreference.matches)containerEl.animate([{opacity:.55},{opacity:1}],{duration:140,easing:'ease-out'});
+    containerEl.style.transition='opacity .15s ease,transform .15s ease';
+    containerEl.style.opacity='0';
+    containerEl.style.transform=`translateX(${dir*-14}px)`;
+    setTimeout(()=>{
+      containerEl.innerHTML='';
+      rows.slice(idx*pageSize,idx*pageSize+pageSize).forEach(r=>containerEl.appendChild(r));
+      if(afterRender)afterRender();
+      containerEl.style.transition='none';
+      containerEl.style.transform=`translateX(${dir*14}px)`;
+      void containerEl.offsetWidth; // force reflow so the next transition runs
+      containerEl.style.transition='opacity .22s cubic-bezier(.22,1,.36,1),transform .22s cubic-bezier(.22,1,.36,1)';
+      containerEl.style.opacity='1';
+      containerEl.style.transform='translateX(0)';
+    },150);
   }
   syncDots(dotsEl,pageCount,0,(i)=>renderPage(i,true));
   containerEl.style.minHeight='';
@@ -6171,37 +6108,6 @@ function renderMatchHistorySummary(){
     [teamMvps,'Team MVP','mvp-team'],
   ].map(([value,label,cls])=>'<div class="mh-summary-item '+cls+'"><span class="mh-summary-value">'+value+'</span><span class="mh-summary-label">'+label+'</span></div>').join('');
 }
-// A critically damped disclosure keeps its current position and velocity when
-// retargeted. Only opacity/transform animate; roster layout remains native.
-const disclosureMotionPreference=matchMedia('(prefers-reduced-motion: reduce)');
-const activeDisclosureSprings=new Set();
-disclosureMotionPreference.addEventListener('change',()=>{
-  if(disclosureMotionPreference.matches)for(const settle of [...activeDisclosureSprings])settle();
-});
-function createDisclosureSpring(draw,onRest){
-  let position=0,velocity=0,target=0,frame=0,lastTime=0;
-  function settle(){
-    cancelAnimationFrame(frame);frame=0;position=target;velocity=0;
-    activeDisclosureSprings.delete(settle);draw(position);onRest(target);
-  }
-  function tick(time){
-    // Analytic critical damping stays stable after a delayed/background frame.
-    const dt=Math.max(0,(time-lastTime)/1000),omega=24;
-    const offset=position-target,coefficient=velocity+omega*offset,decay=Math.exp(-omega*dt);
-    position=target+(offset+coefficient*dt)*decay;
-    velocity=(velocity-omega*coefficient*dt)*decay;
-    lastTime=time;draw(position);
-    if(Math.abs(position-target)<.001&&Math.abs(velocity)<.01)settle();
-    else frame=requestAnimationFrame(tick);
-  }
-  return value=>{
-    target=value;
-    if(disclosureMotionPreference.matches){settle();return;}
-    draw(position);
-    if(!frame){lastTime=performance.now();activeDisclosureSprings.add(settle);frame=requestAnimationFrame(tick);}
-  };
-}
-
 function buildMatchCard(m){
   const {mapName,serverName,startedAt,startedAtMs,won,myR,opR,avgRank,myStats,myRR,myDerankProtected}=m;
   const rc=won===true?'win':won===false?'loss':'draw';
@@ -6253,14 +6159,9 @@ function buildMatchCard(m){
   const label=rt+' on '+mapName+', '+score+'. '+(awardLabel?awardLabel+'. ':'')+kda+' KDA, '+acs+' ACS, '+performanceScore+' Performance Score.';
   trigger.setAttribute('aria-label',label+' Show roster');
   trigger.addEventListener('click',()=>{
-    const expanded=trigger.getAttribute('aria-expanded')!=='true';
+    const expanded=card.classList.toggle('expanded');
     trigger.setAttribute('aria-expanded',String(expanded));
     trigger.setAttribute('aria-label',label+(expanded?' Hide roster':' Show roster'));
-    players.inert=!expanded;
-    players.setAttribute('aria-hidden',String(!expanded));
-    if(expanded)card.classList.add('expanded');
-    if(!expanded&&players.contains(document.activeElement))trigger.focus({preventScroll:true});
-    animateRoster(expanded?1:0);
   });
   loadMatchMapMetadata().then(maps=>{
     const src=maps.get(String(m.mapId||'').toLowerCase())||maps.get(String(mapName).toLowerCase());
@@ -6273,17 +6174,6 @@ function buildMatchCard(m){
   });
   const players=buildPlayersGrid(m);
   players.id=detailId;
-  players.inert=true;players.setAttribute('aria-hidden','true');
-  const chevron=card.querySelector('.mc-expand-icon svg');
-  const animateRoster=createDisclosureSpring(value=>{
-    players.style.opacity=String(Math.max(0,Math.min(1,value)));
-    players.style.transform=`translateY(${-6*(1-value)}px)`;
-    chevron.style.transform=`rotate(${180*value}deg)`;
-  },value=>{
-    card.classList.toggle('expanded',value===1);
-    players.style.removeProperty('opacity');players.style.removeProperty('transform');
-    chevron.style.removeProperty('transform');
-  });
   card.appendChild(players);
   return card;
 }
@@ -6598,7 +6488,7 @@ function renderScoreMarginChart(matches){
 }
 function renderMatches(){
   const container=document.getElementById('matches-container');
-  const expandedIds=new Set([...container.querySelectorAll('.match-card:has(.match-row[aria-expanded="true"])')].map(card=>card.dataset.matchId));
+  const expandedIds=new Set([...container.querySelectorAll('.match-card.expanded')].map(card=>card.dataset.matchId));
   const focusedId=document.activeElement?.closest?.('.match-card')?.dataset.matchId;
   mhData=allMatches.slice().sort((a,b)=>(b.startedAtMs??0)-(a.startedAtMs??0));
   // Per-day avg lobby rank + total RR change, aggregated across the FULL set
