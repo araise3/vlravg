@@ -1,0 +1,107 @@
+[
+  {
+    "width": 305,
+    "page": "overview",
+    "scroll": 305
+  },
+  {
+    "width": 305,
+    "page": "matches",
+    "scroll": 305
+  },
+  {
+    "width": 305,
+    "page": "duos",
+    "scroll": 305
+  },
+  {
+    "width": 305,
+    "page": "lobbyrank",
+    "scroll": 305
+  },
+  {
+    "width": 305,
+    "page": "servers",
+    "scroll": 305
+  },
+  {
+    "width": 305,
+    "page": "rr",
+    "scroll": 305
+  },
+  {
+    "width": 305,
+    "page": "names",
+    "scroll": 305
+  },
+  {
+    "width": 1165,
+    "page": "overview",
+    "scroll": 1165
+  },
+  {
+    "width": 1165,
+    "page": "matches",
+    "scroll": 1165
+  },
+  {
+    "width": 1165,
+    "page": "duos",
+    "scroll": 1165
+  },
+  {
+    "width": 1180,
+    "page": "lobbyrank",
+    "scroll": 1165
+  },
+  {
+    "width": 1180,
+    "page": "servers",
+    "scroll": 1165
+  },
+  {
+    "width": 1165,
+    "page": "rr",
+    "scroll": 1165
+  },
+  {
+    "width": 1165,
+    "page": "names",
+    "scroll": 1165
+  },
+  {
+    "width": 2545,
+    "page": "overview",
+    "scroll": 2545
+  },
+  {
+    "width": 2545,
+    "page": "matches",
+    "scroll": 2545
+  },
+  {
+    "width": 2545,
+    "page": "duos",
+    "scroll": 2545
+  },
+  {
+    "width": 2560,
+    "page": "lobbyrank",
+    "scroll": 2545
+  },
+  {
+    "width": 2560,
+    "page": "servers",
+    "scroll": 2545
+  },
+  {
+    "width": 2545,
+    "page": "rr",
+    "scroll": 2545
+  },
+  {
+    "width": 2545,
+    "page": "names",
+    "scroll": 2545
+  }
+]

@@ -1,0 +1,198 @@
+[
+  {
+    "data": "empty",
+    "page": "overview",
+    "chars": 732,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "empty",
+    "page": "matches",
+    "chars": 957,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "empty",
+    "page": "duos",
+    "chars": 839,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "empty",
+    "page": "lobbyrank",
+    "chars": 979,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "empty",
+    "page": "servers",
+    "chars": 961,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "empty",
+    "page": "rr",
+    "chars": 855,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "empty",
+    "page": "names",
+    "chars": 1114,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "one",
+    "page": "overview",
+    "chars": 4042,
+    "scroll": 1265,
+    "viewport": 1265
+  },
+  {
+    "data": "one",
+    "page": "matches",
+    "chars": 2412,
+    "scroll": 1265,
+    "viewport": 1265
+  },
+  {
+    "data": "one",
+    "page": "duos",
+    "chars": 7508,
+    "scroll": 1265,
+    "viewport": 1265
+  },
+  {
+    "data": "one",
+    "page": "lobbyrank",
+    "chars": 4331,
+    "scroll": 1265,
+    "viewport": 1265
+  },
+  {
+    "data": "one",
+    "page": "servers",
+    "chars": 3639,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "one",
+    "page": "rr",
+    "chars": 9219,
+    "scroll": 1265,
+    "viewport": 1265
+  },
+  {
+    "data": "one",
+    "page": "names",
+    "chars": 4944,
+    "scroll": 1265,
+    "viewport": 1265
+  },
+  {
+    "data": "loading",
+    "page": "overview",
+    "chars": 735,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "loading",
+    "page": "matches",
+    "chars": 940,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "loading",
+    "page": "duos",
+    "chars": 822,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "loading",
+    "page": "lobbyrank",
+    "chars": 962,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "loading",
+    "page": "servers",
+    "chars": 944,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "loading",
+    "page": "rr",
+    "chars": 838,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "loading",
+    "page": "names",
+    "chars": 5018,
+    "scroll": 1265,
+    "viewport": 1265
+  },
+  {
+    "data": "error",
+    "page": "overview",
+    "chars": 719,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "error",
+    "page": "matches",
+    "chars": 881,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "error",
+    "page": "duos",
+    "chars": 763,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "error",
+    "page": "lobbyrank",
+    "chars": 903,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "error",
+    "page": "servers",
+    "chars": 885,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "error",
+    "page": "rr",
+    "chars": 779,
+    "scroll": 1265,
+    "viewport": 1280
+  },
+  {
+    "data": "error",
+    "page": "names",
+    "chars": 5002,
+    "scroll": 1265,
+    "viewport": 1265
+  }
+]

@@ -1,0 +1,46 @@
+[
+  {
+    "data": "empty",
+    "cards": 0,
+    "loadMore": false,
+    "renderMs": "15"
+  },
+  {
+    "data": "one",
+    "cards": 1,
+    "loadMore": false,
+    "renderMs": "54"
+  },
+  {
+    "data": "15",
+    "cards": 15,
+    "loadMore": false,
+    "renderMs": "56"
+  },
+  {
+    "data": "16",
+    "cards": 15,
+    "loadMore": true,
+    "renderMs": "75",
+    "cardsAfterLoadMore": 16
+  },
+  {
+    "data": "1000",
+    "cards": 15,
+    "loadMore": true,
+    "renderMs": "562",
+    "cardsAfterLoadMore": 30
+  },
+  {
+    "data": "loading",
+    "cards": 0,
+    "loadMore": false,
+    "renderMs": "7"
+  },
+  {
+    "data": "error",
+    "cards": 0,
+    "loadMore": false,
+    "renderMs": "6"
+  }
+]
