@@ -5,7 +5,7 @@ import {runInNewContext} from 'node:vm';
 
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const start=html.indexOf('function performanceComparisonRows(');
-const end=html.indexOf('let performanceDnaOffset=',start);
+const end=html.indexOf('let performanceDnaRange=',start);
 const {rows,path}=runInNewContext(html.slice(start,end)+'\n({rows:performanceComparisonRows,path:performanceDnaPath})');
 const game=(acs,ps,players,startedAtMs=1)=>({startedAtMs,myStats:{acs,performanceScore:ps},
   players:players.map(([a,p])=>({_acs:a,_performanceScore:p}))});
