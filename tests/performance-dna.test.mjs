@@ -6,7 +6,7 @@ import {runInNewContext} from 'node:vm';
 const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const start=html.indexOf('function performanceComparisonRows(');
 const end=html.indexOf('let performanceDnaRange=',start);
-const {rows,path}=runInNewContext(html.slice(start,end)+'\n({rows:performanceComparisonRows,path:performanceDnaPath})');
+const {rows,path,coverage}=runInNewContext(html.slice(start,end)+'\n({rows:performanceComparisonRows,path:performanceDnaPath,coverage:performanceDnaCoverageRows})');
 const game=(acs,ps,players,startedAtMs=1)=>({startedAtMs,myStats:{acs,performanceScore:ps},
   players:players.map(([a,p])=>({_acs:a,_performanceScore:p}))});
 
@@ -48,4 +48,27 @@ test('strand curves break across unavailable games and stay within endpoint valu
   const result=path([{score:0},{score:100},{score:null},{score:25},{score:75}],'score',i=>i*10,v=>v);
   assert.equal(result,'M0,0 C5,0 5,100 10,100M30,25 C35,25 35,75 40,75');
   assert.equal(path([{score:null}],'score',i=>i,v=>v),'');
+});
+
+test('recent coverage excludes isolated older PS islands and the long empty prefix',()=>{
+  const history=Array.from({length:129},(_,index)=>({game:index+1,gap:[19,46,48,49].includes(index)||index>=83?10:null}));
+  const result=coverage(history);
+  assert.equal(result.length,46);
+  assert.equal(result[0].game,84);
+  assert.equal(result.at(-1).game,129);
+  assert.equal(history.length,129,'chart scoping must not remove match history');
+});
+
+test('short missing stretches and the newest unavailable games remain as gaps',()=>{
+  const history=[0,null,null,null,null,20,null].map((gap,index)=>({game:index+1,gap}));
+  assert.equal(coverage(history).length,7,'four missing games do not split coverage');
+  history.splice(5,0,{game:5.5,gap:null});
+  const result=coverage(history);
+  assert.deepEqual(Array.from(result,row=>row.gap),[20,null],'five missing games split coverage');
+});
+
+test('coverage handles empty history, no comparisons, and a new player with one game',()=>{
+  assert.equal(coverage([]).length,0);
+  assert.equal(coverage([{gap:null}]).length,0);
+  assert.equal(coverage([{gap:0}]).length,1);
 });
