@@ -31,6 +31,22 @@ test('collector commits raw entries and witnessed predecessors, corrects existin
   assert.equal(JSON.parse(sql.prepare('SELECT data FROM rr_history WHERE match_id=?').get(mid).data).last_change,18);
   assert.equal(sql.prepare('SELECT checks FROM rr_collection').get().checks,2);
 });
+
+test('collector retains new competitive fields when a later response is missing them',async t=>{
+  const {sql,db}=database(t),scope={puuid,region:'eu',platform:'pc'};
+  await collectRR(db,payload([{...entry(),rr_performance_bonus:5,rr_penalty:.25,
+    tier_before_update:{id:11},rr_before_update:95,is_placement_match:true}]),scope);
+  await collectRR(db,payload([{...entry(),last_change:18,rr_performance_bonus:null}]),scope);
+  let saved=JSON.parse(sql.prepare('SELECT data FROM rr_history WHERE match_id=?').get(mid).data);
+  assert.equal(saved.rr_performance_bonus,5);
+  assert.equal(saved.rr_penalty,.25);
+  assert.equal(saved.rr_before_update,95);
+  assert.equal(saved.last_change,18);
+  await collectRR(db,payload([{...entry(),rr_performance_bonus:0,is_placement_match:false}]),scope);
+  saved=JSON.parse(sql.prepare('SELECT data FROM rr_history WHERE match_id=?').get(mid).data);
+  assert.equal(saved.rr_performance_bonus,0);
+  assert.equal(saved.is_placement_match,false);
+});
 test('a non-overlapping full window is flagged, initial or empty windows are not',async t=>{
   const {db,sql}=database(t),scope={puuid,region:'eu',platform:'pc'};
   const windows=n=>Array.from({length:20},(_,i)=>({...entry(`${n}-${i}`),date:new Date(1790985600000+i*60000).toISOString()}));
@@ -65,6 +81,17 @@ test('coverage SQL reports staleness using UTC timestamps and returns act sample
   await collectRR(db,payload([entry()]),{puuid,region:'eu',platform:'pc'});
   const report=await corpusReport({},async(_env,query,params=[])=>{const s=db.prepare(query);return (await s.bind(...params).all()).results;});
   assert.equal(report.health.stale,0);assert.equal(report.ranks[0].payouts,1);
+  assert.equal(report.competitiveUpdates.bonus_known,0);
+  await collectRR(db,payload([{...entry(),tier_before_update:{id:12},rr_before_update:30,
+    rr_performance_bonus:0,afk_penalty:0,rr_penalty:.25,is_placement_match:false}]),{puuid,region:'eu',platform:'pc'});
+  const enriched=await corpusReport({},async(_env,query,params=[])=>{const s=db.prepare(query);return (await s.bind(...params).all()).results;});
+  assert.equal(enriched.competitiveUpdates.reported_start,1);
+  assert.equal(enriched.competitiveUpdates.bonus_known,1);
+  assert.equal(enriched.competitiveUpdates.bonus_nonzero,0);
+  assert.equal(enriched.competitiveUpdates.afk_penalty_known,1);
+  assert.equal(enriched.competitiveUpdates.rr_penalty_known,1);
+  assert.equal(enriched.competitiveUpdates.map_forgiveness_known,0);
+  assert.equal(enriched.competitiveUpdates.placement_known,1);
 });
 test('feature route reuses trusted archive; unknown RR IDs never call upstream',async t=>{
   const {db,sql}=database(t);await collectRR(db,payload([entry()]),{puuid,region:'eu',platform:'pc'});

@@ -91,6 +91,9 @@ Payouts and feature evidence have no act-end expiry.
 With repository variable `RR_REPORT_EXPORT_ENABLED=true`, each run uploads
 `rr-corpus-coverage`: payouts, unique players, detail coverage,
 gains and losses by act/ending tier, plus overdue accounts and possible gaps.
+Collection reports also count reported starting rank/RR, placement status and
+bonus/penalty/forgiveness field coverage by act/tier and overall. Reported zeros
+count as coverage; null, absent and incorrectly typed fields do not.
 Artifact exports are disabled until explicitly authorized. Collection and
 analysis still run, and the source evidence remains in D1.
 Ending-tier buckets are collection diagnostics, not model coordinates. Check
@@ -117,11 +120,32 @@ It does not guess future Riot
 act-end dates. With insufficient clean samples it reports that limitation;
 `ready_to_review` is not authorization to publish the curve automatically.
 
-The clean benchmark uses the preceding **witnessed** game's ending rank as
-starting rank and audits the payout/refund/shield coordinate equation. It
-excludes act transitions, coordinate discrepancies, unknown party evidence,
-five-stacks/penalties and draws from primary model selection, while retaining
-all raw records for sensitivity checks. Immortal+ shares a continuous RR axis.
+The benchmark prefers Henrik's reported `tier_before_update` and
+`rr_before_update` as starting rank. These work without a witnessed predecessor
+and take priority over an older or conflicting predecessor. If the complete
+reported pair is unavailable, it falls back to the preceding **witnessed** game's
+ending rank within the same act. It still audits the payout/refund/shield
+coordinate equation and match-feature season. Immortal+ uses cumulative RR on
+a continuous axis.
+
+Primary model selection excludes reported placements, act transitions in the
+fallback path, coordinate discrepancies, unknown party evidence, five-stacks,
+party penalties, draws and reported nonzero performance bonuses, AFK/RR penalties
+or new-map forgiveness. Legacy unknown adjustment fields remain eligible for
+continuity; the primary result does not claim those matches had no adjustments.
+
+Version 2 benchmark reports add `competitive_updates`: per-field coverage,
+starting-value provenance, and separate ordinary-reported, unknown-adjustment,
+bonus, AFK penalty, RR penalty, forgiveness, party/five-stack, shield and refund
+cohorts. Ordinary-reported requires all four adjustment fields to be known zero
+and no other listed adjustment context. Groups overlap, so their counts cannot
+be summed. Each has per-outcome player-weighted raw payout averages and the same
+temporal/player-separated model evaluation when enough samples exist. Cohort
+comparisons are descriptive: players differ and no causal effect is implied.
+All targets remain Riot's `last_change`; no adjustment is subtracted or added
+again, and unspecified penalty units/overlap are not guessed. The snapshot
+workflow runs this analysis automatically with its existing benchmark command;
+no new upstream endpoint, database migration or quota budget is needed.
 
 Candidate models are act mean, regularized linear, the current nearby-30-RR
 5-neighbor/prior-8 curve, and Gaussian curves with two bandwidths. Stable player

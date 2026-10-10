@@ -337,6 +337,15 @@ body.has-analysis .input-section,body.detail-view .input-section{padding:14px;ga
 .my-stat-val{color:var(--text);font-weight:600;}
 .players-grid{display:none;margin-top:8px;gap:6px;}
 .match-card.expanded .players-grid{display:grid;grid-template-columns:1fr 1fr;}
+.match-rr-details{grid-column:1/-1;min-width:0;padding:0 4px 14px;margin-bottom:8px;border-bottom:1px solid var(--border);}
+.match-rr-details h4{margin:0 0 12px;font-size:12px;font-weight:600;color:#d4d4d8;}
+.match-rr-details dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));gap:12px;margin:0;}
+.match-rr-details dt{font-size:10px;color:var(--muted);margin-bottom:4px;}
+.match-rr-details dd{margin:0;font-size:12px;color:#e4e4e7;font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}
+.match-rr-details p{margin:12px 0 0;font-size:10px;line-height:1.5;color:var(--muted);}
+.rr-reported-summary{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;margin-top:14px;font-size:12px;line-height:1.5;color:#a1a1aa;}
+.rr-reported-summary strong{color:#e4e4e7;font-weight:600;font-variant-numeric:tabular-nums;}
+.rr-reported-coverage{font-size:11px;color:var(--muted);}
 .team-col{}
 .team-col-header{display:flex;align-items:center;padding:2px 12px;margin-bottom:3px;gap:6px;}
 .team-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);flex:1;}
@@ -1042,6 +1051,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
           <strong id="rr-trend-total" class="rr-trend-total"></strong>
         </div>
         <dl id="rr-summary-stats" class="rr-summary-stats" aria-label="RR summary for selected match range"></dl>
+        <div id="rr-reported-summary" class="rr-reported-summary" aria-live="polite"></div>
         <div id="rr-trend-chart" class="rr-trend-scroll" role="region" aria-label="RR trend across matches" tabindex="0"></div>
       </section>
       <section id="performance-dna-section" class="rr-trend-card" aria-labelledby="performance-dna-title" hidden>
@@ -1094,7 +1104,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
     <div id="match-list-section" style="display:none">
       <div id="match-history-summary" class="mh-summary" aria-label="Match history summary"></div>
 
-      <div class="mh-list-heading"><span>Match log</span><span>Newest first · Select a match for the roster</span></div>
+      <div class="mh-list-heading"><span>Match log</span><span>Newest first · Select a match for RR details and roster</span></div>
       <div id="matches-container"></div>
       <button class="load-more-btn" id="load-more-btn" style="display:none" onclick="loadMoreMatches()">Load More</button>
     </div>
@@ -1474,6 +1484,26 @@ let CURRENT_RR=null;
 // to be covered (never fetched before, or persisted after this ran). Read via
 // _rrChangeByMatchId[matchId] ?? null, never assume it's present.
 let _rrChangeByMatchId={};
+// Nullable competitive-update fields from Henrik v4.10. Absence is not zero.
+let _rrDetailsByMatchId={};
+function parseRRDetails(h){
+  const number=v=>Number.isFinite(v)?v:null;
+  const bool=v=>typeof v==='boolean'?v:null;
+  return {
+    bonus:number(h.rr_performance_bonus),afkPenalty:number(h.afk_penalty),
+    penalty:number(h.rr_penalty),mapForgiveness:number(h.new_map_incentive_rr_forgiven),
+    placement:bool(h.is_placement_match),shieldReplenished:bool(h.was_derank_protection_replenished),
+    beforeTier:number(h.tier_before_update?.id),beforeRR:number(h.rr_before_update),
+    afterTier:number(h.tier?.id),afterRR:number(h.rr),
+    queue:typeof h.queue_id==='string'?h.queue_id:null,
+    duration:Number.isFinite(h.match_length)&&h.match_length>=0?h.match_length:null,
+    movement:typeof h.competitive_movement==='string'?h.competitive_movement:null,
+  };
+}
+function reportedRRStart(d){
+  if(d.beforeTier==null||d.beforeTier<3||d.beforeRR==null)return null;
+  return (d.beforeTier>=24?2100:(d.beforeTier-3)*100)+d.beforeRR;
+}
 // match_id -> continuous RR position BEFORE that match — previous history
 // position within a season, else the post-match position minus the movement
 // that actually applied. Immortal+ is normalized to 2100 + cumulative RR.
@@ -2532,7 +2562,7 @@ function runAnalysis(searchOverride,{fromUrl=false,initialAct=null}={}){
   allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;mhDayStats={};
   performanceDnaRange='all';
   document.querySelector('input[name="performance-dna-range"][value="all"]').checked=true;
-  _rrChangeByMatchId={};_preRRByMatchId={};_preTierByMatchId={};_postRRByMatchId={};_postTierByMatchId={};_refundedRRByMatchId={};_derankProtectedByMatchId={};
+  _rrChangeByMatchId={};_rrDetailsByMatchId={};_preRRByMatchId={};_preTierByMatchId={};_postRRByMatchId={};_postTierByMatchId={};_refundedRRByMatchId={};_derankProtectedByMatchId={};
   allTeammates=[];allEncounters=[];serverData=[];serverPartySize=0;serverFilteredMatchCount=0;lobbyRankPartySize=0;lobbyRankFilteredMatchCount=0;rrMovementZoomTier=null;
   rrTrendRange='all';
   document.querySelector('input[name="rr-trend-range"][value="all"]').checked=true;
@@ -3432,6 +3462,7 @@ function processMatch(m){
   // all. Only populated for whichever recent matches that fetch covered;
   // null for everything else, not just genuinely unrated games.
   const myRR=_rrChangeByMatchId[matchId]??null;
+  const myRRDetails=_rrDetailsByMatchId[matchId]??null;
   // RR total going into this match — the x-axis position in RR movement.
   const myPreRR=_preRRByMatchId[matchId]??null;
   const myPreTierId=_preTierByMatchId[matchId]??null;
@@ -3442,7 +3473,7 @@ function processMatch(m){
   // Whether Rank Shield absorbed this match's loss (badge didn't drop even
   // though myRR above still carries the normal negative payout).
   const myDerankProtected=_derankProtectedByMatchId[matchId]??false;
-  return{mapName,serverName,startedAt,startedAtMs,durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,avgTeamRank,avgEnemyRank,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,myPreRR,myPreTierId,myPostRR,myPostTierId,myRefundedRR,myDerankProtected,myPartyPenalty,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
+  return{mapName,serverName,startedAt,startedAtMs,durationMs:durationMs||myRRDetails?.duration||durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,avgTeamRank,avgEnemyRank,lowRated,ratedCount,myStats,players:playersOut,myTierId,myTierName,myRR,myRRDetails,myPreRR,myPreTierId,myPostRR,myPostTierId,myRefundedRR,myDerankProtected,myPartyPenalty,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
 }
 
 function extractStats(p,fallbackRounds=null){
@@ -3884,6 +3915,8 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
           const refundedRR=Number.isFinite(h.refunded_rr)?h.refunded_rr:0;
           const derankProtected=!!h.was_derank_protected;
           _rrChangeByMatchId[h.match_id]=lastChange;
+          const details=parseRRDetails(h);
+          _rrDetailsByMatchId[h.match_id]=details;
           _refundedRRByMatchId[h.match_id]=refundedRR;
           _derankProtectedByMatchId[h.match_id]=derankProtected;
           // Pre-match RR: the previous entry's elo is the exact value when the
@@ -3905,7 +3938,11 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
           const endingTotal=historyTotal(h);
           if(endingTotal!=null)_postRRByMatchId[h.match_id]=endingTotal;
           if((h?.tier?.id??0)>=3)_postTierByMatchId[h.match_id]=h.tier.id;
-          if(sameSeason&&previousTotal!=null){
+          const reportedStart=reportedRRStart(details);
+          if(reportedStart!=null){
+            _preRRByMatchId[h.match_id]=reportedStart;
+            _preTierByMatchId[h.match_id]=details.beforeTier;
+          }else if(sameSeason&&previousTotal!=null){
             _preRRByMatchId[h.match_id]=previousTotal;
             if((prev?.tier?.id??0)>=3)_preTierByMatchId[h.match_id]=prev.tier.id;
           }else if(endingTotal!=null&&lastChange!=null){
@@ -5077,7 +5114,8 @@ function rrBucketStats(rows){
 // matches the averages just show as "—" (rrBucketStats returns null on an
 // empty bucket), rather than hiding the card outright.
 function isRREligible(m){
-  return m.myRR!=null&&m.myTierId>=3&&!m.actPlacement&&(m.partySize||1)<5;
+  const placement=m.myRRDetails?.placement??!!m.actPlacement;
+  return m.myRR!=null&&m.myTierId>=3&&!placement&&(m.partySize||1)<5;
 }
 function computeRRStats(matches){
   const eligible=[];
@@ -5730,6 +5768,47 @@ function renderRRSummary(matches){
     stat('RR / Loss',summary.avgLoss==null?'—':rrSigned(-summary.avgLoss,1),'rank-negative')+
     stat('Games',record(summary))+
     stat('Win rate',summary.winRate==null?'—':Math.round(summary.winRate)+'%');
+  renderRRReportedSummary(matches);
+}
+function rrReportedStats(matches){
+  const eligible=matches.filter(isRREligible);
+  const covered=eligible.filter(m=>m.myRRDetails?.bonus!=null);
+  return {total:eligible.length,covered:covered.length,
+    bonusMatches:covered.filter(m=>m.myRRDetails.bonus>0).length,
+    bonusTotal:covered.reduce((sum,m)=>sum+m.myRRDetails.bonus,0)};
+}
+function renderRRReportedSummary(matches){
+  const s=rrReportedStats(matches);
+  const el=document.getElementById('rr-reported-summary');
+  if(!el)return;
+  el.innerHTML=s.covered
+    ?`<span>Performance bonus <strong>${rrSigned(s.bonusTotal,0)} RR</strong> across <strong>${s.bonusMatches}</strong> games</span><span class="rr-reported-coverage">Bonus data available for ${s.covered} / ${s.total} eligible games</span>`
+    :'<span>Performance bonus data unavailable for this range</span>';
+}
+function buildRRDetailsHtml(m){
+  const d=m.myRRDetails;
+  const rows=[];
+  const add=(label,value)=>rows.push(`<div><dt>${label}</dt><dd>${matchHtml(value)}</dd></div>`);
+  if(m.myRR!=null)add('Recorded payout',rrSigned(m.myRR,0)+' RR');
+  if(d){
+    if(d.beforeTier!=null&&d.beforeRR!=null)add('Starting rank',avgLabelShort(d.beforeTier)+' · '+d.beforeRR+' RR');
+    if(d.afterTier!=null&&d.afterRR!=null)add('Ending rank',avgLabelShort(d.afterTier)+' · '+d.afterRR+' RR');
+    if(d.bonus!=null)add('Performance bonus',rrSigned(d.bonus,0)+' RR');
+    // Penalty units/sign conventions are not defined by the schema. Display
+    // the reported values verbatim; do not turn a fractional factor into RR.
+    if(d.afkPenalty!=null)add('AFK penalty (reported)',String(d.afkPenalty));
+    if(d.penalty!=null)add('RR penalty (reported)',String(d.penalty));
+    if(d.mapForgiveness!=null)add('New-map forgiveness',rrSigned(d.mapForgiveness,0)+' RR');
+    if(d.placement!=null)add('Placement match',d.placement?'Yes':'No');
+    if(d.shieldReplenished!=null)add('Rank Shield replenished',d.shieldReplenished?'Yes':'No');
+    if(d.queue)add('Queue',d.queue);
+    if(d.movement)add('Competitive movement',d.movement);
+  }
+  if(m.myRefundedRR)add('Refund',rrSigned(m.myRefundedRR,0)+' RR');
+  if(m.myDerankProtected)add('Rank Shield','Protected displayed rank');
+  if(!rows.length)return '';
+  const hasBreakdown=d&&[d.bonus,d.afkPenalty,d.penalty,d.mapForgiveness].some(v=>v!=null);
+  return `<section class="match-rr-details" aria-label="Your RR details"><h4>Your RR details</h4><dl>${rows.join('')}</dl><p>${hasBreakdown?'Reported bonus and penalty fields describe this update; they are not added again to the recorded payout.':'Bonus and penalty details are unavailable for this match.'}</p></section>`;
 }
 function renderRRBreakdown(matches){
   renderPerformanceDna(allMatches);
@@ -6036,7 +6115,7 @@ function buildPlayersGrid(m){
 
   const grid=document.createElement('div');
   grid.className='players-grid';
-  grid.innerHTML=`
+  grid.innerHTML=buildRRDetailsHtml(m)+`
     <div class="team-col">
       <div class="team-col-header">
         <span class="team-label">Your team</span>
@@ -6149,7 +6228,7 @@ function buildMatchCard(m){
         (preMatchRankText?'<span class="mc-map-meta-row"><span class="mc-player-rank" title="Your rank at the start of this match">'+matchHtml(preMatchRankText)+'</span></span>':'')+'</span>'+
         (preMatchRankIcon?'<span class="mc-player-rank-icon" style="--rank-glow-rgb:'+hexToRgb(rColor(preMatchRank.tier))+'" title="Your rank at the start of this match">'+preMatchRankIcon+'</span>':'')+'</span>'+
       '<span class="mc-body"><span class="mc-topline"><span class="mc-result"><span class="m-result-tag '+rc+'">'+rt+'</span><span class="match-score">'+scoreHtml+'</span></span>'+awardTag+resetTag+
-        '<span class="mc-expand-icon"><span class="mc-expand-label">Roster</span><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 7.5 5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>'+
+        '<span class="mc-expand-icon"><span class="mc-expand-label">Details</span><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 7.5 5 5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>'+
       '<span class="mc-performance"><span class="mc-performance-stat"><span class="mc-performance-lbl">K / D / A</span><span class="mc-performance-val">'+kdaHtml+'</span></span>'+
       '<span class="mc-performance-stat"><span class="mc-performance-lbl">ACS</span><span class="mc-performance-val">'+acs+'</span></span>'+
       '<span class="mc-performance-stat" title="'+(myStats?.performanceScore==null?'Performance Score is not provided in this match’s API data':'Performance Score')+'"><span class="mc-performance-lbl">PS</span><span class="mc-performance-val">'+performanceScore+'</span></span>'+
@@ -6157,11 +6236,11 @@ function buildMatchCard(m){
       '<span class="mc-performance-stat mc-rr-stat"><span class="mc-performance-lbl">RR change</span><span class="match-rr-change '+(myRR!=null?(myRR>=0?'gain':'loss'):'')+(shielded?' shielded':'')+'" title="'+(myRR==null?'No RR data for this match':shielded?'Rank Shield protected your displayed rank; this recorded RR loss still applied':'Recorded RR change for this match')+'">'+shieldIcon+(myRR!=null?(myRR>=0?'+':'')+myRR:'—')+'</span></span></span></span></button>';
   const trigger=card.querySelector('button');
   const label=rt+' on '+mapName+', '+score+'. '+(awardLabel?awardLabel+'. ':'')+kda+' KDA, '+acs+' ACS, '+performanceScore+' Performance Score.';
-  trigger.setAttribute('aria-label',label+' Show roster');
+  trigger.setAttribute('aria-label',label+' Show RR details and roster');
   trigger.addEventListener('click',()=>{
     const expanded=card.classList.toggle('expanded');
     trigger.setAttribute('aria-expanded',String(expanded));
-    trigger.setAttribute('aria-label',label+(expanded?' Hide roster':' Show roster'));
+    trigger.setAttribute('aria-label',label+(expanded?' Hide RR details and roster':' Show RR details and roster'));
   });
   loadMatchMapMetadata().then(maps=>{
     const src=maps.get(String(m.mapId||'').toLowerCase())||maps.get(String(mapName).toLowerCase());
