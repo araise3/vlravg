@@ -85,7 +85,7 @@
 import { observeName, readNameHistory } from "../../lib/name-history.mjs";
 import { backfillState, saveBackfillPage, saveStoredBackfillPage, saveStoredMatchDetail, skipStoredMatchDetail } from "../../lib/name-backfill.mjs";
 import { beginCoverageScan, readCoverageScan, recordCoveragePage, finishCoverageScan } from "../../lib/match-coverage.mjs";
-import { collectRR, saveFeatures, trackRRAccount } from "../../lib/rr-corpus.mjs";
+import { collectRR, mergeRRUpdate, saveFeatures, trackRRAccount } from "../../lib/rr-corpus.mjs";
 import { discoverMatchPlayers } from "../../lib/rr-activity.mjs";
 import { workflowAuthorized } from "../../lib/workflow-auth.mjs";
 import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, observePublicQuota } from "../../lib/upstream-pacing.mjs";
@@ -810,7 +810,7 @@ async function mergeRRHistory(env, bodyText, route) {
       .bind(puuid).all();
   for (const r of results || [])stored.set(r.match_id,JSON.parse(r.data));
   // Keep this response current even if a D1 read replica trails the write.
-  for(const h of parsed.data.history)stored.set(h.match_id,h);
+  for(const h of parsed.data.history)stored.set(h.match_id,mergeRRUpdate(stored.get(h.match_id),h));
 
   // Always hand back the full accumulated set (could already be more than
   // these ~20 from a prior visit). The fresh window has already committed.

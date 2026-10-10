@@ -56,7 +56,14 @@ export async function corpusReport(env,query=d1Query){
     COUNT(*) AS payouts,COUNT(DISTINCT h.puuid) AS players,
     SUM(CASE WHEN f.match_id IS NOT NULL THEN 1 ELSE 0 END) AS with_features,
     SUM(CASE WHEN json_extract(h.data,'$.last_change')>0 THEN 1 ELSE 0 END) AS gains,
-    SUM(CASE WHEN json_extract(h.data,'$.last_change')<0 THEN 1 ELSE 0 END) AS losses
+    SUM(CASE WHEN json_extract(h.data,'$.last_change')<0 THEN 1 ELSE 0 END) AS losses,
+    SUM(CASE WHEN json_type(h.data,'$.tier_before_update.id')='integer' AND json_type(h.data,'$.rr_before_update') IN ('integer','real') THEN 1 ELSE 0 END) AS reported_start,
+    SUM(CASE WHEN json_type(h.data,'$.rr_performance_bonus') IN ('integer','real') THEN 1 ELSE 0 END) AS bonus_known,
+    SUM(CASE WHEN json_extract(h.data,'$.rr_performance_bonus')<>0 THEN 1 ELSE 0 END) AS bonus_nonzero,
+    SUM(CASE WHEN json_type(h.data,'$.afk_penalty') IN ('integer','real') THEN 1 ELSE 0 END) AS afk_penalty_known,
+    SUM(CASE WHEN json_type(h.data,'$.rr_penalty') IN ('integer','real') THEN 1 ELSE 0 END) AS rr_penalty_known,
+    SUM(CASE WHEN json_type(h.data,'$.new_map_incentive_rr_forgiven') IN ('integer','real') THEN 1 ELSE 0 END) AS map_forgiveness_known,
+    SUM(CASE WHEN json_type(h.data,'$.is_placement_match') IN ('true','false') THEN 1 ELSE 0 END) AS placement_known
     FROM rr_history h LEFT JOIN rr_match_features f ON f.puuid=h.puuid AND f.match_id=h.match_id
     GROUP BY season_id,act,ending_tier ORDER BY act,ending_tier`);
   const health=await query(env,`WITH activity AS (
@@ -71,7 +78,11 @@ export async function corpusReport(env,query=d1Query){
         CASE WHEN games>=10 AND last_game>=julianday('now','-2 days') THEN 4.0/24
           WHEN games>=3 AND last_game>=julianday('now','-3 days') THEN 12.0/24 ELSE 1 END THEN 1 ELSE 0 END) AS stale,
     SUM(COALESCE(possible_gaps,0)) AS possible_gaps FROM activity`);
-  return {at:new Date().toISOString(),health:health[0],ranks,
+  const competitiveUpdates={};
+  for(const field of ['payouts','reported_start','bonus_known','bonus_nonzero','afk_penalty_known','rr_penalty_known','map_forgiveness_known','placement_known']){
+    competitiveUpdates[field]=ranks.reduce((sum,row)=>sum+(Number(row[field])||0),0);
+  }
+  return {at:new Date().toISOString(),health:health[0],ranks,competitiveUpdates,
     note:'Rank buckets use ending tier for collection monitoring. Model evaluation reconstructs starting rank and excludes ambiguous rows.'};
 }
 

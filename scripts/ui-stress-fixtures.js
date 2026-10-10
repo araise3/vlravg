@@ -26,6 +26,17 @@ function stressRawMatch(i){
     _postRRByMatchId[matchId]=_preRRByMatchId[matchId]+_rrChangeByMatchId[matchId];
     _preTierByMatchId[matchId]=stressWorst?27:18;_postTierByMatchId[matchId]=stressWorst?27:18;
     _derankProtectedByMatchId[matchId]=stressWorst&&i%5===1;
+    if(i%5!==4){
+      _rrDetailsByMatchId[matchId]=parseRRDetails({
+        rr_performance_bonus:i%2?0:5,afk_penalty:i%5===1?3:0,rr_penalty:i%5===1?.25:0,
+        new_map_incentive_rr_forgiven:i%5===1?5:0,is_placement_match:i===2,
+        was_derank_protection_replenished:i===0,queue_id:'competitive',
+        tier_before_update:{id:stressWorst?27:3+Math.floor(_preRRByMatchId[matchId]/100)},
+        rr_before_update:stressWorst?_preRRByMatchId[matchId]-2100:_preRRByMatchId[matchId]%100,
+        tier:{id:stressWorst?27:3+Math.floor(_postRRByMatchId[matchId]/100)},
+        rr:stressWorst?_postRRByMatchId[matchId]-2100:_postRRByMatchId[matchId]%100,
+      });
+    }
   }
   return{metadata:{match_id:matchId,map:{name:['Abyss','Ascent','Sunset','Lotus','Breeze'][i%5]},cluster:stressWorst?'Singapore':'Frankfurt',started_at:new Date(Date.UTC(2026,9,9,22,30)-i*7200000).toISOString(),game_length_in_ms:(overtime?105:35)*60000,season:{short:'e10a6',id:'fixture-act'}},players,teams:[{team_id:'Red',rounds:{won:myRounds}},{team_id:'Blue',rounds:{won:enemyRounds}}]};
 }
