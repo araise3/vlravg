@@ -4640,7 +4640,7 @@ async function refreshTeammateNames(rows){
       try{
         const result=await apiGet(`${API_BASE}/account-by-puuid/${encodeURIComponent(id)}`,{signal,quiet:true,cache:'no-store'});
         if(state.generation!==_analysisGen||signal?.aborted)return;
-        const account=result?.data;
+        const account=result?.j?.data;
         if(account?.puuid?.toLowerCase()!==id||!account.name||!account.tag)continue;
         state.accounts.set(id,{name:account.name,tag:account.tag});
         buildTeammates(); // Updates the duo table, overview, and profile links.

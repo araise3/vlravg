@@ -19,12 +19,12 @@ test('current duo Riot ID replaces an archived name, with one lookup per analysi
   const api=setup(async(url,opts)=>{
     calls++;assert.equal(url,`/api/account-by-puuid/${id}`);
     assert.equal(opts.quiet,true);assert.equal(opts.cache,'no-store');
-    return {data:{puuid:id,name:'Renamed',tag:'NEW'}};
+    return {j:{data:{puuid:id,name:'atakurd',tag:'pkk'}}};
   });
-  const old={puuid:id,name:'Old',tag:'OLD'};
+  const old={puuid:id,name:'kurdistan peek',tag:'musun'};
   await api.refreshTeammateNames([{key:id},{key:id.toUpperCase()}]);
-  assert.equal(api.currentTeammateIdentity(old).name,'Renamed');
-  assert.equal(api.currentTeammateIdentity(old).tag,'NEW');
+  assert.equal(api.currentTeammateIdentity(old).name,'atakurd');
+  assert.equal(api.currentTeammateIdentity(old).tag,'pkk');
   await api.refreshTeammateNames([{key:id}]);
   assert.equal(calls,1);assert.equal(api.context.renders,1);
   api.context._analysisGen++;
@@ -34,7 +34,7 @@ test('current duo Riot ID replaces an archived name, with one lookup per analysi
 });
 
 test('failed or mismatched lookups keep archived names and do not loop',async()=>{
-  for(const result of [()=>{throw new Error('offline');},()=>({data:{puuid:'wrong',name:'Wrong',tag:'ID'}})]){
+  for(const result of [()=>{throw new Error('offline');},()=>({j:{data:{puuid:'wrong',name:'Wrong',tag:'ID'}}})]){
     let calls=0;
     const api=setup(async()=>{calls++;return result();});
     const old={puuid:id,name:'Old',tag:'OLD'};
@@ -45,12 +45,26 @@ test('failed or mismatched lookups keep archived names and do not loop',async()=
   }
 });
 
+test('duo refresh reads the real apiGet response envelope',async()=>{
+  const start=html.indexOf('async function apiGet(');
+  const end=html.indexOf('// Back-compat alias',start);
+  const apiGet=runInNewContext(html.slice(start,end)+'\napiGet',{
+    fetchApiJson:async()=>({r:{status:200,ok:true},j:{status:200,data:{puuid:id,name:'atakurd',tag:'pkk'}}}),
+  });
+  const api=setup(apiGet);
+  await api.refreshTeammateNames([{key:id}]);
+  const identity=api.currentTeammateIdentity({puuid:id,name:'kurdistan peek',tag:'musun'});
+  assert.equal(identity.name,'atakurd');
+  assert.equal(identity.tag,'pkk');
+  assert.equal(api.context.renders,1);
+});
+
 test('late name response from a previous search cannot update the current search',async()=>{
   let finish;
   const api=setup(()=>new Promise(resolve=>{finish=resolve;}));
   const pending=api.refreshTeammateNames([{key:id}]);
   api.context._analysisGen++;
-  finish({data:{puuid:id,name:'Late',tag:'OLD'}});
+  finish({j:{data:{puuid:id,name:'Late',tag:'OLD'}}});
   await pending;
   assert.equal(api.context.renders,0);
   const old={puuid:id,name:'Archived',tag:'ID'};
