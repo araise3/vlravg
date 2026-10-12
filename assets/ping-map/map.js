@@ -11,6 +11,7 @@ const PING_SERVERS=[
   {id:'stockholm',name:'Stockholm',country:'Sweden',coords:[18.0686,59.3293],berlinMs:35},
   {id:'istanbul',name:'Istanbul',country:'Türkiye',coords:[28.9784,41.0082],berlinMs:44},
   {id:'madrid',name:'Madrid',country:'Spain',coords:[-3.7038,40.4168],berlinMs:46},
+  {id:'riyadh',name:'Riyadh',country:'Saudi Arabia',coords:[46.6753,24.7136],berlinMs:97},
 ];
 // Capital reference points, longitude then latitude. Country estimates never
 // imply that one capital represents the network routing of the whole country.
@@ -63,7 +64,7 @@ function pingColor(ms){return (PING_BANDS.find(b=>ms<b.ms)||PING_BANDS.at(-1)).c
 let selectedServer=PING_SERVERS[0];
 let selectedCountry=PING_COUNTRIES.find(c=>c.code==='DEU');
 const countryByCode=new Map(PING_COUNTRIES.map(c=>[c.code,c]));
-const projection=d3.geoMercator().center([18,53]).scale(560).translate([500,380]);
+const projection=d3.geoMercator().center([21,51]).scale(500).translate([500,355]);
 const path=d3.geoPath(projection);
 const svg=d3.select('#map'),scene=d3.select('#map-scene');
 const land=scene.append('g'),rings=scene.append('g').attr('aria-hidden','true'),labels=scene.append('g').attr('aria-hidden','true');
@@ -89,8 +90,8 @@ const serverPins=pins.selectAll('g').data(PING_SERVERS).join('g').attr('class','
 serverPins.append('circle').attr('class','pin-hit').attr('r',22);
 serverPins.append('circle').attr('class','halo').attr('r',10);
 serverPins.append('circle').attr('class','pin-dot').attr('r',5);
-serverPins.append('text').attr('x',s=>['london','paris'].includes(s.id)?-12:12).attr('y',s=>s.id==='paris'?17:4)
-  .attr('text-anchor',s=>['london','paris'].includes(s.id)?'end':'start').text(s=>s.name);
+serverPins.append('text').attr('x',s=>['london','paris','riyadh'].includes(s.id)?-12:12).attr('y',s=>s.id==='paris'?17:4)
+  .attr('text-anchor',s=>['london','paris','riyadh'].includes(s.id)?'end':'start').text(s=>s.name);
 serverPins.each(function(){const group=d3.select(this),box=group.select('text').node().getBBox();group.insert('rect',':first-child').attr('class','pin-hit').attr('x',box.x-6).attr('y',box.y-10).attr('width',box.width+12).attr('height',box.height+20);});
 serverPins.append('title').text(s=>s.name+' · '+s.country);
 
@@ -100,7 +101,6 @@ svg.call(zoom).on('dblclick.zoom',null);
 document.getElementById('zoom-in').onclick=()=>svg.call(zoom.scaleBy,1.35);
 document.getElementById('zoom-out').onclick=()=>svg.call(zoom.scaleBy,1/1.35);
 document.getElementById('reset-map').onclick=()=>svg.call(zoom.transform,d3.zoomIdentity);
-document.getElementById('show-rings').onchange=event=>rings.style('display',event.target.checked?null:'none');
 
 // Keep server names and tap targets readable at every map and zoom size.
 function positionPins(){
@@ -119,7 +119,7 @@ function render(){
   serverPins.attr('aria-pressed',s=>s===selectedServer?'true':'false').classed('selected',s=>s===selectedServer);
   serverPins.select('.pin-dot').attr('fill',s=>s===selectedServer?'#60a5fa':'#a1a1aa').attr('r',s=>s===selectedServer?5:4);
   serverPins.select('.halo').attr('visibility',s=>s===selectedServer?'visible':'hidden');
-  countryPaths.attr('fill','#1c1c20')
+  countryPaths.attr('fill',f=>{const c=countryByCode.get(f.properties.code);return c?d3.color(pingColor(estimatePing(c.coords,selectedServer).ms)).darker(3).formatHex():'#1c1c20';})
     .classed('selected',f=>f.properties.code===selectedCountry.code)
     .attr('aria-label',f=>{const c=countryByCode.get(f.properties.code);return c?c.name+', '+estimatePing(c.coords,selectedServer).ms+' milliseconds from '+c.capital:null;});
   rings.selectAll('*').remove();
@@ -127,7 +127,7 @@ function render(){
     const radiusKm=(b.ms-serverBaseline(selectedServer))/.016;
     if(radiusKm<=0)return;
     const circle=d3.geoCircle().center(selectedServer.coords).radius(radiusKm/6371*180/Math.PI).precision(2)();
-    rings.append('path').datum(circle).attr('d',path).attr('class','ring').attr('fill',b.color).attr('fill-opacity',.012).attr('stroke',b.color).attr('stroke-opacity',.42);
+    rings.append('path').datum(circle).attr('d',path).attr('class','ring').attr('fill',b.color).attr('fill-opacity',.045).attr('stroke',b.color).attr('stroke-opacity',.6);
     // A true great-circle boundary, not a constant screen-pixel radius.
     const labelPoint=destination(selectedServer.coords,radiusKm,105),p=projection(labelPoint);
     if(p[0]>25&&p[0]<940&&p[1]>95&&p[1]<650)rings.append('text').attr('class','ring-label').attr('x',p[0]+5).attr('y',p[1]-6).attr('fill',b.color).text(b.ms+' ms');
