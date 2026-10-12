@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RR curve methodology comparison</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#101113;color:#e8e9ee}*{box-sizing:border-box}body{max-width:1100px;margin:0 auto;padding:26px 22px 44px}h1{font-size:26px;letter-spacing:-.03em;margin:0 0 9px}h2{font-size:18px;margin:28px 0 8px}p{color:#a9afbb;line-height:1.55;margin:8px 0 16px}.controls{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin:16px 0}label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:#c5cbd7}select{font:inherit;background:#20232a;color:#f3f4f7;border:1px solid #494e58;border-radius:5px;padding:9px;max-width:100%}.chart{height:355px;position:relative}.twocol{display:grid;grid-template-columns:1fr 1fr;gap:24px}.twocol .chart{height:300px}a{color:#99c4ff}#summary{min-height:22px;font-size:13px}.legend{display:flex;flex-wrap:wrap;gap:16px;font-size:12px;color:#afb5c1}.legend span:before{content:"";display:inline-block;width:23px;vertical-align:middle;margin-right:6px;border-top:2px solid var(--color)}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:10px 8px;border-bottom:1px solid #30343e;text-align:right}th:first-child,td:first-child{text-align:left}th{color:#adb5c4;font-size:11px;font-weight:650;text-transform:uppercase}footer{margin-top:28px;color:#9aa3b1;font-size:12px}#error{color:#f3aeab}.table-wrap{overflow:auto}@media(max-width:680px){body{padding:20px 14px}.twocol{grid-template-columns:1fr}.chart{height:315px}h1{font-size:23px}}
+</style></head><body>
+<h1>How should the RR curves be drawn?</h1>
+<p>Recorded payouts, current estimator, and the corpus-selected Gaussian weighted mean. Analysis date: 1 October 2026.</p>
+<div class="controls"><label>Player and act<select id="player"></select></label><label>Comparison<select id="method"><option value="current">Current 30 RR vs Gaussian 80 RR</option><option value="40">Hard 40 RR vs Gaussian 80 RR</option><option value="bandwidth">Gaussian 60 / 80 / 100 RR</option></select></label><label>Observations<select id="dots"><option value="yes">Show matches</option><option value="no">Curves only</option></select></label></div>
+<div id="summary" aria-live="polite"></div><div id="error" role="alert"></div>
+<div class="chart"><canvas id="curves" role="img" aria-label="Recorded win and loss payouts compared with smoothed curves"></canvas></div>
+<p>Green: win magnitude. Red: loss magnitude. Current/hard lines are dashed; the selected 80-RR mean is solid. Empty regions in the hard rule are real missing estimates. All curves end at their own observed rank range.</p>
+<div class="twocol"><section><h2>Held-out prediction error</h2><p>Player-balanced RMSE in RR. Differences are small and uncertain.</p><div class="chart"><canvas id="error-chart" role="img" aria-label="Blocked prediction error by estimator"></canvas></div></section><section><h2>Supported observed rank range</h2><p>Mean coverage on 210 held-out outcome groups with ≥10 matches.</p><div class="chart"><canvas id="coverage-chart" role="img" aria-label="Percentage of observed rank range covered by supported curves"></canvas></div></section></div>
+<h2>Comparison on identical held-out matches</h2><div class="table-wrap"><table><thead><tr><th>Method</th><th>RMSE / RR</th><th>Local prediction support</th><th>Display fragmentation</th></tr></thead><tbody id="metrics"></tbody></table></div>
+<footer>Full methodology, eligibility caveats, forward validation and uncertainty interpretation: <a href="report.md">written report</a>. Individual dots use Riot’s actual payout. These curves describe collected matches; they do not establish a causal rank effect.</footer>
+<script id="analysis-data" type="application/json">RR_ANALYSIS_DATA</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+<script>
+(()=>{
+  const data=JSON.parse(document.getElementById('analysis-data').textContent);
+  if(typeof Chart==='undefined'){document.getElementById('error').textContent='The chart library did not load. Open the written report for the complete findings.';return;}
+  Chart.defaults.color='#aeb6c5';Chart.defaults.borderColor='#2b3039';Chart.defaults.font.family='system-ui,sans-serif';
+  const player=document.getElementById('player'),method=document.getElementById('method'),dots=document.getElementById('dots');
+  const keys=[...new Set(data.examples.map(e=>e.name+' · '+e.season))].sort((a,b)=>a.startsWith('Sxllow')?-1:b.startsWith('Sxllow')?1:a.localeCompare(b));
+  for(const key of keys){const option=document.createElement('option');option.value=key;option.textContent=key;player.appendChild(option);}
+  let curveChart;
+  const rankNames=['','','','Iron 1','Iron 2','Iron 3','Bronze 1','Bronze 2','Bronze 3','Silver 1','Silver 2','Silver 3','Gold 1','Gold 2','Gold 3','Plat 1','Plat 2','Plat 3','Diamond 1','Diamond 2','Diamond 3','Asc 1','Asc 2','Asc 3','Immo 1','Immo 2','Immo 3','Radiant'];
+  function coordinate(value,immortal){return immortal?String(Math.round(value-2100)):(rankNames[Math.max(3,Math.min(27,Math.floor(value/100)+3))]+' · '+Math.round(value%100));}
+  function curvePoints(curve,id){
+    const out=[];let previous=null;
+    for(const p of curve){
+      if(id.startsWith('hard_')&&previous&&p.x-previous.x>(id==='hard_s40_k5_p8'?40:30))out.push({x:(p.x+previous.x)/2,y:null});
+      out.push({x:p.x,y:p.supported?p.y:null});previous=p;
+    }
+    return out;
+  }
+  function render(){
+    const chosen=data.examples.filter(e=>e.name+' · '+e.season===player.value);
+    const immortal=chosen.flatMap(e=>e.points).every(p=>p.x>=2100);
+    let ids=method.value==='bandwidth'?['gaussian_h60_p0','gaussian_h80_p0','gaussian_h100_p0']:[method.value==='40'?'hard_s40_k5_p8':'hard_s30_k5_p8','gaussian_h80_p0'];
+    const datasets=[];
+    for(const e of chosen){
+      const colour=e.won?'#4ade80':'#fb7b7b';const outcome=e.won?'Win':'Loss';
+      if(dots.value==='yes')datasets.push({type:'scatter',label:outcome+' · match',data:e.points.map(p=>({x:p.x,y:p.y})),pointRadius:2.4,backgroundColor:colour+'3b',borderColor:colour+'66',pointBorderWidth:1,order:5});
+      for(const id of ids){
+        if(!e.curves[id])continue;
+        datasets.push({type:'line',label:outcome+' · '+data.labels[id],data:curvePoints(e.curves[id],id),pointRadius:0,borderColor:colour,borderWidth:id==='gaussian_h80_p0'?2.4:1.4,borderDash:id==='gaussian_h80_p0'?[]:id.endsWith('100_p0')?[2,5]:[7,4],spanGaps:false,tension:0,order:1});
+      }
+    }
+    if(curveChart)curveChart.destroy();
+    curveChart=new Chart(document.getElementById('curves'),{data:{datasets},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'nearest',intersect:false},plugins:{legend:{position:'bottom',labels:{boxWidth:18,font:{size:11}}},tooltip:{callbacks:{title:items=>coordinate(items[0].parsed.x,immortal)+' RR',label:item=>item.dataset.label+': '+item.parsed.y.toFixed(2)+' RR'}}},scales:{x:{type:'linear',title:{display:true,text:immortal?'Starting leaderboard RR':'Starting rank · RR'},ticks:{maxTicksLimit:window.innerWidth<600?4:7,callback:value=>coordinate(value,immortal)}},y:{grace:'5%',title:{display:true,text:'Payout magnitude / RR'}}}}});
+    document.getElementById('summary').textContent=chosen.map(e=>(e.won?'Wins':'Losses')+': '+e.points.length).join(' · ');
+  }
+  [player,method,dots].forEach(e=>e.addEventListener('change',render));render();
+  const ids=['act_mean','hard_s30_k5_p8','hard_s40_k5_p8','gaussian_h80_p0','tricube_h150_d1_p0'];
+  const short=['Act average','Current 30 RR','Hard 40 RR','Gaussian 80 RR','Local linear'];
+  const metric=id=>data.results.models.find(m=>m.model.id===id);
+  new Chart(document.getElementById('error-chart'),{type:'bar',data:{labels:short,datasets:[{label:'Player-balanced RMSE / RR',data:ids.map(id=>metric(id).holdout_blocked.player_rmse),backgroundColor:ids.map(id=>id==='gaussian_h80_p0'?'#63a7fb':'#616d83')}]},options:{responsive:true,maintainAspectRatio:false,animation:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,title:{display:true,text:'Prediction error / RR'}},y:{grid:{display:false}}}}});
+  const rangeIds=ids.slice(1);
+  new Chart(document.getElementById('coverage-chart'),{type:'bar',data:{labels:short.slice(1),datasets:[{label:'Supported range / %',data:rangeIds.map(id=>100*data.results.display[id].mean_grid_coverage),backgroundColor:rangeIds.map(id=>id==='gaussian_h80_p0'?'#63a7fb':'#616d83')}]},options:{responsive:true,maintainAspectRatio:false,animation:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{min:0,max:100,title:{display:true,text:'Observed range covered / %'}},y:{grid:{display:false}}}}});
+  const tbody=document.getElementById('metrics');
+  for(const id of ids){const m=metric(id);const tr=document.createElement('tr');const cells=[data.labels[id],m.holdout_blocked.player_rmse.toFixed(3),id==='act_mean'?'Average everywhere':(100*m.holdout_blocked.coverage).toFixed(1)+'%',id==='act_mean'?'—':(100*data.results.display[id].fragmented_fraction).toFixed(1)+'%'];for(const text of cells){const td=document.createElement('td');td.textContent=text;tr.appendChild(td);}tbody.appendChild(tr);}
+})();
+</script></body></html>

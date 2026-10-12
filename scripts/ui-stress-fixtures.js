@@ -23,9 +23,9 @@ function stressRawMatch(i){
   if(!(stressWorst&&i%5===3)){
     _rrChangeByMatchId[matchId]=draw?0:myRounds>enemyRounds?35:-30;
     _preRRByMatchId[matchId]=stressWorst?2100+1100+i*5:1550+i*5;
-    _postRRByMatchId[matchId]=_preRRByMatchId[matchId]+_rrChangeByMatchId[matchId];
+    _derankProtectedByMatchId[matchId]=stressWorst&&i%5===1&&_rrChangeByMatchId[matchId]<0;
+    _postRRByMatchId[matchId]=_preRRByMatchId[matchId]+(_derankProtectedByMatchId[matchId]?0:_rrChangeByMatchId[matchId]);
     _preTierByMatchId[matchId]=stressWorst?27:18;_postTierByMatchId[matchId]=stressWorst?27:18;
-    _derankProtectedByMatchId[matchId]=stressWorst&&i%5===1;
     if(i%5!==4){
       _rrDetailsByMatchId[matchId]=parseRRDetails({
         rr_performance_bonus:i%2?0:5,afk_penalty:i%5===1?3:0,rr_penalty:i%5===1?.25:0,

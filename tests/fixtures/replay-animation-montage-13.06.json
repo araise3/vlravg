@@ -1,0 +1,1250 @@
+{
+  "source_record_sha256": "3513796e847a01e86865fe4de138aa3fa0247bbe5dce25b159c5a4e835766c66",
+  "asset": {
+    "object_path": "/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage",
+    "export_class": "AnimMontage",
+    "properties": {
+      "BlendIn": {
+        "BlendTime": 0.0
+      },
+      "BlendOut": {
+        "BlendTime": 0.0
+      },
+      "CompositeSections": [
+        {
+          "SectionName": "Default",
+          "NextSectionName": "loop",
+          "MetaData": [],
+          "LinkedMontage": {
+            "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": 0,
+          "LinkMethod": "EAnimLinkMethod::Absolute",
+          "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 1.3333333730697632,
+          "LinkValue": 0.0,
+          "LinkedSequence": {
+            "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+          }
+        },
+        {
+          "SectionName": "loop",
+          "NextSectionName": "loop",
+          "MetaData": [],
+          "LinkedMontage": {
+            "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": 0,
+          "LinkMethod": "EAnimLinkMethod::Absolute",
+          "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 1.3333333730697632,
+          "LinkValue": 1.2591431140899658,
+          "LinkedSequence": {
+            "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+          }
+        }
+      ],
+      "SlotAnimTracks": [
+        {
+          "SlotName": "Death",
+          "AnimTrack": {
+            "AnimSegments": [
+              {
+                "AnimReference": {
+                  "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+                },
+                "StartPos": 0.0,
+                "AnimStartTime": 0.0,
+                "AnimEndTime": 1.3333333730697632,
+                "AnimPlayRate": 1.0,
+                "LoopingCount": 1
+              }
+            ]
+          }
+        }
+      ],
+      "CommonTargetFrameRate": {
+        "Numerator": 30
+      },
+      "Notifies": [
+        {
+          "TriggerTimeOffset": -9.999999747378752e-05,
+          "EndTriggerTimeOffset": 0.0,
+          "TriggerWeightThreshold": 9.999999747378752e-06,
+          "NotifyName": "NotifyState_HideEquippable_C",
+          "Notify": {
+            "reference": "0"
+          },
+          "NotifyStateClass": {
+            "reference": "NotifyState_HideEquippable_C'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:NotifyState_HideEquippable_C_0'"
+          },
+          "Duration": 2.0,
+          "EndLink": {
+            "LinkedMontage": {
+              "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+            },
+            "SlotIndex": 0,
+            "SegmentIndex": -1,
+            "LinkMethod": "EAnimLinkMethod::Absolute",
+            "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+            "SegmentBeginTime": -1.0,
+            "SegmentLength": -1.0,
+            "LinkValue": 2.0,
+            "LinkedSequence": {
+              "reference": "0"
+            }
+          },
+          "bConvertedFromBranchingPoint": false,
+          "MontageTickType": "EMontageNotifyTickType::Queued",
+          "NotifyTriggerChance": 1.0,
+          "NotifyFilterType": "ENotifyFilterType::NoFiltering",
+          "NotifyFilterLOD": 0,
+          "bTriggerOnDedicatedServer": true,
+          "bTriggerOnFollower": false,
+          "TrackIndex": 0,
+          "LinkedMontage": {
+            "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": 0,
+          "LinkMethod": "EAnimLinkMethod::Absolute",
+          "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 1.3333333730697632,
+          "LinkValue": 0.0,
+          "LinkedSequence": {
+            "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+          }
+        },
+        {
+          "TriggerTimeOffset": 0.0,
+          "EndTriggerTimeOffset": -9.999999747378752e-05,
+          "TriggerWeightThreshold": 9.999999747378752e-06,
+          "NotifyName": "CanInterruptDeathReaction",
+          "Notify": {
+            "reference": "0"
+          },
+          "NotifyStateClass": {
+            "reference": "AnimNotifyState_CanInterruptDeathReaction'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:AnimNotifyState_CanInterruptDeathReaction_0'"
+          },
+          "Duration": 1.0624431371688843,
+          "EndLink": {
+            "LinkedMontage": {
+              "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+            },
+            "SlotIndex": 0,
+            "SegmentIndex": 0,
+            "LinkMethod": "EAnimLinkMethod::Absolute",
+            "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+            "SegmentBeginTime": 0.0,
+            "SegmentLength": 1.3333333730697632,
+            "LinkValue": 1.3333333730697632,
+            "LinkedSequence": {
+              "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+            }
+          },
+          "bConvertedFromBranchingPoint": false,
+          "MontageTickType": "EMontageNotifyTickType::Queued",
+          "NotifyTriggerChance": 1.0,
+          "NotifyFilterType": "ENotifyFilterType::NoFiltering",
+          "NotifyFilterLOD": 0,
+          "bTriggerOnDedicatedServer": true,
+          "bTriggerOnFollower": false,
+          "TrackIndex": 1,
+          "LinkedMontage": {
+            "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": 0,
+          "LinkMethod": "EAnimLinkMethod::Absolute",
+          "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 1.3333333730697632,
+          "LinkValue": 0.2708902657032013,
+          "LinkedSequence": {
+            "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+          }
+        },
+        {
+          "TriggerTimeOffset": 0.0,
+          "EndTriggerTimeOffset": 0.0,
+          "TriggerWeightThreshold": 9.999999747378752e-06,
+          "NotifyName": "Audio_StandingMaterial_C",
+          "Notify": {
+            "reference": "AnimNotify_Audio_StandingMaterial_C'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:AnimNotify_Audio_StandingMaterial_C_0'"
+          },
+          "NotifyStateClass": {
+            "reference": "0"
+          },
+          "Duration": 0.0,
+          "EndLink": {
+            "LinkedMontage": {
+              "reference": "0"
+            },
+            "SlotIndex": 0,
+            "SegmentIndex": -1,
+            "LinkMethod": "EAnimLinkMethod::Absolute",
+            "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+            "SegmentBeginTime": 0.0,
+            "SegmentLength": 0.0,
+            "LinkValue": 0.29085469245910645,
+            "LinkedSequence": {
+              "reference": "0"
+            }
+          },
+          "bConvertedFromBranchingPoint": false,
+          "MontageTickType": "EMontageNotifyTickType::Queued",
+          "NotifyTriggerChance": 1.0,
+          "NotifyFilterType": "ENotifyFilterType::NoFiltering",
+          "NotifyFilterLOD": 0,
+          "bTriggerOnDedicatedServer": true,
+          "bTriggerOnFollower": false,
+          "TrackIndex": 8,
+          "LinkedMontage": {
+            "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": 0,
+          "LinkMethod": "EAnimLinkMethod::Absolute",
+          "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 1.3333333730697632,
+          "LinkValue": 0.29085469245910645,
+          "LinkedSequence": {
+            "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+          }
+        },
+        {
+          "TriggerTimeOffset": 0.0,
+          "EndTriggerTimeOffset": 0.0,
+          "TriggerWeightThreshold": 9.999999747378752e-06,
+          "NotifyName": "Audio_StandingMaterial_C",
+          "Notify": {
+            "reference": "AnimNotify_Audio_StandingMaterial_C'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:AnimNotify_Audio_StandingMaterial_C_1'"
+          },
+          "NotifyStateClass": {
+            "reference": "0"
+          },
+          "Duration": 0.0,
+          "EndLink": {
+            "LinkedMontage": {
+              "reference": "0"
+            },
+            "SlotIndex": 0,
+            "SegmentIndex": -1,
+            "LinkMethod": "EAnimLinkMethod::Absolute",
+            "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+            "SegmentBeginTime": 0.0,
+            "SegmentLength": 0.0,
+            "LinkValue": 0.36878708004951477,
+            "LinkedSequence": {
+              "reference": "0"
+            }
+          },
+          "bConvertedFromBranchingPoint": false,
+          "MontageTickType": "EMontageNotifyTickType::Queued",
+          "NotifyTriggerChance": 1.0,
+          "NotifyFilterType": "ENotifyFilterType::NoFiltering",
+          "NotifyFilterLOD": 0,
+          "bTriggerOnDedicatedServer": true,
+          "bTriggerOnFollower": false,
+          "TrackIndex": 7,
+          "LinkedMontage": {
+            "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": 0,
+          "LinkMethod": "EAnimLinkMethod::Absolute",
+          "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 1.3333333730697632,
+          "LinkValue": 0.36878708004951477,
+          "LinkedSequence": {
+            "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+          }
+        },
+        {
+          "TriggerTimeOffset": 0.0,
+          "EndTriggerTimeOffset": 0.0,
+          "TriggerWeightThreshold": 9.999999747378752e-06,
+          "NotifyName": "Audio_StandingMaterial_C",
+          "Notify": {
+            "reference": "AnimNotify_Audio_StandingMaterial_C'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:AnimNotify_Audio_StandingMaterial_C_2'"
+          },
+          "NotifyStateClass": {
+            "reference": "0"
+          },
+          "Duration": 0.0,
+          "EndLink": {
+            "LinkedMontage": {
+              "reference": "0"
+            },
+            "SlotIndex": 0,
+            "SegmentIndex": -1,
+            "LinkMethod": "EAnimLinkMethod::Absolute",
+            "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+            "SegmentBeginTime": 0.0,
+            "SegmentLength": 0.0,
+            "LinkValue": 0.4328029453754425,
+            "LinkedSequence": {
+              "reference": "0"
+            }
+          },
+          "bConvertedFromBranchingPoint": false,
+          "MontageTickType": "EMontageNotifyTickType::Queued",
+          "NotifyTriggerChance": 1.0,
+          "NotifyFilterType": "ENotifyFilterType::NoFiltering",
+          "NotifyFilterLOD": 0,
+          "bTriggerOnDedicatedServer": true,
+          "bTriggerOnFollower": false,
+          "TrackIndex": 6,
+          "LinkedMontage": {
+            "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": 0,
+          "LinkMethod": "EAnimLinkMethod::Absolute",
+          "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 1.3333333730697632,
+          "LinkValue": 0.4328029453754425,
+          "LinkedSequence": {
+            "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+          }
+        },
+        {
+          "TriggerTimeOffset": 0.0,
+          "EndTriggerTimeOffset": 0.0,
+          "TriggerWeightThreshold": 9.999999747378752e-06,
+          "NotifyName": "Audio_StandingMaterial_C",
+          "Notify": {
+            "reference": "AnimNotify_Audio_StandingMaterial_C'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:AnimNotify_Audio_StandingMaterial_C_3'"
+          },
+          "NotifyStateClass": {
+            "reference": "0"
+          },
+          "Duration": 0.0,
+          "EndLink": {
+            "LinkedMontage": {
+              "reference": "0"
+            },
+            "SlotIndex": 0,
+            "SegmentIndex": -1,
+            "LinkMethod": "EAnimLinkMethod::Absolute",
+            "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+            "SegmentBeginTime": 0.0,
+            "SegmentLength": 0.0,
+            "LinkValue": 0.573359489440918,
+            "LinkedSequence": {
+              "reference": "0"
+            }
+          },
+          "bConvertedFromBranchingPoint": false,
+          "MontageTickType": "EMontageNotifyTickType::Queued",
+          "NotifyTriggerChance": 1.0,
+          "NotifyFilterType": "ENotifyFilterType::NoFiltering",
+          "NotifyFilterLOD": 0,
+          "bTriggerOnDedicatedServer": true,
+          "bTriggerOnFollower": false,
+          "TrackIndex": 5,
+          "LinkedMontage": {
+            "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": 0,
+          "LinkMethod": "EAnimLinkMethod::Absolute",
+          "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 1.3333333730697632,
+          "LinkValue": 0.573359489440918,
+          "LinkedSequence": {
+            "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+          }
+        },
+        {
+          "TriggerTimeOffset": 0.0,
+          "EndTriggerTimeOffset": 0.0,
+          "TriggerWeightThreshold": 9.999999747378752e-06,
+          "NotifyName": "Audio_StandingMaterial_C",
+          "Notify": {
+            "reference": "AnimNotify_Audio_StandingMaterial_C'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:AnimNotify_Audio_StandingMaterial_C_4'"
+          },
+          "NotifyStateClass": {
+            "reference": "0"
+          },
+          "Duration": 0.0,
+          "EndLink": {
+            "LinkedMontage": {
+              "reference": "0"
+            },
+            "SlotIndex": 0,
+            "SegmentIndex": -1,
+            "LinkMethod": "EAnimLinkMethod::Absolute",
+            "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+            "SegmentBeginTime": 0.0,
+            "SegmentLength": 0.0,
+            "LinkValue": 0.7097411751747131,
+            "LinkedSequence": {
+              "reference": "0"
+            }
+          },
+          "bConvertedFromBranchingPoint": false,
+          "MontageTickType": "EMontageNotifyTickType::Queued",
+          "NotifyTriggerChance": 1.0,
+          "NotifyFilterType": "ENotifyFilterType::NoFiltering",
+          "NotifyFilterLOD": 0,
+          "bTriggerOnDedicatedServer": true,
+          "bTriggerOnFollower": false,
+          "TrackIndex": 4,
+          "LinkedMontage": {
+            "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": 0,
+          "LinkMethod": "EAnimLinkMethod::Absolute",
+          "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 1.3333333730697632,
+          "LinkValue": 0.7097411751747131,
+          "LinkedSequence": {
+            "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+          }
+        },
+        {
+          "TriggerTimeOffset": 0.0,
+          "EndTriggerTimeOffset": 0.0,
+          "TriggerWeightThreshold": 9.999999747378752e-06,
+          "NotifyName": "Audio_StandingMaterial_C",
+          "Notify": {
+            "reference": "AnimNotify_Audio_StandingMaterial_C'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:AnimNotify_Audio_StandingMaterial_C_5'"
+          },
+          "NotifyStateClass": {
+            "reference": "0"
+          },
+          "Duration": 0.0,
+          "EndLink": {
+            "LinkedMontage": {
+              "reference": "0"
+            },
+            "SlotIndex": 0,
+            "SegmentIndex": -1,
+            "LinkMethod": "EAnimLinkMethod::Absolute",
+            "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+            "SegmentBeginTime": 0.0,
+            "SegmentLength": 0.0,
+            "LinkValue": 0.8071566224098206,
+            "LinkedSequence": {
+              "reference": "0"
+            }
+          },
+          "bConvertedFromBranchingPoint": false,
+          "MontageTickType": "EMontageNotifyTickType::Queued",
+          "NotifyTriggerChance": 1.0,
+          "NotifyFilterType": "ENotifyFilterType::NoFiltering",
+          "NotifyFilterLOD": 0,
+          "bTriggerOnDedicatedServer": true,
+          "bTriggerOnFollower": false,
+          "TrackIndex": 3,
+          "LinkedMontage": {
+            "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": 0,
+          "LinkMethod": "EAnimLinkMethod::Absolute",
+          "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 1.3333333730697632,
+          "LinkValue": 0.8071566224098206,
+          "LinkedSequence": {
+            "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+          }
+        },
+        {
+          "TriggerTimeOffset": 0.0,
+          "EndTriggerTimeOffset": 0.0,
+          "TriggerWeightThreshold": 9.999999747378752e-06,
+          "NotifyName": "Audio_StandingMaterial_C",
+          "Notify": {
+            "reference": "AnimNotify_Audio_StandingMaterial_C'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:AnimNotify_Audio_StandingMaterial_C_6'"
+          },
+          "NotifyStateClass": {
+            "reference": "0"
+          },
+          "Duration": 0.0,
+          "EndLink": {
+            "LinkedMontage": {
+              "reference": "0"
+            },
+            "SlotIndex": 0,
+            "SegmentIndex": -1,
+            "LinkMethod": "EAnimLinkMethod::Absolute",
+            "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+            "SegmentBeginTime": 0.0,
+            "SegmentLength": 0.0,
+            "LinkValue": 0.943538248538971,
+            "LinkedSequence": {
+              "reference": "0"
+            }
+          },
+          "bConvertedFromBranchingPoint": false,
+          "MontageTickType": "EMontageNotifyTickType::Queued",
+          "NotifyTriggerChance": 1.0,
+          "NotifyFilterType": "ENotifyFilterType::NoFiltering",
+          "NotifyFilterLOD": 0,
+          "bTriggerOnDedicatedServer": true,
+          "bTriggerOnFollower": false,
+          "TrackIndex": 2,
+          "LinkedMontage": {
+            "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": 0,
+          "LinkMethod": "EAnimLinkMethod::Absolute",
+          "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 1.3333333730697632,
+          "LinkValue": 0.943538248538971,
+          "LinkedSequence": {
+            "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+          }
+        },
+        {
+          "TriggerTimeOffset": 0.0,
+          "EndTriggerTimeOffset": -9.999999747378752e-05,
+          "TriggerWeightThreshold": 9.999999747378752e-06,
+          "NotifyName": "OnDeadAndSettled_C",
+          "Notify": {
+            "reference": "0"
+          },
+          "NotifyStateClass": {
+            "reference": "AnimNotifyState_OnDeadAndSettled_C'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:AnimNotifyState_OnDeadAndSettled_C_0'"
+          },
+          "Duration": 0.27006351947784424,
+          "EndLink": {
+            "LinkedMontage": {
+              "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+            },
+            "SlotIndex": 0,
+            "SegmentIndex": 0,
+            "LinkMethod": "EAnimLinkMethod::Absolute",
+            "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+            "SegmentBeginTime": 0.0,
+            "SegmentLength": 1.3333333730697632,
+            "LinkValue": 1.3333333730697632,
+            "LinkedSequence": {
+              "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+            }
+          },
+          "bConvertedFromBranchingPoint": false,
+          "MontageTickType": "EMontageNotifyTickType::Queued",
+          "NotifyTriggerChance": 1.0,
+          "NotifyFilterType": "ENotifyFilterType::NoFiltering",
+          "NotifyFilterLOD": 0,
+          "bTriggerOnDedicatedServer": true,
+          "bTriggerOnFollower": false,
+          "TrackIndex": 9,
+          "LinkedMontage": {
+            "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": 0,
+          "LinkMethod": "EAnimLinkMethod::Absolute",
+          "CachedLinkMethod": "EAnimLinkMethod::Absolute",
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 1.3333333730697632,
+          "LinkValue": 1.063269853591919,
+          "LinkedSequence": {
+            "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+          }
+        }
+      ],
+      "SequenceLength": 1.3333333730697632,
+      "Skeleton": {
+        "reference": "Skeleton'/Game/Characters/_Core/3P/Models/Core_Skeleton.Core_Skeleton'"
+      }
+    },
+    "SlotAnimTracks": [
+      {
+        "SlotName": "Death",
+        "AnimTrack": {
+          "AnimSegments": [
+            {
+              "AnimReference": {
+                "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+              },
+              "StartPos": 0.0,
+              "AnimStartTime": 0.0,
+              "AnimEndTime": 1.3333333730697632,
+              "AnimPlayRate": 1.0,
+              "LoopingCount": 1
+            }
+          ]
+        }
+      }
+    ],
+    "CompositeSections": [
+      {
+        "SectionName": "Default",
+        "NextSectionName": "loop",
+        "MetaData": [],
+        "LinkedMontage": {
+          "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+        },
+        "SlotIndex": 0,
+        "SegmentIndex": 0,
+        "LinkMethod": {
+          "value__": 0
+        },
+        "CachedLinkMethod": {
+          "value__": 0
+        },
+        "SegmentBeginTime": 0.0,
+        "SegmentLength": 1.3333333730697632,
+        "LinkValue": 0.0,
+        "LinkedSequence": {
+          "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+        }
+      },
+      {
+        "SectionName": "loop",
+        "NextSectionName": "loop",
+        "MetaData": [],
+        "LinkedMontage": {
+          "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+        },
+        "SlotIndex": 0,
+        "SegmentIndex": 0,
+        "LinkMethod": {
+          "value__": 0
+        },
+        "CachedLinkMethod": {
+          "value__": 0
+        },
+        "SegmentBeginTime": 0.0,
+        "SegmentLength": 1.3333333730697632,
+        "LinkValue": 1.2591431140899658,
+        "LinkedSequence": {
+          "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+        }
+      }
+    ],
+    "SequenceLength": 1.3333333730697632,
+    "RateScale": 1.0,
+    "Notifies": [
+      {
+        "TriggerTimeOffset": -9.999999747378752e-05,
+        "EndTriggerTimeOffset": 0.0,
+        "TriggerWeightThreshold": 9.999999747378752e-06,
+        "NotifyName": "NotifyState_HideEquippable_C",
+        "Notify": {
+          "reference": "0"
+        },
+        "NotifyStateClass": {
+          "reference": "NotifyState_HideEquippable_C'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:NotifyState_HideEquippable_C_0'"
+        },
+        "Duration": 2.0,
+        "EndLink": {
+          "LinkedMontage": {
+            "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": -1,
+          "LinkMethod": {
+            "value__": 0
+          },
+          "CachedLinkMethod": {
+            "value__": 0
+          },
+          "SegmentBeginTime": -1.0,
+          "SegmentLength": -1.0,
+          "LinkValue": 2.0,
+          "LinkedSequence": {
+            "reference": "0"
+          }
+        },
+        "bConvertedFromBranchingPoint": false,
+        "MontageTickType": {
+          "value__": 0
+        },
+        "NotifyTriggerChance": 1.0,
+        "NotifyFilterType": {
+          "value__": 0
+        },
+        "NotifyFilterLOD": 0,
+        "bTriggerOnDedicatedServer": true,
+        "bTriggerOnFollower": false,
+        "TrackIndex": 0,
+        "LinkedMontage": {
+          "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+        },
+        "SlotIndex": 0,
+        "SegmentIndex": 0,
+        "LinkMethod": {
+          "value__": 0
+        },
+        "CachedLinkMethod": {
+          "value__": 0
+        },
+        "SegmentBeginTime": 0.0,
+        "SegmentLength": 1.3333333730697632,
+        "LinkValue": 0.0,
+        "LinkedSequence": {
+          "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+        }
+      },
+      {
+        "TriggerTimeOffset": 0.0,
+        "EndTriggerTimeOffset": -9.999999747378752e-05,
+        "TriggerWeightThreshold": 9.999999747378752e-06,
+        "NotifyName": "CanInterruptDeathReaction",
+        "Notify": {
+          "reference": "0"
+        },
+        "NotifyStateClass": {
+          "reference": "AnimNotifyState_CanInterruptDeathReaction'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:AnimNotifyState_CanInterruptDeathReaction_0'"
+        },
+        "Duration": 1.0624431371688843,
+        "EndLink": {
+          "LinkedMontage": {
+            "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": 0,
+          "LinkMethod": {
+            "value__": 0
+          },
+          "CachedLinkMethod": {
+            "value__": 0
+          },
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 1.3333333730697632,
+          "LinkValue": 1.3333333730697632,
+          "LinkedSequence": {
+            "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+          }
+        },
+        "bConvertedFromBranchingPoint": false,
+        "MontageTickType": {
+          "value__": 0
+        },
+        "NotifyTriggerChance": 1.0,
+        "NotifyFilterType": {
+          "value__": 0
+        },
+        "NotifyFilterLOD": 0,
+        "bTriggerOnDedicatedServer": true,
+        "bTriggerOnFollower": false,
+        "TrackIndex": 1,
+        "LinkedMontage": {
+          "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+        },
+        "SlotIndex": 0,
+        "SegmentIndex": 0,
+        "LinkMethod": {
+          "value__": 0
+        },
+        "CachedLinkMethod": {
+          "value__": 0
+        },
+        "SegmentBeginTime": 0.0,
+        "SegmentLength": 1.3333333730697632,
+        "LinkValue": 0.2708902657032013,
+        "LinkedSequence": {
+          "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+        }
+      },
+      {
+        "TriggerTimeOffset": 0.0,
+        "EndTriggerTimeOffset": 0.0,
+        "TriggerWeightThreshold": 9.999999747378752e-06,
+        "NotifyName": "Audio_StandingMaterial_C",
+        "Notify": {
+          "reference": "AnimNotify_Audio_StandingMaterial_C'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:AnimNotify_Audio_StandingMaterial_C_0'"
+        },
+        "NotifyStateClass": {
+          "reference": "0"
+        },
+        "Duration": 0.0,
+        "EndLink": {
+          "LinkedMontage": {
+            "reference": "0"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": -1,
+          "LinkMethod": {
+            "value__": 0
+          },
+          "CachedLinkMethod": {
+            "value__": 0
+          },
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 0.0,
+          "LinkValue": 0.29085469245910645,
+          "LinkedSequence": {
+            "reference": "0"
+          }
+        },
+        "bConvertedFromBranchingPoint": false,
+        "MontageTickType": {
+          "value__": 0
+        },
+        "NotifyTriggerChance": 1.0,
+        "NotifyFilterType": {
+          "value__": 0
+        },
+        "NotifyFilterLOD": 0,
+        "bTriggerOnDedicatedServer": true,
+        "bTriggerOnFollower": false,
+        "TrackIndex": 8,
+        "LinkedMontage": {
+          "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+        },
+        "SlotIndex": 0,
+        "SegmentIndex": 0,
+        "LinkMethod": {
+          "value__": 0
+        },
+        "CachedLinkMethod": {
+          "value__": 0
+        },
+        "SegmentBeginTime": 0.0,
+        "SegmentLength": 1.3333333730697632,
+        "LinkValue": 0.29085469245910645,
+        "LinkedSequence": {
+          "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+        }
+      },
+      {
+        "TriggerTimeOffset": 0.0,
+        "EndTriggerTimeOffset": 0.0,
+        "TriggerWeightThreshold": 9.999999747378752e-06,
+        "NotifyName": "Audio_StandingMaterial_C",
+        "Notify": {
+          "reference": "AnimNotify_Audio_StandingMaterial_C'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:AnimNotify_Audio_StandingMaterial_C_1'"
+        },
+        "NotifyStateClass": {
+          "reference": "0"
+        },
+        "Duration": 0.0,
+        "EndLink": {
+          "LinkedMontage": {
+            "reference": "0"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": -1,
+          "LinkMethod": {
+            "value__": 0
+          },
+          "CachedLinkMethod": {
+            "value__": 0
+          },
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 0.0,
+          "LinkValue": 0.36878708004951477,
+          "LinkedSequence": {
+            "reference": "0"
+          }
+        },
+        "bConvertedFromBranchingPoint": false,
+        "MontageTickType": {
+          "value__": 0
+        },
+        "NotifyTriggerChance": 1.0,
+        "NotifyFilterType": {
+          "value__": 0
+        },
+        "NotifyFilterLOD": 0,
+        "bTriggerOnDedicatedServer": true,
+        "bTriggerOnFollower": false,
+        "TrackIndex": 7,
+        "LinkedMontage": {
+          "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+        },
+        "SlotIndex": 0,
+        "SegmentIndex": 0,
+        "LinkMethod": {
+          "value__": 0
+        },
+        "CachedLinkMethod": {
+          "value__": 0
+        },
+        "SegmentBeginTime": 0.0,
+        "SegmentLength": 1.3333333730697632,
+        "LinkValue": 0.36878708004951477,
+        "LinkedSequence": {
+          "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+        }
+      },
+      {
+        "TriggerTimeOffset": 0.0,
+        "EndTriggerTimeOffset": 0.0,
+        "TriggerWeightThreshold": 9.999999747378752e-06,
+        "NotifyName": "Audio_StandingMaterial_C",
+        "Notify": {
+          "reference": "AnimNotify_Audio_StandingMaterial_C'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:AnimNotify_Audio_StandingMaterial_C_2'"
+        },
+        "NotifyStateClass": {
+          "reference": "0"
+        },
+        "Duration": 0.0,
+        "EndLink": {
+          "LinkedMontage": {
+            "reference": "0"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": -1,
+          "LinkMethod": {
+            "value__": 0
+          },
+          "CachedLinkMethod": {
+            "value__": 0
+          },
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 0.0,
+          "LinkValue": 0.4328029453754425,
+          "LinkedSequence": {
+            "reference": "0"
+          }
+        },
+        "bConvertedFromBranchingPoint": false,
+        "MontageTickType": {
+          "value__": 0
+        },
+        "NotifyTriggerChance": 1.0,
+        "NotifyFilterType": {
+          "value__": 0
+        },
+        "NotifyFilterLOD": 0,
+        "bTriggerOnDedicatedServer": true,
+        "bTriggerOnFollower": false,
+        "TrackIndex": 6,
+        "LinkedMontage": {
+          "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+        },
+        "SlotIndex": 0,
+        "SegmentIndex": 0,
+        "LinkMethod": {
+          "value__": 0
+        },
+        "CachedLinkMethod": {
+          "value__": 0
+        },
+        "SegmentBeginTime": 0.0,
+        "SegmentLength": 1.3333333730697632,
+        "LinkValue": 0.4328029453754425,
+        "LinkedSequence": {
+          "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+        }
+      },
+      {
+        "TriggerTimeOffset": 0.0,
+        "EndTriggerTimeOffset": 0.0,
+        "TriggerWeightThreshold": 9.999999747378752e-06,
+        "NotifyName": "Audio_StandingMaterial_C",
+        "Notify": {
+          "reference": "AnimNotify_Audio_StandingMaterial_C'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:AnimNotify_Audio_StandingMaterial_C_3'"
+        },
+        "NotifyStateClass": {
+          "reference": "0"
+        },
+        "Duration": 0.0,
+        "EndLink": {
+          "LinkedMontage": {
+            "reference": "0"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": -1,
+          "LinkMethod": {
+            "value__": 0
+          },
+          "CachedLinkMethod": {
+            "value__": 0
+          },
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 0.0,
+          "LinkValue": 0.573359489440918,
+          "LinkedSequence": {
+            "reference": "0"
+          }
+        },
+        "bConvertedFromBranchingPoint": false,
+        "MontageTickType": {
+          "value__": 0
+        },
+        "NotifyTriggerChance": 1.0,
+        "NotifyFilterType": {
+          "value__": 0
+        },
+        "NotifyFilterLOD": 0,
+        "bTriggerOnDedicatedServer": true,
+        "bTriggerOnFollower": false,
+        "TrackIndex": 5,
+        "LinkedMontage": {
+          "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+        },
+        "SlotIndex": 0,
+        "SegmentIndex": 0,
+        "LinkMethod": {
+          "value__": 0
+        },
+        "CachedLinkMethod": {
+          "value__": 0
+        },
+        "SegmentBeginTime": 0.0,
+        "SegmentLength": 1.3333333730697632,
+        "LinkValue": 0.573359489440918,
+        "LinkedSequence": {
+          "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+        }
+      },
+      {
+        "TriggerTimeOffset": 0.0,
+        "EndTriggerTimeOffset": 0.0,
+        "TriggerWeightThreshold": 9.999999747378752e-06,
+        "NotifyName": "Audio_StandingMaterial_C",
+        "Notify": {
+          "reference": "AnimNotify_Audio_StandingMaterial_C'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:AnimNotify_Audio_StandingMaterial_C_4'"
+        },
+        "NotifyStateClass": {
+          "reference": "0"
+        },
+        "Duration": 0.0,
+        "EndLink": {
+          "LinkedMontage": {
+            "reference": "0"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": -1,
+          "LinkMethod": {
+            "value__": 0
+          },
+          "CachedLinkMethod": {
+            "value__": 0
+          },
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 0.0,
+          "LinkValue": 0.7097411751747131,
+          "LinkedSequence": {
+            "reference": "0"
+          }
+        },
+        "bConvertedFromBranchingPoint": false,
+        "MontageTickType": {
+          "value__": 0
+        },
+        "NotifyTriggerChance": 1.0,
+        "NotifyFilterType": {
+          "value__": 0
+        },
+        "NotifyFilterLOD": 0,
+        "bTriggerOnDedicatedServer": true,
+        "bTriggerOnFollower": false,
+        "TrackIndex": 4,
+        "LinkedMontage": {
+          "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+        },
+        "SlotIndex": 0,
+        "SegmentIndex": 0,
+        "LinkMethod": {
+          "value__": 0
+        },
+        "CachedLinkMethod": {
+          "value__": 0
+        },
+        "SegmentBeginTime": 0.0,
+        "SegmentLength": 1.3333333730697632,
+        "LinkValue": 0.7097411751747131,
+        "LinkedSequence": {
+          "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+        }
+      },
+      {
+        "TriggerTimeOffset": 0.0,
+        "EndTriggerTimeOffset": 0.0,
+        "TriggerWeightThreshold": 9.999999747378752e-06,
+        "NotifyName": "Audio_StandingMaterial_C",
+        "Notify": {
+          "reference": "AnimNotify_Audio_StandingMaterial_C'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:AnimNotify_Audio_StandingMaterial_C_5'"
+        },
+        "NotifyStateClass": {
+          "reference": "0"
+        },
+        "Duration": 0.0,
+        "EndLink": {
+          "LinkedMontage": {
+            "reference": "0"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": -1,
+          "LinkMethod": {
+            "value__": 0
+          },
+          "CachedLinkMethod": {
+            "value__": 0
+          },
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 0.0,
+          "LinkValue": 0.8071566224098206,
+          "LinkedSequence": {
+            "reference": "0"
+          }
+        },
+        "bConvertedFromBranchingPoint": false,
+        "MontageTickType": {
+          "value__": 0
+        },
+        "NotifyTriggerChance": 1.0,
+        "NotifyFilterType": {
+          "value__": 0
+        },
+        "NotifyFilterLOD": 0,
+        "bTriggerOnDedicatedServer": true,
+        "bTriggerOnFollower": false,
+        "TrackIndex": 3,
+        "LinkedMontage": {
+          "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+        },
+        "SlotIndex": 0,
+        "SegmentIndex": 0,
+        "LinkMethod": {
+          "value__": 0
+        },
+        "CachedLinkMethod": {
+          "value__": 0
+        },
+        "SegmentBeginTime": 0.0,
+        "SegmentLength": 1.3333333730697632,
+        "LinkValue": 0.8071566224098206,
+        "LinkedSequence": {
+          "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+        }
+      },
+      {
+        "TriggerTimeOffset": 0.0,
+        "EndTriggerTimeOffset": 0.0,
+        "TriggerWeightThreshold": 9.999999747378752e-06,
+        "NotifyName": "Audio_StandingMaterial_C",
+        "Notify": {
+          "reference": "AnimNotify_Audio_StandingMaterial_C'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:AnimNotify_Audio_StandingMaterial_C_6'"
+        },
+        "NotifyStateClass": {
+          "reference": "0"
+        },
+        "Duration": 0.0,
+        "EndLink": {
+          "LinkedMontage": {
+            "reference": "0"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": -1,
+          "LinkMethod": {
+            "value__": 0
+          },
+          "CachedLinkMethod": {
+            "value__": 0
+          },
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 0.0,
+          "LinkValue": 0.943538248538971,
+          "LinkedSequence": {
+            "reference": "0"
+          }
+        },
+        "bConvertedFromBranchingPoint": false,
+        "MontageTickType": {
+          "value__": 0
+        },
+        "NotifyTriggerChance": 1.0,
+        "NotifyFilterType": {
+          "value__": 0
+        },
+        "NotifyFilterLOD": 0,
+        "bTriggerOnDedicatedServer": true,
+        "bTriggerOnFollower": false,
+        "TrackIndex": 2,
+        "LinkedMontage": {
+          "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+        },
+        "SlotIndex": 0,
+        "SegmentIndex": 0,
+        "LinkMethod": {
+          "value__": 0
+        },
+        "CachedLinkMethod": {
+          "value__": 0
+        },
+        "SegmentBeginTime": 0.0,
+        "SegmentLength": 1.3333333730697632,
+        "LinkValue": 0.943538248538971,
+        "LinkedSequence": {
+          "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+        }
+      },
+      {
+        "TriggerTimeOffset": 0.0,
+        "EndTriggerTimeOffset": -9.999999747378752e-05,
+        "TriggerWeightThreshold": 9.999999747378752e-06,
+        "NotifyName": "OnDeadAndSettled_C",
+        "Notify": {
+          "reference": "0"
+        },
+        "NotifyStateClass": {
+          "reference": "AnimNotifyState_OnDeadAndSettled_C'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage:AnimNotifyState_OnDeadAndSettled_C_0'"
+        },
+        "Duration": 0.27006351947784424,
+        "EndLink": {
+          "LinkedMontage": {
+            "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+          },
+          "SlotIndex": 0,
+          "SegmentIndex": 0,
+          "LinkMethod": {
+            "value__": 0
+          },
+          "CachedLinkMethod": {
+            "value__": 0
+          },
+          "SegmentBeginTime": 0.0,
+          "SegmentLength": 1.3333333730697632,
+          "LinkValue": 1.3333333730697632,
+          "LinkedSequence": {
+            "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+          }
+        },
+        "bConvertedFromBranchingPoint": false,
+        "MontageTickType": {
+          "value__": 0
+        },
+        "NotifyTriggerChance": 1.0,
+        "NotifyFilterType": {
+          "value__": 0
+        },
+        "NotifyFilterLOD": 0,
+        "bTriggerOnDedicatedServer": true,
+        "bTriggerOnFollower": false,
+        "TrackIndex": 9,
+        "LinkedMontage": {
+          "reference": "AnimMontage'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG_Montage.TP_Core_Death_Belly_Front_LG_Montage'"
+        },
+        "SlotIndex": 0,
+        "SegmentIndex": 0,
+        "LinkMethod": {
+          "value__": 0
+        },
+        "CachedLinkMethod": {
+          "value__": 0
+        },
+        "SegmentBeginTime": 0.0,
+        "SegmentLength": 1.3333333730697632,
+        "LinkValue": 1.063269853591919,
+        "LinkedSequence": {
+          "reference": "AnimSequence'/Game/Characters/_Core/Death/3P/Anims/TP_Core_Death_Belly_Front_LG.TP_Core_Death_Belly_Front_LG'"
+        }
+      }
+    ]
+  }
+}

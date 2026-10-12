@@ -487,11 +487,12 @@ a.player-name-wrap:focus-visible{outline:2px solid var(--brand);outline-offset:2
 .overview-hero-footer{border-top:1px solid var(--surface-border);padding:16px 0;font-size:12px;color:#a1a1aa;}
 .overview-hero-footer a{color:#c4c4cc;text-decoration:none;white-space:nowrap;}
 .overview-hero-footer a:hover{color:#fff;}
-.overview-basic-stats{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));margin:0;border:1px solid var(--surface-border);border-radius:12px;background:var(--surface);}
+.overview-basic-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(max-content,1fr) repeat(2,minmax(0,1fr));margin:0;border:1px solid var(--surface-border);border-radius:12px;background:var(--surface);}
 .overview-basic-stats>div{min-width:0;padding:18px 20px;border-right:1px solid var(--surface-border);}
 .overview-basic-stats>div:last-child{border-right:0;}
 .overview-basic-stats dt{color:#a1a1aa;font-size:11px;margin-bottom:8px;}
 .overview-basic-stats dd{margin:0;font-size:25px;line-height:1.1;font-weight:700;font-variant-numeric:tabular-nums;}
+#sg-playtime{white-space:nowrap;}
 .overview-previews{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;}
 .overview-preview{min-width:0;background:var(--surface);border:1px solid var(--surface-border);border-radius:12px;padding:20px;}
 .overview-preview-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--text);text-decoration:none;margin-bottom:15px;}
@@ -646,8 +647,10 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
 .rank-table{width:100%;min-width:620px;border-collapse:separate;border-spacing:0;text-align:right;font-family:var(--font-display);font-variant-numeric:tabular-nums;}
 .rank-table.duos-table{min-width:680px;}
 #teammate-list .duos-table{min-width:800px;}
-#teammate-list .duos-table th:first-child{width:180px;max-width:180px;}
-#teammate-list .duo-player-name{max-width:148px;vertical-align:middle;}
+#teammate-list .duos-table th:first-child{width:auto;}
+#teammate-list .duos-table th:not(:first-child){width:1%;}
+#teammate-list .duo-player-name{max-width:none;vertical-align:middle;}
+#teammate-list .duo-name{flex-shrink:0;overflow:visible;text-overflow:clip;}
 #party-size-list .duos-table{min-width:800px;}
 .rank-table.duos-table th,.rank-table.duos-table td{padding-left:16px;padding-right:16px;}
 .duos-table th:first-child{width:25%;}
@@ -817,27 +820,6 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
 .stat-chart-svg .bar{fill:#93c5fd;}.stat-chart-svg .bar.win{fill:#4ade80;}.stat-chart-svg .bar.loss{fill:#f87171;}.stat-chart-svg .bar.draw{fill:#facc15;}
 .stat-chart-svg .bar:focus{outline:none;stroke:#fff;stroke-width:2;}
 .stat-chart-note{margin:10px 0 0;color:#a1a1aa;font-size:12px;line-height:1.5;}
-.performance-dna-key{width:18px;height:3px;border-radius:2px;background:#67e8f9;}
-.performance-dna-key.ps{background:#c4b5fd;}
-.performance-dna-svg{display:block;width:100%;min-width:640px;height:194px;font-family:var(--font-body);}
-.performance-dna-svg .grid{stroke:#29292f;stroke-width:1;}
-.performance-dna-svg .midline{stroke:#555560;stroke-dasharray:3 5;}
-.performance-dna-svg .tick{fill:#a1a1aa;font-size:10px;}
-.performance-dna-svg .strand{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;}
-.performance-dna-svg .acs{stroke:#67e8f9;}.performance-dna-svg .ps{stroke:#c4b5fd;}
-.performance-dna-svg .dna-point{stroke:#141416;stroke-width:2;}
-.performance-dna-svg .dna-game{cursor:crosshair;outline:none;}
-.performance-dna-svg .dna-game .dna-hit{fill:transparent;}
-.performance-dna-svg .dna-game.selected .dna-hit,.performance-dna-svg .dna-game:focus .dna-hit{fill:rgba(255,255,255,.045);}
-.performance-dna-svg .dna-game:focus .dna-point{stroke:#fff;}
-.performance-dna-scroll{position:relative;}
-.performance-dna-scroll .performance-dna-tooltip{min-width:170px;max-width:240px;top:8px;}
-.performance-dna-tooltip strong{display:block;margin-bottom:4px;}
-.performance-dna-tooltip .acs{color:#67e8f9;}.performance-dna-tooltip .ps{color:#c4b5fd;}
-.overview-performance-dna{grid-column:1/-1;}
-.overview-performance-dna h2 small{margin-left:8px;font-size:11px;font-weight:400;color:#a1a1aa;}
-.overview-performance-dna .performance-dna-svg{min-width:0;height:160px;}
-.overview-performance-dna .dna-game{cursor:default;}
 @media(max-width:640px){.stat-chart-card{padding:14px;}}
 @media(max-width:600px){
   .rank-table th,.rank-table td,.rank-table.duos-table th,.rank-table.duos-table td{padding-left:14px;padding-right:14px;}
@@ -1032,6 +1014,19 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
       </div>
     </div>
     <div id="servers-empty" class="page-empty" role="status">Search for a player above to compare their servers.</div>
+    <section id="server-ping-map" class="map-panel" aria-label="Europe server ping map">
+      <div class="map-heading">
+        <div class="map-server-heading"><strong id="map-server-name">Frankfurt</strong><span>Click a server to explore ping</span></div>
+        <label class="ring-toggle"><input id="show-rings" type="checkbox" checked> Ping rings</label>
+      </div>
+      <svg id="map" viewBox="0 0 1000 760" preserveAspectRatio="xMidYMid slice" aria-label="Select a server pin and a country to explore approximate ping."><defs><clipPath id="map-clip"><rect width="1000" height="760"/></clipPath></defs><g clip-path="url(#map-clip)"><g id="map-scene"></g></g></svg>
+      <div class="map-controls" aria-label="Map controls"><button id="zoom-in" type="button" aria-label="Zoom in">+</button><button id="zoom-out" type="button" aria-label="Zoom out">−</button><button id="reset-map" type="button" aria-label="Reset map view">↺</button></div>
+      <div id="tooltip" role="tooltip" hidden></div>
+      <div class="map-footer">
+      <div id="map-readout" class="map-readout" role="status" aria-live="polite">Loading map…</div>
+      <div class="legend" aria-label="Estimated ping bands"><span><i style="--color:#62dfb4"></i>&lt;20 ms</span><span><i style="--color:#9ad579"></i>20–35</span><span><i style="--color:#e2c06c"></i>35–50</span><span><i style="--color:#e99a68"></i>50–75</span><span><i style="--color:#dc758d"></i>75+ ms</span></div>
+      </div>
+    </section>
   </main>
   <main id="rr-page" class="detail-page" hidden aria-labelledby="rr-title">
     <div class="page-heading"><h1 id="rr-title" tabindex="-1">RR Breakdown</h1></div>
@@ -1053,21 +1048,6 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
         <dl id="rr-summary-stats" class="rr-summary-stats" aria-label="RR summary for selected match range"></dl>
         <div id="rr-reported-summary" class="rr-reported-summary" aria-live="polite"></div>
         <div id="rr-trend-chart" class="rr-trend-scroll" role="region" aria-label="RR trend across matches" tabindex="0"></div>
-      </section>
-      <section id="performance-dna-section" class="rr-trend-card" aria-labelledby="performance-dna-title" hidden>
-        <div class="rr-trend-head">
-          <div class="rr-trend-head-main">
-          <h2 id="performance-dna-title">Performance DNA</h2>
-          <div class="party-size-options" role="radiogroup" aria-label="Performance DNA match range">
-            <label><input type="radio" name="performance-dna-range" value="all" checked onchange="setPerformanceDnaRange(this.value)"><span id="performance-dna-all-label">All (0)</span></label>
-            <label id="performance-dna-50-option" hidden><input type="radio" name="performance-dna-range" value="50" aria-label="50 most recent matches" onchange="setPerformanceDnaRange(this.value)"><span>50</span></label>
-            <label><input type="radio" name="performance-dna-range" value="30" aria-label="30 most recent matches" onchange="setPerformanceDnaRange(this.value)"><span>30</span></label>
-            <label><input type="radio" name="performance-dna-range" value="20" aria-label="20 most recent matches" onchange="setPerformanceDnaRange(this.value)"><span>20</span></label>
-          </div>
-          </div>
-        </div>
-        <div class="stat-chart-legend"><span><i class="performance-dna-key"></i>ACS</span><span><i class="performance-dna-key ps"></i>PS</span><span id="performance-dna-coverage"></span></div>
-        <div id="performance-dna-chart" class="stat-chart-scroll performance-dna-scroll" role="region" aria-label="ACS and PS lobby percentiles by game, oldest to newest" tabindex="0"></div>
       </section>
       <section id="rr-movement-section" class="rr-movement-section" hidden aria-labelledby="rr-movement-title">
         <div class="rr-movement-card">
@@ -1151,12 +1131,7 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
         </section>
       </div>
       <div class="overview-previews">
-        <section id="overview-performance-dna-section" class="overview-preview overview-performance-dna" aria-labelledby="overview-performance-dna-title" hidden>
-          <a class="overview-preview-heading" href="/rr" data-page="rr"><h2 id="overview-performance-dna-title">Performance DNA <small>Last 20</small></h2><span aria-hidden="true">↗</span></a>
-          <div class="stat-chart-legend"><span><i class="performance-dna-key"></i>ACS</span><span><i class="performance-dna-key ps"></i>PS</span></div>
-          <div id="overview-performance-dna-chart" role="img" aria-label="ACS and PS lobby percentiles in the last 20 games"></div>
-        </section>
-        <section class="overview-preview" aria-labelledby="overview-lobbies-title">
+          <section class="overview-preview" aria-labelledby="overview-lobbies-title">
           <a class="overview-preview-heading" href="/lobbyrank" data-page="lobby-rank"><h2 id="overview-lobbies-title">Most-played lobbies</h2><span aria-hidden="true">↗</span></a>
           <div id="overview-lobbies"></div>
         </section>
@@ -1497,7 +1472,7 @@ function parseRRDetails(h){
     afterTier:number(h.tier?.id),afterRR:number(h.rr),
     queue:typeof h.queue_id==='string'?h.queue_id:null,
     duration:Number.isFinite(h.match_length)&&h.match_length>=0?h.match_length:null,
-    movement:typeof h.competitive_movement==='string'?h.competitive_movement:null,
+    movement:typeof h.competitive_movement==='string'&&h.competitive_movement!=='MOVEMENT_UNKNOWN'?h.competitive_movement:null,
   };
 }
 function reportedRRStart(d){
@@ -1837,6 +1812,22 @@ function loadPlayerFromRoute(){
   updateSeasonTriggerLabel();
   runAnalysis(undefined,{fromUrl:true,initialAct:route.act});
 }
+let serverPingMapLoad=null;
+function loadServerPingMap(){
+  if(serverPingMapLoad)return;
+  serverPingMapLoad=(async()=>{
+    if(!document.querySelector('link[data-ping-map-style]')){
+      const css=document.createElement('link');css.rel='stylesheet';css.href='/assets/ping-map/map.css';css.dataset.pingMapStyle='';document.head.appendChild(css);
+    }
+    for(const file of ['d3.min.js','countries.js','map.js']){
+      if(document.querySelector(`script[data-ping-map-file="${file}"]`))continue;
+      await new Promise((resolve,reject)=>{
+        const script=document.createElement('script');script.src='/assets/ping-map/'+file;script.dataset.pingMapFile=file;
+        script.onload=resolve;script.onerror=()=>{script.remove();reject(new Error('Map asset unavailable'));};document.head.appendChild(script);
+      });
+    }
+  })().catch(()=>{document.getElementById('map-readout').textContent='Map unavailable. Reopen Servers to retry.';serverPingMapLoad=null;});
+}
 function applyPage(focus=false){
   const playerRoute=parsePlayerRoute();
   let path=location.pathname.replace(/\/+$/,'');
@@ -1854,6 +1845,7 @@ function applyPage(focus=false){
   document.getElementById('matches-page').hidden=activePage!=='matches';
   document.getElementById('lobby-rank-page').hidden=activePage!=='lobby-rank';
   document.getElementById('servers-page').hidden=activePage!=='servers';
+  if(activePage==='servers')loadServerPingMap();
   document.getElementById('rr-page').hidden=activePage!=='rr';
   document.getElementById('names-page').hidden=activePage!=='names';
   const titles={overview:'vlravg — Average Lobby Rank & Valorant Stats',duos:'Duos — vlravg',matches:'Match History — vlravg','lobby-rank':'Lobby Rank — vlravg',servers:'Servers — vlravg',rr:'RR Breakdown — vlravg',names:'Name History — vlravg'};
@@ -2560,8 +2552,6 @@ function runAnalysis(searchOverride,{fromUrl=false,initialAct=null}={}){
   CURRENT_TIER_ID=null;
   CURRENT_RR=null;
   allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;mhDayStats={};
-  performanceDnaRange='all';
-  document.querySelector('input[name="performance-dna-range"][value="all"]').checked=true;
   _rrChangeByMatchId={};_rrDetailsByMatchId={};_preRRByMatchId={};_preTierByMatchId={};_postRRByMatchId={};_postTierByMatchId={};_refundedRRByMatchId={};_derankProtectedByMatchId={};
   allTeammates=[];allEncounters=[];serverData=[];serverPartySize=0;serverFilteredMatchCount=0;lobbyRankPartySize=0;lobbyRankFilteredMatchCount=0;rrMovementZoomTier=null;
   rrTrendRange='all';
@@ -3818,6 +3808,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       .sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0))));
     setSeasonMatchCount(TARGET_SEASON,allMatches.length,'loading');
     renderAll(true);
+    void refreshTeammateNames(lookupTeammateRows(allMatches));
     setStatus(`Showing ${allMatches.length} games. Checking for more matches…`,true);
   };
   const onRateLimit=seconds=>{
@@ -3932,7 +3923,8 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
           const historyTotal=entry=>{
             const tier=entry?.tier?.id??0;
             if(tier>=24&&Number.isFinite(entry?.rr))return 2100+entry.rr;
-            return Number.isFinite(entry?.elo)?entry.elo:(Number.isFinite(entry?.rr)?entry.rr:null);
+            return Number.isFinite(entry?.elo)?entry.elo:
+              tier>=3&&Number.isFinite(entry?.rr)?(tier-3)*100+entry.rr:null;
           };
           const previousTotal=historyTotal(prev);
           const endingTotal=historyTotal(h);
@@ -4177,6 +4169,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     setProgress(100);
     setTimeout(()=>{if(myGen===_analysisGen)setProgress(0);},600);
     renderAll();
+    void refreshTeammateNames(lookupTeammateRows(allMatches));
     if(scanStoppedEarly&&allMatches.length)
       setStatus(`Showing ${allMatches.length} games. The live match scan stopped early; search again later to load more.`);
   }catch(e){
@@ -4607,6 +4600,58 @@ function computeEncounters(matches,partyScope,playerPuuid,playerName,playerTag){
     .sort((a,b)=>b.games-a.games||b.lastSeen-a.lastSeen||a.name.localeCompare(b.name));
 }
 
+// Match archives preserve Riot IDs at match time. Resolve current duo names
+// separately during a player lookup, once per analysis. Rendering, navigation,
+// and filters only reuse these names; they never initiate account requests.
+let teammateNameState=null;
+function lookupTeammateRows(matches){
+  const rows=new Map();
+  for(const m of matches){
+    if(!m.myPartyId)continue;
+    const me=m.players.find(p=>p.puuid===PUUID);
+    if(!me)continue;
+    for(const p of m.players){
+      if(p===me||p.team_id!==me.team_id||p.party_id!==m.myPartyId||!p.puuid)continue;
+      rows.set(p.puuid.toLowerCase(),{key:p.puuid});
+    }
+  }
+  return [...rows.values()];
+}
+function currentTeammateIdentity(p){
+  if(teammateNameState?.generation!==_analysisGen)return p;
+  return teammateNameState.accounts.get(p.puuid?.toLowerCase())||p;
+}
+async function refreshTeammateNames(rows){
+  if(teammateNameState?.generation!==_analysisGen){
+    teammateNameState={generation:_analysisGen,accounts:new Map(),queue:[],running:false};
+  }
+  const state=teammateNameState,signal=_analysisController?.signal;
+  for(const row of rows){
+    if(!PUUID_RE.test(row.key))continue;
+    const id=row.key.toLowerCase();
+    if(state.accounts.has(id))continue;
+    state.accounts.set(id,null); // Also deduplicates failed and pending lookups.
+    state.queue.push(id);
+  }
+  if(state.running)return;
+  state.running=true;
+  try{
+    while(state.queue.length&&state.generation===_analysisGen&&!signal?.aborted){
+      const id=state.queue.shift();
+      try{
+        const result=await apiGet(`${API_BASE}/account-by-puuid/${encodeURIComponent(id)}`,{signal,quiet:true,cache:'no-store'});
+        if(state.generation!==_analysisGen||signal?.aborted)return;
+        const account=result?.data;
+        if(account?.puuid?.toLowerCase()!==id||!account.name||!account.tag)continue;
+        state.accounts.set(id,{name:account.name,tag:account.tag});
+        buildTeammates(); // Updates the duo table, overview, and profile links.
+      }catch{
+        // Keep the last observed name when a lookup is unavailable.
+      }
+    }
+  }finally{state.running=false;}
+}
+
 function buildTeammates(){
   const tmap={};
   statMatches.forEach(m=>{
@@ -4620,7 +4665,12 @@ function buildTeammates(){
       // Only count players who were in the same party (duo/trio/5-stack)
       if(!m.myPartyId||p.party_id!==m.myPartyId)return;
       const key=p.puuid||`${p.name}#${p.tag}`;
-      if(!tmap[key])tmap[key]={name:p.name,tag:p.tag,key,games:0,wins:0,decided:0,kills:0,deaths:0,rankSum:0,rankCount:0,acsSum:0,acsCount:0,performanceSum:0,performanceCount:0,placeSum:0,placeCount:0,rrTotal:0,rrCount:0};
+      if(!tmap[key])tmap[key]={name:p.name,tag:p.tag,key,lastSeen:-1,games:0,wins:0,decided:0,kills:0,deaths:0,rankSum:0,rankCount:0,acsSum:0,acsCount:0,performanceSum:0,performanceCount:0,placeSum:0,placeCount:0,rrTotal:0,rrCount:0};
+      if((m.startedAtMs||0)>tmap[key].lastSeen){
+        const identity=currentTeammateIdentity(p);
+        tmap[key].name=identity.name;tmap[key].tag=identity.tag;
+        tmap[key].lastSeen=m.startedAtMs||0;
+      }
       tmap[key].games++;
       if(m.won===true||m.won===false)tmap[key].decided++;
       if(m.won===true)tmap[key].wins++;
@@ -4809,7 +4859,6 @@ function overviewRecentMatches(matches){
 
 function decidedWinRate(wins,decided){return decided>0?wins/decided*100:null;}
 function renderOverviewPreviews(){
-  renderPerformanceDna(allMatches,{overview:true});
   const rated=statMatches.filter(m=>m.avgRank!=null);
   const placements=allMatches.some(m=>m.postReset);
   document.getElementById('overview-lobby-context').textContent=`${rated.length} rated lobbies${placements?' · Placements '+(mhIncludeReset?'included':'excluded'):''}`;
@@ -5811,7 +5860,6 @@ function buildRRDetailsHtml(m){
   return `<section class="match-rr-details" aria-label="Your RR details"><h4>Your RR details</h4><dl>${rows.join('')}</dl><p>${hasBreakdown?'Reported bonus and penalty fields describe this update; they are not added again to the recorded payout.':'Bonus and penalty details are unavailable for this match.'}</p></section>`;
 }
 function renderRRBreakdown(matches){
-  renderPerformanceDna(allMatches);
   renderScoreMarginChart(allMatches);
   renderRRByScore(matches);
   renderRRTrend(matches);
@@ -6319,186 +6367,6 @@ function updateLoadMoreBtn(total){
     loadMoreBtn.textContent=`Load More (${remaining} remaining)`;
   }else{
     loadMoreBtn.style.display='none';
-  }
-}
-
-// Full rebuild — used for the initial render, since everything needs redoing.
-// Compare positions within the SAME lobby, rather than equating raw ACS and
-// PS scales. A tied mid-rank among N players maps to [0,100] with N-1 intervals.
-// Both ranks use the same measured players. Partial coverage is disclosed,
-// and fewer than two paired players cannot establish a relative position.
-function performanceComparisonRows(matches){
-  const percentile=(value,players,field)=>{
-    if(!Number.isFinite(value))return{value:null,count:0};
-    const scores=players.map(p=>p[field]).filter(Number.isFinite);
-    if(scores.length<2||!scores.includes(value))return{value:null,count:scores.length};
-    const lower=scores.filter(score=>score<value).length;
-    const tied=scores.filter(score=>score===value).length;
-    return{value:100*(lower+(tied-1)/2)/(scores.length-1),count:scores.length};
-  };
-  return [...matches].sort((a,b)=>(a.startedAtMs??0)-(b.startedAtMs??0)).map((m,index)=>{
-    const acs=m.myStats?.acs,ps=m.myStats?.performanceScore;
-    const peers=(m.players||[]).filter(p=>Number.isFinite(p._acs)&&Number.isFinite(p._performanceScore));
-    const hasScores=Number.isFinite(acs)&&Number.isFinite(ps);
-    const acsRank=percentile(hasScores?acs:null,peers,'_acs');
-    const psRank=percentile(hasScores?ps:null,peers,'_performanceScore');
-    return{m,game:index+1,acs:Number.isFinite(acs)?acs:null,ps:Number.isFinite(ps)?ps:null,
-      acsPercentile:acsRank.value,psPercentile:psRank.value,acsCount:acsRank.count,psCount:psRank.count,
-      gap:acsRank.value!=null&&psRank.value!=null?psRank.value-acsRank.value:null};
-  });
-}
-
-// Smooth only between adjacent reported points. These horizontal Bézier
-// tangents cannot overshoot either endpoint; missing games break the strand.
-function performanceDnaPath(rows,field,x,y){
-  let path='',previous=null;
-  rows.forEach((row,index)=>{
-    const value=row[field];
-    if(value==null){previous=null;return;}
-    const point={x:x(index),y:y(value)};
-    if(!previous)path+=`M${point.x},${point.y}`;
-    else{
-      const middle=(previous.x+point.x)/2;
-      path+=` C${middle},${previous.y} ${middle},${point.y} ${point.x},${point.y}`;
-    }
-    previous=point;
-  });
-  return path;
-}
-
-// Ignore older islands of PS coverage separated from the recent period by
-// at least five consecutive games without a valid comparison. Short gaps
-// remain visible; this scopes only the chart, never the underlying statistics.
-function performanceDnaCoverageRows(rows){
-  let start=0,lastComparable=-1;
-  rows.forEach((row,index)=>{
-    if(row.gap==null)return;
-    if(lastComparable<0||index-lastComparable-1>=5)start=index;
-    lastComparable=index;
-  });
-  return lastComparable<0?[]:rows.slice(start);
-}
-
-let performanceDnaRange='all';
-let overviewPerformanceDnaWidth=0,overviewPerformanceDnaObserver=null;
-function setPerformanceDnaRange(value){
-  if(!['20','30','50','all'].includes(value)||
-    (value==='50'&&performanceDnaCoverageRows(performanceComparisonRows(allMatches)).length<=50))return;
-  performanceDnaRange=value;
-  const input=document.querySelector(`input[name="performance-dna-range"][value="${value}"]`);
-  if(input)input.checked=true;
-  renderPerformanceDna(allMatches);
-}
-function renderPerformanceDna(matches,{overview=false}={}){
-  const historyRows=performanceComparisonRows(matches);
-  const rows=performanceDnaCoverageRows(historyRows);
-  const prefix=overview?'overview-performance-dna':'performance-dna';
-  const section=document.getElementById(prefix+'-section');
-  const container=document.getElementById(prefix+'-chart');
-  if(overview){
-    overviewPerformanceDnaWidth=container.clientWidth;
-    if(!overviewPerformanceDnaObserver){
-      overviewPerformanceDnaObserver=new ResizeObserver(()=>{
-        const width=container.clientWidth;
-        if(width>0&&width!==overviewPerformanceDnaWidth)renderPerformanceDna(allMatches,{overview:true});
-      });
-      overviewPerformanceDnaObserver.observe(container);
-    }
-  }
-  section.hidden=!rows.length;container.replaceChildren();
-  if(!overview){
-    const allLabel=document.getElementById('performance-dna-all-label');
-    allLabel.textContent=`All (${rows.length})`;
-    const omitted=historyRows.length-rows.length;
-    allLabel.title=omitted?`${omitted} older games omitted before the recent PS coverage period, after a gap of five or more games without a valid comparison.`:'All games in the PS coverage period';
-    document.getElementById('performance-dna-50-option').hidden=rows.length<=50;
-    if(performanceDnaRange==='50'&&rows.length<=50){
-      performanceDnaRange='all';
-      document.querySelector('input[name="performance-dna-range"][value="all"]').checked=true;
-    }
-  }
-  if(!rows.length)return;
-  const visible=overview?rows.slice(-20):performanceDnaRange==='all'?rows:rows.slice(-Number(performanceDnaRange));
-  const paired=visible.filter(row=>row.gap!=null);
-  if(!overview)document.getElementById('performance-dna-coverage').textContent=`${paired.length}/${visible.length} games`;
-  // Overview uses its actual content width so labels and points keep their size.
-  // Detail charts retain their scrollable canvas for long histories.
-  const width=overview?Math.max(120,overviewPerformanceDnaWidth||640):Math.max(1000,visible.length*22+94);
-  const height=overview?160:220,left=overview?38:64,right=overview?12:30,top=24,bottom=overview?116:174;
-  const slot=(width-left-right)/Math.max(visible.length,1);
-  const x=index=>left+slot*(index+.5),y=value=>bottom-(bottom-top)*value/100;
-  const svg=statChartNode('svg',{class:'performance-dna-svg',viewBox:`0 0 ${width} ${height}`,role:'group','aria-label':'Performance DNA: both scores ranked within each game lobby'});
-  // Keep individual games readable in All; long coverage periods can scroll.
-  svg.style.minWidth=overview?'0':`${Math.max(640,visible.length*18)}px`;
-  svg.setAttribute('preserveAspectRatio','none');
-  for(const value of [0,25,50,75,100]){
-    svg.appendChild(statChartNode('line',{x1:left,y1:y(value),x2:width-right,y2:y(value),class:value===50?'grid midline':'grid'}));
-    svg.appendChild(statChartNode('text',{x:left-12,y:y(value)+4,'text-anchor':'end',class:'tick'},String(value)));
-  }
-  svg.appendChild(statChartNode('text',{x:left,y:15,class:'tick'},'Lobby percentile'));
-  const psColor='#c4b5fd',acsColor='#67e8f9';
-  visible.forEach((row,index)=>{
-    if(row.gap==null)return;
-    svg.appendChild(statChartNode('line',{x1:x(index),y1:y(row.acsPercentile),x2:x(index),y2:y(row.psPercentile),
-      stroke:row.gap>0?psColor:row.gap<0?acsColor:'#a1a1aa','stroke-width':2,opacity:.4}));
-  });
-  svg.appendChild(statChartNode('path',{d:performanceDnaPath(visible,'acsPercentile',x,y),class:'strand acs'}));
-  svg.appendChild(statChartNode('path',{d:performanceDnaPath(visible,'psPercentile',x,y),class:'strand ps'}));
-  const format=value=>value==null?'—':value.toFixed(1);
-  const describeGap=row=>row.gap==null?'Comparison unavailable':Math.abs(row.gap)<.05?'Both scores rank equally':`${row.gap>0?'PS':'ACS'} ranks ${Math.abs(row.gap).toFixed(1)} percentile points higher`;
-  const date=row=>Number.isFinite(row.m.startedAtMs)?new Date(row.m.startedAtMs).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}):'Date unavailable';
-  const groups=[];
-  const tickCount=overview?Math.max(2,Math.floor((width-left-right)/44)):20;
-  const tickStep=Math.max(1,Math.ceil(visible.length/tickCount));
-  const detail=overview?null:document.createElement('div');
-  if(detail){
-    detail.className='rr-trend-tooltip performance-dna-tooltip';detail.hidden=true;
-    detail.setAttribute('aria-live','polite');
-  }
-  const select=row=>{
-    if(!detail)return;
-    groups.forEach(({group,game})=>group.classList.toggle('selected',game===row.game));
-    const game=document.createElement('strong');game.textContent=`${row.m.mapName||'Unknown map'} · ${date(row)}`;
-    const acs=document.createElement('div');acs.className='acs';acs.textContent=`ACS ${format(row.acs)} · ${format(row.acsPercentile)} percentile`;
-    const ps=document.createElement('div');ps.className='ps';ps.textContent=`PS ${format(row.ps)} · ${format(row.psPercentile)} percentile`;
-    detail.replaceChildren(game,acs,ps);detail.hidden=false;
-    const point=groups.find(entry=>entry.game===row.game)?.group;
-    const box=container.getBoundingClientRect(),pointBox=point?.getBoundingClientRect();
-    const left=pointBox?pointBox.left-box.left:8;
-    detail.style.left=`${container.scrollLeft+Math.max(8,Math.min(container.clientWidth-detail.offsetWidth-8,left))}px`;
-  };
-  visible.forEach((row,index)=>{
-    const description=`Game ${row.game}, ${row.m.mapName||'Unknown map'}, ${date(row)}. ACS ${format(row.acs)}, lobby percentile ${format(row.acsPercentile)} among ${row.acsCount} players. Performance Score ${format(row.ps)}, lobby percentile ${format(row.psPercentile)} among ${row.psCount} players. ${describeGap(row)}.`;
-    const group=statChartNode('g',{class:'dna-game',...(overview?{}:{tabindex:'0'}),role:'img','aria-label':description});
-    group.appendChild(statChartNode('title',{},description));
-    group.appendChild(statChartNode('rect',{x:x(index)-slot/2,y:top-8,width:slot,height:bottom-top+44,class:'dna-hit',rx:5}));
-    for(const [value,color] of [[row.acsPercentile,acsColor],[row.psPercentile,psColor]]){
-      if(value!=null)group.appendChild(statChartNode('circle',{cx:x(index),cy:y(value),r:overview?Math.min(3,slot/4):4.5,fill:color,class:'dna-point'}));
-    }
-    if(row.acsPercentile==null&&row.psPercentile==null){
-      group.appendChild(statChartNode('text',{x:x(index),y:y(50)+3,'text-anchor':'middle',class:'tick'},'—'));
-    }
-    if(!overview){
-      group.addEventListener('pointerenter',()=>select(row));
-      group.addEventListener('focus',()=>select(row));
-      group.addEventListener('click',()=>select(row));
-      group.addEventListener('keydown',event=>{
-        if(event.key==='Escape'){detail.hidden=true;return;}
-        if(event.key!=='ArrowLeft'&&event.key!=='ArrowRight')return;
-        event.preventDefault();groups[index+(event.key==='ArrowRight'?1:-1)]?.group.focus();
-      });
-    }
-    groups.push({group,game:row.game});svg.appendChild(group);
-    if(index%tickStep===0||index===visible.length-1){
-      svg.appendChild(statChartNode('text',{x:x(index),y:bottom+22,'text-anchor':'middle',class:'tick'},`#${row.game}`));
-    }
-  });
-  svg.appendChild(statChartNode('text',{x:(left+width-right)/2,y:height-12,'text-anchor':'middle',class:'tick'},'Games · oldest → newest'));
-  container.appendChild(svg);
-  if(detail){
-    container.appendChild(detail);
-    container.onpointerleave=()=>{detail.hidden=true;};
-    container.onfocusout=event=>{if(!container.contains(event.relatedTarget))detail.hidden=true;};
   }
 }
 

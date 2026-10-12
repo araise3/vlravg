@@ -10,6 +10,9 @@
 /lobby-rank/ /lobbyrank 301
 /servers /index.html 200
 /servers/ /servers 301
+/ping-map /servers 301
+/ping-map/ /servers 301
+/ping-map.html /servers 301
 /names / 200
 /names/ /names 301
 /player/* /index.html 200

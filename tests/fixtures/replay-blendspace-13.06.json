@@ -1,0 +1,646 @@
+[
+  {
+    "source_record_sha256": "8e3bd35c46dfa9ed86c99c965d189c019651bc41863cc6b9b00ceee3f0594efb",
+    "asset": {
+      "object_path": "/Game/Characters/_Core/3P/Anims/TP_Core_CrouchTurnE_1DBlend.TP_Core_CrouchTurnE_1DBlend",
+      "export_class": "BlendSpace1D",
+      "metadata_kind": "typed_blendspace_arrays",
+      "axes": [
+        {
+          "DisplayName": null,
+          "Min": 0.0,
+          "Max": 360.0,
+          "GridNum": 8,
+          "bSnapToGrid": false,
+          "bWrapInput": false
+        }
+      ],
+      "samples": [
+        {
+          "Animation": {
+            "reference": "AnimSequence'/Game/Characters/_Core/3P/Anims/TP_Core_CrouchTurnE45_LB.TP_Core_CrouchTurnE45_LB'"
+          },
+          "SampleValue": {
+            "X": 45.0,
+            "Y": 0.0,
+            "Z": 0.0
+          },
+          "RateScale": 1.0
+        },
+        {
+          "Animation": {
+            "reference": "AnimSequence'/Game/Characters/_Core/3P/Anims/TP_Core_CrouchTurnE90_LB.TP_Core_CrouchTurnE90_LB'"
+          },
+          "SampleValue": {
+            "X": 90.0,
+            "Y": 0.0,
+            "Z": 0.0
+          },
+          "RateScale": 1.0
+        },
+        {
+          "Animation": {
+            "reference": "AnimSequence'/Game/Characters/_Core/3P/Anims/TP_Core_CrouchTurnE180_LB.TP_Core_CrouchTurnE180_LB'"
+          },
+          "SampleValue": {
+            "X": 180.0,
+            "Y": 0.0,
+            "Z": 0.0
+          },
+          "RateScale": 1.0
+        },
+        {
+          "Animation": {
+            "reference": "AnimSequence'/Game/Characters/_Core/3P/Anims/TP_Core_CrouchTurnE135_LB.TP_Core_CrouchTurnE135_LB'"
+          },
+          "SampleValue": {
+            "X": 135.0,
+            "Y": 0.0,
+            "Z": 0.0
+          },
+          "RateScale": 1.0
+        },
+        {
+          "Animation": {
+            "reference": "AnimSequence'/Game/Characters/_Core/3P/Anims/TP_Core_CrouchPose_LB.TP_Core_CrouchPose_LB'"
+          },
+          "SampleValue": {
+            "X": 0.0,
+            "Y": 0.0,
+            "Z": 0.0
+          },
+          "RateScale": 1.0
+        }
+      ],
+      "grid": [
+        {
+          "Indices": [
+            0,
+            4,
+            -1
+          ],
+          "Weights": [
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "Indices": [
+            0,
+            4,
+            -1
+          ],
+          "Weights": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "Indices": [
+            1,
+            0,
+            -1
+          ],
+          "Weights": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "Indices": [
+            3,
+            1,
+            -1
+          ],
+          "Weights": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "Indices": [
+            2,
+            3,
+            -1
+          ],
+          "Weights": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "Indices": [
+            2,
+            -1,
+            -1
+          ],
+          "Weights": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "Indices": [
+            2,
+            -1,
+            -1
+          ],
+          "Weights": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "Indices": [
+            2,
+            -1,
+            -1
+          ],
+          "Weights": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "Indices": [
+            2,
+            -1,
+            -1
+          ],
+          "Weights": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "grid_divisions": [
+        8
+      ],
+      "grid_shape_binding": "serialized_or_unique_grid_count",
+      "duration_seconds": 1.0,
+      "properties": {
+        "bTargetWeightInterpolationEaseInOut": false,
+        "AnimLength": 1.0,
+        "bInterpolateUsingGrid": true,
+        "Skeleton": {
+          "reference": "Skeleton'/Game/Characters/_Core/3P/Models/Core_Skeleton.Core_Skeleton'"
+        }
+      },
+      "native_graph_execution": false
+    }
+  },
+  {
+    "source_record_sha256": "acb1e8d03b154bab4630c63cebbc62e9aa853deed85514da9a00fde289636e07",
+    "asset": {
+      "object_path": "/Game/Characters/_Core/3P/Anims/Grenade/TP_Core_Grenade_CrouchIdle_UB_AimOffset.TP_Core_Grenade_CrouchIdle_UB_AimOffset",
+      "export_class": "AimOffsetBlendSpace",
+      "metadata_kind": "typed_blendspace_arrays",
+      "axes": [
+        {
+          "DisplayName": "Pitch",
+          "Min": -89.0,
+          "Max": 89.0,
+          "GridNum": 0,
+          "bSnapToGrid": false,
+          "bWrapInput": false
+        },
+        {
+          "DisplayName": "Yaw",
+          "Min": -89.0,
+          "Max": 89.0,
+          "GridNum": 0,
+          "bSnapToGrid": false,
+          "bWrapInput": false
+        }
+      ],
+      "samples": [
+        {
+          "Animation": {
+            "reference": "AnimSequence'/Game/Characters/_Core/3P/Anims/Grenade/TP_Core_Grenade_Crouch_AimW_UB.TP_Core_Grenade_Crouch_AimW_UB'"
+          },
+          "SampleValue": {
+            "X": -89.0,
+            "Y": 0.0,
+            "Z": 0.0
+          },
+          "RateScale": 1.0
+        },
+        {
+          "Animation": {
+            "reference": "AnimSequence'/Game/Characters/_Core/3P/Anims/Grenade/TP_Core_Grenade_Crouch_AimE_UB.TP_Core_Grenade_Crouch_AimE_UB'"
+          },
+          "SampleValue": {
+            "X": 89.0,
+            "Y": 0.0,
+            "Z": 0.0
+          },
+          "RateScale": 1.0
+        },
+        {
+          "Animation": {
+            "reference": "AnimSequence'/Game/Characters/_Core/3P/Anims/Grenade/TP_Core_Grenade_Crouch_AimN_UB.TP_Core_Grenade_Crouch_AimN_UB'"
+          },
+          "SampleValue": {
+            "X": 0.0,
+            "Y": 89.0,
+            "Z": 0.0
+          },
+          "RateScale": 1.0
+        },
+        {
+          "Animation": {
+            "reference": "AnimSequence'/Game/Characters/_Core/3P/Anims/Grenade/TP_Core_Grenade_Crouch_AimNW_UB.TP_Core_Grenade_Crouch_AimNW_UB'"
+          },
+          "SampleValue": {
+            "X": -89.0,
+            "Y": 89.0,
+            "Z": 0.0
+          },
+          "RateScale": 1.0
+        },
+        {
+          "Animation": {
+            "reference": "AnimSequence'/Game/Characters/_Core/3P/Anims/Grenade/TP_Core_Grenade_Crouch_AimNE_UB.TP_Core_Grenade_Crouch_AimNE_UB'"
+          },
+          "SampleValue": {
+            "X": 89.0,
+            "Y": 89.0,
+            "Z": 0.0
+          },
+          "RateScale": 1.0
+        },
+        {
+          "Animation": {
+            "reference": "AnimSequence'/Game/Characters/_Core/3P/Anims/Grenade/TP_Core_Grenade_Crouch_AimS_UB.TP_Core_Grenade_Crouch_AimS_UB'"
+          },
+          "SampleValue": {
+            "X": 0.0,
+            "Y": -89.0,
+            "Z": 0.0
+          },
+          "RateScale": 1.0
+        },
+        {
+          "Animation": {
+            "reference": "AnimSequence'/Game/Characters/_Core/3P/Anims/Grenade/TP_Core_Grenade_Crouch_AimSW_UB.TP_Core_Grenade_Crouch_AimSW_UB'"
+          },
+          "SampleValue": {
+            "X": -89.0,
+            "Y": -89.0,
+            "Z": 0.0
+          },
+          "RateScale": 1.0
+        },
+        {
+          "Animation": {
+            "reference": "AnimSequence'/Game/Characters/_Core/3P/Anims/Grenade/TP_Core_Grenade_Crouch_AimSE_UB.TP_Core_Grenade_Crouch_AimSE_UB'"
+          },
+          "SampleValue": {
+            "X": 89.0,
+            "Y": -89.0,
+            "Z": 0.0
+          },
+          "RateScale": 1.0
+        },
+        {
+          "Animation": {
+            "reference": "AnimSequence'/Game/Equippables/Guns/Sidearms/BasePistol/S0/3P/Anims/TP_Core_nullAddMesh.TP_Core_nullAddMesh'"
+          },
+          "SampleValue": {
+            "X": 0.0,
+            "Y": 0.0,
+            "Z": 0.0
+          },
+          "RateScale": 1.0
+        }
+      ],
+      "grid": [
+        {
+          "Indices": [
+            6,
+            5,
+            0
+          ],
+          "Weights": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "Indices": [
+            6,
+            5,
+            0
+          ],
+          "Weights": [
+            0.5,
+            0.5,
+            0.0
+          ]
+        },
+        {
+          "Indices": [
+            5,
+            7,
+            1
+          ],
+          "Weights": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "Indices": [
+            5,
+            7,
+            1
+          ],
+          "Weights": [
+            0.5,
+            0.5,
+            0.0
+          ]
+        },
+        {
+          "Indices": [
+            5,
+            7,
+            1
+          ],
+          "Weights": [
+            -0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "Indices": [
+            6,
+            5,
+            0
+          ],
+          "Weights": [
+            0.5,
+            0.0,
+            0.5
+          ]
+        },
+        {
+          "Indices": [
+            6,
+            5,
+            0
+          ],
+          "Weights": [
+            0.0,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "Indices": [
+            5,
+            8,
+            0
+          ],
+          "Weights": [
+            0.5,
+            0.5,
+            0.0
+          ]
+        },
+        {
+          "Indices": [
+            5,
+            7,
+            1
+          ],
+          "Weights": [
+            0.5,
+            0.0,
+            0.5
+          ]
+        },
+        {
+          "Indices": [
+            5,
+            7,
+            1
+          ],
+          "Weights": [
+            -0.0,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "Indices": [
+            3,
+            0,
+            2
+          ],
+          "Weights": [
+            0.0,
+            1.0,
+            0.0
+          ]
+        },
+        {
+          "Indices": [
+            5,
+            8,
+            0
+          ],
+          "Weights": [
+            0.0,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "Indices": [
+            8,
+            2,
+            0
+          ],
+          "Weights": [
+            1.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "Indices": [
+            1,
+            2,
+            8
+          ],
+          "Weights": [
+            0.5,
+            0.0,
+            0.5
+          ]
+        },
+        {
+          "Indices": [
+            5,
+            7,
+            1
+          ],
+          "Weights": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "Indices": [
+            3,
+            0,
+            2
+          ],
+          "Weights": [
+            0.5,
+            0.5,
+            0.0
+          ]
+        },
+        {
+          "Indices": [
+            3,
+            0,
+            2
+          ],
+          "Weights": [
+            0.0,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "Indices": [
+            1,
+            2,
+            8
+          ],
+          "Weights": [
+            0.0,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "Indices": [
+            1,
+            4,
+            2
+          ],
+          "Weights": [
+            0.5,
+            0.0,
+            0.5
+          ]
+        },
+        {
+          "Indices": [
+            1,
+            4,
+            2
+          ],
+          "Weights": [
+            0.5,
+            0.5,
+            0.0
+          ]
+        },
+        {
+          "Indices": [
+            3,
+            0,
+            2
+          ],
+          "Weights": [
+            1.0,
+            -0.0,
+            0.0
+          ]
+        },
+        {
+          "Indices": [
+            3,
+            0,
+            2
+          ],
+          "Weights": [
+            0.5,
+            -0.0,
+            0.5
+          ]
+        },
+        {
+          "Indices": [
+            3,
+            0,
+            2
+          ],
+          "Weights": [
+            0.0,
+            0.0,
+            1.0
+          ]
+        },
+        {
+          "Indices": [
+            1,
+            4,
+            2
+          ],
+          "Weights": [
+            0.0,
+            0.5,
+            0.5
+          ]
+        },
+        {
+          "Indices": [
+            1,
+            4,
+            2
+          ],
+          "Weights": [
+            0.0,
+            1.0,
+            0.0
+          ]
+        }
+      ],
+      "grid_divisions": [
+        4,
+        4
+      ],
+      "grid_shape_binding": "serialized_or_unique_grid_count",
+      "duration_seconds": 0.03333333507180214,
+      "properties": {
+        "bContainsRotationOffsetMeshSpaceSamples": true,
+        "bTargetWeightInterpolationEaseInOut": false,
+        "AnimLength": 0.03333333507180214,
+        "bInterpolateUsingGrid": true,
+        "Skeleton": {
+          "reference": "Skeleton'/Game/Characters/_Core/3P/Models/Core_Skeleton.Core_Skeleton'"
+        }
+      },
+      "native_graph_execution": false
+    }
+  }
+]

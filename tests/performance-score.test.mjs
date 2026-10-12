@@ -50,7 +50,8 @@ test('overview averages reported match scores independently of round counts and 
 test('fresh scores enrich archive-first matches by PUUID without losing stats or duplicating matches',()=>{
   const context={allMatches:[],TARGET_SEASON:'act',processMatch:raw=>raw,
     tagActPlacements:rows=>rows,tagPostResetPlacements:rows=>rows,
-    setSeasonMatchCount:()=>{},renderAll:()=>{},setStatus:()=>{}};
+    setSeasonMatchCount:()=>{},renderAll:()=>{},setStatus:()=>{},
+    refreshTeammateNames:()=>{},lookupTeammateRows:()=>[]};
   const publish=runInNewContext(section('  const rawMatches=new Map()', '  const onRateLimit=')+'\npublishMatches',context);
   const archived={metadata:{match_id:'match'},players:[
     {puuid:'me',stats:{kills:20},performance:null},

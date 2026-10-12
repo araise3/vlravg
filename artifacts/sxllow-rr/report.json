@@ -1,0 +1,207 @@
+{
+  "archived": 199,
+  "rrHistory": 161,
+  "covered": 161,
+  "wins": {
+    "segments": [
+      {
+        "from": 120,
+        "to": 389
+      },
+      {
+        "from": 425,
+        "to": 443
+      }
+    ],
+    "sparse": [
+      {
+        "rr": 407
+      }
+    ],
+    "matches": [
+      {
+        "rr": 305,
+        "payout": 18
+      },
+      {
+        "rr": 305,
+        "payout": 18
+      },
+      {
+        "rr": 305,
+        "payout": 18
+      },
+      {
+        "rr": 305,
+        "payout": 18
+      },
+      {
+        "rr": 312,
+        "payout": 19
+      },
+      {
+        "rr": 315,
+        "payout": 17
+      },
+      {
+        "rr": 323,
+        "payout": 18
+      },
+      {
+        "rr": 323,
+        "payout": 18
+      },
+      {
+        "rr": 331,
+        "payout": 17
+      },
+      {
+        "rr": 336,
+        "payout": 17
+      },
+      {
+        "rr": 341,
+        "payout": 18
+      },
+      {
+        "rr": 348,
+        "payout": 20
+      },
+      {
+        "rr": 357,
+        "payout": 19
+      },
+      {
+        "rr": 368,
+        "payout": 21
+      },
+      {
+        "rr": 376,
+        "payout": 18
+      },
+      {
+        "rr": 389,
+        "payout": 18
+      },
+      {
+        "rr": 407,
+        "payout": 18
+      },
+      {
+        "rr": 425,
+        "payout": 18
+      },
+      {
+        "rr": 442,
+        "payout": 18
+      },
+      {
+        "rr": 443,
+        "payout": 18
+      }
+    ]
+  },
+  "losses": {
+    "segments": [
+      {
+        "from": 137,
+        "to": 461
+      }
+    ],
+    "sparse": [],
+    "matches": [
+      {
+        "rr": 301,
+        "payout": -18
+      },
+      {
+        "rr": 301,
+        "payout": -18
+      },
+      {
+        "rr": 301,
+        "payout": -18
+      },
+      {
+        "rr": 303,
+        "payout": -19
+      },
+      {
+        "rr": 319,
+        "payout": -18
+      },
+      {
+        "rr": 323,
+        "payout": -20
+      },
+      {
+        "rr": 323,
+        "payout": -18
+      },
+      {
+        "rr": 323,
+        "payout": -18
+      },
+      {
+        "rr": 332,
+        "payout": -20
+      },
+      {
+        "rr": 334,
+        "payout": -19
+      },
+      {
+        "rr": 337,
+        "payout": -18
+      },
+      {
+        "rr": 341,
+        "payout": -18
+      },
+      {
+        "rr": 353,
+        "payout": -19
+      },
+      {
+        "rr": 355,
+        "payout": -19
+      },
+      {
+        "rr": 359,
+        "payout": -22
+      },
+      {
+        "rr": 374,
+        "payout": -19
+      },
+      {
+        "rr": 376,
+        "payout": -19
+      },
+      {
+        "rr": 394,
+        "payout": -20
+      },
+      {
+        "rr": 398,
+        "payout": -22
+      },
+      {
+        "rr": 419,
+        "payout": -21
+      },
+      {
+        "rr": 441,
+        "payout": -22
+      },
+      {
+        "rr": 460,
+        "payout": -19
+      },
+      {
+        "rr": 461,
+        "payout": -19
+      }
+    ]
+  }
+}

@@ -76,7 +76,7 @@ test('player-rank table includes every game and performance while preserving eli
   let values;
   const render=runInNewContext(stats+'\n'+html.slice(html.indexOf('function renderRRBreakdown('),html.indexOf('function buildRRScoreRows('))+'\nrenderRRBreakdown',{
     allMatches:matches,document:{getElementById:()=>container},
-    renderPerformanceDna:()=>{},renderScoreMarginChart:()=>{},renderRRByScore:()=>{},renderRRTrend:()=>{},
+    renderScoreMarginChart:()=>{},renderRRByScore:()=>{},renderRRTrend:()=>{},
     renderRRSummary:()=>{},rrTrendScopedMatches:m=>m,renderRRMovement:()=>{},
     rankIcon:()=>'',avgLabel:tier=>String(tier),rrSigned:(n,d)=>`${n<0?'−':'+'}${Math.abs(n).toFixed(d)}`,
     highlightTableMaxima:()=>{},initTableSorting:(_,rows)=>{values=rows;},
@@ -154,6 +154,7 @@ test('party aggregation attaches your stats only to your same-team party teammat
     statMatches:[{players:[me,friend,stranger,opponent],myPartyId:'party',myRR:21,won:true,
       myStats:{kills:10,deaths:20,score:4000,rounds_played:20}}],
     document:{getElementById:()=>({style:{}})},computeEncounters:()=>[],
+    currentTeammateIdentity:p=>p,
     renderTeammates:()=>{},renderEncounters:()=>{},renderWintradeSignals:()=>{},renderOverviewPreviews:()=>{},updateDetailPages:()=>{}};
   const start=html.indexOf('function buildTeammates('),end=html.indexOf('\nfunction renderEncounters(',start);
   const rows=runInNewContext(html.slice(start,end)+'\nbuildTeammates();allTeammates',context);

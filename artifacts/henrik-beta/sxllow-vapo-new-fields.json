@@ -1,0 +1,723 @@
+{
+  "match_id": "e4c51f11-2f16-41f2-87f4-99ce4149e12c",
+  "map": "Summit",
+  "started_at": "2026-10-01T08:38:32.747Z",
+  "metadata": {
+    "mvp": {
+      "puuid": "9213e20b-e474-5d81-874b-52db45c1665c",
+      "name": "Kampfkarotte",
+      "tag": "Yoru",
+      "team": "Blue"
+    }
+  },
+  "players": [
+    {
+      "puuid": "9213e20b-e474-5d81-874b-52db45c1665c",
+      "name": "Kampfkarotte",
+      "tag": "Yoru",
+      "performance": {
+        "score": 497.6318824117879,
+        "breakdown": {
+          "damage": 254.3,
+          "trades": 0.25,
+          "assists": 0.3,
+          "utility_usage": 2.55,
+          "plants": null,
+          "defuses": null,
+          "adjusted_kills": 1.306175,
+          "adjusted_deaths": -0.520875
+        },
+        "ratings": {
+          "grade": "distinction",
+          "combat": {
+            "damage": "double_up",
+            "death_impact": "double_up",
+            "kill_impact": "double_up",
+            "trades": "up"
+          },
+          "utility": {
+            "assists": "up",
+            "defuses": "neutral",
+            "plants": "neutral",
+            "utility_usage": "double_up"
+          }
+        }
+      },
+      "drafted_ability_casts": null,
+      "team_number": 1,
+      "customization": {
+        "bloomline": {
+          "level": 11,
+          "plank_background_id": "dd77f348-4165-2b5f-539c-6f9ed470d8f6",
+          "hype_id": "35da5cc9-4388-c3d1-5054-fdab4a5f1225",
+          "clip_id": "f04cad8b-4036-9898-8dcb-dda65c52af1d"
+        }
+      }
+    },
+    {
+      "puuid": "263c7f1e-dd4b-5ae1-8732-15d546f84d62",
+      "name": "heartless",
+      "tag": "imy",
+      "performance": {
+        "score": 274.0216214651841,
+        "breakdown": {
+          "damage": 138.65,
+          "trades": 0.15,
+          "assists": 0.4,
+          "utility_usage": 2.6,
+          "plants": 0.05,
+          "defuses": null,
+          "adjusted_kills": 0.7749750000000002,
+          "adjusted_deaths": -0.7351500000000002
+        },
+        "ratings": {
+          "grade": "pass",
+          "combat": {
+            "damage": "neutral",
+            "death_impact": "neutral",
+            "kill_impact": "up",
+            "trades": "neutral"
+          },
+          "utility": {
+            "assists": "double_up",
+            "defuses": "neutral",
+            "plants": "up",
+            "utility_usage": "up"
+          }
+        }
+      },
+      "drafted_ability_casts": null,
+      "team_number": 1,
+      "customization": {
+        "bloomline": {
+          "level": 2,
+          "plank_background_id": "00000000-0000-0000-0000-000000000000",
+          "hype_id": "00000000-0000-0000-0000-000000000000",
+          "clip_id": "00000000-0000-0000-0000-000000000000"
+        }
+      }
+    },
+    {
+      "puuid": "5ae2603f-6a31-5a1e-9ca0-67b51f9301d9",
+      "name": "Sxllow",
+      "tag": "vapo",
+      "performance": {
+        "score": 226.70416482816853,
+        "breakdown": {
+          "damage": 123.3,
+          "trades": 0.25,
+          "assists": 0.15,
+          "utility_usage": 1.75,
+          "plants": null,
+          "defuses": null,
+          "adjusted_kills": 0.7687499999999999,
+          "adjusted_deaths": -0.786925
+        },
+        "ratings": {
+          "grade": "pass",
+          "combat": {
+            "damage": "down",
+            "death_impact": "down",
+            "kill_impact": "up",
+            "trades": "up"
+          },
+          "utility": {
+            "assists": "down",
+            "defuses": "neutral",
+            "plants": "neutral",
+            "utility_usage": "down"
+          }
+        }
+      },
+      "drafted_ability_casts": null,
+      "team_number": 2,
+      "customization": {
+        "bloomline": {
+          "level": 1,
+          "plank_background_id": "00000000-0000-0000-0000-000000000000",
+          "hype_id": "00000000-0000-0000-0000-000000000000",
+          "clip_id": "00000000-0000-0000-0000-000000000000"
+        }
+      }
+    },
+    {
+      "puuid": "5fbe00ac-503e-50a7-b7eb-925667e04ee9",
+      "name": "HEHE XD",
+      "tag": "ODIN",
+      "performance": {
+        "score": 227.07456686945255,
+        "breakdown": {
+          "damage": 105.1,
+          "trades": 0.25,
+          "assists": 0.45,
+          "utility_usage": 2.65,
+          "plants": 0.05,
+          "defuses": 0.05,
+          "adjusted_kills": 0.490925,
+          "adjusted_deaths": -0.7325000000000002
+        },
+        "ratings": {
+          "grade": "pass",
+          "combat": {
+            "damage": "down",
+            "death_impact": "neutral",
+            "kill_impact": "down",
+            "trades": "up"
+          },
+          "utility": {
+            "assists": "double_up",
+            "defuses": "double_up",
+            "plants": "up",
+            "utility_usage": "down"
+          }
+        }
+      },
+      "drafted_ability_casts": null,
+      "team_number": 2,
+      "customization": {
+        "bloomline": {
+          "level": 11,
+          "plank_background_id": "a9176a09-47c1-f801-0172-06a06b6abe30",
+          "hype_id": "f63e73c0-4ae9-f52a-8c0b-769d8402df36",
+          "clip_id": "fda79714-4c0e-dc7b-b9b0-0691c238e12d"
+        }
+      }
+    },
+    {
+      "puuid": "c347394f-466d-56e6-9825-9dc709685f26",
+      "name": "Twaii",
+      "tag": "Kitty",
+      "performance": {
+        "score": 334.1369864906642,
+        "breakdown": {
+          "damage": 197.25,
+          "trades": 0.05,
+          "assists": 0.25,
+          "utility_usage": 1.6,
+          "plants": null,
+          "defuses": null,
+          "adjusted_kills": 1.146675,
+          "adjusted_deaths": -0.6256750000000001
+        },
+        "ratings": {
+          "grade": "merit",
+          "combat": {
+            "damage": "double_up",
+            "death_impact": "up",
+            "kill_impact": "double_up",
+            "trades": "double_down"
+          },
+          "utility": {
+            "assists": "up",
+            "defuses": "neutral",
+            "plants": "neutral",
+            "utility_usage": "down"
+          }
+        }
+      },
+      "drafted_ability_casts": null,
+      "team_number": 2,
+      "customization": {
+        "bloomline": {
+          "level": 1,
+          "plank_background_id": "00000000-0000-0000-0000-000000000000",
+          "hype_id": "00000000-0000-0000-0000-000000000000",
+          "clip_id": "00000000-0000-0000-0000-000000000000"
+        }
+      }
+    },
+    {
+      "puuid": "bad0f4a0-39ae-5190-a1e4-c2e60afaa443",
+      "name": "OneTapenade",
+      "tag": "001",
+      "performance": {
+        "score": 55.517942627594095,
+        "breakdown": {
+          "damage": 49.45,
+          "trades": 0.05,
+          "assists": 0.2,
+          "utility_usage": 1.25,
+          "plants": null,
+          "defuses": 0.1,
+          "adjusted_kills": 0.2637,
+          "adjusted_deaths": -0.672
+        },
+        "ratings": {
+          "grade": "pass",
+          "combat": {
+            "damage": "double_down",
+            "death_impact": "up",
+            "kill_impact": "double_down",
+            "trades": "double_down"
+          },
+          "utility": {
+            "assists": "neutral",
+            "defuses": "double_up",
+            "plants": "neutral",
+            "utility_usage": "double_down"
+          }
+        }
+      },
+      "drafted_ability_casts": null,
+      "team_number": 2,
+      "customization": {
+        "bloomline": {
+          "level": 1,
+          "plank_background_id": "00000000-0000-0000-0000-000000000000",
+          "hype_id": "00000000-0000-0000-0000-000000000000",
+          "clip_id": "00000000-0000-0000-0000-000000000000"
+        }
+      }
+    },
+    {
+      "puuid": "61ce7ab8-25b8-52cf-99ed-c9ccfdf15c58",
+      "name": "mazaa",
+      "tag": "101",
+      "performance": {
+        "score": 204.84690368717293,
+        "breakdown": {
+          "damage": 129.7,
+          "trades": 0.1,
+          "assists": 0.05,
+          "utility_usage": 1.75,
+          "plants": null,
+          "defuses": null,
+          "adjusted_kills": 0.7375750000000001,
+          "adjusted_deaths": -0.7364499999999999
+        },
+        "ratings": {
+          "grade": "pass",
+          "combat": {
+            "damage": "neutral",
+            "death_impact": "neutral",
+            "kill_impact": "neutral",
+            "trades": "down"
+          },
+          "utility": {
+            "assists": "double_down",
+            "defuses": "neutral",
+            "plants": "neutral",
+            "utility_usage": "up"
+          }
+        }
+      },
+      "drafted_ability_casts": null,
+      "team_number": 1,
+      "customization": {
+        "bloomline": {
+          "level": 5,
+          "plank_background_id": "00000000-0000-0000-0000-000000000000",
+          "hype_id": "00000000-0000-0000-0000-000000000000",
+          "clip_id": "00000000-0000-0000-0000-000000000000"
+        }
+      }
+    },
+    {
+      "puuid": "49ef826f-6ced-53db-9b33-7321d689b58d",
+      "name": "Ｎｋｙｅ",
+      "tag": "Moro",
+      "performance": {
+        "score": 189.50159564953643,
+        "breakdown": {
+          "damage": 115.8,
+          "trades": 0.2,
+          "assists": 0.1,
+          "utility_usage": 1.8,
+          "plants": null,
+          "defuses": null,
+          "adjusted_kills": 0.581275,
+          "adjusted_deaths": -0.8131
+        },
+        "ratings": {
+          "grade": "pass",
+          "combat": {
+            "damage": "down",
+            "death_impact": "down",
+            "kill_impact": "down",
+            "trades": "up"
+          },
+          "utility": {
+            "assists": "down",
+            "defuses": "neutral",
+            "plants": "neutral",
+            "utility_usage": "neutral"
+          }
+        }
+      },
+      "drafted_ability_casts": null,
+      "team_number": 2,
+      "customization": {
+        "bloomline": {
+          "level": 2,
+          "plank_background_id": "00000000-0000-0000-0000-000000000000",
+          "hype_id": "00000000-0000-0000-0000-000000000000",
+          "clip_id": "00000000-0000-0000-0000-000000000000"
+        }
+      }
+    },
+    {
+      "puuid": "0cac57d7-9f53-5dd2-8452-b740eae2f045",
+      "name": "Boogie2ndAcc",
+      "tag": "KING",
+      "performance": {
+        "score": 181.38887236421832,
+        "breakdown": {
+          "damage": 109.2,
+          "trades": 0.1,
+          "assists": 0.1,
+          "utility_usage": 2.2,
+          "plants": 0.05,
+          "defuses": null,
+          "adjusted_kills": 0.494775,
+          "adjusted_deaths": -0.5250000000000001
+        },
+        "ratings": {
+          "grade": "pass",
+          "combat": {
+            "damage": "down",
+            "death_impact": "double_up",
+            "kill_impact": "down",
+            "trades": "down"
+          },
+          "utility": {
+            "assists": "down",
+            "defuses": "neutral",
+            "plants": "up",
+            "utility_usage": "neutral"
+          }
+        }
+      },
+      "drafted_ability_casts": null,
+      "team_number": 1,
+      "customization": {
+        "bloomline": {
+          "level": 3,
+          "plank_background_id": "00000000-0000-0000-0000-000000000000",
+          "hype_id": "00000000-0000-0000-0000-000000000000",
+          "clip_id": "00000000-0000-0000-0000-000000000000"
+        }
+      }
+    },
+    {
+      "puuid": "1bf68125-a854-5ebb-975a-76e6301028cd",
+      "name": "Benjy9",
+      "tag": "miaou",
+      "performance": {
+        "score": 247.9854325508914,
+        "breakdown": {
+          "damage": 110.9,
+          "trades": 0.1,
+          "assists": 0.55,
+          "utility_usage": 3.05,
+          "plants": 0.15,
+          "defuses": null,
+          "adjusted_kills": 0.5267000000000002,
+          "adjusted_deaths": -0.6438499999999999
+        },
+        "ratings": {
+          "grade": "pass",
+          "combat": {
+            "damage": "down",
+            "death_impact": "up",
+            "kill_impact": "down",
+            "trades": "down"
+          },
+          "utility": {
+            "assists": "double_up",
+            "defuses": "neutral",
+            "plants": "double_up",
+            "utility_usage": "up"
+          }
+        }
+      },
+      "drafted_ability_casts": null,
+      "team_number": 1,
+      "customization": {
+        "bloomline": {
+          "level": 1,
+          "plank_background_id": "00000000-0000-0000-0000-000000000000",
+          "hype_id": "00000000-0000-0000-0000-000000000000",
+          "clip_id": "00000000-0000-0000-0000-000000000000"
+        }
+      }
+    }
+  ],
+  "teams": [
+    {
+      "team_id": "Red",
+      "mvp": {
+        "puuid": "c347394f-466d-56e6-9825-9dc709685f26",
+        "name": "Twaii",
+        "tag": "Kitty",
+        "team": "Red"
+      },
+      "placement": 2,
+      "health": null,
+      "team_number": null
+    },
+    {
+      "team_id": "Blue",
+      "mvp": {
+        "puuid": "9213e20b-e474-5d81-874b-52db45c1665c",
+        "name": "Kampfkarotte",
+        "tag": "Yoru",
+        "team": "Blue"
+      },
+      "placement": 1,
+      "health": null,
+      "team_number": null
+    }
+  ],
+  "rounds": [
+    {
+      "id": 0,
+      "first_blood": {
+        "puuid": "61ce7ab8-25b8-52cf-99ed-c9ccfdf15c58",
+        "name": "mazaa",
+        "tag": "101",
+        "team": "Blue"
+      },
+      "winning_team_role": "Defender",
+      "ceremony_player": {
+        "puuid": "263c7f1e-dd4b-5ae1-8732-15d546f84d62",
+        "name": "heartless",
+        "tag": "imy",
+        "team": "Blue"
+      },
+      "ceremony_team": "Blue"
+    },
+    {
+      "id": 1,
+      "first_blood": {
+        "puuid": "9213e20b-e474-5d81-874b-52db45c1665c",
+        "name": "Kampfkarotte",
+        "tag": "Yoru",
+        "team": "Blue"
+      },
+      "winning_team_role": "Defender",
+      "ceremony_player": null,
+      "ceremony_team": null
+    },
+    {
+      "id": 2,
+      "first_blood": {
+        "puuid": "263c7f1e-dd4b-5ae1-8732-15d546f84d62",
+        "name": "heartless",
+        "tag": "imy",
+        "team": "Blue"
+      },
+      "winning_team_role": "Defender",
+      "ceremony_player": null,
+      "ceremony_team": null
+    },
+    {
+      "id": 3,
+      "first_blood": {
+        "puuid": "1bf68125-a854-5ebb-975a-76e6301028cd",
+        "name": "Benjy9",
+        "tag": "miaou",
+        "team": "Blue"
+      },
+      "winning_team_role": "Defender",
+      "ceremony_player": null,
+      "ceremony_team": null
+    },
+    {
+      "id": 4,
+      "first_blood": {
+        "puuid": "263c7f1e-dd4b-5ae1-8732-15d546f84d62",
+        "name": "heartless",
+        "tag": "imy",
+        "team": "Blue"
+      },
+      "winning_team_role": "Defender",
+      "ceremony_player": null,
+      "ceremony_team": null
+    },
+    {
+      "id": 5,
+      "first_blood": {
+        "puuid": "49ef826f-6ced-53db-9b33-7321d689b58d",
+        "name": "Ｎｋｙｅ",
+        "tag": "Moro",
+        "team": "Red"
+      },
+      "winning_team_role": "Attacker",
+      "ceremony_player": null,
+      "ceremony_team": null
+    },
+    {
+      "id": 6,
+      "first_blood": {
+        "puuid": "9213e20b-e474-5d81-874b-52db45c1665c",
+        "name": "Kampfkarotte",
+        "tag": "Yoru",
+        "team": "Blue"
+      },
+      "winning_team_role": "Defender",
+      "ceremony_player": null,
+      "ceremony_team": null
+    },
+    {
+      "id": 7,
+      "first_blood": {
+        "puuid": "c347394f-466d-56e6-9825-9dc709685f26",
+        "name": "Twaii",
+        "tag": "Kitty",
+        "team": "Red"
+      },
+      "winning_team_role": "Defender",
+      "ceremony_player": null,
+      "ceremony_team": null
+    },
+    {
+      "id": 8,
+      "first_blood": {
+        "puuid": "9213e20b-e474-5d81-874b-52db45c1665c",
+        "name": "Kampfkarotte",
+        "tag": "Yoru",
+        "team": "Blue"
+      },
+      "winning_team_role": "Defender",
+      "ceremony_player": null,
+      "ceremony_team": null
+    },
+    {
+      "id": 9,
+      "first_blood": {
+        "puuid": "61ce7ab8-25b8-52cf-99ed-c9ccfdf15c58",
+        "name": "mazaa",
+        "tag": "101",
+        "team": "Blue"
+      },
+      "winning_team_role": "Defender",
+      "ceremony_player": null,
+      "ceremony_team": "Blue"
+    },
+    {
+      "id": 10,
+      "first_blood": {
+        "puuid": "1bf68125-a854-5ebb-975a-76e6301028cd",
+        "name": "Benjy9",
+        "tag": "miaou",
+        "team": "Blue"
+      },
+      "winning_team_role": "Defender",
+      "ceremony_player": null,
+      "ceremony_team": null
+    },
+    {
+      "id": 11,
+      "first_blood": {
+        "puuid": "49ef826f-6ced-53db-9b33-7321d689b58d",
+        "name": "Ｎｋｙｅ",
+        "tag": "Moro",
+        "team": "Red"
+      },
+      "winning_team_role": "Defender",
+      "ceremony_player": null,
+      "ceremony_team": null
+    },
+    {
+      "id": 12,
+      "first_blood": {
+        "puuid": "9213e20b-e474-5d81-874b-52db45c1665c",
+        "name": "Kampfkarotte",
+        "tag": "Yoru",
+        "team": "Blue"
+      },
+      "winning_team_role": "Defender",
+      "ceremony_player": null,
+      "ceremony_team": null
+    },
+    {
+      "id": 13,
+      "first_blood": {
+        "puuid": "bad0f4a0-39ae-5190-a1e4-c2e60afaa443",
+        "name": "OneTapenade",
+        "tag": "001",
+        "team": "Red"
+      },
+      "winning_team_role": "Defender",
+      "ceremony_player": null,
+      "ceremony_team": null
+    },
+    {
+      "id": 14,
+      "first_blood": {
+        "puuid": "0cac57d7-9f53-5dd2-8452-b740eae2f045",
+        "name": "Boogie2ndAcc",
+        "tag": "KING",
+        "team": "Blue"
+      },
+      "winning_team_role": "Defender",
+      "ceremony_player": null,
+      "ceremony_team": null
+    },
+    {
+      "id": 15,
+      "first_blood": {
+        "puuid": "263c7f1e-dd4b-5ae1-8732-15d546f84d62",
+        "name": "heartless",
+        "tag": "imy",
+        "team": "Blue"
+      },
+      "winning_team_role": "Attacker",
+      "ceremony_player": null,
+      "ceremony_team": "Blue"
+    },
+    {
+      "id": 16,
+      "first_blood": {
+        "puuid": "c347394f-466d-56e6-9825-9dc709685f26",
+        "name": "Twaii",
+        "tag": "Kitty",
+        "team": "Red"
+      },
+      "winning_team_role": "Defender",
+      "ceremony_player": {
+        "puuid": "bad0f4a0-39ae-5190-a1e4-c2e60afaa443",
+        "name": "OneTapenade",
+        "tag": "001",
+        "team": "Red"
+      },
+      "ceremony_team": "Red"
+    },
+    {
+      "id": 17,
+      "first_blood": {
+        "puuid": "9213e20b-e474-5d81-874b-52db45c1665c",
+        "name": "Kampfkarotte",
+        "tag": "Yoru",
+        "team": "Blue"
+      },
+      "winning_team_role": "Defender",
+      "ceremony_player": null,
+      "ceremony_team": null
+    },
+    {
+      "id": 18,
+      "first_blood": {
+        "puuid": "c347394f-466d-56e6-9825-9dc709685f26",
+        "name": "Twaii",
+        "tag": "Kitty",
+        "team": "Red"
+      },
+      "winning_team_role": "Defender",
+      "ceremony_player": null,
+      "ceremony_team": null
+    },
+    {
+      "id": 19,
+      "first_blood": {
+        "puuid": "61ce7ab8-25b8-52cf-99ed-c9ccfdf15c58",
+        "name": "mazaa",
+        "tag": "101",
+        "team": "Blue"
+      },
+      "winning_team_role": "Attacker",
+      "ceremony_player": null,
+      "ceremony_team": null
+    }
+  ]
+}

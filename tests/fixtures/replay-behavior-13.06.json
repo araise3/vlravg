@@ -1,0 +1,471 @@
+{
+  "mapping_sha256": "5555dd628883df9d9f68272a2099e4f7bfc15bcdcc8cb9bf31216a61bb1174dc",
+  "source_report_sha256": "24d4a09c04c5dd7acc17c0045e4aaff8d60996993b4dc6deaf946387d2488336",
+  "semantics": "Extracted serialized Blueprint programs; native bindings are explicitly modeled, not game-engine validation.",
+  "functions": {
+    "smoke_duration": {
+      "package": "ShooterGame/Content/Characters/Global/Smoke/GameObject_NewSmokeZone_Parent.uasset",
+      "name": "GetSmokeDuration",
+      "program_sha256": "eb061c5ef33bcff16527609c12fd6c8196ccdab643950968ee848c84f0b020c7",
+      "code": [
+        {
+          "Property": {
+            "Old": null,
+            "New": {
+              "Path": [
+                "Duration"
+              ],
+              "ResolvedOwner": {
+                "reference": "Function'/Game/Characters/Global/Smoke/GameObject_NewSmokeZone_Parent.GameObject_NewSmokeZone_Parent_C:GetSmokeDuration'"
+              }
+            },
+            "expression_type": "FKismetPropertyPointer"
+          },
+          "Variable": {
+            "Variable": {
+              "Old": null,
+              "New": {
+                "Path": [
+                  "Duration"
+                ],
+                "ResolvedOwner": {
+                  "reference": "Function'/Game/Characters/Global/Smoke/GameObject_NewSmokeZone_Parent.GameObject_NewSmokeZone_Parent_C:GetSmokeDuration'"
+                }
+              },
+              "expression_type": "FKismetPropertyPointer"
+            },
+            "StatementIndex": 9,
+            "expression_type": "EX_LocalOutVariable"
+          },
+          "Assignment": {
+            "Variable": {
+              "Old": null,
+              "New": {
+                "Path": [
+                  "SmokeDuration"
+                ],
+                "ResolvedOwner": {
+                  "reference": "BlueprintGeneratedClass'/Game/Characters/Global/Smoke/GameObject_NewSmokeZone_Parent.GameObject_NewSmokeZone_Parent_C'"
+                }
+              },
+              "expression_type": "FKismetPropertyPointer"
+            },
+            "StatementIndex": 18,
+            "expression_type": "EX_InstanceVariable"
+          },
+          "StatementIndex": 0,
+          "expression_type": "EX_Let"
+        },
+        {
+          "ReturnExpression": {
+            "StatementIndex": 28,
+            "expression_type": "EX_Nothing"
+          },
+          "StatementIndex": 27,
+          "expression_type": "EX_Return"
+        },
+        {
+          "StatementIndex": 29,
+          "expression_type": "EX_EndOfScript"
+        }
+      ]
+    },
+    "smoke_scale": {
+      "package": "ShooterGame/Content/Characters/Global/Smoke/GameObject_NewSmokeZone_Parent.uasset",
+      "name": "SetSmokeScaleByPercentage",
+      "program_sha256": "dc3adfc1af3530e95983dd3edc7148e8ff1d1a3c2c9023e9f784024f884d3699",
+      "code": [
+        {
+          "Property": {
+            "Old": null,
+            "New": {
+              "Path": [
+                "CallFunc_Conv_DoubleToVector_ReturnValue"
+              ],
+              "ResolvedOwner": {
+                "reference": "Function'/Game/Characters/Global/Smoke/GameObject_NewSmokeZone_Parent.GameObject_NewSmokeZone_Parent_C:SetSmokeScaleByPercentage'"
+              }
+            },
+            "expression_type": "FKismetPropertyPointer"
+          },
+          "Variable": {
+            "Variable": {
+              "Old": null,
+              "New": {
+                "Path": [
+                  "CallFunc_Conv_DoubleToVector_ReturnValue"
+                ],
+                "ResolvedOwner": {
+                  "reference": "Function'/Game/Characters/Global/Smoke/GameObject_NewSmokeZone_Parent.GameObject_NewSmokeZone_Parent_C:SetSmokeScaleByPercentage'"
+                }
+              },
+              "expression_type": "FKismetPropertyPointer"
+            },
+            "StatementIndex": 9,
+            "expression_type": "EX_LocalVariable"
+          },
+          "Assignment": {
+            "StackNode": {
+              "reference": "Class'/Script/Engine.KismetMathLibrary:Conv_DoubleToVector'"
+            },
+            "Parameters": [
+              {
+                "Variable": {
+                  "Old": null,
+                  "New": {
+                    "Path": [
+                      "ScalePercentage"
+                    ],
+                    "ResolvedOwner": {
+                      "reference": "Function'/Game/Characters/Global/Smoke/GameObject_NewSmokeZone_Parent.GameObject_NewSmokeZone_Parent_C:SetSmokeScaleByPercentage'"
+                    }
+                  },
+                  "expression_type": "FKismetPropertyPointer"
+                },
+                "StatementIndex": 27,
+                "expression_type": "EX_LocalVariable"
+              }
+            ],
+            "StatementIndex": 18,
+            "expression_type": "EX_CallMath"
+          },
+          "StatementIndex": 0,
+          "expression_type": "EX_Let"
+        },
+        {
+          "ObjectExpression": {
+            "Variable": {
+              "Old": null,
+              "New": {
+                "Path": [
+                  "SmokeScene"
+                ],
+                "ResolvedOwner": {
+                  "reference": "BlueprintGeneratedClass'/Game/Characters/Global/Smoke/GameObject_NewSmokeZone_Parent.GameObject_NewSmokeZone_Parent_C'"
+                }
+              },
+              "expression_type": "FKismetPropertyPointer"
+            },
+            "StatementIndex": 38,
+            "expression_type": "EX_InstanceVariable"
+          },
+          "Offset": 19,
+          "RValuePointer": {
+            "Old": null,
+            "New": {
+              "Path": [],
+              "ResolvedOwner": {
+                "reference": "0"
+              }
+            },
+            "expression_type": "FKismetPropertyPointer"
+          },
+          "ContextExpression": {
+            "StackNode": {
+              "reference": "Class'/Script/Engine.SceneComponent:SetWorldScale3D'"
+            },
+            "Parameters": [
+              {
+                "Variable": {
+                  "Old": null,
+                  "New": {
+                    "Path": [
+                      "CallFunc_Conv_DoubleToVector_ReturnValue"
+                    ],
+                    "ResolvedOwner": {
+                      "reference": "Function'/Game/Characters/Global/Smoke/GameObject_NewSmokeZone_Parent.GameObject_NewSmokeZone_Parent_C:SetSmokeScaleByPercentage'"
+                    }
+                  },
+                  "expression_type": "FKismetPropertyPointer"
+                },
+                "StatementIndex": 68,
+                "expression_type": "EX_LocalVariable"
+              }
+            ],
+            "StatementIndex": 59,
+            "expression_type": "EX_FinalFunction"
+          },
+          "StatementIndex": 37,
+          "expression_type": "EX_Context"
+        },
+        {
+          "ReturnExpression": {
+            "StatementIndex": 79,
+            "expression_type": "EX_Nothing"
+          },
+          "StatementIndex": 78,
+          "expression_type": "EX_Return"
+        },
+        {
+          "StatementIndex": 80,
+          "expression_type": "EX_EndOfScript"
+        }
+      ]
+    },
+    "alt_death": {
+      "package": "ShooterGame/Content/Characters/_Core/BasePlayerCharacter.uasset",
+      "name": "HasAltDeathReaction",
+      "program_sha256": "1eb68dbb3192511395488ca718d9edfb8e9deda2fe58864813d37dc2c3abb887",
+      "code": [
+        {
+          "Variable": {
+            "Variable": {
+              "Old": null,
+              "New": {
+                "Path": [
+                  "Result"
+                ],
+                "ResolvedOwner": {
+                  "reference": "Function'/Game/Characters/_Core/BasePlayerCharacter.BasePlayerCharacter_C:HasAltDeathReaction'"
+                }
+              },
+              "expression_type": "FKismetPropertyPointer"
+            },
+            "StatementIndex": 1,
+            "expression_type": "EX_LocalOutVariable"
+          },
+          "Assignment": {
+            "StatementIndex": 10,
+            "expression_type": "EX_False"
+          },
+          "StatementIndex": 0,
+          "expression_type": "EX_LetBool"
+        },
+        {
+          "ReturnExpression": {
+            "StatementIndex": 12,
+            "expression_type": "EX_Nothing"
+          },
+          "StatementIndex": 11,
+          "expression_type": "EX_Return"
+        },
+        {
+          "StatementIndex": 13,
+          "expression_type": "EX_EndOfScript"
+        }
+      ]
+    },
+    "audio_perspective": {
+      "package": "ShooterGame/Content/Audio/Core/Comp_FXC_AudioBasic.uasset",
+      "name": "ShouldPlayForPerspective",
+      "program_sha256": "d1f7c41be838c300d1d09f7f9e90120f4491e1f43af779fc6a2d13c9875ed019",
+      "source_record_sha256": "5cb8cccfd6cc433b9ad61857d6b419c35863cfd3410082536e3265f9e3ad36a8",
+      "code": [
+        {
+          "BooleanExpression": {
+            "Variable": {
+              "Old": null,
+              "New": {
+                "Path": [
+                  "IsFirstPerson"
+                ],
+                "ResolvedOwner": {
+                  "reference": "Function'/Game/Audio/Core/Comp_FXC_AudioBasic.Comp_FXC_AudioBasic_C:ShouldPlayForPerspective'"
+                }
+              },
+              "expression_type": "FKismetPropertyPointer"
+            },
+            "StatementIndex": 5,
+            "expression_type": "EX_LocalVariable"
+          },
+          "CodeOffset": 67,
+          "ObjectName": "ShouldPlayForPerspective",
+          "StatementIndex": 0,
+          "expression_type": "EX_JumpIfNot"
+        },
+        {
+          "Variable": {
+            "Variable": {
+              "Old": null,
+              "New": {
+                "Path": [
+                  "CallFunc_Not_PreBool_ReturnValue"
+                ],
+                "ResolvedOwner": {
+                  "reference": "Function'/Game/Audio/Core/Comp_FXC_AudioBasic.Comp_FXC_AudioBasic_C:ShouldPlayForPerspective'"
+                }
+              },
+              "expression_type": "FKismetPropertyPointer"
+            },
+            "StatementIndex": 15,
+            "expression_type": "EX_LocalVariable"
+          },
+          "Assignment": {
+            "StackNode": {
+              "reference": "Class'/Script/Engine.KismetMathLibrary:Not_PreBool'"
+            },
+            "Parameters": [
+              {
+                "Variable": {
+                  "Old": null,
+                  "New": {
+                    "Path": [
+                      "MuteFirstPerson"
+                    ],
+                    "ResolvedOwner": {
+                      "reference": "BlueprintGeneratedClass'/Game/Audio/Core/Comp_FXC_AudioBasic.Comp_FXC_AudioBasic_C'"
+                    }
+                  },
+                  "expression_type": "FKismetPropertyPointer"
+                },
+                "StatementIndex": 33,
+                "expression_type": "EX_InstanceVariable"
+              }
+            ],
+            "StatementIndex": 24,
+            "expression_type": "EX_CallMath"
+          },
+          "StatementIndex": 14,
+          "expression_type": "EX_LetBool"
+        },
+        {
+          "Variable": {
+            "Variable": {
+              "Old": null,
+              "New": {
+                "Path": [
+                  "ReturnValue"
+                ],
+                "ResolvedOwner": {
+                  "reference": "Function'/Game/Audio/Core/Comp_FXC_AudioBasic.Comp_FXC_AudioBasic_C:ShouldPlayForPerspective'"
+                }
+              },
+              "expression_type": "FKismetPropertyPointer"
+            },
+            "StatementIndex": 44,
+            "expression_type": "EX_LocalOutVariable"
+          },
+          "Assignment": {
+            "Variable": {
+              "Old": null,
+              "New": {
+                "Path": [
+                  "CallFunc_Not_PreBool_ReturnValue"
+                ],
+                "ResolvedOwner": {
+                  "reference": "Function'/Game/Audio/Core/Comp_FXC_AudioBasic.Comp_FXC_AudioBasic_C:ShouldPlayForPerspective'"
+                }
+              },
+              "expression_type": "FKismetPropertyPointer"
+            },
+            "StatementIndex": 53,
+            "expression_type": "EX_LocalVariable"
+          },
+          "StatementIndex": 43,
+          "expression_type": "EX_LetBool"
+        },
+        {
+          "CodeOffset": 115,
+          "ObjectName": "ShouldPlayForPerspective",
+          "StatementIndex": 62,
+          "expression_type": "EX_Jump"
+        },
+        {
+          "Variable": {
+            "Variable": {
+              "Old": null,
+              "New": {
+                "Path": [
+                  "CallFunc_Not_PreBool_ReturnValue_1"
+                ],
+                "ResolvedOwner": {
+                  "reference": "Function'/Game/Audio/Core/Comp_FXC_AudioBasic.Comp_FXC_AudioBasic_C:ShouldPlayForPerspective'"
+                }
+              },
+              "expression_type": "FKismetPropertyPointer"
+            },
+            "StatementIndex": 68,
+            "expression_type": "EX_LocalVariable"
+          },
+          "Assignment": {
+            "StackNode": {
+              "reference": "Class'/Script/Engine.KismetMathLibrary:Not_PreBool'"
+            },
+            "Parameters": [
+              {
+                "Variable": {
+                  "Old": null,
+                  "New": {
+                    "Path": [
+                      "MuteThirdPerson"
+                    ],
+                    "ResolvedOwner": {
+                      "reference": "BlueprintGeneratedClass'/Game/Audio/Core/Comp_FXC_AudioBasic.Comp_FXC_AudioBasic_C'"
+                    }
+                  },
+                  "expression_type": "FKismetPropertyPointer"
+                },
+                "StatementIndex": 86,
+                "expression_type": "EX_InstanceVariable"
+              }
+            ],
+            "StatementIndex": 77,
+            "expression_type": "EX_CallMath"
+          },
+          "StatementIndex": 67,
+          "expression_type": "EX_LetBool"
+        },
+        {
+          "Variable": {
+            "Variable": {
+              "Old": null,
+              "New": {
+                "Path": [
+                  "ReturnValue"
+                ],
+                "ResolvedOwner": {
+                  "reference": "Function'/Game/Audio/Core/Comp_FXC_AudioBasic.Comp_FXC_AudioBasic_C:ShouldPlayForPerspective'"
+                }
+              },
+              "expression_type": "FKismetPropertyPointer"
+            },
+            "StatementIndex": 97,
+            "expression_type": "EX_LocalOutVariable"
+          },
+          "Assignment": {
+            "Variable": {
+              "Old": null,
+              "New": {
+                "Path": [
+                  "CallFunc_Not_PreBool_ReturnValue_1"
+                ],
+                "ResolvedOwner": {
+                  "reference": "Function'/Game/Audio/Core/Comp_FXC_AudioBasic.Comp_FXC_AudioBasic_C:ShouldPlayForPerspective'"
+                }
+              },
+              "expression_type": "FKismetPropertyPointer"
+            },
+            "StatementIndex": 106,
+            "expression_type": "EX_LocalVariable"
+          },
+          "StatementIndex": 96,
+          "expression_type": "EX_LetBool"
+        },
+        {
+          "ReturnExpression": {
+            "Variable": {
+              "Old": null,
+              "New": {
+                "Path": [
+                  "ReturnValue"
+                ],
+                "ResolvedOwner": {
+                  "reference": "Function'/Game/Audio/Core/Comp_FXC_AudioBasic.Comp_FXC_AudioBasic_C:ShouldPlayForPerspective'"
+                }
+              },
+              "expression_type": "FKismetPropertyPointer"
+            },
+            "StatementIndex": 116,
+            "expression_type": "EX_LocalOutVariable"
+          },
+          "StatementIndex": 115,
+          "expression_type": "EX_Return"
+        },
+        {
+          "StatementIndex": 125,
+          "expression_type": "EX_EndOfScript"
+        }
+      ]
+    }
+  }
+}

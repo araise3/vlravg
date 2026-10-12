@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Riot remote authentication test</title>
+<style>
+body{font:16px system-ui;background:#11151d;color:#e9eef7;max-width:760px;margin:60px auto;padding:24px}
+input,button{font:inherit;padding:12px;border-radius:6px;border:1px solid #657083;background:#202936;color:inherit}
+input{box-sizing:border-box;width:100%;margin:8px 0 20px}button{margin:0 8px 10px 0;cursor:pointer}
+button:disabled{opacity:.5;cursor:wait}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#080c12;padding:20px;border-radius:8px}
+</style>
+<h1>Riot remote authentication test</h1>
+<p>Run authentication first, then content, then player data. The dedicated account and optional consenting target are configured in Cloudflare.</p>
+<p>Enter only the probe access key below. Set the Riot cookie in Cloudflare secrets.</p>
+<label for="key">Probe access key</label>
+<input id="key" type="password" autocomplete="off" spellcheck="false">
+<div><button data-mode="auth">1. Authentication</button><button data-mode="content">2. Content</button><button data-mode="player">3. Player data</button><button data-mode="custom">Custom history</button><button data-mode="benchmark">Compare cached players</button></div>
+<pre id="result" role="status" aria-live="polite">Ready.</pre>
+<script>
+const buttons = [...document.querySelectorAll('button')];
+buttons.forEach(button => button.addEventListener('click', async () => {
+  const key = document.getElementById('key').value;
+  const output = document.getElementById('result');
+  if (key.length < 32) { output.textContent = 'Enter the probe access key (at least 32 characters).'; return; }
+  buttons.forEach(b => b.disabled = true);
+  output.textContent = 'Running ' + button.dataset.mode + ' test…';
+  try {
+    if(button.dataset.mode==='benchmark') {
+      const reports=[];
+      for(let index=0;index<24;index++) {
+        output.textContent='Comparing cached player '+(index+1)+' of 24…\n'+JSON.stringify(reports,null,2);
+        const response=await fetch('/riot-probe/benchmark?index='+index,{method:'POST',headers:{Authorization:'Bearer '+key},cache:'no-store'});
+        const data=await response.json();
+        if(!response.ok){output.textContent=JSON.stringify(data,null,2);return;}
+        if(data.done)break;
+        reports.push(data.report);
+        if(data.report.rateLimited)break;
+        await new Promise(resolve=>setTimeout(resolve,1000));
+      }
+      output.textContent=JSON.stringify({reports},null,2);
+      return;
+    }
+    const response = await fetch('/riot-probe/run?mode=' + button.dataset.mode, {
+      method: 'POST', headers: { Authorization: 'Bearer ' + key }, cache: 'no-store',
+    });
+    output.textContent = 'HTTP ' + response.status + '\n' + JSON.stringify(await response.json(), null, 2);
+  } catch { output.textContent = 'Test request failed.'; }
+  finally { buttons.forEach(b => b.disabled = false); }
+}));
+</script>
+</html>
