@@ -181,6 +181,7 @@ function analysisClient({count=200,archiveWait=null,rrWait=null,storedFailure=fa
     setTimeout:()=>0,setProgress(){},setStatus(){},setSeasonMatchCount(){},showSeasonSelect(){},showSeasonIdle(){},
     writePlayerRoute(){},finalizeHeader(){},updateSeasonDropdown(){},updateSeasonTriggerLabel(){},updateDetailPages(){},
     accountUrlFor:()=>'/api/account/Example/123',loadNameHistory:async()=>{},readSavedMatchCounts:async()=>({}),
+    refreshTeammateNames:()=>{},lookupTeammateRows:()=>[],
     currentActId:()=>season,loadSeasonDates:async()=>{},getActInfoByUuid:()=>({start:1000}),getSeasonOrder:()=>[],
     parseSearchInput:()=>({key:'Example#123'}),isSeason:row=>row.metadata?.season?.id===season,
     actOptionLabel:()=>'',renderSeasonOptions(){},

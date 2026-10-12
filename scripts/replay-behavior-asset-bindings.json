@@ -1,0 +1,356 @@
+{
+  "schema_version": 1,
+  "mapping_sha256": "5555dd628883df9d9f68272a2099e4f7bfc15bcdcc8cb9bf31216a61bb1174dc",
+  "source_record_sha256": "b853d20db97080fdcc570efaed80e7e0d20038f1bcffe4ef50d1bf716a5e3202",
+  "package": "ShooterGame/Content/Characters/_Core/FXC_Blinded_Shared.uasset",
+  "programs": {
+    "blind_duration_readout": {
+      "name": "Calculate Longest Blind",
+      "object_path": "/Game/Characters/_Core/FXC_Blinded_Shared.FXC_Blinded_Shared_C:Calculate Longest Blind",
+      "ScriptBytecode": [
+        {
+          "expression_type": "EX_LetObj",
+          "Variable": {
+            "expression_type": "EX_LocalVariable",
+            "Variable": {
+              "expression_type": "FKismetPropertyPointer",
+              "Old": null,
+              "New": {
+                "Path": [
+                  "CallFunc_GetBlindManagerComponent_ReturnValue"
+                ],
+                "ResolvedOwner": {
+                  "reference": "Function'/Game/Characters/_Core/FXC_Blinded_Shared.FXC_Blinded_Shared_C:Calculate Longest Blind'"
+                }
+              }
+            },
+            "StatementIndex": 1
+          },
+          "Assignment": {
+            "expression_type": "EX_Context",
+            "ObjectExpression": {
+              "expression_type": "EX_InstanceVariable",
+              "Variable": {
+                "expression_type": "FKismetPropertyPointer",
+                "Old": null,
+                "New": {
+                  "Path": [
+                    "BlindedShooterCharacter"
+                  ],
+                  "ResolvedOwner": {
+                    "reference": "BlueprintGeneratedClass'/Game/Characters/_Core/FXC_Blinded_Shared.FXC_Blinded_Shared_C'"
+                  }
+                }
+              },
+              "StatementIndex": 11
+            },
+            "Offset": 10,
+            "RValuePointer": {
+              "expression_type": "FKismetPropertyPointer",
+              "Old": null,
+              "New": {
+                "Path": [
+                  "CallFunc_GetBlindManagerComponent_ReturnValue"
+                ],
+                "ResolvedOwner": {
+                  "reference": "Function'/Game/Characters/_Core/FXC_Blinded_Shared.FXC_Blinded_Shared_C:Calculate Longest Blind'"
+                }
+              }
+            },
+            "ContextExpression": {
+              "expression_type": "EX_FinalFunction",
+              "StackNode": {
+                "reference": "Class'/Script/ShooterGame.ShooterCharacter:GetBlindManagerComponent'"
+              },
+              "Parameters": [],
+              "StatementIndex": 32
+            },
+            "StatementIndex": 10
+          },
+          "StatementIndex": 0
+        },
+        {
+          "expression_type": "EX_Let",
+          "Property": {
+            "expression_type": "FKismetPropertyPointer",
+            "Old": null,
+            "New": {
+              "Path": [
+                "CallFunc_GetLongestActiveBlindDuration_ReturnValue"
+              ],
+              "ResolvedOwner": {
+                "reference": "Function'/Game/Characters/_Core/FXC_Blinded_Shared.FXC_Blinded_Shared_C:Calculate Longest Blind'"
+              }
+            }
+          },
+          "Variable": {
+            "expression_type": "EX_LocalVariable",
+            "Variable": {
+              "expression_type": "FKismetPropertyPointer",
+              "Old": null,
+              "New": {
+                "Path": [
+                  "CallFunc_GetLongestActiveBlindDuration_ReturnValue"
+                ],
+                "ResolvedOwner": {
+                  "reference": "Function'/Game/Characters/_Core/FXC_Blinded_Shared.FXC_Blinded_Shared_C:Calculate Longest Blind'"
+                }
+              }
+            },
+            "StatementIndex": 51
+          },
+          "Assignment": {
+            "expression_type": "EX_Context",
+            "ObjectExpression": {
+              "expression_type": "EX_LocalVariable",
+              "Variable": {
+                "expression_type": "FKismetPropertyPointer",
+                "Old": null,
+                "New": {
+                  "Path": [
+                    "CallFunc_GetBlindManagerComponent_ReturnValue"
+                  ],
+                  "ResolvedOwner": {
+                    "reference": "Function'/Game/Characters/_Core/FXC_Blinded_Shared.FXC_Blinded_Shared_C:Calculate Longest Blind'"
+                  }
+                }
+              },
+              "StatementIndex": 61
+            },
+            "Offset": 10,
+            "RValuePointer": {
+              "expression_type": "FKismetPropertyPointer",
+              "Old": null,
+              "New": {
+                "Path": [
+                  "CallFunc_GetLongestActiveBlindDuration_ReturnValue"
+                ],
+                "ResolvedOwner": {
+                  "reference": "Function'/Game/Characters/_Core/FXC_Blinded_Shared.FXC_Blinded_Shared_C:Calculate Longest Blind'"
+                }
+              }
+            },
+            "ContextExpression": {
+              "expression_type": "EX_FinalFunction",
+              "StackNode": {
+                "reference": "Class'/Script/ShooterGame.BlindManagerComponent:GetLongestActiveBlindDuration'"
+              },
+              "Parameters": [],
+              "StatementIndex": 82
+            },
+            "StatementIndex": 60
+          },
+          "StatementIndex": 42
+        },
+        {
+          "expression_type": "EX_Let",
+          "Property": {
+            "expression_type": "FKismetPropertyPointer",
+            "Old": null,
+            "New": {
+              "Path": [],
+              "ResolvedOwner": {
+                "reference": "0"
+              }
+            }
+          },
+          "Variable": {
+            "expression_type": "EX_LocalVariable",
+            "Variable": {
+              "expression_type": "FKismetPropertyPointer",
+              "Old": null,
+              "New": {
+                "Path": [
+                  "K2Node_FunctionResult_L_LongestBlind1_ImplicitCast"
+                ],
+                "ResolvedOwner": {
+                  "reference": "Function'/Game/Characters/_Core/FXC_Blinded_Shared.FXC_Blinded_Shared_C:Calculate Longest Blind'"
+                }
+              }
+            },
+            "StatementIndex": 101
+          },
+          "Assignment": {
+            "expression_type": "EX_Cast",
+            "ConversionType": {
+              "expression_type": "ECastToken",
+              "value__": 4
+            },
+            "Target": {
+              "expression_type": "EX_LocalVariable",
+              "Variable": {
+                "expression_type": "FKismetPropertyPointer",
+                "Old": null,
+                "New": {
+                  "Path": [
+                    "CallFunc_GetLongestActiveBlindDuration_ReturnValue"
+                  ],
+                  "ResolvedOwner": {
+                    "reference": "Function'/Game/Characters/_Core/FXC_Blinded_Shared.FXC_Blinded_Shared_C:Calculate Longest Blind'"
+                  }
+                }
+              },
+              "StatementIndex": 112
+            },
+            "StatementIndex": 110
+          },
+          "StatementIndex": 92
+        },
+        {
+          "expression_type": "EX_Let",
+          "Property": {
+            "expression_type": "FKismetPropertyPointer",
+            "Old": null,
+            "New": {
+              "Path": [
+                "L_LongestBlind1"
+              ],
+              "ResolvedOwner": {
+                "reference": "Function'/Game/Characters/_Core/FXC_Blinded_Shared.FXC_Blinded_Shared_C:Calculate Longest Blind'"
+              }
+            }
+          },
+          "Variable": {
+            "expression_type": "EX_LocalOutVariable",
+            "Variable": {
+              "expression_type": "FKismetPropertyPointer",
+              "Old": null,
+              "New": {
+                "Path": [
+                  "L_LongestBlind1"
+                ],
+                "ResolvedOwner": {
+                  "reference": "Function'/Game/Characters/_Core/FXC_Blinded_Shared.FXC_Blinded_Shared_C:Calculate Longest Blind'"
+                }
+              }
+            },
+            "StatementIndex": 130
+          },
+          "Assignment": {
+            "expression_type": "EX_LocalVariable",
+            "Variable": {
+              "expression_type": "FKismetPropertyPointer",
+              "Old": null,
+              "New": {
+                "Path": [
+                  "K2Node_FunctionResult_L_LongestBlind1_ImplicitCast"
+                ],
+                "ResolvedOwner": {
+                  "reference": "Function'/Game/Characters/_Core/FXC_Blinded_Shared.FXC_Blinded_Shared_C:Calculate Longest Blind'"
+                }
+              }
+            },
+            "StatementIndex": 139
+          },
+          "StatementIndex": 121
+        },
+        {
+          "expression_type": "EX_Return",
+          "ReturnExpression": {
+            "expression_type": "EX_Nothing",
+            "StatementIndex": 149
+          },
+          "StatementIndex": 148
+        },
+        {
+          "expression_type": "EX_EndOfScript",
+          "StatementIndex": 150
+        }
+      ],
+      "ChildProperties": [
+        {
+          "ArrayDim": 1,
+          "ElementSize": 8,
+          "PropertyFlags": {
+            "value__": 384
+          },
+          "RepIndex": 0,
+          "RepNotifyFunc": "None",
+          "BlueprintReplicationCondition": {
+            "value__": 0
+          },
+          "Name": "L_LongestBlind1",
+          "Flags": {
+            "value__": 1
+          },
+          "property_type": "FDoubleProperty"
+        },
+        {
+          "ArrayDim": 1,
+          "ElementSize": 8,
+          "PropertyFlags": {
+            "value__": 5
+          },
+          "RepIndex": 0,
+          "RepNotifyFunc": "None",
+          "BlueprintReplicationCondition": {
+            "value__": 0
+          },
+          "Name": "L_LongestBlind",
+          "Flags": {
+            "value__": 1
+          },
+          "property_type": "FDoubleProperty"
+        },
+        {
+          "PropertyClass": {
+            "reference": "Class'/Script/ShooterGame.BlindManagerComponent'"
+          },
+          "ArrayDim": 1,
+          "ElementSize": 8,
+          "PropertyFlags": {
+            "value__": 524288
+          },
+          "RepIndex": 0,
+          "RepNotifyFunc": "None",
+          "BlueprintReplicationCondition": {
+            "value__": 0
+          },
+          "Name": "CallFunc_GetBlindManagerComponent_ReturnValue",
+          "Flags": {
+            "value__": 1
+          },
+          "property_type": "FObjectProperty"
+        },
+        {
+          "ArrayDim": 1,
+          "ElementSize": 4,
+          "PropertyFlags": {
+            "value__": 0
+          },
+          "RepIndex": 0,
+          "RepNotifyFunc": "None",
+          "BlueprintReplicationCondition": {
+            "value__": 0
+          },
+          "Name": "CallFunc_GetLongestActiveBlindDuration_ReturnValue",
+          "Flags": {
+            "value__": 1
+          },
+          "property_type": "FFloatProperty"
+        },
+        {
+          "ArrayDim": 1,
+          "ElementSize": 8,
+          "PropertyFlags": {
+            "value__": 0
+          },
+          "RepIndex": 0,
+          "RepNotifyFunc": "None",
+          "BlueprintReplicationCondition": {
+            "value__": 0
+          },
+          "Name": "K2Node_FunctionResult_L_LongestBlind1_ImplicitCast",
+          "Flags": {
+            "value__": 1
+          },
+          "property_type": "FDoubleProperty"
+        }
+      ],
+      "FunctionFlags": {
+        "value__": 205651968
+      },
+      "program_sha256": "6cd09171693309f318d55acf8f978eca45c7495fdd91a36a330799cb0e7c1219"
+    }
+  }
+}

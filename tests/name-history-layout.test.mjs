@@ -15,13 +15,15 @@ class Element {
   append(...children){this.children.push(...children);}
   appendChild(child){this.append(child);}
   replaceChildren(...children){this.children=children;this.text='';}
+  set innerHTML(value){this.replaceChildren();if(value.includes('<tbody>'))this.appendChild(new Element('tbody'));}
+  querySelector(tag){return this.children.find(child=>child.tag===tag)||this.children.map(child=>child.querySelector(tag)).find(Boolean)||null;}
   setAttribute(name,value){this.attributes[name]=value;}
   addEventListener(name,callback){this['on'+name]=callback;}
 }
 const findAll=(root,className)=>[root,...root.children.flatMap(child=>findAll(child,className))]
   .filter(node=>node.className.split(' ').includes(className));
 
-test('name records show compact dates and acts, current identity, and re-sort',()=>{
+test('name history table shows dates and acts, marks the current identity, and sorts newest first',()=>{
   const elements=new Map();
   const document={createElement:tag=>new Element(tag),getElementById:id=>{
     if(!elements.has(id))elements.set(id,new Element('div'));
@@ -29,7 +31,7 @@ test('name records show compact dates and acts, current identity, and re-sort',(
   }};
   const context={document,Intl,Date,
     HARDCODED_ACT_META:{a:{start:Date.parse('2021-01-01')},b:{start:Date.parse('2021-03-01')},c:{start:Date.parse('2021-05-01')},d:{start:Date.parse('2021-07-01')}},
-    nameHistoryState:'ready',nameHistorySort:'newest',nameHistoryBackfill:{available:true},
+    nameHistoryState:'ready',nameHistoryBackfill:{available:true},
     nameBackfillBusy:false,nameBackfillError:false,nameBackfillStopRequested:false,nameBackfillStopped:false,nameBackfillPages:0,
     nameHistoryRows:[
       {name:'Old',tag:'EU',first_seen:'2021-01-10',last_seen:'2021-03-10',ended_at:'2021-03-11'},
@@ -39,18 +41,16 @@ test('name records show compact dates and acts, current identity, and re-sort',(
   const render=runInNewContext(html.slice(start,end)+'\nrenderNameHistory',context);
   render();
   const root=elements.get('name-history-table');
-  const list=findAll(root,'name-history-list')[0];
+  const table=findAll(root,'name-history-table')[0];
+  const list=table.querySelector('tbody');
   assert.equal(list.children.length,2);
+  assert.ok(list.children.every(row=>row.children.length===4),'each row has Riot ID, first date, last date, and act');
   assert.match(list.children[0].textContent,/Current#NOW/);
   assert.equal(findAll(list.children[0],'name-history-current').length,1);
   assert.match(list.children[0].textContent,/10 Jul 2021.*E2A1/);
-  assert.equal((list.children[0].textContent.match(/10 Jul 2021/g)||[]).length,1);
+  assert.equal((list.children[0].textContent.match(/10 Jul 2021/g)||[]).length,2,'first and last observations each have a date column');
   assert.match(list.children[1].textContent,/10 Jan 2021.*10 Mar 2021.*E1A1 — A2/);
-  assert.equal(findAll(list.children[0],'name-history-meta').length,1);
-  assert.equal(findAll(root,'rank-table').length,0);
-
-  const sort=findAll(root,'name-history-sort')[0].children[0];
-  sort.value='oldest';sort.onchange();
-  const reordered=findAll(elements.get('name-history-table'),'name-history-list')[0];
-  assert.match(reordered.children[0].textContent,/Old#EU/);
+  assert.equal(findAll(list.children[0],'name-history-date').length,2);
+  assert.equal(findAll(root,'name-history-table-scroll').length,1);
+  assert.equal(context.nameHistoryRows[0].name,'Old','rendering must not reorder stored history');
 });

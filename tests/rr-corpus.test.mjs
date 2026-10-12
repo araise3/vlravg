@@ -143,6 +143,39 @@ test('profile account lookups enrol visitors on cache misses and hits without ra
   assert.equal(upstreamCalls,1);
 });
 
+test('current PUUID identities retire old cache keys and share a five-minute forced refresh',async t=>{
+  const {db}=database(t),oldFetch=globalThis.fetch,oldCaches=globalThis.caches;
+  let saved=null,calls=0;
+  globalThis.caches={default:{
+    async match(key){
+      const url=new URL(key.url);
+      assert.equal(url.pathname,`/api/account-by-puuid/${puuid}`);
+      assert.equal(url.search,'?_identity=current-v1');
+      return saved?.clone()||null;
+    },
+    async put(_key,response){
+      assert.equal(response.headers.get('Cache-Control'),'public, max-age=300');
+      saved=response.clone();
+    },
+  }};
+  globalThis.fetch=async url=>{
+    calls++;
+    assert.equal(String(url),`https://api.henrikdev.xyz/valorant/v1/by-puuid/account/${puuid}?force=true`);
+    return Response.json({data:{puuid,name:'Renamed',tag:'NEW',region:'eu'}},{headers:{'x-ratelimit-remaining':'55'}});
+  };
+  t.after(()=>{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;});
+  for(const suffix of [puuid,`${puuid.toUpperCase()}?force=false&random=123`]){
+    const jobs=[];
+    const response=await onRequestGet({request:new Request(`https://test/api/account-by-puuid/${suffix}`),
+      env:{APP_DB:db,HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});
+    assert.equal(response.status,200);
+    assert.equal((await response.json()).data.name,'Renamed');
+    assert.equal(response.headers.get('x-ratelimit-remaining'),null);
+    await Promise.all(jobs);
+  }
+  assert.equal(calls,1);
+});
+
 test('cached account enrolment cannot overwrite a newer identity or invent ranked activity',async t=>{
   const {db,sql}=database(t);
   await trackRRAccount(db,{puuid:puuid.toUpperCase(),name:'Current',tag:'NEW',region:'eu'});
@@ -159,10 +192,11 @@ test('public RR lookups atomically collect fresh windows and return all previous
   const {db,sql}=database(t),oldFetch=globalThis.fetch,oldCaches=globalThis.caches;
   const earlier={...entry('earlier'),date:'2026-10-01T00:00:00Z'};
   await collectRR(db,payload([earlier]),{puuid,region:'eu',platform:'pc'});
-  let fresh=[entry(),{...entry('previous'),date:'2026-10-02T00:00:00Z'}];
+  let fresh=[{...entry(),rr_performance_bonus:5,rr_penalty:.25,tier_before_update:{id:12},rr_before_update:30},
+    {...entry('previous'),date:'2026-10-02T00:00:00Z'}];
   let cachedResponse=null,cachePuts=0,upstreamCalls=0;
   globalThis.caches={default:{async match(){return null;},async put(_key,response){cachePuts++;cachedResponse=response.clone();}}};
-  globalThis.fetch=async()=>{upstreamCalls++;return Response.json(payload(fresh),{headers:{'x-ratelimit-remaining':'55'}});};
+  globalThis.fetch=async url=>{assert.equal(new URL(url).origin,'https://api.henrikdev.xyz');upstreamCalls++;return Response.json(payload(fresh),{headers:{'x-ratelimit-remaining':'55'}});};
   t.after(()=>{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;});
   for(const path of ['mmr-history/eu/pc/Alpha/EU',`mmr-history-by-puuid/eu/pc/${puuid}`]){
     const jobs=[];
@@ -172,7 +206,12 @@ test('public RR lookups atomically collect fresh windows and return all previous
     assert.equal(sql.prepare('SELECT previous_match_id FROM rr_predecessors WHERE match_id=?').get(mid).previous_match_id,'previous');
     // The older database neighbour was not witnessed in this upstream window.
     assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_predecessors WHERE match_id=?').get('previous').n,0);
-    assert.deepEqual((await response.json()).data.history.map(h=>h.match_id),[mid,'previous','earlier']);
+    const returned=(await response.json()).data.history;
+    assert.deepEqual(returned.map(h=>h.match_id),[mid,'previous','earlier']);
+    assert.equal(returned[0].rr_performance_bonus,5);
+    assert.equal(returned[0].rr_penalty,.25);
+    assert.equal(returned[0].rr_before_update,30);
+    fresh=fresh.map(h=>({...h,rr_performance_bonus:null,rr_penalty:null,rr_before_update:null}));
     await Promise.all(jobs);
   }
   assert.equal(sql.prepare('SELECT checks FROM rr_collection').get().checks,3);

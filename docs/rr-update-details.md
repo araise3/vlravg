@@ -5,8 +5,9 @@ The frontend reads the v4.10 competitive-update fields from the existing stable
 required. Existing server-side quota handling stays in place.
 
 Source: [Henrik release notes](https://docs.henrikdev.xyz/valorant/changes/v4.10.0).
-Field names and nullable types were verified against the vendor's OpenAPI schema
-on 2026-10-10. Older records may lack every new field.
+Field names and nullable types were verified against the stable authenticated
+OpenAPI schema and live stable history responses on 2026-10-10. Older records may
+lack every new field. See [verification results](rr-update-verification.md).
 
 Expanded match details show reported starting/ending rank and RR, performance
 bonus, penalties, new-map forgiveness, placement status, shield replenishment,

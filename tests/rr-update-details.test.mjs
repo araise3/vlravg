@@ -44,3 +44,42 @@ test('details preserve fractional penalty, escape strings, and explain missing c
   assert.match(api.buildRRDetailsHtml(match({})),/unavailable/);
   assert.equal(api.buildRRDetailsHtml({}), '');
 });
+
+test('stable API unknown movement sentinel is not displayed as a rank event',()=>{
+  const m=match({competitive_movement:'MOVEMENT_UNKNOWN'});
+  assert.equal(m.myRRDetails.movement,null);
+  assert.ok(!api.buildRRDetailsHtml(m).includes('Competitive movement'));
+});
+
+test('history ingestion prefers exact starts across gaps, promotions and act transitions',()=>{
+  const history=[
+    {match_id:'first',date:'2026-10-01',season:{short:'old'},tier:{id:17},rr:95,elo:1495,last_change:20},
+    {match_id:'promotion',date:'2026-10-03',season:{short:'new'},tier:{id:18},rr:10,elo:1510,last_change:17,
+      tier_before_update:{id:17},rr_before_update:88,rr_performance_bonus:0,is_placement_match:false},
+    {match_id:'immortal',date:'2026-10-04',season:{short:'new'},tier:{id:26},rr:350,last_change:20,
+      tier_before_update:{id:24},rr_before_update:330},
+    {match_id:'zero',date:'2026-10-05',season:{short:'new'},tier:{id:18},rr:20,last_change:20,
+      tier_before_update:{id:18},rr_before_update:0},
+    {match_id:'shield',date:'2026-10-06',season:{short:'new'},tier:{id:18},rr:0,last_change:-20,
+      tier_before_update:{id:18},rr_before_update:0,was_derank_protected:true},
+  ];
+  const start=html.indexOf('        const history=(rrJ.data||rrJ).history||[];');
+  const end=html.indexOf('\n        });',start)+'\n        });'.length;
+  assert.ok(start>0&&end>start);
+  const names=['_rrChangeByMatchId','_rrDetailsByMatchId','_preRRByMatchId','_preTierByMatchId',
+    '_postRRByMatchId','_postTierByMatchId','_refundedRRByMatchId','_derankProtectedByMatchId'];
+  const context=Object.fromEntries(names.map(name=>[name,{}]));
+  Object.assign(context,{rrJ:{data:{history:history.reverse()}},parseRRDetails:api.parseRRDetails,reportedRRStart:api.reportedRRStart});
+  runInNewContext(html.slice(start,end),context);
+  assert.equal(context._preRRByMatchId.promotion,1488);
+  assert.equal(context._preTierByMatchId.promotion,17);
+  assert.equal(context._preRRByMatchId.immortal,2430);
+  assert.equal(context._preTierByMatchId.immortal,24);
+  assert.equal(context._preRRByMatchId.zero,1500);
+  assert.equal(context._rrDetailsByMatchId.promotion.bonus,0);
+  assert.equal(context._rrDetailsByMatchId.promotion.placement,false);
+  assert.equal(context._preRRByMatchId.shield,1500);
+  assert.equal(context._postRRByMatchId.shield,1500);
+  assert.equal(context._rrChangeByMatchId.shield,-20);
+  assert.equal(context._derankProtectedByMatchId.shield,true);
+});

@@ -1,0 +1,4 @@
+duckdb==1.4.3
+numpy==2.5.1
+pillow==12.3.0
+pyarrow==21.0.0

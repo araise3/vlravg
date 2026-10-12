@@ -1,0 +1,984 @@
+{
+  "startedAt": "2026-09-29T21:52:41.933Z",
+  "reports": [
+    {
+      "batch": 0,
+      "concurrency": 1,
+      "report": {
+        "ok": true,
+        "setupOk": true,
+        "concurrency": 1,
+        "peakConcurrency": 1,
+        "pacingMs": 0,
+        "elapsedMs": 28522,
+        "dataWallMs": 28291,
+        "dataRequests": 37,
+        "dataSuccesses": 37,
+        "dataRequestsPerSecond": 1.31,
+        "stopped": false,
+        "rateLimited": false,
+        "metrics": [
+          {
+            "endpoint": "auth",
+            "status": 303,
+            "startMs": 0,
+            "elapsedMs": 155,
+            "bytes": 0
+          },
+          {
+            "endpoint": "auth",
+            "status": 200,
+            "startMs": 155,
+            "elapsedMs": 42,
+            "bytes": 614
+          },
+          {
+            "endpoint": "auth",
+            "status": 200,
+            "startMs": 197,
+            "elapsedMs": 20,
+            "bytes": 650
+          },
+          {
+            "endpoint": "content",
+            "status": 200,
+            "startMs": 217,
+            "elapsedMs": 14,
+            "bytes": 11502
+          },
+          {
+            "endpoint": "rank",
+            "status": 200,
+            "startMs": 231,
+            "elapsedMs": 934,
+            "bytes": 31554
+          },
+          {
+            "endpoint": "history",
+            "status": 200,
+            "startMs": 1165,
+            "elapsedMs": 673,
+            "bytes": 2203
+          },
+          {
+            "endpoint": "rr",
+            "status": 200,
+            "startMs": 1838,
+            "elapsedMs": 173,
+            "bytes": 9606
+          },
+          {
+            "endpoint": "rank",
+            "status": 200,
+            "startMs": 2011,
+            "elapsedMs": 26,
+            "bytes": 18759
+          },
+          {
+            "endpoint": "history",
+            "status": 200,
+            "startMs": 2037,
+            "elapsedMs": 16,
+            "bytes": 941
+          },
+          {
+            "endpoint": "rr",
+            "status": 200,
+            "startMs": 2053,
+            "elapsedMs": 16,
+            "bytes": 6626
+          },
+          {
+            "endpoint": "rank",
+            "status": 200,
+            "startMs": 2069,
+            "elapsedMs": 1438,
+            "bytes": 30351
+          },
+          {
+            "endpoint": "history",
+            "status": 200,
+            "startMs": 3507,
+            "elapsedMs": 1082,
+            "bytes": 2203
+          },
+          {
+            "endpoint": "rr",
+            "status": 200,
+            "startMs": 4589,
+            "elapsedMs": 286,
+            "bytes": 11964
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 4875,
+            "elapsedMs": 1020,
+            "bytes": 608167
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 5895,
+            "elapsedMs": 1524,
+            "bytes": 699076
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 7419,
+            "elapsedMs": 856,
+            "bytes": 443090
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 8275,
+            "elapsedMs": 1017,
+            "bytes": 576996
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 9292,
+            "elapsedMs": 854,
+            "bytes": 441127
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 10146,
+            "elapsedMs": 1027,
+            "bytes": 574780
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 11173,
+            "elapsedMs": 360,
+            "bytes": 529580
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 11533,
+            "elapsedMs": 1017,
+            "bytes": 475133
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 12550,
+            "elapsedMs": 1023,
+            "bytes": 549598
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 13573,
+            "elapsedMs": 194,
+            "bytes": 448748
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 13767,
+            "elapsedMs": 87,
+            "bytes": 594237
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 13854,
+            "elapsedMs": 85,
+            "bytes": 510154
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 13939,
+            "elapsedMs": 60,
+            "bytes": 195496
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 13999,
+            "elapsedMs": 56,
+            "bytes": 554836
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 14055,
+            "elapsedMs": 64,
+            "bytes": 567945
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 14119,
+            "elapsedMs": 62,
+            "bytes": 448277
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 14181,
+            "elapsedMs": 85,
+            "bytes": 479622
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 14266,
+            "elapsedMs": 63,
+            "bytes": 533856
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 14329,
+            "elapsedMs": 2510,
+            "bytes": 536221
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 16839,
+            "elapsedMs": 585,
+            "bytes": 574290
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 17424,
+            "elapsedMs": 1368,
+            "bytes": 355594
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 18792,
+            "elapsedMs": 854,
+            "bytes": 498399
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 19646,
+            "elapsedMs": 843,
+            "bytes": 615738
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 20489,
+            "elapsedMs": 2492,
+            "bytes": 705729
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 22981,
+            "elapsedMs": 1687,
+            "bytes": 755133
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 24668,
+            "elapsedMs": 1640,
+            "bytes": 542242
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 26308,
+            "elapsedMs": 1388,
+            "bytes": 245193
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 27696,
+            "elapsedMs": 826,
+            "bytes": 307115
+          }
+        ],
+        "pages": [
+          {
+            "index": 0,
+            "region": "ap",
+            "requested": 10,
+            "returned": 10,
+            "detailBytes": 5346295,
+            "detailTransferMs": 8892,
+            "detailWallMs": 8892,
+            "sample": 0,
+            "playerHash": "ae158067d80d56934f020e59210acd5684604be268393fa43f1244967ee3c922"
+          },
+          {
+            "index": 1,
+            "region": "eu",
+            "requested": 8,
+            "returned": 8,
+            "detailBytes": 3884423,
+            "detailTransferMs": 562,
+            "detailWallMs": 562,
+            "sample": 1,
+            "playerHash": "061439ac43fe8d38ff072bf9b4518e698a53e86c9840b544dbeac2f3447bca2f"
+          },
+          {
+            "index": 2,
+            "region": "kr",
+            "requested": 10,
+            "returned": 10,
+            "detailBytes": 5135654,
+            "detailTransferMs": 14193,
+            "detailWallMs": 14193,
+            "sample": 2,
+            "playerHash": "99d1ffeacca2431474fab93e43168a6a9d65e6c3949ed22431d68c113f44fe9d"
+          }
+        ]
+      }
+    },
+    {
+      "batch": 1,
+      "concurrency": 1,
+      "report": {
+        "ok": true,
+        "setupOk": true,
+        "concurrency": 1,
+        "peakConcurrency": 1,
+        "pacingMs": 0,
+        "elapsedMs": 18774,
+        "dataWallMs": 18556,
+        "dataRequests": 39,
+        "dataSuccesses": 39,
+        "dataRequestsPerSecond": 2.1,
+        "stopped": false,
+        "rateLimited": false,
+        "metrics": [
+          {
+            "endpoint": "auth",
+            "status": 303,
+            "startMs": 0,
+            "elapsedMs": 150,
+            "bytes": 0
+          },
+          {
+            "endpoint": "auth",
+            "status": 200,
+            "startMs": 150,
+            "elapsedMs": 35,
+            "bytes": 614
+          },
+          {
+            "endpoint": "auth",
+            "status": 200,
+            "startMs": 185,
+            "elapsedMs": 17,
+            "bytes": 650
+          },
+          {
+            "endpoint": "content",
+            "status": 200,
+            "startMs": 202,
+            "elapsedMs": 16,
+            "bytes": 11502
+          },
+          {
+            "endpoint": "rank",
+            "status": 200,
+            "startMs": 218,
+            "elapsedMs": 901,
+            "bytes": 21164
+          },
+          {
+            "endpoint": "history",
+            "status": 200,
+            "startMs": 1119,
+            "elapsedMs": 699,
+            "bytes": 2203
+          },
+          {
+            "endpoint": "rr",
+            "status": 200,
+            "startMs": 1818,
+            "elapsedMs": 185,
+            "bytes": 10091
+          },
+          {
+            "endpoint": "rank",
+            "status": 200,
+            "startMs": 2003,
+            "elapsedMs": 942,
+            "bytes": 35296
+          },
+          {
+            "endpoint": "history",
+            "status": 200,
+            "startMs": 2945,
+            "elapsedMs": 178,
+            "bytes": 2203
+          },
+          {
+            "endpoint": "rr",
+            "status": 200,
+            "startMs": 3123,
+            "elapsedMs": 685,
+            "bytes": 11988
+          },
+          {
+            "endpoint": "rank",
+            "status": 200,
+            "startMs": 3808,
+            "elapsedMs": 33,
+            "bytes": 27012
+          },
+          {
+            "endpoint": "history",
+            "status": 200,
+            "startMs": 3841,
+            "elapsedMs": 16,
+            "bytes": 2203
+          },
+          {
+            "endpoint": "rr",
+            "status": 200,
+            "startMs": 3857,
+            "elapsedMs": 16,
+            "bytes": 9023
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 3873,
+            "elapsedMs": 1318,
+            "bytes": 426658
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 5191,
+            "elapsedMs": 357,
+            "bytes": 542890
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 5548,
+            "elapsedMs": 200,
+            "bytes": 671986
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 5748,
+            "elapsedMs": 205,
+            "bytes": 703661
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 5953,
+            "elapsedMs": 194,
+            "bytes": 505947
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 6147,
+            "elapsedMs": 1066,
+            "bytes": 548609
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 7213,
+            "elapsedMs": 376,
+            "bytes": 558091
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 7589,
+            "elapsedMs": 1085,
+            "bytes": 600217
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 8674,
+            "elapsedMs": 996,
+            "bytes": 598622
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 9670,
+            "elapsedMs": 719,
+            "bytes": 496754
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 10389,
+            "elapsedMs": 1052,
+            "bytes": 466024
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 11441,
+            "elapsedMs": 1044,
+            "bytes": 597186
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 12485,
+            "elapsedMs": 1522,
+            "bytes": 575445
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 14007,
+            "elapsedMs": 884,
+            "bytes": 597816
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 14891,
+            "elapsedMs": 213,
+            "bytes": 525511
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 15104,
+            "elapsedMs": 209,
+            "bytes": 449798
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 15313,
+            "elapsedMs": 203,
+            "bytes": 526998
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 15516,
+            "elapsedMs": 860,
+            "bytes": 577460
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 16376,
+            "elapsedMs": 1069,
+            "bytes": 595353
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 17445,
+            "elapsedMs": 384,
+            "bytes": 753204
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 17829,
+            "elapsedMs": 84,
+            "bytes": 540316
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 17913,
+            "elapsedMs": 107,
+            "bytes": 562145
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 18020,
+            "elapsedMs": 94,
+            "bytes": 630885
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 18114,
+            "elapsedMs": 92,
+            "bytes": 479277
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 18206,
+            "elapsedMs": 84,
+            "bytes": 470677
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 18290,
+            "elapsedMs": 102,
+            "bytes": 597656
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 18392,
+            "elapsedMs": 99,
+            "bytes": 595074
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 18491,
+            "elapsedMs": 93,
+            "bytes": 533371
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 18584,
+            "elapsedMs": 99,
+            "bytes": 536156
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 18683,
+            "elapsedMs": 91,
+            "bytes": 610479
+          }
+        ],
+        "pages": [
+          {
+            "index": 0,
+            "region": "na",
+            "requested": 10,
+            "returned": 10,
+            "detailBytes": 5653435,
+            "detailTransferMs": 6516,
+            "detailWallMs": 6516,
+            "sample": 3,
+            "playerHash": "b1b19489d52489b06be3ba3caae04016efd747c5691bb0275563b527c12f555c"
+          },
+          {
+            "index": 1,
+            "region": "ap",
+            "requested": 10,
+            "returned": 10,
+            "detailBytes": 5664795,
+            "detailTransferMs": 7440,
+            "detailWallMs": 7440,
+            "sample": 4,
+            "playerHash": "4759822014e13b6d759c67fe93ab6752045f92f5ee63eb615271b0c0bf7e4c00"
+          },
+          {
+            "index": 2,
+            "region": "eu",
+            "requested": 10,
+            "returned": 10,
+            "detailBytes": 5556036,
+            "detailTransferMs": 945,
+            "detailWallMs": 945,
+            "sample": 5,
+            "playerHash": "663bd910da8c1906fb38faf9741c42d01e87f56820f4863b3d25c3fc9340c214"
+          }
+        ]
+      }
+    },
+    {
+      "batch": 2,
+      "concurrency": 1,
+      "report": {
+        "ok": false,
+        "setupOk": true,
+        "concurrency": 1,
+        "peakConcurrency": 1,
+        "pacingMs": 0,
+        "elapsedMs": 13278,
+        "dataWallMs": 13071,
+        "dataRequests": 27,
+        "dataSuccesses": 26,
+        "dataRequestsPerSecond": 1.99,
+        "stopped": true,
+        "rateLimited": true,
+        "metrics": [
+          {
+            "endpoint": "auth",
+            "status": 303,
+            "startMs": 0,
+            "elapsedMs": 133,
+            "bytes": 0
+          },
+          {
+            "endpoint": "auth",
+            "status": 200,
+            "startMs": 133,
+            "elapsedMs": 41,
+            "bytes": 614
+          },
+          {
+            "endpoint": "auth",
+            "status": 200,
+            "startMs": 174,
+            "elapsedMs": 19,
+            "bytes": 650
+          },
+          {
+            "endpoint": "content",
+            "status": 200,
+            "startMs": 193,
+            "elapsedMs": 14,
+            "bytes": 11502
+          },
+          {
+            "endpoint": "rank",
+            "status": 200,
+            "startMs": 207,
+            "elapsedMs": 356,
+            "bytes": 19730
+          },
+          {
+            "endpoint": "history",
+            "status": 200,
+            "startMs": 563,
+            "elapsedMs": 181,
+            "bytes": 2203
+          },
+          {
+            "endpoint": "rr",
+            "status": 200,
+            "startMs": 744,
+            "elapsedMs": 169,
+            "bytes": 11958
+          },
+          {
+            "endpoint": "rank",
+            "status": 200,
+            "startMs": 913,
+            "elapsedMs": 493,
+            "bytes": 33844
+          },
+          {
+            "endpoint": "history",
+            "status": 200,
+            "startMs": 1406,
+            "elapsedMs": 174,
+            "bytes": 2203
+          },
+          {
+            "endpoint": "rr",
+            "status": 200,
+            "startMs": 1580,
+            "elapsedMs": 179,
+            "bytes": 6011
+          },
+          {
+            "endpoint": "rank",
+            "status": 200,
+            "startMs": 1759,
+            "elapsedMs": 37,
+            "bytes": 46372
+          },
+          {
+            "endpoint": "history",
+            "status": 200,
+            "startMs": 1796,
+            "elapsedMs": 14,
+            "bytes": 2203
+          },
+          {
+            "endpoint": "rr",
+            "status": 200,
+            "startMs": 1810,
+            "elapsedMs": 20,
+            "bytes": 11932
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 1830,
+            "elapsedMs": 1004,
+            "bytes": 646059
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 2834,
+            "elapsedMs": 1080,
+            "bytes": 596096
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 3914,
+            "elapsedMs": 422,
+            "bytes": 592784
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 4336,
+            "elapsedMs": 209,
+            "bytes": 571292
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 4545,
+            "elapsedMs": 1579,
+            "bytes": 524122
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 6124,
+            "elapsedMs": 1009,
+            "bytes": 604623
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 7133,
+            "elapsedMs": 203,
+            "bytes": 496308
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 7336,
+            "elapsedMs": 725,
+            "bytes": 576335
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 8061,
+            "elapsedMs": 390,
+            "bytes": 534127
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 8451,
+            "elapsedMs": 217,
+            "bytes": 504233
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 8668,
+            "elapsedMs": 1027,
+            "bytes": 590175
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 9695,
+            "elapsedMs": 1043,
+            "bytes": 584372
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 10738,
+            "elapsedMs": 202,
+            "bytes": 493843
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 10940,
+            "elapsedMs": 209,
+            "bytes": 617308
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 11149,
+            "elapsedMs": 208,
+            "bytes": 595445
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 11357,
+            "elapsedMs": 866,
+            "bytes": 558402
+          },
+          {
+            "endpoint": "detail",
+            "status": 200,
+            "startMs": 12223,
+            "elapsedMs": 1053,
+            "bytes": 477454
+          },
+          {
+            "endpoint": "detail",
+            "status": 429,
+            "startMs": 13276,
+            "elapsedMs": 2,
+            "bytes": 17
+          }
+        ],
+        "pages": [
+          {
+            "index": 0,
+            "region": "na",
+            "requested": 10,
+            "returned": 10,
+            "detailBytes": 5645979,
+            "detailTransferMs": 6838,
+            "detailWallMs": 6838,
+            "sample": 6,
+            "playerHash": "b2dab960bc666e6e3d84c96897ad7081b13ebd5c2a9adc5dff4743cfacd58e17"
+          },
+          {
+            "index": 1,
+            "region": "ap",
+            "requested": 10,
+            "returned": 7,
+            "detailBytes": 3916999,
+            "detailTransferMs": 4608,
+            "detailWallMs": 4610,
+            "sample": 7,
+            "playerHash": "e8c8cf182b31d0bdfda981785986a3030cb66fc8e625938123cd2969cc6c9e40"
+          },
+          {
+            "index": 2,
+            "region": "eu",
+            "requested": 10,
+            "returned": 0,
+            "detailBytes": 0,
+            "detailTransferMs": 0,
+            "detailWallMs": null,
+            "sample": 8,
+            "playerHash": "c59e6191e3502073c442805e5f686b0958a2a1bb1910e85b184933c34c9bec43"
+          }
+        ]
+      }
+    }
+  ],
+  "pacingMs": 0,
+  "elapsedMs": 60882,
+  "stopped": true,
+  "stageTimes": [
+    {
+      "concurrency": 1,
+      "clientWallMs": 60882
+    }
+  ]
+}

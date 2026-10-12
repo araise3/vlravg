@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>vlravg — The product film</title>
+<link rel="icon" href="favicon.svg">
+<style>
+:root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Arial,sans-serif;background:#08090c;color:#f4f6fb}
+*{box-sizing:border-box}body{margin:0;min-height:100svh;background:radial-gradient(ellipse at 50% 0,#15203a 0,transparent 55%),#08090c}
+button,a,input{font:inherit}button,a{touch-action:manipulation}button{cursor:pointer}button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #8dbbff;outline-offset:5px}
+.shell{max-width:1480px;padding:32px 36px 28px;margin:auto}.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:26px}.brand{font-weight:650;font-size:23px;letter-spacing:-1px;text-decoration:none;color:#fff}.brand span{color:#6aa9ff}.header small{color:#a6adba;font-size:13px;letter-spacing:.08em}
+.film{background:#080b12;border:1px solid #252c3b;border-radius:20px;overflow:hidden;box-shadow:0 32px 100px #0008;position:relative;aspect-ratio:16/9}canvas{display:block;width:100%;height:100%}.film:fullscreen{border:0;border-radius:0;width:100vw;height:100vh;aspect-ratio:auto}.film:fullscreen canvas{object-fit:contain}
+.controls{display:flex;gap:14px;align-items:center;margin-top:22px}.btn{border:1px solid #333b4b;background:#171c27;color:#f4f6fb;border-radius:999px;min-height:44px;padding:10px 18px;font-size:13px;white-space:nowrap}.btn:hover{background:#242d3e}.btn:disabled{opacity:.5;cursor:wait}.primary{background:#eef3fc;color:#0b1120;border-color:#eef3fc;font-weight:600}.primary:hover{background:#cddfff}.time{color:#a6adba;font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}.scrub{flex:1;min-width:60px;accent-color:#6aa9ff;cursor:pointer;height:44px}
+.chapters{display:grid;grid-template-columns:repeat(8,1fr);gap:7px;margin-top:25px}.chapter{min-height:60px;text-align:left;padding:11px 12px;border:0;border-top:2px solid #252d3e;background:transparent;color:#a6adba;font-size:12px;line-height:1.5}.chapter span{display:block;color:#8993a6;font-size:10px;letter-spacing:.1em}.chapter:hover,.chapter[aria-current=true]{color:#fff;border-color:#6aa9ff}.chapter[aria-current=true] span{color:#8dbbff}
+.footer{display:flex;justify-content:space-between;gap:20px;margin-top:22px;color:#9aa4b5;font-size:12px;line-height:1.6}.footer a{color:#bacce8;text-decoration:none}.footer a:hover{text-decoration:underline}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:760px){.shell{padding:20px 14px}.header{margin-bottom:20px}.header small{font-size:10px}.film{border-radius:10px}.controls{gap:8px;flex-wrap:wrap}.btn{padding:10px 13px}.scrub{order:5;flex-basis:100%}.chapters{grid-template-columns:repeat(4,1fr);gap:4px;margin-top:10px}.chapter{padding:8px 6px}.footer{flex-direction:column;gap:6px}.time{margin-left:auto}}
+</style>
+</head>
+<body>
+<main class="shell">
+  <header class="header"><a class="brand" href="./index.html" aria-label="Open vlravg">vlr<span>/</span>avg</a><small>THE PRODUCT FILM · 48 SECONDS</small></header>
+  <h1 class="sr-only">Explore vlravg: a motion graphics showcase</h1>
+  <div class="film" id="film"><canvas id="canvas" width="1920" height="1080" role="img" aria-label="Animated product showcase with illustrative Valorant statistics" aria-describedby="transcript"></canvas></div>
+  <div class="controls" aria-label="Playback controls">
+    <button class="btn primary" id="play" type="button" aria-label="Pause showcase">Pause</button>
+    <button class="btn" id="replay" type="button">Replay</button>
+    <input class="scrub" id="scrub" type="range" min="0" max="48" step="0.05" value="0" aria-label="Showcase position in seconds">
+    <span class="time" id="time">0:00 / 0:48</span>
+    <button class="btn" id="fullscreen" type="button">Fullscreen</button>
+    <button class="btn" id="export" type="button">Save video</button>
+  </div>
+  <nav class="chapters" id="chapters" aria-label="Film chapters"></nav>
+  <div class="footer"><span id="status" role="status" aria-live="polite">Illustrative player data. Apple system typography with local font fallbacks.</span><a href="./index.html">Explore vlravg ↗</a></div>
+  <div class="sr-only" id="transcript">vlravg helps you read your Valorant lobby. Search by Riot ID or choose a pro player. See average lobby rank, K/D, ACS, ADR and playtime. Explore RR gains and losses and your rank trend. Compare your most-played duos. Review clutch wins, losses and saves. Browse match history, MVP performances and individual rosters. Compare performance across servers and party sizes. All figures in this film are fictional examples.</div>
+</main>
+<script>
+'use strict';
+// A deterministic 1080p timeline, shared by playback, capture and offline export.
+const canvas=document.getElementById('canvas'),ctx=canvas.getContext('2d');
+const FONT='-apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif';
+const C={bg:'#080b12',panel:'#121720',border:'#2a3344',white:'#f4f6fb',muted:'#a2aec2',blue:'#72acff',green:'#69e6ad',red:'#ff8799',gold:'#ffda8a'};
+const chapters=['The bigger picture','Find your player','Read the lobby','Follow the RR','Find your duo','Own the clutch','Every match matters','Your game. In focus.'];
+const DURATION=48,SCENE=6,reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
+const rankImages={};
+for(const tier of [17,20,23,26]){const img=new Image();img.src=`assets/ranks/${tier}.png`;rankImages[tier]=img;}
+const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
+const ease=v=>1-Math.pow(1-clamp(v),3);
+const smooth=v=>{v=clamp(v);return v*v*(3-2*v);};
+function round(x,y,w,h,r=22,fill=C.panel,stroke=C.border){ctx.beginPath();ctx.roundRect(x,y,w,h,r);if(fill){ctx.fillStyle=fill;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=1;ctx.stroke();}}
+function text(str,x,y,size=24,color=C.white,weight=400,align='left'){ctx.font=`${weight} ${size}px ${FONT}`;ctx.fillStyle=color;ctx.textAlign=align;ctx.textBaseline='alphabetic';ctx.fillText(str,x,y);}
+function line(x1,y1,x2,y2,color=C.border,width=1){ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.stroke();}
+function circle(x,y,r,color,stroke){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);if(color){ctx.fillStyle=color;ctx.fill();}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke();}}
+function pill(str,x,y,color=C.blue,width=130){round(x,y,width,38,19,`${color}15`,`${color}45`);text(str,x+width/2,y+25,16,color,550,'center');}
+function logo(x,y,size=34,align='left'){text('vlr / avg',x,y,size,C.white,650,align);}
+function stagger(t,delay,draw){const p=ease((t-delay)/.9);if(!p)return;ctx.save();ctx.globalAlpha*=p;ctx.translate(0,(1-p)*32);draw(p);ctx.restore();}
+function header(kicker,a,b,description,t){stagger(t,.15,()=>{text(kicker.toUpperCase(),140,270,20,C.blue,600);text(a,135,385,88,C.white,650);text(b,135,485,88,C.white,650);});stagger(t,.6,()=>{description.forEach((s,i)=>text(s,140,563+i*36,26,C.muted));});}
+function card(x,y,w,h,title,tag){round(x,y,w,h,24);if(title)text(title,x+30,y+47,23,C.white,550);if(tag)pill(tag,x+w-164,y+20,C.muted,134);}
+function metric(label,value,x,y,color=C.white,size=55){text(label,x,y,19,C.muted);text(value,x,y+65,size,color,600);}
+function rank(tier,x,y,size=100){const img=rankImages[tier];if(img?.complete&&img.naturalWidth)ctx.drawImage(img,x,y,size,size);else{ctx.save();ctx.translate(x+size/2,y+size/2);ctx.rotate(Math.PI/4);round(-size*.28,-size*.28,size*.56,size*.56,5,'#72acff',null);ctx.restore();}}
+function chart(x,y,w,h,p,values=[.13,.24,.19,.38,.3,.51,.44,.61,.58,.75,.7,.87],color=C.blue){
+  for(let i=0;i<4;i++)line(x,y+i*h/3,x+w,y+i*h/3,'#263043');
+  const points=values.map((v,i)=>[x+i*w/(values.length-1),y+h-v*h]);
+  const end=clamp(p)*(points.length-1),last=Math.floor(end),visible=points.slice(0,last+1);
+  if(last<points.length-1){const q=end-last;visible.push([points[last][0]+(points[last+1][0]-points[last][0])*q,points[last][1]+(points[last+1][1]-points[last][1])*q]);}
+  if(visible.length<2)return;
+  const g=ctx.createLinearGradient(0,y,0,y+h);g.addColorStop(0,`${color}32`);g.addColorStop(1,`${color}00`);
+  ctx.beginPath();ctx.moveTo(x,y+h);visible.forEach(pt=>ctx.lineTo(...pt));ctx.lineTo(visible.at(-1)[0],y+h);ctx.closePath();ctx.fillStyle=g;ctx.fill();
+  ctx.beginPath();visible.forEach((pt,i)=>i?ctx.lineTo(...pt):ctx.moveTo(...pt));ctx.strokeStyle=color;ctx.lineWidth=4;ctx.lineJoin='round';ctx.stroke();
+  const tip=visible.at(-1);circle(...tip,10,`${color}22`);circle(...tip,4,color);
+}
+function ambient(t){
+  ctx.fillStyle=C.bg;ctx.fillRect(0,0,1920,1080);
+  const g=ctx.createRadialGradient(1290+Math.sin(t*.2)*80,410,0,1290,410,920);g.addColorStop(0,'#18336185');g.addColorStop(.55,'#101e3840');g.addColorStop(1,'#080b1200');ctx.fillStyle=g;ctx.fillRect(0,0,1920,1080);
+  ctx.fillStyle='#b6d1ff';ctx.globalAlpha=.08;for(let x=48;x<1920;x+=48)for(let y=48;y<1080;y+=48)ctx.fillRect(x,y,1,1);ctx.globalAlpha=1;
+  logo(140,105,30);text('VALORANT, WITH CONTEXT.',1780,105,16,C.muted,500,'right');
+}
+function intro(t){
+  const growth=ease(t/1.8);
+  ctx.save();ctx.translate(960,505);ctx.rotate(-.35+t*.045);ctx.scale(.7+growth*.3,.7+growth*.3);ctx.strokeStyle='#72acff18';ctx.lineWidth=1;
+  [260,350,450].forEach(r=>{ctx.beginPath();ctx.ellipse(0,0,r,r*.62,0,0,Math.PI*2);ctx.stroke();});ctx.restore();
+  stagger(t,.15,()=>text('YOUR RANK IS ONLY THE BEGINNING.',960,290,20,C.blue,550,'center'));
+  stagger(t,.4,()=>{text('See the',960,444,122,C.white,650,'center');text('bigger picture.',960,581,122,C.blue,650,'center');});
+  stagger(t,.9,()=>text('The lobby. The climb. The people you play with.',960,662,28,C.muted,400,'center'));
+  stagger(t,1.4,()=>{pill('LOBBY RANK',580,744,C.blue,180);pill('RR MOVEMENT',780,744,C.green,180);pill('MATCH INSIGHTS',980,744,C.gold,210);pill('DUOS',1210,744,C.blue,130);});
+}
+function search(t){
+  header('01 / A name is all you need','Your player.','Your story.',['Search a Riot ID. Pick a pro.','Choose an act. Start exploring.'],t);
+  stagger(t,.3,()=>{
+    card(965,230,805,604,'Start with a player','SEARCH');
+    logo(1367,366,49,'center');text('Read the lobby,',1367,431,39,C.white,600,'center');text('not just the rank.',1367,479,39,C.white,600,'center');
+    round(1015,532,705,76,16,'#0b101a','#446da2');circle(1051,568,11,null,C.muted);line(1059,576,1069,586,C.muted,2);
+    const typed='you#EU'.slice(0,Math.floor(clamp((t-.8)/1.4)*6));text(typed,1092,579,27,C.white,500);if(t<3.1&&Math.floor(t*3)%2===0)line(1093+ctx.measureText(typed).width,549,1093+ctx.measureText(typed).width,586,C.blue,2);
+    pill('Most recent act',1016,642,C.muted,190);pill('Pro players',1232,642,C.blue,168);
+    if(t>2.7){const p=ease((t-2.7)/.6);ctx.globalAlpha*=p;round(1015,712,705,77,14,'#16243a','#334c71');rank(23,1034,723,52);text('you',1110,758,24,C.white,600);text('#EU',1161,758,22,C.muted);text('Ascendant 3',1686,758,20,C.green,550,'right');}
+  });
+}
+function lobby(t){
+  header('02 / Average lobby rank','Know the room.','Read your impact.',['See the strength of your lobbies.','Compare K/D across lobby ranks.'],t);
+  stagger(t,.3,()=>{
+    card(965,222,805,366,'Average lobby rank','THIS ACT');
+    rank(23,1003,321,131);text('Ascendant 3',1166,366,48,C.green,600);text('Average across rated players',1168,409,22,C.muted);
+    line(1000,454,1735,454);metric('Solo','Asc 2',1003,493,C.white,37);metric('Duo','Asc 3',1264,493,C.white,37);metric('5-stack','Imm 1',1512,493,C.white,37);
+  });
+  stagger(t,.75,()=>{
+    card(965,612,805,228,'Your performance');
+    [['K/D','1.24'],['AVG ACS','246'],['AVG ADR','158'],['PLAYTIME','42h']].forEach(([label,value],i)=>metric(label,value,1001+i*194,710,i===0?C.blue:C.white,43));
+  });
+  stagger(t,1.2,()=>{round(620,690,295,90,14,'#1a2d47','#416189');text('K/D in Ascendant lobbies',645,722,16,C.muted);text('1.28',645,760,32,C.blue,600);});
+}
+function rr(t){
+  header('03 / RR breakdown','Every gain.','Every loss.',['Follow your RR trend.','Understand what each game pays.'],t);
+  stagger(t,.3,()=>{
+    card(965,230,805,575,'RR trend','THIS ACT');pill('+124 RR',1581,321,C.green,150);
+    chart(1005,400,725,230,ease((t-.8)/2.3));text('Earlier matches',1005,672,16,C.muted);text('Most recent',1730,672,16,C.muted,400,'right');
+    line(1005,700,1730,700);metric('RR / WIN','+22',1005,734,C.green,42);metric('RR / LOSS','−17',1262,734,C.red,42);metric('WIN RATE','58%',1515,734,C.white,42);
+  });
+  stagger(t,1.3,()=>{pill('+24',1258,323,C.green,89);pill('−16',1412,436,C.red,89);});
+}
+function duos(t){
+  header('04 / Most-played teammates','Good company.','Great context.',['Find your most-played duos.','Compare wins, performance and lobbies.'],t);
+  stagger(t,.3,()=>{card(965,225,805,604,'Duos','THIS ACT');text('PLAYER',1000,336,16,C.muted);text('GAMES',1377,336,16,C.muted,400,'right');text('WIN RATE',1546,336,16,C.muted,400,'right');text('K/D',1725,336,16,C.muted,400,'right');});
+  [['orbit','#EU',28,'64%','1.31',C.blue],['nova','#VAL',19,'58%','1.22',C.gold],['echo','#GG',12,'50%','1.18',C.green]].forEach((row,i)=>stagger(t,.6+i*.28,()=>{
+    const y=366+i*133;round(992,y,750,112,14,i===0?'#19283e':'#151c29',i===0?'#3b5e8e':'#2a3344');circle(1046,y+56,27,`${row[5]}22`);text(row[0][0].toUpperCase(),1046,y+65,25,row[5],600,'center');text(row[0],1094,y+51,27,C.white,550);text(row[1],1094,y+79,17,C.muted);text(String(row[2]),1377,y+65,27,C.white,550,'right');text(row[3],1546,y+65,27,C.green,550,'right');text(row[4],1720,y+65,27,C.white,550,'right');
+  }));
+}
+function clutch(t){
+  header('05 / Clutch stats','The last alive.','The full picture.',['Explore your 1vX performance.','Clutch wins, losses and saves.'],t);
+  stagger(t,.3,()=>{
+    card(965,225,805,604,'Clutch performance','THIS ACT');
+    const x=1358,y=492,r=133;circle(x,y,r,null,'#2a3344');ctx.lineWidth=18;ctx.strokeStyle=C.blue;ctx.beginPath();ctx.arc(x,y,r,-Math.PI/2,-Math.PI/2+Math.PI*2*.38*ease((t-.6)/1.6));ctx.stroke();
+    text('1v2',x,y+9,74,C.white,650,'center');text('38% WIN RATE',x,y+54,17,C.blue,550,'center');
+    [[1220,492],[1440,377]].forEach(([px,py],i)=>{circle(px,py,22,'#1b2b43',C.blue);text(i?'2':'1',px,py+6,16,C.blue,600,'center');});
+    const yb=712;round(1006,yb,723,13,6,'#2a3344',null);round(1006,yb,220*ease((t-.9)/1.3),13,6,C.blue,null);round(1226,yb,357*ease((t-1.1)/1.3),13,6,C.red,null);round(1583,yb,146*ease((t-1.3)/1.3),13,6,'#a2aec2',null);
+    text('Won · 12',1006,768,20,C.blue,550);text('Lost · 20',1280,768,20,C.red,550);text('Saved · 8',1573,768,20,C.muted,550);
+  });
+}
+function matches(t){
+  header('06 / Match history','More than','a scoreline.',['Lobby ranks. RR. K/D. MVPs.','Open a match to see the roster.'],t);
+  stagger(t,.25,()=>{text('MATCH HISTORY',971,245,18,C.blue,600);text('Example match day',971,295,25,C.white,550);pill('+32 RR',1598,268,C.green,160);});
+  const rows=[['ASCENT','VICTORY','13 : 8','24 / 14 / 6','+24','Match MVP',C.green],['HAVEN','DEFEAT','10 : 13','18 / 17 / 4','−16','',C.red],['LOTUS','VICTORY','13 : 7','21 / 13 / 8','+24','Team MVP',C.green]];
+  rows.forEach((r,i)=>stagger(t,.5+i*.25,()=>{const y=330+i*145;round(965,y,805,122,17,'#121c29',i===0?'#426593':C.border);round(965,y,4,122,2,r[6],null);text(r[0],995,y+38,23,C.white,600);text(r[1],995,y+68,14,r[6],600);text(r[2],1193,y+55,30,C.white,550);text(r[5],1193,y+85,15,C.gold,500);text(r[3],1510,y+55,23,C.white,500,'right');text('K / D / A',1510,y+85,14,C.muted,400,'right');pill(r[4],1591,y+40,r[6],140);}));
+  stagger(t,2,()=>{round(1020,805,700,86,14,'#1a2b43','#3e5c83');text('ACS 286',1050,856,22,C.white,550);text('ADR 182',1250,856,22,C.white,550);text('Lobby: Ascendant 3',1685,856,20,C.blue,550,'right');});
+}
+function outro(t){
+  const specs=[['LOBBY RANK','Ascendant 3',23],['K/D','1.24'],['PLAYTIME','42h'],['TOP DUO','orbit'],['RR / WIN','+22'],['CLUTCH','1v2 · 38%']];
+  specs.forEach(([label,value,tier],i)=>stagger(t,.15+i*.08,()=>{const left=i<3,x=left?140:1470,y=254+(i%3)*176;ctx.globalAlpha*=.7;round(x,y,310,132,18,'#111a29','#29374b');text(label,x+22,y+35,14,C.muted,550);if(tier){rank(tier,x+16,y+55,53);text(value,x+80,y+93,24,C.green,550);}else text(value,x+22,y+96,38,i===4?C.green:C.white,600);}));
+  stagger(t,.5,()=>{text('Your game.',960,438,110,C.white,650,'center');text('In focus.',960,563,110,C.blue,650,'center');});
+  stagger(t,1,()=>text('Lobby ranks. RR. Duos. Clutches. Match history.',960,641,24,C.muted,400,'center'));
+  stagger(t,1.6,()=>{round(794,703,332,74,37,'#edf4ff',null);text('Explore vlravg  ↗',960,751,25,'#0b1526',600,'center');});
+  stagger(t,2.1,()=>{text('ALSO EXPLORE',960,843,15,C.muted,550,'center');text('Servers  /  Party sizes  /  ACS & ADR  /  Pro players',960,881,23,C.white,450,'center');});
+}
+const scenes=[intro,search,lobby,rr,duos,clutch,matches,outro];
+function render(seconds){
+  const time=clamp(seconds,0,DURATION-.001),index=Math.floor(time/SCENE),local=time-index*SCENE;
+  ambient(time);
+  // Fade through black at chapter boundaries, preserving a continuous camera feel.
+  const fade=Math.min(smooth(local/.55),smooth((SCENE-local)/.45));
+  ctx.save();ctx.globalAlpha=fade;const zoom=1+clamp(local/SCENE)*.012;ctx.translate(960,540);ctx.scale(zoom,zoom);ctx.translate(-960,-540);scenes[index](local);ctx.restore();
+  text(`${String(index+1).padStart(2,'0')} / 08`,140,970,16,C.muted,500);text(chapters[index].toUpperCase(),960,970,16,C.muted,500,'center');text('ILLUSTRATIVE DATA',1780,970,14,C.muted,450,'right');
+  round(140,1009,1640,2,1,'#27334a',null);round(140,1009,1640*clamp(seconds/DURATION),2,1,C.blue,null);
+}
+const playButton=document.getElementById('play'),scrub=document.getElementById('scrub'),exportButton=document.getElementById('export'),status=document.getElementById('status');
+let position=reducedMotion.matches?2.5:0,playing=!reducedMotion.matches,last=performance.now(),recording=false,recorder=null;
+chapters.forEach((name,i)=>{const b=document.createElement('button');b.className='chapter';b.type='button';b.innerHTML=`<span>${String(i+1).padStart(2,'0')}</span>${name}`;b.addEventListener('click',()=>seek(i*SCENE+.65));document.getElementById('chapters').append(b);});
+function updateControls(){playButton.textContent=playing?'Pause':position>=DURATION?'Play again':'Play';playButton.setAttribute('aria-label',playing?'Pause showcase':'Play showcase');scrub.value=position;const seconds=Math.floor(position);document.getElementById('time').textContent=`0:${String(seconds).padStart(2,'0')} / 0:48`;document.querySelectorAll('.chapter').forEach((b,i)=>b.setAttribute('aria-current',Math.min(7,Math.floor(position/SCENE))===i?'true':'false'));}
+function seek(value){position=clamp(value,0,DURATION);last=performance.now();render(position);updateControls();}
+function toggle(){if(recording)return;if(position>=DURATION)position=0;playing=!playing;last=performance.now();updateControls();}
+playButton.addEventListener('click',toggle);document.getElementById('replay').addEventListener('click',()=>{if(recording)return;seek(0);playing=true;updateControls();});scrub.addEventListener('input',()=>{if(!recording)seek(Number(scrub.value));});
+document.getElementById('fullscreen').addEventListener('click',async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.getElementById('film').requestFullscreen();}catch{status.textContent='Fullscreen is unavailable in this browser.';}});
+document.addEventListener('keydown',e=>{if(recording||e.target.matches('input,button,a'))return;if(e.code==='Space'){e.preventDefault();toggle();}if(e.code==='ArrowRight'){e.preventDefault();seek(position+5);}if(e.code==='ArrowLeft'){e.preventDefault();seek(position-5);}});
+document.addEventListener('visibilitychange',()=>{last=performance.now();});
+reducedMotion.addEventListener('change',()=>{if(reducedMotion.matches&&!recording){playing=false;updateControls();}});
+function frame(now){const dt=(now-last)/1000;last=now;if(playing&&(!document.hidden||recording)){position=Math.min(DURATION,position+dt);render(position);updateControls();if(position>=DURATION){playing=false;if(recording&&recorder?.state==='recording')recorder.stop();updateControls();}}requestAnimationFrame(frame);}
+const mime=typeof MediaRecorder!=='undefined'?['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(type=>MediaRecorder.isTypeSupported(type)):null;
+if(!mime||!canvas.captureStream){exportButton.disabled=true;exportButton.title='Video capture is unavailable in this browser.';}
+exportButton.addEventListener('click',()=>{
+  if(recording||!mime)return;
+  const prior={position,playing},chunks=[];let stream;
+  try{
+    stream=canvas.captureStream(30);recorder=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:12000000});
+    recording=true;document.querySelectorAll('.controls button,.chapter,.scrub').forEach(e=>e.disabled=true);status.textContent='Creating your video… keep this page visible for 48 seconds.';exportButton.textContent='Saving…';
+    recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+    function restore(){stream.getTracks().forEach(track=>track.stop());recording=false;document.querySelectorAll('.controls button,.chapter,.scrub').forEach(e=>e.disabled=false);exportButton.textContent='Save video';seek(prior.position);playing=prior.playing;updateControls();}
+    recorder.onstop=()=>{const blob=new Blob(chunks,{type:mime}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='vlravg-showcase-1080p.webm';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);restore();status.textContent='Your 1080p video is ready. Illustrative player data.';};
+    recorder.onerror=()=>{recorder.onstop=null;restore();status.textContent='Video capture failed. Please try again.';};
+    seek(0);playing=true;recorder.start(1000);last=performance.now();updateControls();
+  }catch(error){if(stream)stream.getTracks().forEach(track=>track.stop());recording=false;document.querySelectorAll('.controls button,.chapter,.scrub').forEach(e=>e.disabled=false);exportButton.textContent='Save video';seek(prior.position);playing=prior.playing;updateControls();status.textContent='Video capture is unavailable. Playback is still ready.';}
+});
+// Frame render API for reproducible video exports; never calls the live player API.
+window.showcase={duration:DURATION,chapters,render,seek,pause(){playing=false;updateControls();},ready:Promise.all(Object.values(rankImages).map(img=>img.decode().catch(()=>{})))};
+render(position);updateControls();window.showcase.ready.then(()=>render(position));requestAnimationFrame(frame);
+</script>
+</body>
+</html>

@@ -1,0 +1,3809 @@
+{
+  "startedAt": "2026-09-29T22:12:27.020Z",
+  "frames": [
+    {
+      "phase": "burst1",
+      "frame": 0,
+      "result": {
+        "ok": true,
+        "done": false,
+        "phase": "burst1",
+        "spacingMs": 0,
+        "elapsedMs": 2446,
+        "phaseAttempted": 40,
+        "phaseSuccesses": 40,
+        "sessionAttempted": 40,
+        "sessionSuccesses": 40,
+        "cooldownUntil": 0,
+        "rateLimited": false,
+        "metrics": [
+          {
+            "label": "match-details",
+            "at": 1790719947646,
+            "elapsedMs": 77,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 1,
+            "phaseSequence": 1
+          },
+          {
+            "label": "match-details",
+            "at": 1790719947723,
+            "elapsedMs": 82,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 2,
+            "phaseSequence": 2
+          },
+          {
+            "label": "match-details",
+            "at": 1790719947805,
+            "elapsedMs": 52,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 3,
+            "phaseSequence": 3
+          },
+          {
+            "label": "match-details",
+            "at": 1790719947857,
+            "elapsedMs": 80,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 4,
+            "phaseSequence": 4
+          },
+          {
+            "label": "match-details",
+            "at": 1790719947937,
+            "elapsedMs": 78,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 5,
+            "phaseSequence": 5
+          },
+          {
+            "label": "match-details",
+            "at": 1790719948015,
+            "elapsedMs": 43,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 6,
+            "phaseSequence": 6
+          },
+          {
+            "label": "match-details",
+            "at": 1790719948058,
+            "elapsedMs": 49,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 7,
+            "phaseSequence": 7
+          },
+          {
+            "label": "match-details",
+            "at": 1790719948107,
+            "elapsedMs": 63,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 8,
+            "phaseSequence": 8
+          },
+          {
+            "label": "match-details",
+            "at": 1790719948170,
+            "elapsedMs": 56,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 9,
+            "phaseSequence": 9
+          },
+          {
+            "label": "match-details",
+            "at": 1790719948226,
+            "elapsedMs": 87,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 10,
+            "phaseSequence": 10
+          },
+          {
+            "label": "match-details",
+            "at": 1790719948313,
+            "elapsedMs": 37,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 11,
+            "phaseSequence": 11
+          },
+          {
+            "label": "match-details",
+            "at": 1790719948350,
+            "elapsedMs": 91,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 12,
+            "phaseSequence": 12
+          },
+          {
+            "label": "match-details",
+            "at": 1790719948441,
+            "elapsedMs": 57,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 13,
+            "phaseSequence": 13
+          },
+          {
+            "label": "match-details",
+            "at": 1790719948498,
+            "elapsedMs": 59,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 14,
+            "phaseSequence": 14
+          },
+          {
+            "label": "match-details",
+            "at": 1790719948557,
+            "elapsedMs": 84,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 15,
+            "phaseSequence": 15
+          },
+          {
+            "label": "match-details",
+            "at": 1790719948641,
+            "elapsedMs": 60,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 16,
+            "phaseSequence": 16
+          },
+          {
+            "label": "match-details",
+            "at": 1790719948701,
+            "elapsedMs": 59,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 17,
+            "phaseSequence": 17
+          },
+          {
+            "label": "match-details",
+            "at": 1790719948760,
+            "elapsedMs": 50,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 18,
+            "phaseSequence": 18
+          },
+          {
+            "label": "match-details",
+            "at": 1790719948810,
+            "elapsedMs": 58,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 19,
+            "phaseSequence": 19
+          },
+          {
+            "label": "match-details",
+            "at": 1790719948868,
+            "elapsedMs": 53,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 20,
+            "phaseSequence": 20
+          },
+          {
+            "label": "match-details",
+            "at": 1790719948921,
+            "elapsedMs": 50,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 21,
+            "phaseSequence": 21
+          },
+          {
+            "label": "match-details",
+            "at": 1790719948971,
+            "elapsedMs": 50,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 22,
+            "phaseSequence": 22
+          },
+          {
+            "label": "match-details",
+            "at": 1790719949021,
+            "elapsedMs": 60,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 23,
+            "phaseSequence": 23
+          },
+          {
+            "label": "match-details",
+            "at": 1790719949081,
+            "elapsedMs": 45,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 24,
+            "phaseSequence": 24
+          },
+          {
+            "label": "match-details",
+            "at": 1790719949126,
+            "elapsedMs": 62,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 25,
+            "phaseSequence": 25
+          },
+          {
+            "label": "match-details",
+            "at": 1790719949188,
+            "elapsedMs": 58,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 26,
+            "phaseSequence": 26
+          },
+          {
+            "label": "match-details",
+            "at": 1790719949246,
+            "elapsedMs": 54,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 27,
+            "phaseSequence": 27
+          },
+          {
+            "label": "match-details",
+            "at": 1790719949300,
+            "elapsedMs": 51,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 28,
+            "phaseSequence": 28
+          },
+          {
+            "label": "match-details",
+            "at": 1790719949351,
+            "elapsedMs": 80,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 29,
+            "phaseSequence": 29
+          },
+          {
+            "label": "match-details",
+            "at": 1790719949431,
+            "elapsedMs": 66,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 30,
+            "phaseSequence": 30
+          },
+          {
+            "label": "match-details",
+            "at": 1790719949497,
+            "elapsedMs": 77,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 31,
+            "phaseSequence": 31
+          },
+          {
+            "label": "match-details",
+            "at": 1790719949574,
+            "elapsedMs": 60,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 32,
+            "phaseSequence": 32
+          },
+          {
+            "label": "match-details",
+            "at": 1790719949634,
+            "elapsedMs": 55,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 33,
+            "phaseSequence": 33
+          },
+          {
+            "label": "match-details",
+            "at": 1790719949689,
+            "elapsedMs": 49,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 34,
+            "phaseSequence": 34
+          },
+          {
+            "label": "match-details",
+            "at": 1790719949738,
+            "elapsedMs": 48,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 35,
+            "phaseSequence": 35
+          },
+          {
+            "label": "match-details",
+            "at": 1790719949786,
+            "elapsedMs": 52,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 36,
+            "phaseSequence": 36
+          },
+          {
+            "label": "match-details",
+            "at": 1790719949838,
+            "elapsedMs": 74,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 37,
+            "phaseSequence": 37
+          },
+          {
+            "label": "match-details",
+            "at": 1790719949912,
+            "elapsedMs": 56,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 38,
+            "phaseSequence": 38
+          },
+          {
+            "label": "match-details",
+            "at": 1790719949968,
+            "elapsedMs": 65,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 39,
+            "phaseSequence": 39
+          },
+          {
+            "label": "match-details",
+            "at": 1790719950033,
+            "elapsedMs": 59,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 40,
+            "phaseSequence": 40
+          }
+        ],
+        "session": "b1a26bce-a65b-43fa-9bc7-395bd004f347",
+        "colo": "HAM"
+      }
+    },
+    {
+      "phase": "burst1",
+      "frame": 1,
+      "result": {
+        "ok": false,
+        "done": true,
+        "phase": "burst1",
+        "spacingMs": 0,
+        "elapsedMs": 1099,
+        "phaseAttempted": 61,
+        "phaseSuccesses": 60,
+        "sessionAttempted": 61,
+        "sessionSuccesses": 60,
+        "cooldownUntil": 1790720071355,
+        "rateLimited": true,
+        "metrics": [
+          {
+            "label": "match-details",
+            "at": 1790719950256,
+            "elapsedMs": 50,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 41,
+            "phaseSequence": 41
+          },
+          {
+            "label": "match-details",
+            "at": 1790719950306,
+            "elapsedMs": 61,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 42,
+            "phaseSequence": 42
+          },
+          {
+            "label": "match-details",
+            "at": 1790719950367,
+            "elapsedMs": 35,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 43,
+            "phaseSequence": 43
+          },
+          {
+            "label": "match-details",
+            "at": 1790719950402,
+            "elapsedMs": 68,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 44,
+            "phaseSequence": 44
+          },
+          {
+            "label": "match-details",
+            "at": 1790719950470,
+            "elapsedMs": 47,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 45,
+            "phaseSequence": 45
+          },
+          {
+            "label": "match-details",
+            "at": 1790719950517,
+            "elapsedMs": 62,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 46,
+            "phaseSequence": 46
+          },
+          {
+            "label": "match-details",
+            "at": 1790719950579,
+            "elapsedMs": 45,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 47,
+            "phaseSequence": 47
+          },
+          {
+            "label": "match-details",
+            "at": 1790719950624,
+            "elapsedMs": 69,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 48,
+            "phaseSequence": 48
+          },
+          {
+            "label": "match-details",
+            "at": 1790719950693,
+            "elapsedMs": 51,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 49,
+            "phaseSequence": 49
+          },
+          {
+            "label": "match-details",
+            "at": 1790719950744,
+            "elapsedMs": 66,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 50,
+            "phaseSequence": 50
+          },
+          {
+            "label": "match-details",
+            "at": 1790719950810,
+            "elapsedMs": 39,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 51,
+            "phaseSequence": 51
+          },
+          {
+            "label": "match-details",
+            "at": 1790719950849,
+            "elapsedMs": 53,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 52,
+            "phaseSequence": 52
+          },
+          {
+            "label": "match-details",
+            "at": 1790719950902,
+            "elapsedMs": 59,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 53,
+            "phaseSequence": 53
+          },
+          {
+            "label": "match-details",
+            "at": 1790719950961,
+            "elapsedMs": 52,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 54,
+            "phaseSequence": 54
+          },
+          {
+            "label": "match-details",
+            "at": 1790719951013,
+            "elapsedMs": 58,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 55,
+            "phaseSequence": 55
+          },
+          {
+            "label": "match-details",
+            "at": 1790719951071,
+            "elapsedMs": 53,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 56,
+            "phaseSequence": 56
+          },
+          {
+            "label": "match-details",
+            "at": 1790719951124,
+            "elapsedMs": 58,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 57,
+            "phaseSequence": 57
+          },
+          {
+            "label": "match-details",
+            "at": 1790719951182,
+            "elapsedMs": 66,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 58,
+            "phaseSequence": 58
+          },
+          {
+            "label": "match-details",
+            "at": 1790719951248,
+            "elapsedMs": 51,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 59,
+            "phaseSequence": 59
+          },
+          {
+            "label": "match-details",
+            "at": 1790719951299,
+            "elapsedMs": 51,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 60,
+            "phaseSequence": 60
+          },
+          {
+            "label": "match-details",
+            "at": 1790719951350,
+            "elapsedMs": 5,
+            "status": 429,
+            "bytes": 17,
+            "rate": {
+              "present": [
+                "retry-after"
+              ],
+              "values": {
+                "retry-after-ms": 60000
+              },
+              "retryAfterMs": 60000,
+              "serverClass": "cloudflare",
+              "contentType": "text/plain",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 61,
+            "phaseSequence": 61
+          }
+        ],
+        "session": "b1a26bce-a65b-43fa-9bc7-395bd004f347",
+        "colo": "HAM"
+      }
+    },
+    {
+      "phase": "burst2",
+      "frame": 0,
+      "result": {
+        "ok": true,
+        "done": false,
+        "phase": "burst2",
+        "spacingMs": 0,
+        "elapsedMs": 2909,
+        "phaseAttempted": 40,
+        "phaseSuccesses": 40,
+        "sessionAttempted": 101,
+        "sessionSuccesses": 100,
+        "cooldownUntil": 1790720071355,
+        "rateLimited": false,
+        "metrics": [
+          {
+            "label": "match-details",
+            "at": 1790720076607,
+            "elapsedMs": 136,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 62,
+            "phaseSequence": 1
+          },
+          {
+            "label": "match-details",
+            "at": 1790720076743,
+            "elapsedMs": 87,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 63,
+            "phaseSequence": 2
+          },
+          {
+            "label": "match-details",
+            "at": 1790720076830,
+            "elapsedMs": 79,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 64,
+            "phaseSequence": 3
+          },
+          {
+            "label": "match-details",
+            "at": 1790720076909,
+            "elapsedMs": 83,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 65,
+            "phaseSequence": 4
+          },
+          {
+            "label": "match-details",
+            "at": 1790720076992,
+            "elapsedMs": 80,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 66,
+            "phaseSequence": 5
+          },
+          {
+            "label": "match-details",
+            "at": 1790720077072,
+            "elapsedMs": 58,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 67,
+            "phaseSequence": 6
+          },
+          {
+            "label": "match-details",
+            "at": 1790720077130,
+            "elapsedMs": 83,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 68,
+            "phaseSequence": 7
+          },
+          {
+            "label": "match-details",
+            "at": 1790720077213,
+            "elapsedMs": 79,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 69,
+            "phaseSequence": 8
+          },
+          {
+            "label": "match-details",
+            "at": 1790720077292,
+            "elapsedMs": 78,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 70,
+            "phaseSequence": 9
+          },
+          {
+            "label": "match-details",
+            "at": 1790720077370,
+            "elapsedMs": 80,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 71,
+            "phaseSequence": 10
+          },
+          {
+            "label": "match-details",
+            "at": 1790720077450,
+            "elapsedMs": 55,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 72,
+            "phaseSequence": 11
+          },
+          {
+            "label": "match-details",
+            "at": 1790720077505,
+            "elapsedMs": 66,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 73,
+            "phaseSequence": 12
+          },
+          {
+            "label": "match-details",
+            "at": 1790720077571,
+            "elapsedMs": 80,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 74,
+            "phaseSequence": 13
+          },
+          {
+            "label": "match-details",
+            "at": 1790720077651,
+            "elapsedMs": 56,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 75,
+            "phaseSequence": 14
+          },
+          {
+            "label": "match-details",
+            "at": 1790720077707,
+            "elapsedMs": 90,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 76,
+            "phaseSequence": 15
+          },
+          {
+            "label": "match-details",
+            "at": 1790720077797,
+            "elapsedMs": 67,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 77,
+            "phaseSequence": 16
+          },
+          {
+            "label": "match-details",
+            "at": 1790720077864,
+            "elapsedMs": 76,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 78,
+            "phaseSequence": 17
+          },
+          {
+            "label": "match-details",
+            "at": 1790720077940,
+            "elapsedMs": 78,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 79,
+            "phaseSequence": 18
+          },
+          {
+            "label": "match-details",
+            "at": 1790720078018,
+            "elapsedMs": 70,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 80,
+            "phaseSequence": 19
+          },
+          {
+            "label": "match-details",
+            "at": 1790720078088,
+            "elapsedMs": 90,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 81,
+            "phaseSequence": 20
+          },
+          {
+            "label": "match-details",
+            "at": 1790720078178,
+            "elapsedMs": 48,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 82,
+            "phaseSequence": 21
+          },
+          {
+            "label": "match-details",
+            "at": 1790720078226,
+            "elapsedMs": 44,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 83,
+            "phaseSequence": 22
+          },
+          {
+            "label": "match-details",
+            "at": 1790720078270,
+            "elapsedMs": 79,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 84,
+            "phaseSequence": 23
+          },
+          {
+            "label": "match-details",
+            "at": 1790720078349,
+            "elapsedMs": 86,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 85,
+            "phaseSequence": 24
+          },
+          {
+            "label": "match-details",
+            "at": 1790720078435,
+            "elapsedMs": 75,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 86,
+            "phaseSequence": 25
+          },
+          {
+            "label": "match-details",
+            "at": 1790720078510,
+            "elapsedMs": 76,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 87,
+            "phaseSequence": 26
+          },
+          {
+            "label": "match-details",
+            "at": 1790720078586,
+            "elapsedMs": 80,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 88,
+            "phaseSequence": 27
+          },
+          {
+            "label": "match-details",
+            "at": 1790720078666,
+            "elapsedMs": 89,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 89,
+            "phaseSequence": 28
+          },
+          {
+            "label": "match-details",
+            "at": 1790720078755,
+            "elapsedMs": 51,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 90,
+            "phaseSequence": 29
+          },
+          {
+            "label": "match-details",
+            "at": 1790720078806,
+            "elapsedMs": 33,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 91,
+            "phaseSequence": 30
+          },
+          {
+            "label": "match-details",
+            "at": 1790720078839,
+            "elapsedMs": 48,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 92,
+            "phaseSequence": 31
+          },
+          {
+            "label": "match-details",
+            "at": 1790720078887,
+            "elapsedMs": 59,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 93,
+            "phaseSequence": 32
+          },
+          {
+            "label": "match-details",
+            "at": 1790720078946,
+            "elapsedMs": 78,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 94,
+            "phaseSequence": 33
+          },
+          {
+            "label": "match-details",
+            "at": 1790720079024,
+            "elapsedMs": 86,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 95,
+            "phaseSequence": 34
+          },
+          {
+            "label": "match-details",
+            "at": 1790720079110,
+            "elapsedMs": 85,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 96,
+            "phaseSequence": 35
+          },
+          {
+            "label": "match-details",
+            "at": 1790720079195,
+            "elapsedMs": 66,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 97,
+            "phaseSequence": 36
+          },
+          {
+            "label": "match-details",
+            "at": 1790720079261,
+            "elapsedMs": 81,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 98,
+            "phaseSequence": 37
+          },
+          {
+            "label": "match-details",
+            "at": 1790720079342,
+            "elapsedMs": 32,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 99,
+            "phaseSequence": 38
+          },
+          {
+            "label": "match-details",
+            "at": 1790720079374,
+            "elapsedMs": 87,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 100,
+            "phaseSequence": 39
+          },
+          {
+            "label": "match-details",
+            "at": 1790720079461,
+            "elapsedMs": 55,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 101,
+            "phaseSequence": 40
+          }
+        ],
+        "session": "b1a26bce-a65b-43fa-9bc7-395bd004f347",
+        "colo": "HAM"
+      }
+    },
+    {
+      "phase": "burst2",
+      "frame": 1,
+      "result": {
+        "ok": false,
+        "done": true,
+        "phase": "burst2",
+        "spacingMs": 0,
+        "elapsedMs": 1289,
+        "phaseAttempted": 61,
+        "phaseSuccesses": 60,
+        "sessionAttempted": 122,
+        "sessionSuccesses": 120,
+        "cooldownUntil": 1790720200949,
+        "rateLimited": true,
+        "metrics": [
+          {
+            "label": "match-details",
+            "at": 1790720079660,
+            "elapsedMs": 70,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 102,
+            "phaseSequence": 41
+          },
+          {
+            "label": "match-details",
+            "at": 1790720079730,
+            "elapsedMs": 83,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 103,
+            "phaseSequence": 42
+          },
+          {
+            "label": "match-details",
+            "at": 1790720079813,
+            "elapsedMs": 84,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 104,
+            "phaseSequence": 43
+          },
+          {
+            "label": "match-details",
+            "at": 1790720079897,
+            "elapsedMs": 89,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 105,
+            "phaseSequence": 44
+          },
+          {
+            "label": "match-details",
+            "at": 1790720079986,
+            "elapsedMs": 49,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 106,
+            "phaseSequence": 45
+          },
+          {
+            "label": "match-details",
+            "at": 1790720080035,
+            "elapsedMs": 32,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 107,
+            "phaseSequence": 46
+          },
+          {
+            "label": "match-details",
+            "at": 1790720080067,
+            "elapsedMs": 85,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 108,
+            "phaseSequence": 47
+          },
+          {
+            "label": "match-details",
+            "at": 1790720080152,
+            "elapsedMs": 59,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 109,
+            "phaseSequence": 48
+          },
+          {
+            "label": "match-details",
+            "at": 1790720080211,
+            "elapsedMs": 81,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 110,
+            "phaseSequence": 49
+          },
+          {
+            "label": "match-details",
+            "at": 1790720080292,
+            "elapsedMs": 52,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 111,
+            "phaseSequence": 50
+          },
+          {
+            "label": "match-details",
+            "at": 1790720080344,
+            "elapsedMs": 75,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 112,
+            "phaseSequence": 51
+          },
+          {
+            "label": "match-details",
+            "at": 1790720080419,
+            "elapsedMs": 57,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 113,
+            "phaseSequence": 52
+          },
+          {
+            "label": "match-details",
+            "at": 1790720080476,
+            "elapsedMs": 67,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 114,
+            "phaseSequence": 53
+          },
+          {
+            "label": "match-details",
+            "at": 1790720080543,
+            "elapsedMs": 41,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 115,
+            "phaseSequence": 54
+          },
+          {
+            "label": "match-details",
+            "at": 1790720080584,
+            "elapsedMs": 70,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 116,
+            "phaseSequence": 55
+          },
+          {
+            "label": "match-details",
+            "at": 1790720080654,
+            "elapsedMs": 82,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 117,
+            "phaseSequence": 56
+          },
+          {
+            "label": "match-details",
+            "at": 1790720080736,
+            "elapsedMs": 50,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 118,
+            "phaseSequence": 57
+          },
+          {
+            "label": "match-details",
+            "at": 1790720080786,
+            "elapsedMs": 49,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 119,
+            "phaseSequence": 58
+          },
+          {
+            "label": "match-details",
+            "at": 1790720080835,
+            "elapsedMs": 52,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 120,
+            "phaseSequence": 59
+          },
+          {
+            "label": "match-details",
+            "at": 1790720080887,
+            "elapsedMs": 58,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 121,
+            "phaseSequence": 60
+          },
+          {
+            "label": "match-details",
+            "at": 1790720080945,
+            "elapsedMs": 4,
+            "status": 429,
+            "bytes": 17,
+            "rate": {
+              "present": [
+                "retry-after"
+              ],
+              "values": {
+                "retry-after-ms": 60000
+              },
+              "retryAfterMs": 60000,
+              "serverClass": "cloudflare",
+              "contentType": "text/plain",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 122,
+            "phaseSequence": 61
+          }
+        ],
+        "session": "b1a26bce-a65b-43fa-9bc7-395bd004f347",
+        "colo": "HAM"
+      }
+    },
+    {
+      "phase": "steady",
+      "frame": 0,
+      "result": {
+        "ok": true,
+        "done": false,
+        "phase": "steady",
+        "spacingMs": 1000,
+        "elapsedMs": 39082,
+        "phaseAttempted": 40,
+        "phaseSuccesses": 40,
+        "sessionAttempted": 162,
+        "sessionSuccesses": 160,
+        "cooldownUntil": 1790720200949,
+        "rateLimited": false,
+        "metrics": [
+          {
+            "label": "match-details",
+            "at": 1790720206167,
+            "elapsedMs": 53,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 123,
+            "phaseSequence": 1
+          },
+          {
+            "label": "match-details",
+            "at": 1790720207167,
+            "elapsedMs": 80,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 124,
+            "phaseSequence": 2
+          },
+          {
+            "label": "match-details",
+            "at": 1790720208167,
+            "elapsedMs": 78,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 125,
+            "phaseSequence": 3
+          },
+          {
+            "label": "match-details",
+            "at": 1790720209167,
+            "elapsedMs": 57,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 126,
+            "phaseSequence": 4
+          },
+          {
+            "label": "match-details",
+            "at": 1790720210167,
+            "elapsedMs": 85,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 127,
+            "phaseSequence": 5
+          },
+          {
+            "label": "match-details",
+            "at": 1790720211167,
+            "elapsedMs": 78,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 128,
+            "phaseSequence": 6
+          },
+          {
+            "label": "match-details",
+            "at": 1790720212167,
+            "elapsedMs": 76,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 129,
+            "phaseSequence": 7
+          },
+          {
+            "label": "match-details",
+            "at": 1790720213167,
+            "elapsedMs": 80,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 130,
+            "phaseSequence": 8
+          },
+          {
+            "label": "match-details",
+            "at": 1790720214167,
+            "elapsedMs": 50,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 131,
+            "phaseSequence": 9
+          },
+          {
+            "label": "match-details",
+            "at": 1790720215167,
+            "elapsedMs": 80,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 132,
+            "phaseSequence": 10
+          },
+          {
+            "label": "match-details",
+            "at": 1790720216167,
+            "elapsedMs": 77,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 133,
+            "phaseSequence": 11
+          },
+          {
+            "label": "match-details",
+            "at": 1790720217167,
+            "elapsedMs": 73,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 134,
+            "phaseSequence": 12
+          },
+          {
+            "label": "match-details",
+            "at": 1790720218167,
+            "elapsedMs": 94,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 135,
+            "phaseSequence": 13
+          },
+          {
+            "label": "match-details",
+            "at": 1790720219167,
+            "elapsedMs": 81,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 136,
+            "phaseSequence": 14
+          },
+          {
+            "label": "match-details",
+            "at": 1790720220167,
+            "elapsedMs": 75,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 137,
+            "phaseSequence": 15
+          },
+          {
+            "label": "match-details",
+            "at": 1790720221167,
+            "elapsedMs": 79,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 138,
+            "phaseSequence": 16
+          },
+          {
+            "label": "match-details",
+            "at": 1790720222167,
+            "elapsedMs": 39,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 139,
+            "phaseSequence": 17
+          },
+          {
+            "label": "match-details",
+            "at": 1790720223167,
+            "elapsedMs": 77,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 140,
+            "phaseSequence": 18
+          },
+          {
+            "label": "match-details",
+            "at": 1790720224167,
+            "elapsedMs": 48,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 141,
+            "phaseSequence": 19
+          },
+          {
+            "label": "match-details",
+            "at": 1790720225167,
+            "elapsedMs": 49,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 142,
+            "phaseSequence": 20
+          },
+          {
+            "label": "match-details",
+            "at": 1790720226167,
+            "elapsedMs": 75,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 143,
+            "phaseSequence": 21
+          },
+          {
+            "label": "match-details",
+            "at": 1790720227167,
+            "elapsedMs": 89,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 144,
+            "phaseSequence": 22
+          },
+          {
+            "label": "match-details",
+            "at": 1790720228167,
+            "elapsedMs": 75,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 145,
+            "phaseSequence": 23
+          },
+          {
+            "label": "match-details",
+            "at": 1790720229167,
+            "elapsedMs": 81,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 146,
+            "phaseSequence": 24
+          },
+          {
+            "label": "match-details",
+            "at": 1790720230167,
+            "elapsedMs": 50,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 147,
+            "phaseSequence": 25
+          },
+          {
+            "label": "match-details",
+            "at": 1790720231167,
+            "elapsedMs": 79,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 148,
+            "phaseSequence": 26
+          },
+          {
+            "label": "match-details",
+            "at": 1790720232167,
+            "elapsedMs": 84,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 149,
+            "phaseSequence": 27
+          },
+          {
+            "label": "match-details",
+            "at": 1790720233167,
+            "elapsedMs": 78,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 150,
+            "phaseSequence": 28
+          },
+          {
+            "label": "match-details",
+            "at": 1790720234167,
+            "elapsedMs": 75,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 151,
+            "phaseSequence": 29
+          },
+          {
+            "label": "match-details",
+            "at": 1790720235167,
+            "elapsedMs": 80,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 152,
+            "phaseSequence": 30
+          },
+          {
+            "label": "match-details",
+            "at": 1790720236167,
+            "elapsedMs": 88,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 153,
+            "phaseSequence": 31
+          },
+          {
+            "label": "match-details",
+            "at": 1790720237167,
+            "elapsedMs": 49,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 154,
+            "phaseSequence": 32
+          },
+          {
+            "label": "match-details",
+            "at": 1790720238167,
+            "elapsedMs": 56,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 155,
+            "phaseSequence": 33
+          },
+          {
+            "label": "match-details",
+            "at": 1790720239167,
+            "elapsedMs": 87,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 156,
+            "phaseSequence": 34
+          },
+          {
+            "label": "match-details",
+            "at": 1790720240167,
+            "elapsedMs": 87,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 157,
+            "phaseSequence": 35
+          },
+          {
+            "label": "match-details",
+            "at": 1790720241167,
+            "elapsedMs": 72,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 158,
+            "phaseSequence": 36
+          },
+          {
+            "label": "match-details",
+            "at": 1790720242167,
+            "elapsedMs": 74,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 159,
+            "phaseSequence": 37
+          },
+          {
+            "label": "match-details",
+            "at": 1790720243167,
+            "elapsedMs": 88,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 160,
+            "phaseSequence": 38
+          },
+          {
+            "label": "match-details",
+            "at": 1790720244167,
+            "elapsedMs": 75,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 161,
+            "phaseSequence": 39
+          },
+          {
+            "label": "match-details",
+            "at": 1790720245167,
+            "elapsedMs": 82,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 162,
+            "phaseSequence": 40
+          }
+        ],
+        "session": "b1a26bce-a65b-43fa-9bc7-395bd004f347",
+        "colo": "HAM"
+      }
+    },
+    {
+      "phase": "steady",
+      "frame": 1,
+      "result": {
+        "ok": false,
+        "done": true,
+        "phase": "steady",
+        "spacingMs": 1000,
+        "elapsedMs": 34864,
+        "phaseAttempted": 75,
+        "phaseSuccesses": 74,
+        "sessionAttempted": 197,
+        "sessionSuccesses": 194,
+        "cooldownUntil": 1790720400168,
+        "rateLimited": true,
+        "metrics": [
+          {
+            "label": "match-details",
+            "at": 1790720246167,
+            "elapsedMs": 55,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 163,
+            "phaseSequence": 41
+          },
+          {
+            "label": "match-details",
+            "at": 1790720247167,
+            "elapsedMs": 48,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 164,
+            "phaseSequence": 42
+          },
+          {
+            "label": "match-details",
+            "at": 1790720248167,
+            "elapsedMs": 85,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 165,
+            "phaseSequence": 43
+          },
+          {
+            "label": "match-details",
+            "at": 1790720249167,
+            "elapsedMs": 62,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 166,
+            "phaseSequence": 44
+          },
+          {
+            "label": "match-details",
+            "at": 1790720250167,
+            "elapsedMs": 77,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 167,
+            "phaseSequence": 45
+          },
+          {
+            "label": "match-details",
+            "at": 1790720251167,
+            "elapsedMs": 83,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 168,
+            "phaseSequence": 46
+          },
+          {
+            "label": "match-details",
+            "at": 1790720252167,
+            "elapsedMs": 78,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 169,
+            "phaseSequence": 47
+          },
+          {
+            "label": "match-details",
+            "at": 1790720253167,
+            "elapsedMs": 73,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 170,
+            "phaseSequence": 48
+          },
+          {
+            "label": "match-details",
+            "at": 1790720254167,
+            "elapsedMs": 53,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 171,
+            "phaseSequence": 49
+          },
+          {
+            "label": "match-details",
+            "at": 1790720255167,
+            "elapsedMs": 85,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 172,
+            "phaseSequence": 50
+          },
+          {
+            "label": "match-details",
+            "at": 1790720256167,
+            "elapsedMs": 65,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 173,
+            "phaseSequence": 51
+          },
+          {
+            "label": "match-details",
+            "at": 1790720257167,
+            "elapsedMs": 75,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 174,
+            "phaseSequence": 52
+          },
+          {
+            "label": "match-details",
+            "at": 1790720258167,
+            "elapsedMs": 76,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 175,
+            "phaseSequence": 53
+          },
+          {
+            "label": "match-details",
+            "at": 1790720259167,
+            "elapsedMs": 75,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 176,
+            "phaseSequence": 54
+          },
+          {
+            "label": "match-details",
+            "at": 1790720260167,
+            "elapsedMs": 81,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 177,
+            "phaseSequence": 55
+          },
+          {
+            "label": "match-details",
+            "at": 1790720261167,
+            "elapsedMs": 74,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 178,
+            "phaseSequence": 56
+          },
+          {
+            "label": "match-details",
+            "at": 1790720262167,
+            "elapsedMs": 50,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 179,
+            "phaseSequence": 57
+          },
+          {
+            "label": "match-details",
+            "at": 1790720263167,
+            "elapsedMs": 81,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 180,
+            "phaseSequence": 58
+          },
+          {
+            "label": "match-details",
+            "at": 1790720264167,
+            "elapsedMs": 74,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 181,
+            "phaseSequence": 59
+          },
+          {
+            "label": "match-details",
+            "at": 1790720265167,
+            "elapsedMs": 73,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 182,
+            "phaseSequence": 60
+          },
+          {
+            "label": "match-details",
+            "at": 1790720266167,
+            "elapsedMs": 75,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 183,
+            "phaseSequence": 61
+          },
+          {
+            "label": "match-details",
+            "at": 1790720267167,
+            "elapsedMs": 81,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 184,
+            "phaseSequence": 62
+          },
+          {
+            "label": "match-details",
+            "at": 1790720268167,
+            "elapsedMs": 77,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 185,
+            "phaseSequence": 63
+          },
+          {
+            "label": "match-details",
+            "at": 1790720269167,
+            "elapsedMs": 81,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 186,
+            "phaseSequence": 64
+          },
+          {
+            "label": "match-details",
+            "at": 1790720270167,
+            "elapsedMs": 54,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 187,
+            "phaseSequence": 65
+          },
+          {
+            "label": "match-details",
+            "at": 1790720271167,
+            "elapsedMs": 78,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 188,
+            "phaseSequence": 66
+          },
+          {
+            "label": "match-details",
+            "at": 1790720272167,
+            "elapsedMs": 74,
+            "status": 200,
+            "bytes": 567945,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 189,
+            "phaseSequence": 67
+          },
+          {
+            "label": "match-details",
+            "at": 1790720273167,
+            "elapsedMs": 69,
+            "status": 200,
+            "bytes": 448277,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 190,
+            "phaseSequence": 68
+          },
+          {
+            "label": "match-details",
+            "at": 1790720274167,
+            "elapsedMs": 83,
+            "status": 200,
+            "bytes": 479622,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 191,
+            "phaseSequence": 69
+          },
+          {
+            "label": "match-details",
+            "at": 1790720275167,
+            "elapsedMs": 71,
+            "status": 200,
+            "bytes": 533856,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 192,
+            "phaseSequence": 70
+          },
+          {
+            "label": "match-details",
+            "at": 1790720276167,
+            "elapsedMs": 93,
+            "status": 200,
+            "bytes": 594237,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 193,
+            "phaseSequence": 71
+          },
+          {
+            "label": "match-details",
+            "at": 1790720277167,
+            "elapsedMs": 83,
+            "status": 200,
+            "bytes": 510154,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 194,
+            "phaseSequence": 72
+          },
+          {
+            "label": "match-details",
+            "at": 1790720278167,
+            "elapsedMs": 54,
+            "status": 200,
+            "bytes": 195496,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 195,
+            "phaseSequence": 73
+          },
+          {
+            "label": "match-details",
+            "at": 1790720279167,
+            "elapsedMs": 80,
+            "status": 200,
+            "bytes": 554836,
+            "rate": {
+              "present": [],
+              "values": {},
+              "retryAfterMs": null,
+              "serverClass": "cloudflare",
+              "contentType": "application/json",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 196,
+            "phaseSequence": 74
+          },
+          {
+            "label": "match-details",
+            "at": 1790720280167,
+            "elapsedMs": 1,
+            "status": 429,
+            "bytes": 17,
+            "rate": {
+              "present": [
+                "retry-after"
+              ],
+              "values": {
+                "retry-after-ms": 60000
+              },
+              "retryAfterMs": 60000,
+              "serverClass": "cloudflare",
+              "contentType": "text/plain",
+              "cloudflareRayPresent": true,
+              "challenge": false
+            },
+            "sequence": 197,
+            "phaseSequence": 75
+          }
+        ],
+        "session": "b1a26bce-a65b-43fa-9bc7-395bd004f347",
+        "colo": "HAM"
+      }
+    }
+  ],
+  "phases": [
+    {
+      "phase": "burst1",
+      "wallMs": 3856
+    },
+    {
+      "phase": "burst2",
+      "wallMs": 4564
+    },
+    {
+      "phase": "steady",
+      "wallMs": 74135
+    }
+  ],
+  "cooldowns": [
+    {
+      "before": "burst2",
+      "waitedMs": 125013
+    },
+    {
+      "before": "steady",
+      "waitedMs": 125010
+    }
+  ],
+  "setup": {
+    "ok": true,
+    "session": "b1a26bce-a65b-43fa-9bc7-395bd004f347",
+    "region": "eu",
+    "endpoint": "match-details",
+    "matchCount": 8,
+    "expiresAt": 1790720847567,
+    "colo": "HAM",
+    "setupMetrics": [
+      {
+        "label": "cookie-renewal",
+        "at": 1790719947318,
+        "elapsedMs": 144,
+        "status": 303,
+        "bytes": 0,
+        "rate": {
+          "present": [],
+          "values": {},
+          "retryAfterMs": null,
+          "serverClass": "cloudflare",
+          "contentType": "text/html",
+          "cloudflareRayPresent": true,
+          "challenge": false
+        }
+      },
+      {
+        "label": "userinfo",
+        "at": 1790719947462,
+        "elapsedMs": 43,
+        "status": 200,
+        "bytes": 614,
+        "rate": {
+          "present": [],
+          "values": {},
+          "retryAfterMs": null,
+          "serverClass": "cloudflare",
+          "contentType": "application/json",
+          "cloudflareRayPresent": true,
+          "challenge": false
+        }
+      },
+      {
+        "label": "entitlement",
+        "at": 1790719947505,
+        "elapsedMs": 23,
+        "status": 200,
+        "bytes": 650,
+        "rate": {
+          "present": [],
+          "values": {},
+          "retryAfterMs": null,
+          "serverClass": "cloudflare",
+          "contentType": "application/json",
+          "cloudflareRayPresent": true,
+          "challenge": false
+        }
+      },
+      {
+        "label": "content",
+        "at": 1790719947528,
+        "elapsedMs": 19,
+        "status": 200,
+        "bytes": 11502,
+        "rate": {
+          "present": [],
+          "values": {},
+          "retryAfterMs": null,
+          "serverClass": "cloudflare",
+          "contentType": "application/json",
+          "cloudflareRayPresent": true,
+          "challenge": false
+        }
+      },
+      {
+        "label": "history-discovery",
+        "at": 1790719947547,
+        "status": 200,
+        "elapsedMs": 20,
+        "bytes": 941,
+        "rate": {
+          "present": [],
+          "values": {},
+          "retryAfterMs": null,
+          "serverClass": "cloudflare",
+          "contentType": "application/json",
+          "cloudflareRayPresent": true,
+          "challenge": false
+        }
+      }
+    ]
+  },
+  "elapsedMs": 333144,
+  "cooldownUntil": 1790720405168,
+  "cleanup": {
+    "ok": true
+  }
+}

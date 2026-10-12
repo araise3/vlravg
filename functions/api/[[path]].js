@@ -735,8 +735,8 @@ const ROUTES = [
   {
     // /api/account-by-puuid/{puuid}
     match: /^\/account-by-puuid\/([^/]+)$/,
-    upstream: (m) => `/valorant/v1/by-puuid/account/${m[1]}`,
-    cacheTtl: 86400, // puuid -> name/tag: only changes on a Riot ID rename
+    upstream: (m) => `/valorant/v1/by-puuid/account/${m[1]}?force=true`,
+    cacheTtl: 300, // Current Riot IDs for profiles and duos: refresh every five minutes.
     trackAccount: true,
     accountByPuuid: true,
   },
@@ -976,6 +976,10 @@ async function handleGet(context,{workflow,henrikKey}){
       return json({ error: "Invalid stored match page" }, 400);
     }
     url.search = `?mode=competitive&size=100&page=${page}`;
+  } else if (route.accountByPuuid) {
+    match[1] = match[1].toLowerCase();
+    url.pathname = PREFIX + '/account-by-puuid/' + match[1];
+    url.search = ''; // Share the five-minute cache; callers cannot override force.
   } else if (route.matchDetail) {
     url.search = '';
   }
@@ -1022,6 +1026,8 @@ async function handleGet(context,{workflow,henrikKey}){
   const cache = caches.default;
   // Never put workflow credentials in an edge-cache key or cached request.
   const cacheUrl = new URL(url);
+  // Retire the old day-long account cache after introducing current duo names.
+  if (route.accountByPuuid) cacheUrl.searchParams.set('_identity', 'current-v1');
   // Old details were cached for a day and lists for 150s. Change the namespace
   // once for the new schema; callers cannot supply a cache-bypass token.
   if (route.matchDetail || route.foldCalibration) cacheUrl.searchParams.set('_payload', 'performance-v1');
