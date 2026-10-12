@@ -3,8 +3,6 @@
 #server-ping-map .map-server-heading{display:flex;flex-direction:column;gap:5px}
 #server-ping-map .map-server-heading strong{font-size:14px;font-weight:600;color:#e8eaf0}
 #server-ping-map .map-server-heading span{font-size:11px;color:#85858f}
-#server-ping-map .ring-toggle{display:flex;gap:7px;align-items:center;font-size:11px;color:#a1a1aa;pointer-events:auto;white-space:nowrap;cursor:pointer}
-#server-ping-map input{accent-color:var(--brand);margin:0;width:12px;height:12px}
 #server-ping-map #map{display:block;width:100%;height:auto;max-height:660px;touch-action:none;cursor:grab}
 #server-ping-map #map:active{cursor:grabbing}
 #server-ping-map .country{stroke:#36363c;stroke-width:.7;vector-effect:non-scaling-stroke;cursor:pointer}
@@ -22,9 +20,9 @@
 #server-ping-map .server-pin:hover .pin-dot{fill:var(--brand)}
 #server-ping-map .server-pin .halo{fill:none;stroke:#60a5fa;stroke-width:1;opacity:.45;pointer-events:none}
 #server-ping-map .country-origin{pointer-events:none}
-#server-ping-map .map-controls{position:absolute;right:18px;bottom:90px;display:flex;flex-direction:column;background:#171719;border:1px solid #303036;border-radius:6px;overflow:hidden}
-#server-ping-map .map-controls button{width:30px;height:30px;background:transparent;border:0;border-bottom:1px solid #303036;font-size:18px;color:#a1a1aa}
-#server-ping-map .map-controls button:last-child{border-bottom:0;font-size:16px}
+#server-ping-map .map-controls{position:absolute;right:18px;top:18px;display:flex;flex-direction:row;background:#171719;border:1px solid #303036;border-radius:6px;overflow:hidden}
+#server-ping-map .map-controls button{width:30px;height:30px;background:transparent;border:0;border-right:1px solid #303036;font-size:18px;color:#a1a1aa}
+#server-ping-map .map-controls button:last-child{border-right:0;font-size:16px}
 #server-ping-map .map-controls button:hover{background:#222226;color:#e8eaf0}
 #server-ping-map .map-footer{display:flex;justify-content:space-between;align-items:center;gap:16px;border-top:1px solid #29292d;padding:14px 20px;background:#151517}
 #server-ping-map .map-readout{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 9px;font-size:11px;min-width:0;color:#b4b4bd}
@@ -37,9 +35,9 @@
 #server-ping-map #tooltip strong{display:block;font-weight:600;margin-bottom:4px}
 #server-ping-map #tooltip span{display:block;color:#85858f;font-size:10px;margin-top:4px}
 #server-ping-map [hidden]{display:none!important}
-#server-ping-map input:focus-visible,#server-ping-map [role=button]:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
+#server-ping-map [role=button]:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
 #server-ping-map .server-pin:focus-visible{outline:none}
 #server-ping-map .server-pin:focus-visible .halo{visibility:visible;stroke:#e8eaf0;stroke-width:2;opacity:.9}
-@media(max-width:700px){#server-ping-map .map-footer{flex-direction:column;align-items:flex-start;gap:12px;padding:12px 16px}#server-ping-map .legend{width:100%;justify-content:space-between;gap:8px}#server-ping-map .map-controls{bottom:114px}}
-@media(max-width:640px){#server-ping-map #map{min-height:420px}#server-ping-map .map-heading{top:16px;left:16px;right:16px}#server-ping-map .map-server-heading strong{font-size:13px}#server-ping-map .map-server-heading span{font-size:10px}#server-ping-map .country-label{display:none}#server-ping-map .map-controls{right:12px}#server-ping-map .ring-toggle{font-size:10px}#server-ping-map .legend{font-size:9px}}
+@media(max-width:700px){#server-ping-map .map-footer{flex-direction:column;align-items:flex-start;gap:12px;padding:12px 16px}#server-ping-map .legend{width:100%;justify-content:space-between;gap:8px}}
+@media(max-width:640px){#server-ping-map #map{min-height:420px}#server-ping-map .map-heading{top:16px;left:16px;right:16px}#server-ping-map .map-server-heading strong{font-size:13px}#server-ping-map .map-server-heading span{font-size:10px}#server-ping-map .country-label{display:none}#server-ping-map .map-controls{right:12px;top:12px}#server-ping-map .legend{font-size:9px}}
 @media(max-width:380px){#server-ping-map .map-footer{padding:12px}#server-ping-map .legend{gap:6px;font-size:8px}#server-ping-map .legend i{margin-right:4px;width:4px;height:4px}}
