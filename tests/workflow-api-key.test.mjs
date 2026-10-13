@@ -4,8 +4,8 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {onRequestGet} from '../functions/api/[[path]].js';
 import {createRequestScheduler} from '../.github/scripts/request-scheduler.mjs';
-import {main as refresh} from '../.github/scripts/refresh-rr-history.mjs';
-import {main as collect} from '../.github/scripts/collect-rr-corpus.mjs';
+import {main as refresh,requestJSON} from '../.github/scripts/refresh-rr-history.mjs';
+import {main as collect,collectPlayers} from '../.github/scripts/collect-rr-corpus.mjs';
 import {main as backfill} from '../.github/scripts/backfill-all-names.mjs';
 
 const origin='https://site.test',url=origin+'/api/rank/eu/pc/Alpha/EU';
@@ -169,6 +169,30 @@ test('concurrent workflow callers share one readiness probe and then proceed wit
   await Promise.all([scheduled(url),scheduled(url),scheduled(url)]);
   assert.equal(calls.filter(target=>target.endsWith('/api/calib-model')).length,1);
   assert.equal(calls.filter(target=>target===url).length,3);
+});
+
+test('credential mismatch reaches the collector as a configuration error without retries or per-player masking',async()=>{
+  const calls=[];
+  const scheduled=createRequestScheduler({workflowKey,origin,fetchImpl:async target=>{
+    calls.push(target);return Response.json({error:'Unauthorized workflow request'},{status:401});
+  }});
+  await assert.rejects(collectPlayers([{puuid:'a',region:'eu',platform:'pc'}],{
+    origin,fetchImpl:scheduled,log:()=>{},concurrency:1,
+  }),error=>error.code==='WORKFLOW_CONFIGURATION'&&/HTTP 401.*must match/.test(error.message));
+  assert.deepEqual(calls,[origin+'/api/calib-model']);
+});
+
+test('a transient readiness failure can recover on the next retry',async()=>{
+  let probes=0,requests=0;
+  const scheduled=createRequestScheduler({workflowKey,origin,fetchImpl:async target=>{
+    if(target.endsWith('/api/calib-model')){
+      if(++probes===1)throw new TypeError('fetch failed');
+      return Response.json({data:{}},{headers:{'X-Workflow-Pacing':'upstream-v1'}});
+    }
+    requests++;return Response.json({data:{recovered:true}});
+  }});
+  const result=await requestJSON(url,scheduled,async()=>{});
+  assert.equal(result.ok,true);assert.equal(probes,2);assert.equal(requests,1);
 });
 
 test('all Henrik workflows require the new secret before doing any network work',async()=>{

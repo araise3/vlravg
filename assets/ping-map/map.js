@@ -1,8 +1,10 @@
 'use strict';
 (()=>{
-// Berlin reference values supplied by the user from the VALORANT selector.
-// Other origins are distance-adjusted estimates, not measured RTTs.
+// Observations supplied by the user from the VALORANT selector.
+// Unmeasured origins remain distance-adjusted estimates from Berlin.
 const BERLIN_REFERENCE=[13.405,52.52];
+const TBILISI_REFERENCE=[44.8271,41.7151];
+const TBILISI_PINGS={frankfurt:52,paris:59,london:63,warsaw:68,stockholm:74,istanbul:40,madrid:85,riyadh:136};
 const PING_SERVERS=[
   {id:'frankfurt',name:'Frankfurt',country:'Germany',coords:[8.6821,50.1109],berlinMs:13},
   {id:'paris',name:'Paris',country:'France',coords:[2.3522,48.8566],berlinMs:19},
@@ -55,9 +57,12 @@ const PING_BANDS=[{ms:20,color:'#62dfb4'},{ms:35,color:'#9ad579'},{ms:50,color:'
 function serverBaseline(server){return server.berlinMs-d3.geoDistance(BERLIN_REFERENCE,server.coords)*6371*.016;}
 function estimatePing(from,server){
   const km=d3.geoDistance(from,server.coords)*6371;
-  const observed=from[0]===BERLIN_REFERENCE[0]&&from[1]===BERLIN_REFERENCE[1];
-  const ms=Math.round(Math.max(5,serverBaseline(server)+km*.016)),margin=Math.max(5,Math.round(ms*.25));
-  return {km,ms,observed,low:Math.max(1,ms-margin),high:ms+margin};
+  const isBerlin=from[0]===BERLIN_REFERENCE[0]&&from[1]===BERLIN_REFERENCE[1];
+  const isTbilisi=from[0]===TBILISI_REFERENCE[0]&&from[1]===TBILISI_REFERENCE[1];
+  const observed=isBerlin||isTbilisi,reference=isBerlin?'Berlin':isTbilisi?'Tbilisi':null;
+  const ms=isBerlin?server.berlinMs:isTbilisi?TBILISI_PINGS[server.id]:Math.round(Math.max(5,serverBaseline(server)+km*.016));
+  const margin=Math.max(5,Math.round(ms*.25));
+  return {km,ms,observed,reference,low:Math.max(1,ms-margin),high:ms+margin};
 }
 function pingColor(ms){return (PING_BANDS.find(b=>ms<b.ms)||PING_BANDS.at(-1)).color;}
 
@@ -139,9 +144,9 @@ function render(){
   readout.replaceChildren();
   const route=document.createElement('span');route.textContent=selectedCountry.capital+' → '+selectedServer.name;
   const value=document.createElement('strong');value.style.color=pingColor(ping.ms);value.textContent=(ping.observed?'':'~')+ping.ms+' ms';
-  const note=document.createElement('small');note.textContent=ping.observed?'Observed Berlin reference':'Capital-based estimate · '+ping.low+'–'+ping.high+' ms';
+  const note=document.createElement('small');note.textContent=ping.observed?'Observed '+ping.reference+' reference':'Capital-based estimate · '+ping.low+'–'+ping.high+' ms';
   readout.append(route,value,note);
-  readout.title='Other countries are estimated from the Berlin reference plus the distance difference × 0.016 ms/km (5 ms floor). Actual ISP routing may differ.';
+  readout.title='Berlin and Tbilisi use observed pings. Other countries are estimated from the Berlin reference plus the distance difference × 0.016 ms/km (5 ms floor). Actual ISP routing may differ.';
   positionPins();
 }
 function destination([lon,lat],km,bearing){
@@ -155,7 +160,7 @@ function showTooltip(event,feature){
   const t=document.getElementById('tooltip'),ping=estimatePing(c.coords,selectedServer);
   t.replaceChildren();const name=document.createElement('strong');name.textContent=c.name;
   const value=document.createElement('div');value.textContent=(ping.observed?'':'~')+ping.ms+' ms to '+selectedServer.name;value.style.color=pingColor(ping.ms);
-  const note=document.createElement('span');note.textContent=ping.observed?'Observed Berlin reference':c.capital+' reference · '+ping.low+'–'+ping.high+' ms';t.append(name,value,note);t.hidden=false;
+  const note=document.createElement('span');note.textContent=ping.observed?'Observed '+ping.reference+' reference':c.capital+' reference · '+ping.low+'–'+ping.high+' ms';t.append(name,value,note);t.hidden=false;
   const panel=document.getElementById('server-ping-map').getBoundingClientRect();
   t.style.left=Math.max(8,Math.min(event.clientX-panel.left+14,panel.width-t.offsetWidth-12))+'px';
   t.style.top=Math.max(8,Math.min(event.clientY-panel.top+14,panel.height-t.offsetHeight-70))+'px';

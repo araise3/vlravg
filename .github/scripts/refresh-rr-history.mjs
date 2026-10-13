@@ -63,7 +63,8 @@ export async function requestJSON(url, fetchImpl = fetch, sleepImpl = sleep) {
       if (!res.ok) return { ok: false, reason: `http ${res.status}` };
       if (!body?.data) return { ok: false, reason: 'invalid JSON response' };
       return { ok: true, data: body.data };
-    } catch {
+    } catch (error) {
+      if(error?.code==='WORKFLOW_CONFIGURATION')throw error;
       if (++transientAttempts >= 3) return { ok: false, reason: 'network error or timeout', retryable: true };
       await sleepImpl(2500 * 2 ** (transientAttempts - 1));
     }

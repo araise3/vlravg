@@ -24,7 +24,10 @@ export async function collectPlayers(players,{origin,fetchImpl,log=console.log,c
         if(!result.ok||result.data?.puuid!==player.puuid||!result.data.checked_at)throw new Error(result.reason||'invalid collection receipt');
         checked++;gaps+=result.data.possible_gap?1:0;
         if(checked%50===0)log(`RR committed: ${checked}/${players.length}`);
-      }catch(error){failures.push({puuid:player.puuid,reason:error.message});log(`RR FAILED ${player.puuid}: ${error.message}`);}
+      }catch(error){
+        if(error?.code==='WORKFLOW_CONFIGURATION')throw error;
+        failures.push({puuid:player.puuid,reason:error.message});log(`RR FAILED ${player.puuid}: ${error.message}`);
+      }
     }
   }
   await Promise.all(Array.from({length:Math.min(concurrency,players.length)},worker));
