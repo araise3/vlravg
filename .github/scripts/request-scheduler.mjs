@@ -25,8 +25,15 @@ export function createRequestScheduler({fetchImpl=fetch,workflowKey,origin}={}) 
         });
         const ready=response.ok&&response.headers.get('X-Workflow-Pacing')==='upstream-v1';
         await response.body?.cancel();
-        if(!ready)throw new Error(`Central workflow pacing is not ready (HTTP ${response.status}); deploy the updated Pages Function first`);
-      })();
+        if(!ready){
+          const hint=response.status===401?'HENRIK_WORKFLOW_KEY must match in GitHub Actions and Cloudflare Pages production'
+            :response.status===503?'Check the Pages production HENRIK_WORKFLOW_KEY and proxy availability'
+            :'Deploy the updated Pages Function first';
+          const error=new Error(`Central workflow pacing is not ready (HTTP ${response.status}); ${hint}`);
+          error.code='WORKFLOW_CONFIGURATION';
+          throw error;
+        }
+      })().catch(error=>{readiness=undefined;throw error;});
       await readiness;
     }
     return fetchImpl(url,{...requestOptions,signal:AbortSignal.timeout(45000)});

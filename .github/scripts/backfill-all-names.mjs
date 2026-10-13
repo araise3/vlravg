@@ -23,7 +23,10 @@ export async function drainBackfill(players,{origin,fetchImpl=createRequestSched
       const player=queue.shift();
       let result;
       try{result=await runPage(player,{origin,pages:1,fetchImpl});}
-      catch{result={ok:false,reason:'unexpected request failure'};}
+      catch(error){
+        if(error?.code==='WORKFLOW_CONFIGURATION')throw error;
+        result={ok:false,reason:'unexpected request failure'};
+      }
       if(!result.ok){errors.push({puuid:player.puuid,reason:result.reason});log(`FAILED ${player.puuid}: ${result.reason}; cursor preserved`);continue;}
       if(!result.available){pending.delete(player.puuid);continue;}
       const before=cursor(player),advanced=progress(result)-progress(player);
