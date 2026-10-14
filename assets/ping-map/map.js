@@ -70,29 +70,17 @@ function pingColor(ms){return (PING_BANDS.find(b=>ms<b.ms)||PING_BANDS.at(-1)).c
 
 let selectedServer=PING_SERVERS[0];
 let selectedCountry=PING_COUNTRIES.find(c=>c.code==='DEU');
-let selectedRegion=null;
 const countryByCode=new Map(PING_COUNTRIES.map(c=>[c.code,c]));
-const regionById=new Map(PING_REGIONS.features.map(f=>[f.properties.id,{
-  ...f.properties,country:countryByCode.get(f.properties.countryCode),regional:true,
-}]));
-const regionalCountryCodes=new Set(PING_REGIONS.features.map(f=>f.properties.countryCode));
-function originForFeature(feature){return regionById.get(feature.properties.id)||countryByCode.get(feature.properties.code);}
-function getSelectedOrigin(){return selectedRegion||selectedCountry;}
-function originName(place){return place.regional?place.name+', '+place.country.name:place.capital;}
 const projection=d3.geoMercator().center([21,51]).scale(500).translate([500,355]);
 const path=d3.geoPath(projection);
 const svg=d3.select('#map'),scene=d3.select('#map-scene');
-const land=scene.append('g'),regionalLand=scene.append('g'),rings=scene.append('g').attr('aria-hidden','true'),labels=scene.append('g').attr('aria-hidden','true');
+const land=scene.append('g'),rings=scene.append('g').attr('aria-hidden','true'),labels=scene.append('g').attr('aria-hidden','true');
 const origin=scene.append('g').attr('class','country-origin').attr('aria-hidden','true');
 const pins=scene.append('g');
 const countryPaths=land.selectAll('path').data(PING_GEOGRAPHY.features).join('path').attr('d',path).attr('class','country')
   .attr('tabindex',f=>countryByCode.has(f.properties.code)?0:null).attr('role',f=>countryByCode.has(f.properties.code)?'button':null)
   .on('click',(event,f)=>{const c=countryByCode.get(f.properties.code);if(c)selectCountry(c);})
   .on('keydown',(event,f)=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();const c=countryByCode.get(f.properties.code);if(c)selectCountry(c);}})
-  .on('pointermove',showTooltip).on('pointerleave',hideTooltip);
-const regionPaths=regionalLand.selectAll('path').data(PING_REGIONS.features).join('path').attr('d',path).attr('class','region')
-  .on('click',(event,f)=>selectRegion(regionById.get(f.properties.id)))
-  .on('keydown',(event,f)=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();selectRegion(regionById.get(f.properties.id));}})
   .on('pointermove',showTooltip).on('pointerleave',hideTooltip);
 const largeLabels=new Set(['ISL','IRL','GBR','FRA','ESP','PRT','DEU','ITA','NOR','SWE','FIN','POL','ROU','UKR','RUS','TUR','GRC','DZA','MAR','EGY','SAU','IRN']);
 const labelCoords={NOR:[9,64],SWE:[16,64],FIN:[27,64],RUS:[43,61],FRA:[2,46],ESP:[-4,39],ITA:[13,43],TUR:[34,39],DEU:[10.5,51.5],POL:[19,51],GBR:[-3,55],UKR:[32,49],SAU:[44,27],IRN:[55,33]};
@@ -132,33 +120,18 @@ function positionPins(){
 new ResizeObserver(positionPins).observe(svg.node());
 
 function selectServer(server){selectedServer=server;hideTooltip();render();}
-function selectCountry(country){selectedCountry=country;selectedRegion=null;updateRegionOptions();hideTooltip();render();}
-function selectRegion(region){selectedCountry=region.country;selectedRegion=region;updateRegionOptions();hideTooltip();render();}
-const countrySelect=document.getElementById('map-country'),regionSelect=document.getElementById('map-region');
+function selectCountry(country){selectedCountry=country;countrySelect.value=country.code;hideTooltip();render();}
+const countrySelect=document.getElementById('map-country');
 PING_COUNTRIES.forEach(c=>{const option=document.createElement('option');option.value=c.code;option.textContent=c.name;countrySelect.appendChild(option);});
 countrySelect.addEventListener('change',()=>selectCountry(countryByCode.get(countrySelect.value)));
-regionSelect.addEventListener('change',()=>regionSelect.value?selectRegion(regionById.get(regionSelect.value)):selectCountry(selectedCountry));
-function updateRegionOptions(){
-  countrySelect.value=selectedCountry.code;regionSelect.replaceChildren();
-  const capital=document.createElement('option');capital.value='';capital.textContent=selectedCountry.capital+' reference';regionSelect.appendChild(capital);
-  const regions=[...regionById.values()].filter(r=>r.countryCode===selectedCountry.code).sort((a,b)=>a.name.localeCompare(b.name,'en'));
-  regions.forEach(r=>{const option=document.createElement('option');option.value=r.id;option.textContent=r.name;regionSelect.appendChild(option);});
-  regionSelect.disabled=!regions.length;regionSelect.value=selectedRegion?.id||'';
-}
 function render(){
   document.getElementById('map-server-name').textContent=selectedServer.name;
   serverPins.attr('aria-pressed',s=>s===selectedServer?'true':'false').classed('selected',s=>s===selectedServer);
   serverPins.select('.pin-dot').attr('fill',s=>s===selectedServer?'#60a5fa':'#a1a1aa').attr('r',s=>s===selectedServer?5:4);
   serverPins.select('.halo').attr('visibility',s=>s===selectedServer?'visible':'hidden');
-  countryPaths.attr('fill',f=>{const c=countryByCode.get(f.properties.code);return c&&!regionalCountryCodes.has(c.code)?d3.color(pingColor(estimatePing(c.coords,selectedServer).ms)).darker(3).formatHex():'#1c1c20';})
+  countryPaths.attr('fill',f=>{const c=countryByCode.get(f.properties.code);return c?d3.color(pingColor(estimatePing(c.coords,selectedServer).ms)).darker(3).formatHex():'#1c1c20';})
     .classed('selected',f=>f.properties.code===selectedCountry.code)
     .attr('aria-label',f=>{const c=countryByCode.get(f.properties.code);return c?c.name+', '+estimatePing(c.coords,selectedServer).ms+' milliseconds from '+c.capital:null;});
-  regionPaths.attr('fill',f=>d3.color(pingColor(estimatePing(f.properties.coords,selectedServer).ms)).darker(3).formatHex())
-    .classed('in-country',f=>f.properties.countryCode===selectedCountry.code)
-    .classed('selected',f=>f.properties.id===selectedRegion?.id)
-    .attr('role',f=>f.properties.countryCode===selectedCountry.code?'button':null)
-    .attr('tabindex',f=>f.properties.countryCode===selectedCountry.code?0:null)
-    .attr('aria-label',f=>{if(f.properties.countryCode!==selectedCountry.code)return null;const r=regionById.get(f.properties.id),ping=estimatePing(r.coords,selectedServer);return originName(r)+', '+(ping.observed?'observed':'estimated')+' '+ping.ms+' milliseconds to '+selectedServer.name;});
   rings.selectAll('*').remove();
   [...PING_RING_THRESHOLDS].reverse().forEach(ms=>{
     const b={ms,color:pingColor(ms)};
@@ -170,14 +143,14 @@ function render(){
     const labelPoint=destination(selectedServer.coords,radiusKm,105),p=projection(labelPoint);
     if(p[0]>25&&p[0]<940&&p[1]>95&&p[1]<650)rings.append('text').attr('class','ring-label').attr('x',p[0]+5).attr('y',p[1]-6).attr('fill',b.color).text(b.ms+' ms');
   });
-  const place=getSelectedOrigin(),p=projection(place.coords);
+  const place=selectedCountry,p=projection(place.coords);
   origin.selectAll('*').remove();
   origin.append('circle').attr('cx',p[0]).attr('cy',p[1]).attr('r',3).attr('fill','#b4b4bd').attr('stroke','#111113').attr('stroke-width',1.5);
   const ping=estimatePing(place.coords,selectedServer),readout=document.getElementById('map-readout');
   readout.replaceChildren();
-  const route=document.createElement('span');route.textContent=originName(place)+' → '+selectedServer.name;
+  const route=document.createElement('span');route.textContent=place.capital+' → '+selectedServer.name;
   const value=document.createElement('strong');value.style.color=pingColor(ping.ms);value.textContent=(ping.observed?'':'~')+ping.ms+' ms';
-  const note=document.createElement('small');note.textContent=ping.observed?'Observed '+ping.reference+' reference':(place.regional?'Regional reference estimate':'Capital-based estimate')+' · '+ping.low+'–'+ping.high+' ms';
+  const note=document.createElement('small');note.textContent=ping.observed?'Observed '+ping.reference+' reference':'Capital-based estimate'+' · '+ping.low+'–'+ping.high+' ms';
   readout.append(route,value,note);
   readout.title='Berlin and Tbilisi use observed pings. Other locations use a geographic reference estimate; actual ISP routing may differ. Rings are spaced every 10 ms.';
   positionPins();
@@ -189,15 +162,15 @@ function destination([lon,lat],km,bearing){
   return [lambda2/r,phi2/r];
 }
 function showTooltip(event,feature){
-  const c=originForFeature(feature);if(!c){hideTooltip();return;}
+  const c=countryByCode.get(feature.properties.code);if(!c){hideTooltip();return;}
   const t=document.getElementById('tooltip'),ping=estimatePing(c.coords,selectedServer);
-  t.replaceChildren();const name=document.createElement('strong');name.textContent=c.regional?c.name+', '+c.country.name:c.name;
+  t.replaceChildren();const name=document.createElement('strong');name.textContent=c.name;
   const value=document.createElement('div');value.textContent=(ping.observed?'':'~')+ping.ms+' ms to '+selectedServer.name;value.style.color=pingColor(ping.ms);
-  const note=document.createElement('span');note.textContent=ping.observed?'Observed '+ping.reference+' reference':(c.regional?'Regional estimate':c.capital+' reference')+' · '+ping.low+'–'+ping.high+' ms';t.append(name,value,note);t.hidden=false;
+  const note=document.createElement('span');note.textContent=ping.observed?'Observed '+ping.reference+' reference':(c.capital+' reference')+' · '+ping.low+'–'+ping.high+' ms';t.append(name,value,note);t.hidden=false;
   const panel=document.getElementById('server-ping-map').getBoundingClientRect();
   t.style.left=Math.max(8,Math.min(event.clientX-panel.left+14,panel.width-t.offsetWidth-12))+'px';
   t.style.top=Math.max(8,Math.min(event.clientY-panel.top+14,panel.height-t.offsetHeight-70))+'px';
 }
 function hideTooltip(){document.getElementById('tooltip').hidden=true;}
-updateRegionOptions();render();
+countrySelect.value=selectedCountry.code;render();
 })();

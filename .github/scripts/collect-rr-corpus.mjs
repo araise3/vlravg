@@ -6,6 +6,7 @@ import {d1Query} from './d1-query.mjs';
 import {randomUUID} from 'node:crypto';
 import {readQuotaAudit,quotaCheckReport} from './workflow-quota-check.mjs';
 import {loadActivity,loadCandidates} from './rr-activity-query.mjs';
+import {loadFeaturePlan} from './rr-feature-plan.mjs';
 import {selectPollingPlayers,selectDiscoveryCandidates,pollingPolicy} from '../../lib/rr-activity.mjs';
 
 export async function collectPlayers(players,{origin,fetchImpl,log=console.log,concurrency=4,
@@ -145,12 +146,10 @@ export async function main(env=process.env){
   try{
     report.scouting=await collectPlayers(captureIncomplete?[]:candidates,{origin,fetchImpl,deadline});
     report.candidatesScouted=report.scouting.players;
-    const pending=limit&&!captureIncomplete&&Date.now()<deadline?await d1Query(env,`SELECT h.puuid,h.match_id,p.region FROM rr_history h
-      JOIN rr_players p ON p.puuid=h.puuid LEFT JOIN rr_match_features f ON f.puuid=h.puuid AND f.match_id=h.match_id
-      LEFT JOIN rr_feature_retry r ON r.puuid=h.puuid AND r.match_id=h.match_id
-      WHERE f.match_id IS NULL AND p.region IS NOT NULL
-      AND (r.next_attempt_at IS NULL OR julianday(r.next_attempt_at)<=julianday('now'))
-      ORDER BY h.date DESC,h.puuid,h.match_id LIMIT ?1`,[limit]):[];
+    const plan=await loadFeaturePlan(env,!captureIncomplete&&Date.now()<deadline?limit:0);
+    report.detailInventory=plan.inventory;
+    const pending=plan.rows;
+    console.log(`Database inventory: ${plan.inventory.saved} completed feature rows skipped; ${plan.inventory.missing} missing; ${plan.inventory.archived} available from saved matches; ${plan.inventory.waitingRetry} waiting for upstream retry.`);
     report.detailQueued=pending.length;
     const features=await collectMatchFeatures(pending,{origin,fetchImpl,deadline});
     Object.assign(report,{details:features.saved,detailDeferred:features.deferred,
@@ -166,6 +165,7 @@ export async function main(env=process.env){
   if(env.GITHUB_STEP_SUMMARY)await appendFile(env.GITHUB_STEP_SUMMARY,
     `## RR corpus\n\n${refresh.checked}/${refresh.players} accounts committed; ${refresh.failures.length} failed; ${refresh.deferred} deferred by the run budget. ${report.details} match feature rows saved; ${report.detailDeferred} upstream matches deferred for retry (RR retained); ${report.detailFailed} detail errors; ${report.detailBudgetDeferred} details deferred by the run budget.\n\n${report.health?.stale??'Unknown'} accounts overdue; ${report.health?.possible_gaps??'Unknown'} possible rolling-window gaps.\n`+
     (report.currentAct?`\nObserved act: ${report.currentAct.act||report.currentAct.id}; ${report.currentAct.payouts} payouts, including ${report.currentAct.placements} placements.\n`:'')+
+    (report.detailInventory?`\nDatabase inventory before enrichment: ${report.detailInventory.saved} completed feature rows skipped; ${report.detailInventory.missing} missing, including ${report.detailInventory.archived} archived matches ready without an upstream fetch, ${report.detailInventory.waitingRetry} waiting for retry, and ${report.detailInventory.missingRegion} without a known region.\n`:'')+
     `\nQuota check: ${report.quotaCheck.status}; ${report.quotaCheck.otherProxyCalls??'unknown'} other proxy calls; ${report.quotaCheck.unexplainedRequests??'unknown'} unexplained quota units. This cannot identify another instance or prove exclusive use.\n`+
     (report.enrichmentSkipped?'\nOptional enrichment skipped because tracked capture is incomplete.\n':'')+
     (report.enrichmentError||report.coverageError?'\nEnrichment or coverage reporting failed; see the job log. Committed RR is retained.\n':''));

@@ -7,6 +7,7 @@ import {collectPlayers,collectMatchFeatures,corpusReport} from '../.github/scrip
 import {onRequestGet} from '../functions/api/[[path]].js';
 import {pollingPolicy,selectPollingPlayers,selectDiscoveryCandidates,discoverMatchPlayers} from '../lib/rr-activity.mjs';
 import {loadActivity,loadCandidates} from '../.github/scripts/rr-activity-query.mjs';
+import {loadFeaturePlan} from '../.github/scripts/rr-feature-plan.mjs';
 
 const puuid='11111111-1111-4111-8111-111111111111',mid='22222222-2222-4222-8222-222222222222',season='33333333-3333-4333-8333-333333333333';
 const entry=(id=mid)=>({match_id:id,date:'2026-10-03T00:00:00Z',last_change:20,tier:{id:12},rr:50,season:{id:season,short:'test'}});
@@ -22,6 +23,30 @@ function database(t){
     async batch(statements){sql.exec('BEGIN');try{for(const s of statements)await s.run();sql.exec('COMMIT');}catch(e){sql.exec('ROLLBACK');throw e;}}};
   return {sql,db};
 }
+
+test('D1 feature plan skips saved evidence and prioritizes archives over upstream requests',async t=>{
+  const {sql,db}=database(t);
+  await collectRR(db,payload(['saved','archived','waiting','ready'].map(id=>entry(id))),{puuid,region:'eu',platform:'pc'});
+  sql.prepare('INSERT INTO rr_match_features VALUES (?,?,?,?,?,?)').run(puuid,'saved',season,null,'{}',new Date().toISOString());
+  sql.prepare('INSERT INTO match_archive VALUES (?,?,?,?,?)').run(puuid,season,'archived',null,new Uint8Array([1]));
+  for(const id of ['archived','waiting'])sql.prepare('INSERT INTO rr_feature_retry VALUES (?,?,1,?)').run(puuid,id,'2099-01-01');
+  sql.prepare('INSERT INTO rr_history VALUES (?,?,?,?)').run('unknown','no-region','{}',entry().date);
+  const query=async(_env,text,params=[]) => (await db.prepare(text).bind(...params).all()).results;
+  const plan=await loadFeaturePlan({},10,query);
+  assert.deepEqual({...plan.inventory},{total:5,saved:1,missing:4,missingRegion:1,archived:1,waitingRetry:1});
+  assert.deepEqual(plan.rows.map(r=>r.match_id),['archived','ready']);
+  assert.equal(plan.rows[0].archived,1);
+  assert.deepEqual((await loadFeaturePlan({},1,query)).rows.map(r=>r.match_id),['archived']);
+  assert.deepEqual((await loadFeaturePlan({},0,query)).rows,[]);
+});
+
+test('empty D1 inventory reports zeros and no pending features',async t=>{
+  const {db}=database(t);
+  const query=async(_env,text,params=[]) => (await db.prepare(text).bind(...params).all()).results;
+  const plan=await loadFeaturePlan({},10,query);
+  assert.deepEqual({...plan.inventory},{total:0,saved:0,missing:0,missingRegion:0,archived:0,waitingRetry:0});
+  assert.deepEqual(plan.rows,[]);
+});
 test('collector commits raw entries and witnessed predecessors, corrects existing IDs',async t=>{
   const {sql,db}=database(t),old={...entry('old'),date:'2026-10-02T00:00:00Z'};
   await collectRR(db,payload([entry(),old]),{puuid,region:'eu',platform:'pc'});
