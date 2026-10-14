@@ -8,10 +8,13 @@ on:
       detail_limit:
         description: 'Maximum missing match feature rows per run (0–5000)'
         default: '1500'
+      runtime_minutes:
+        description: 'Run budget including reporting (10–210 minutes)'
+        default: '180'
 
 # Henrik jobs share HENRIK_WORKFLOW_KEY, separate from the public site's key.
 # Save it as a secret in GitHub Actions and Cloudflare Pages production.
-# Historical backfill yields at short boundaries.
+# Serialize manual and scheduled collection runs against the shared key.
 concurrency:
   group: refresh-rr-history
   cancel-in-progress: false
@@ -20,7 +23,7 @@ permissions:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 220
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -34,6 +37,7 @@ jobs:
           HENRIK_WORKFLOW_KEY: ${{ secrets.HENRIK_WORKFLOW_KEY }}
           SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg1.pages.dev' }}
           DETAIL_LIMIT: ${{ inputs.detail_limit || '1500' }}
+          RUNTIME_MINUTES: ${{ inputs.runtime_minutes || '180' }}
         run: node .github/scripts/collect-rr-corpus.mjs
       - name: Save corpus coverage and collection failures
         if: ${{ always() && vars.RR_REPORT_EXPORT_ENABLED == 'true' }}

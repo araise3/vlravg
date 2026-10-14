@@ -7,35 +7,17 @@ generated from the sibling `vct-2026-data-analysis` repository:
 node scripts/build-pro-player-library.mjs
 ```
 
-Each player can have multiple known accounts. A resolved account includes its
-permanent Riot PUUID, current Riot ID, and Tracker.gg URL. Accounts without a
-PUUID remain available as Tracker/Riot-ID searches, but are not eligible for
-automated backfill until the source project resolves them.
+Each player has a pro handle and one or more permanent Riot PUUIDs. Generated
+accounts contain no Riot IDs or Tracker links. Accounts without a valid PUUID
+are omitted until the source project resolves them.
 
-## Automated refresh and backfill
+The pro list displays and searches pro handles and PUUIDs without account API
+requests. Choosing an account or submitting an exact pro handle opens the profile
+by PUUID; its account lookup resolves the current Riot ID. The act picker also
+uses that PUUID when explicitly requested. The loaded profile retains its current
+Riot ID and Tracker link.
 
-The existing **Refresh names and RR history** workflow runs daily at 05:17 UTC.
-Its queue is the union of:
-
-- accounts already stored in D1's `rr_players` table; and
-- every resolved PUUID in `pro-players.json`.
-
-The first `/api/name-history/{puuid}` request enrolls a new pro account in D1.
-The same pass refreshes that account's rolling RR history by PUUID. After the
-refresh job, the existing **Backfill all name histories** continuation scans
-all unfinished D1 players, including the newly enrolled pros, until their live
-and stored match indexes are complete.
-
-Both jobs share the `refresh-rr-history` concurrency lock and the proxy's
-server-side quota pacing, so adding the pro library does not create a competing
-request stream or expose the HenrikDev API key.
-
-To seed the pro library immediately after deployment, manually run **Refresh
-names and RR history** with the default inputs. The continuation workflow starts
-automatically afterward.
-
-## Verification
-
-```bash
-node --test tests/pro-player-backfill.test.mjs tests/name-history.test.mjs tests/backfill-scheduler.test.mjs
-```
+There is no scheduled pro-name refresh or automatic library enrollment. Opening
+a profile enrolls the account in D1, where the remaining `Collect act RR corpus`
+workflow can capture its RR history under the usual activity policy. Historical
+name scans remain available through the profile's Load older names button.

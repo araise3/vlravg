@@ -11,8 +11,7 @@ Deploy the updated Pages Function after setting the Cloudflare secret, then run
 the updated workflows. The two secret values must match. Keep `HENRIK_KEY` in
 Cloudflare for ordinary visitors.
 
-Refresh names/RR, collect RR corpus, and historical name backfill all require the
-new secret. The snapshot workflow only reads D1 and needs no HenrikDev key.
+`Collect act RR corpus` is the only remaining workflow and requires this secret.
 Missing workflow secrets fail explicitly; jobs do not fall back to the public key.
 
 Jobs authenticate to the existing proxy over HTTPS using `X-Workflow-Key`. The
@@ -37,8 +36,7 @@ higher public allowance can produce faster admissions. Missing headers never
 erase known, reserved quota. Cache hits and D1-only responses bypass both gates,
 including while either key is exhausted. No new secret or setting is required.
 
-The workflow concurrency lock and request scheduler remain shared between the
-three Henrik jobs. Cloudflare atomically reserves a slot immediately before each
+The workflow concurrency lock serializes scheduled and manual collector runs. Cloudflare atomically reserves a slot immediately before each
 real Henrik call, with at least 2.1 seconds between admissions (at most 29 per
 rolling minute). Known remaining quota is reserved for in-flight calls, and
 headers can stretch spacing or pause the gate until reset. Late responses cannot
@@ -46,12 +44,12 @@ restore capacity already reserved by newer calls; a real 429 pauses upstream
 callers using that key even when its response arrives late. Public and workflow
 cooldowns never consume or pause each other's capacity.
 
-The workflow client has no fixed wait or global cooldown. D1-only responses run
-immediately, including during an upstream cooldown. Each throttled request retries
+The collector uses a FIFO request queue and shares proxy-requested cooldowns
+across its workers. The proxy remains the quota authority. Other script callers
+retain immediate D1-only reads, including during an upstream cooldown. Each throttled request retries
 using `retryAfterMs`. Cloudflare waits for a slot for up to eight seconds before
 returning that retry signal; quota exhaustion returns it immediately. Failed gate
-storage returns 503 without making an upstream call. Limited manual refresh runs
-(`max_players` greater than zero) do not launch a full historical backfill.
+storage returns 503 without making an upstream call.
 
 Before sending work, each client performs one authenticated, D1-only readiness
 probe and requires `X-Workflow-Pacing: upstream-v1`. It fails safely if the new
@@ -61,3 +59,25 @@ Upstream quota headers stay server-side; clients only receive the existing
 `retryAfterMs` body on a 429. Atomic D1 admission coordinates all proxy callers;
 it does not control other software independently using the same Henrik key or
 eliminate network timing variation between admission and upstream arrival.
+
+## Shared-key quota check
+
+Every collector process sends a unique `X-Workflow-Run` identifier to the proxy.
+It is never forwarded to HenrikDev. The proxy saves server-only counters in
+`workflow_quota_audit`, created automatically on first use; no secret, binding
+or manual migration is added. The collector reads a baseline and final snapshot
+through its existing authenticated D1 access.
+
+The Actions summary and collection report distinguish other proxy processes
+active during the run from possible external usage. Each upstream response is
+compared with the expected remaining quota after this proxy's own reservation.
+An unexplained same-window decrease produces a warning. Missing headers,
+superseded responses and samples near or across a reset are excluded; a three-
+second tolerance allows rounded reset headers. Live remaining/reset values are
+never included in public responses or the report.
+
+These are diagnostic observations, not proof of exclusive key use. External
+instances cannot be identified from rate-limit headers, and no comparable samples
+is reported as insufficient evidence. Quota-read failures are reported as
+unavailable. The check makes no extra upstream requests and does not stop RR
+capture merely because another consumer is detected.

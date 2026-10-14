@@ -25,6 +25,18 @@ CREATE TABLE IF NOT EXISTS workflow_rate_quota (
   next_start_at INTEGER NOT NULL DEFAULT 0
 );
 
+-- Server-only counters; initialized lazily by the workflow proxy on deployment.
+CREATE TABLE IF NOT EXISTS workflow_quota_audit (
+  run_id TEXT PRIMARY KEY,
+  upstream_calls INTEGER NOT NULL DEFAULT 0,
+  comparable_samples INTEGER NOT NULL DEFAULT 0,
+  skipped_samples INTEGER NOT NULL DEFAULT 0,
+  external_usage_events INTEGER NOT NULL DEFAULT 0,
+  unexplained_requests INTEGER NOT NULL DEFAULT 0,
+  last_observed_at TEXT NOT NULL,
+  last_detected_at TEXT
+);
+
 -- RR-history persistence (was KV key "rrhist:{puuid}", one JSON blob per
 -- player). One row per match instead of one blob per player — a fresh
 -- upstream entry for an existing match_id just overwrites via ON CONFLICT,

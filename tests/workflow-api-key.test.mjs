@@ -152,6 +152,17 @@ test('the scheduler sends credentials only to its HTTPS API origin and refuses r
   assert.equal(calls.length,2);
 });
 
+test('workflow process identity is sent only to the authenticated proxy',async()=>{
+  const calls=[];
+  const scheduled=createRequestScheduler({workflowKey,origin,runId:'123:1:process-a',fetchImpl:async(target,options)=>{
+    calls.push({target,options});return Response.json({data:{}},{headers:{'X-Workflow-Pacing':'upstream-v1'}});
+  }});
+  await scheduled(url);
+  assert.equal(calls.at(-1).options.headers.get('X-Workflow-Run'),'123:1:process-a');
+  await assert.rejects(scheduled('https://other.test/api/rr-collect'),/Workflow key may only be sent/);
+  assert.equal(calls.length,2);
+});
+
 test('an older proxy cannot receive unpaced workflow requests',async()=>{
   const calls=[];
   const scheduled=createRequestScheduler({workflowKey,origin,fetchImpl:async target=>{
@@ -193,6 +204,38 @@ test('a transient readiness failure can recover on the next retry',async()=>{
   }});
   const result=await requestJSON(url,scheduled,async()=>{});
   assert.equal(result.ok,true);assert.equal(probes,2);assert.equal(requests,1);
+});
+
+test('collector FIFO requests share quota cooldowns and cannot starve competing workers',async()=>{
+  let clock=0,active=0,maximum=0;const starts=[],waits=[];
+  const scheduled=createRequestScheduler({workflowKey,origin,serialize:true,now:()=>clock,
+    sleepImpl:async ms=>{waits.push(ms);clock+=ms;},fetchImpl:async target=>{
+      if(target.endsWith('/api/calib-model'))return Response.json({data:{}},{headers:{'X-Workflow-Pacing':'upstream-v1'}});
+      active++;maximum=Math.max(maximum,active);starts.push(clock);await Promise.resolve();active--;
+      return starts.length===1?Response.json({retryAfterMs:9000},{status:429}):Response.json({data:{}});
+    }});
+  const results=await Promise.all([scheduled(url),scheduled(url),scheduled(url)]);
+  assert.equal(maximum,1);assert.deepEqual(starts,[0,9000,9000]);assert.deepEqual(waits,[9000]);
+  assert.equal(results[0].status,429);assert.equal(results[2].status,200);
+});
+
+test('quota cooldown cannot hold a collector past its run budget',async()=>{
+  let clock=0,calls=0;
+  const scheduled=createRequestScheduler({workflowKey,origin,serialize:true,deadline:1000,now:()=>clock,
+    sleepImpl:async ms=>{clock+=ms;},fetchImpl:async target=>{
+      if(target.endsWith('/api/calib-model'))return Response.json({data:{}},{headers:{'X-Workflow-Pacing':'upstream-v1'}});
+      calls++;return Response.json({retryAfterMs:60000},{status:429});
+    }});
+  await scheduled(url);
+  await assert.rejects(requestJSON(url,scheduled,async()=>{}),error=>error.code==='WORKFLOW_BUDGET');
+  assert.equal(clock,1000);assert.equal(calls,1);
+});
+
+test('HTTP retry waits stop at the collection deadline',async()=>{
+  let clock=0,calls=0;
+  await assert.rejects(requestJSON(url,async()=>{calls++;return Response.json({retryAfterMs:60000},{status:429});},
+    async ms=>{clock+=ms;},{deadline:1000,now:()=>clock}),error=>error.code==='WORKFLOW_BUDGET');
+  assert.equal(clock,1000);assert.equal(calls,1);
 });
 
 test('all Henrik workflows require the new secret before doing any network work',async()=>{

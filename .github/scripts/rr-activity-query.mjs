@@ -2,7 +2,13 @@ import {d1Query} from './d1-query.mjs';
 // Limit games queries to the last week using date indexes. All-time latest
 // timestamps seek each player's existing (puuid,date) index.
 export async function loadActivity(env,players,query=d1Query){
-  const rows=await query(env,`WITH recent AS (
+  const rows=await query(env,`WITH latest_season AS (
+    SELECT LOWER(json_extract(data,'$.season.id')) AS id FROM rr_history
+    WHERE COALESCE(json_extract(data,'$.season.id'),'')<>'' ORDER BY date DESC LIMIT 1
+  ), season_start AS (
+    SELECT MIN(h.date) AS started_at FROM rr_history h,latest_season s
+    WHERE LOWER(json_extract(h.data,'$.season.id'))=s.id
+  ), recent AS (
     SELECT puuid,COUNT(*) AS games_7d FROM rr_history
     WHERE julianday(date)>=julianday('now','-7 days') GROUP BY puuid
   ), roster AS (
@@ -11,10 +17,12 @@ export async function loadActivity(env,players,query=d1Query){
   ) SELECT p.puuid,p.platform,c.checked_at,COALESCE(r.games_7d,0) AS games_7d,
     (SELECT date FROM rr_history h WHERE h.puuid=p.puuid ORDER BY date DESC LIMIT 1) AS last_played_at,
     (SELECT json_extract(data,'$.tier.id') FROM rr_history h WHERE h.puuid=p.puuid ORDER BY date DESC LIMIT 1) AS tier,
-    roster.played_at AS candidate_played_at,roster.observed_at AS candidate_observed_at
+    roster.played_at AS candidate_played_at,roster.observed_at AS candidate_observed_at,
+    season_start.started_at AS season_started_at
     FROM rr_players p LEFT JOIN recent r ON r.puuid=p.puuid
     LEFT JOIN rr_collection c ON c.puuid=p.puuid AND c.platform=p.platform
-    LEFT JOIN roster ON roster.puuid=p.puuid AND roster.platform=p.platform`);
+    LEFT JOIN roster ON roster.puuid=p.puuid AND roster.platform=p.platform
+    CROSS JOIN season_start`);
   const byId=new Map(rows.map(p=>[`${p.puuid}:${p.platform}`,p]));
   return players.map(p=>({...p,...byId.get(`${p.puuid}:${p.platform}`)}));
 }

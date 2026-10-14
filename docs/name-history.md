@@ -5,45 +5,17 @@ The `/names` tab shows each observed Riot ID, its first and last observed dates
 returning to an earlier ID starts another period. History belongs to the PUUID
 and spans acts.
 
-`Refresh names and RR history` runs daily at 05:17 UTC. It checks names for
-active and unassessed accounts by PUUID. Inactive accounts are skipped, and RR
-polling is owned by the activity-based corpus collector. A focused manual
-`target_puuid` run also checks RR. The schedule is
-best-effort. A manual run accepts `max_players` for a small verification sample;
-scheduled runs use the activity policy. Existing Cloudflare secrets are reused.
-Accounts without a saved platform are checked on PC and console, stopping once
-RR history is found. Missing regions and failed RR requests are reported as
-failures rather than successful skips. Corrected entries for existing match IDs
-are saved too, even when the refresh contains no new matches.
+There is no scheduled name refresh or historical backfill. The remaining RR
+collector polls tracked accounts under its activity policy.
 
-Searches also check names, with a one-hour edge cache for account checks. The
+Searches check names, with a one-hour edge cache for account checks. The
 timeline itself is re-read from D1 so backfilled names appear immediately.
 Only fresh account responses update the current identity.
 
-After daily name and RR checks, `Backfill all name histories` drains the
-unfinished player queue continuously. Four workers share a gate that starts
-at most one request per second; proxy rate-limit responses pause the entire
-queue. This overlaps network latency without multiplying the request ceiling.
-There are no fixed 2.5-second pauses and no per-player daily page cap.
-Each page contains up to ten full
-match records, identified by PUUID; no act filter is applied. The compact stored
-matches endpoint is scanned afterward in pages of 100. HenrikDev only began
-including name/tag there for new records in v4.6.0 and is gradually filling old
-records. Usable archived identities extend the timeline immediately. Blank archive
-rows older than the earliest known identity are queued
-and resolved through the full match-by-ID endpoint; unavailable match IDs are
-skipped. Both the archive page and pending-detail queue are persisted, so every
-upstream call remains resumable and goes through the shared quota gate. The
-full-match and stored-archive phases have separate cursors.
-
-Progress and match evidence are saved atomically in one per-player cursor row.
-Subsequent jobs resume the cursor, and completed players are skipped before any API request. Pages rotate
-between players, with oldest-touched players first after a restart. Each run
-has a 30-minute budget and dispatches its next run immediately when unfinished
-work remains and progress was made. It stops with an error if remaining players
-cannot make progress. Daily refreshes share the workflow lock and take priority
-at continuation boundaries. Four-hour RR corpus capture also takes priority;
-the next scheduled backfill resumes the saved cursor if capture interrupts continuation.
+Historical scanning is requested through the Name History tab. Full matches and
+the compact stored archive provide historical identity evidence; blank archived
+rows may require match-by-ID lookups. Full-match and stored-archive cursors are
+persisted separately, so interrupted scans resume and completed scans are skipped.
 
 Only the earliest and latest observation of each consecutive Riot ID period
 are retained. This preserves displayed date ranges and one-match name changes
@@ -58,16 +30,14 @@ week. This covers stale matches at the end of a long name period even when the
 returning ID has just one match. Longer or less well-supported name reuse stays
 separate. The correction is applied while reading existing compact evidence too,
 so a completed backfill does not need to run again.
-The backfill has its own 00:07 UTC schedule so a Free-plan D1 write-limit pause
-resumes just after Cloudflare resets daily usage at 00:00 UTC.
+If a scan hits a quota limit, its saved cursor can be resumed later.
 
 An empty full-match page advances to the stored archive; a short full-match page
 does not. The archive ends when HenrikDev reports no records after the current
 page (or returns an empty page). Each phase has a 10,000-record safety limit that
 is explicitly reported as incomplete.
-The Name History tab's Load older names button processes up to 20 pages, and
-can be used again to continue. The daily refresh workflow still accepts
-`target_puuid` and `backfill_pages` (up to 1000) to complete a player's scan.
+The Name History tab's Load older names button scans until completion or until
+the user stops it. Selecting it again resumes from the saved cursor.
 
 Historical evidence fills the time before the first live account observation.
 It cannot replace the current identity or split a verified live period. Names
@@ -89,7 +59,7 @@ npx wrangler d1 execute <database-name> --remote --file migrations/0004_stored_n
 ```
 
 Migration 0004 marks the stored-archive phase unfinished for every existing
-cursor. The scheduled backfill therefore supplements players whose full-match
+cursor. A subsequent user-requested scan therefore supplements players whose full-match
 scan had already completed; it does not repeat their full-match pages.
 
 The migration preserves each player's last stored name and observation date as

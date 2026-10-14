@@ -25,10 +25,10 @@ the activity policy below and enriches saved payouts with trusted match details.
 `Collect act RR corpus` runs every four hours, reads the activity index for
 every tracked account, and captures only accounts due under the activity policy
 before slower match-detail work. Four workers
-share a 1.5-second request-start gate and pause together on proxy 429s. It shares
-the workflow lock with the daily name refresh and historical backfill. Historical
-backfill now yields after 30-minute runs and defers continuation when capture is
-waiting. GitHub scheduling is best-effort; a four-hour schedule is not a guarantee.
+share a FIFO client queue. The proxy atomically paces actual upstream calls;
+a 429 pauses queued client requests too, preventing workers from repeatedly
+racing for the same slot. Manual and scheduled collector runs share one workflow lock. No name refresh
+or historical backfill workflows run alongside collection. GitHub scheduling is best-effort; a four-hour schedule is not a guarantee.
 
 Polling uses actual ranked-game dates, never the date someone searched an account:
 
@@ -37,11 +37,14 @@ Polling uses actual ranked-game dates, never the date someone searched an accoun
 - Occasional: a game in the last week; once a day.
 - Inactive: no ranked game in the last week; no routine RR polling or daily name refresh.
 
-Accounts without a prior check get one assessment. Fresh, unseen roster evidence
+Accounts without a prior check get one assessment. Once a newly observed act
+appears in saved RR, previously inactive accounts last checked before its first
+observed game receive one new assessment. A successful check pauses them again
+if they still have no recent ranked games. Act detection uses saved season IDs
+and game dates, with no hardcoded act or guessed release date. Fresh, unseen roster evidence
 can wake an inactive account once, and its returned RR history determines the
-new interval. Existing history is retained. The daily job refreshes names for
-active/unassessed accounts; it no longer fetches RR for everyone. A focused
-manual `target_puuid` run still checks both identity and RR.
+new interval. Existing history is retained. Names are resolved when a profile is loaded; there is no daily name workflow or
+automatic enrollment of the static pro library.
 At most 1,000 tracked accounts are polled per run. Due accounts are ordered by
 how overdue they are relative to their interval, then by frequency. This keeps
 sweeps bounded as discovery grows the pool and prevents permanent starvation.
@@ -52,6 +55,8 @@ fetches never count as extra games. Each run probes at most 25 new accounts from
 those rosters, prioritizing observed game frequency within rank bands and giving
 thin bands more slots. A first probe establishes the player's actual last-week
 activity from their RR history; occasional players get fewer subsequent checks.
+Trusted competitive placement rosters also admit players reported as Unrated (tier 0),
+so the new-act reset does not silently exclude them from discovery.
 Failed/unavailable candidate probes cool down for a day, and failures while
 scouting do not mark successful tracked-account capture as failed.
 
@@ -78,15 +83,30 @@ No secrets or bindings are added. New tables:
   separately from unexpected request/storage errors.
 
 The detail queue joins saved RR to features, reuses existing gzip match archives
-first, and otherwise fetches match-by-ID. It prioritizes newest evidence from
-the last seven days plus due retries of older unavailable matches, and
-processes up to 1,500 missing rows per run. Only already-saved RR match IDs are
+first, and otherwise fetches match-by-ID. It prioritizes newest evidence plus due retries of older unavailable matches, and
+processes up to 1,500 missing rows per run. Missing older rows remain eligible
+after the recent-game window; an act transition never discards their evidence. Only already-saved RR match IDs are
 accepted. No browser-supplied payout or feature data can enter the corpus.
-Expected upstream 404s do not fail a run; unexpected detail errors do. Retry
+Expected upstream 404s do not fail a run; unexpected detail errors do. Transient
+tracked-account capture failures get one final retry pass. If transient failures
+or the run budget leave capture incomplete, optional scouting and enrichment
+are skipped so capture has priority on the next run. Permanent account errors
+remain visible without blocking enrichment for every other player. Retry
 rows remain eligible after the seven-day recent-match cutoff, so the longer
 backoff cannot silently strand an older payout without future enrichment.
 Compact feature rows avoid storing a full kill feed for every research sample.
-Payouts and feature evidence have no act-end expiry.
+Payouts and feature evidence have no act-end expiry. Placement payouts remain
+raw evidence, and witnessed RR predecessors never cross act boundaries. A full
+20-entry window is saved atomically using five write statements, leaving room
+for quota queries under the D1 invocation limit.
+
+The default run budget is 180 minutes, configurable from 10 to 210 minutes for
+manual runs. Five minutes are reserved for reporting; the job timeout is 220
+minutes, below the four-hour schedule. Work not attempted before the deadline
+remains in D1 and is reported as deferred. Capture results are written before optional scouting, detail queries or aggregate
+coverage queries, so later failures cannot erase the capture report. These
+failures remain visible in the job outcome.
+Reports identify the latest observed act, its date range, payouts and placements.
 
 With repository variable `RR_REPORT_EXPORT_ENABLED=true`, each run uploads
 `rr-corpus-coverage`: payouts, unique players, detail coverage,
@@ -100,7 +120,7 @@ Ending-tier buckets are collection diagnostics, not model coordinates. Check
 these after rollout; increase detail capacity only if API and D1 budgets permit.
 Growth in tracked accounts should be accompanied by a sweep-duration check.
 
-`Snapshot RR research corpus` exports weekly, or manually at act end, as an
+The local export script can be run manually at act end to create an
 immutable gzip NDJSON file plus checksum manifest. It always reads fresh pages
 using `(puuid,match_id)` cursors; it never reuses stale OFFSET caches. Player keys
 are hashes of permanent PUUIDs. Name changes cannot split an account. Snapshot
@@ -112,10 +132,9 @@ node scripts/export-rr-corpus.mjs
 python scripts/benchmark-rr-corpus.py .local/rr-corpus/snapshots/<timestamp>/corpus.ndjson.gz --act <act-short>
 ```
 
-The weekly workflow also benchmarks every act superseded by a newer observed
-act and uploads only aggregate reports and the snapshot checksum manifest.
-The raw snapshot is temporary on the runner and is not a GitHub artifact;
-use the local export command to retain raw evidence for further research.
+There is no scheduled snapshot workflow. Run the benchmark locally with
+`--completed-acts` to evaluate every act superseded by a newer observed act.
+Local exports retain the raw evidence for further research.
 It does not guess future Riot
 act-end dates. With insufficient clean samples it reports that limitation;
 `ready_to_review` is not authorization to publish the curve automatically.
@@ -143,8 +162,7 @@ be summed. Each has per-outcome player-weighted raw payout averages and the same
 temporal/player-separated model evaluation when enough samples exist. Cohort
 comparisons are descriptive: players differ and no causal effect is implied.
 All targets remain Riot's `last_change`; no adjustment is subtracted or added
-again, and unspecified penalty units/overlap are not guessed. The snapshot
-workflow runs this analysis automatically with its existing benchmark command;
+again, and unspecified penalty units/overlap are not guessed. The local benchmark command runs this analysis;
 no new upstream endpoint, database migration or quota budget is needed.
 
 Candidate models are act mean, regularized linear, the current nearby-30-RR
