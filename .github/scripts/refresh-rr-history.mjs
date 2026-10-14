@@ -41,21 +41,23 @@ export function mergeTrackedPlayers(tracked, pros) {
   return [...players.values()];
 }
 
-export async function requestJSON(url, fetchImpl = fetch, sleepImpl = sleep) {
+export async function requestJSON(url, fetchImpl = fetch, sleepImpl = sleep, {deadline=Infinity,now=Date.now}={}) {
   let transientAttempts = 0, rateLimitAttempts = 0;
+  const pause=ms=>sleepImpl(Math.max(0,Math.min(ms,deadline-now())));
   for (;;) {
+    if(now()>=deadline){const error=new Error('Collection run budget exhausted');error.code='WORKFLOW_BUDGET';throw error;}
     try {
       const res = await fetchImpl(url, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(30000) });
       const body = await res.json().catch(() => null);
       if (res.status === 429) {
         if (++rateLimitAttempts >= 5) return { ok: false, reason: 'http 429', retryable: true };
         const retry = body?.retryAfterMs;
-        await sleepImpl(Number.isFinite(retry) ? Math.max(1000, Math.min(retry, 120000)) : 60000);
+        await pause(Number.isFinite(retry) ? Math.max(1000, Math.min(retry, 120000)) : 60000);
         continue;
       }
       if (res.status >= 500) {
         if (++transientAttempts < 3) {
-          await sleepImpl(2500 * 2 ** (transientAttempts - 1));
+          await pause(2500 * 2 ** (transientAttempts - 1));
           continue;
         }
         return { ok: false, reason: `http ${res.status}`, retryable: true };
@@ -64,9 +66,9 @@ export async function requestJSON(url, fetchImpl = fetch, sleepImpl = sleep) {
       if (!body?.data) return { ok: false, reason: 'invalid JSON response' };
       return { ok: true, data: body.data };
     } catch (error) {
-      if(error?.code==='WORKFLOW_CONFIGURATION')throw error;
+      if(error?.code==='WORKFLOW_CONFIGURATION'||error?.code==='WORKFLOW_BUDGET')throw error;
       if (++transientAttempts >= 3) return { ok: false, reason: 'network error or timeout', retryable: true };
-      await sleepImpl(2500 * 2 ** (transientAttempts - 1));
+      await pause(2500 * 2 ** (transientAttempts - 1));
     }
   }
 }

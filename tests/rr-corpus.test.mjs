@@ -61,6 +61,74 @@ test('wrong account or a failed batch never records a successful check',async t=
   await assert.rejects(collectRR({...db,batch:async()=>{throw new Error('storage full');}},payload([entry()]),{puuid,region:'eu',platform:'pc'}));
   assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_collection').get().n,0);
 });
+
+test('new-act placement windows preserve old payouts and never link RR across acts',async t=>{
+  const {db,sql}=database(t),scope={puuid,region:'eu',platform:'pc'};
+  const previous={...entry('old-act'),date:'2026-10-12T00:00:00Z'};
+  const placement={...entry('placement'),date:'2026-10-13T00:00:00Z',is_placement_match:true,last_change:0,
+    season:{id:'44444444-4444-4444-8444-444444444444',short:'new'}};
+  const next={...placement,match_id:'new-game',date:'2026-10-13T01:00:00Z',last_change:18,is_placement_match:false};
+  await collectRR(db,payload([previous]),scope);
+  // Simulate the cross-act edge left by the previous collector.
+  sql.prepare('INSERT INTO rr_predecessors VALUES(?,?,?)').run(puuid,'placement','old-act');
+  await collectRR(db,payload([next,placement,previous]),scope);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_history').get().n,3);
+  assert.equal(sql.prepare('SELECT previous_match_id FROM rr_predecessors WHERE match_id=?').get('placement'),undefined);
+  assert.equal(sql.prepare('SELECT previous_match_id FROM rr_predecessors WHERE match_id=?').get('new-game').previous_match_id,'placement');
+  assert.equal(JSON.parse(sql.prepare('SELECT data FROM rr_history WHERE match_id=?').get('placement').data).is_placement_match,true);
+  await collectRR(db,payload([]),scope);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_history').get().n,3);
+});
+
+test('a full RR window uses a bounded number of D1 statements and commits atomically',async t=>{
+  const {db,sql}=database(t);let prepares=0;
+  const counted={...db,prepare(query){prepares++;return db.prepare(query);}};
+  const history=Array.from({length:20},(_,i)=>({...entry(`game-${i}`),date:new Date(Date.parse(entry().date)+i*60000).toISOString()}));
+  await collectRR(counted,payload(history),{puuid,region:'eu',platform:'pc'});
+  assert.ok(prepares<=8,`${prepares} statements leave headroom for the proxy quota gate`);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_history').get().n,20);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_predecessors').get().n,19);
+  await collectRR(db,payload(history.slice(1)),{puuid,region:'eu',platform:'pc'});
+  assert.equal(sql.prepare('SELECT previous_match_id FROM rr_predecessors WHERE match_id=?').get('game-1').previous_match_id,'game-0',
+    'sliding windows retain previously witnessed same-act predecessors');
+});
+
+test('a new season reassesses inactive players once, without turning searches into activity',async t=>{
+  const now=Date.now(),iso=hours=>new Date(now-hours*3600000).toISOString();
+  const player={puuid,platform:'pc',checked_at:iso(48),last_played_at:iso(240),games_7d:0,season_started_at:iso(24)};
+  assert.equal(pollingPolicy(player,now).cohort,'season-assessment');
+  assert.equal(selectPollingPlayers([player],now).length,1);
+  assert.equal(pollingPolicy({...player,checked_at:iso(1)},now).cohort,'inactive');
+  const {db}=database(t);
+  await collectRR(db,payload([{...entry(),date:iso(240)}]),{puuid,region:'eu',platform:'pc'},iso(48));
+  const other='55555555-5555-4555-8555-555555555555';
+  await collectRR(db,{data:{account:{puuid:other},history:[{...entry('season-start'),date:iso(24),season:{id:'new-act',short:'new'}}]}},
+    {puuid:other,region:'eu',platform:'pc'});
+  const query=async(_env,text,params=[]) => (await db.prepare(text).bind(...params).all()).results;
+  const rows=await loadActivity({},[{puuid,platform:'pc'}],query);
+  assert.equal(rows[0].season_started_at,iso(24));
+  assert.equal(pollingPolicy(rows[0],now).cohort,'season-assessment');
+});
+
+test('new-act Unrated placement rosters still supply trusted competitive discovery',async t=>{
+  const {db,sql}=database(t),other='55555555-5555-4555-8555-555555555555';
+  const stamp=new Date().toISOString();
+  const record={metadata:{match_id:mid,started_at:stamp,queue:{id:'competitive'}},players:[{puuid:other,tier:{id:0}}]};
+  assert.equal(await discoverMatchPlayers(db,record,{puuid,region:'eu',platform:'pc'},stamp),1);
+  assert.equal(sql.prepare('SELECT tier FROM rr_candidate_games').get().tier,0);
+  record.metadata.match_id='unranked';record.metadata.queue.id='unrated';
+  assert.equal(await discoverMatchPlayers(db,record,{puuid,region:'eu',platform:'pc'},stamp),0);
+});
+
+test('run deadlines preserve unattempted capture and enrichment as deferred work',async()=>{
+  const players=[1,2,3].map(n=>({puuid:String(n),region:'eu',platform:'pc',match_id:String(n)}));
+  let now=0,calls=0;
+  const refresh=await collectPlayers(players,{origin:'https://test',log:()=>{},concurrency:1,deadline:1,now:()=>now,
+    fetchImpl:async url=>{calls++;now=1;return Response.json({data:{puuid:url.split('/').at(-1),checked_at:'now'}});}});
+  assert.equal(calls,1);assert.equal(refresh.checked,1);assert.equal(refresh.deferred,2);assert.equal(refresh.failures.length,0);
+  const features=await collectMatchFeatures(players,{origin:'https://test',deadline:1,now:()=>now,fetchImpl:()=>{throw new Error('budget exhausted');}});
+  assert.equal(features.budgetDeferred,3);assert.equal(features.failed,0);
+});
 test('compact evidence retains unknown party values, shields stay in raw payouts',async t=>{
   const {sql,db}=database(t),m=match();
   assert.equal(matchFeatures(m,puuid).party,1);assert.equal(matchFeatures(m,puuid).pen,0);
@@ -75,6 +143,18 @@ test('sweep checks every account even when one fails and counts committed receip
   const result=await collectPlayers(players,{origin:'https://test',log:()=>{},fetchImpl:async url=>url.endsWith('/2')
     ?Response.json({}, {status:404}):Response.json({data:{puuid:url.split('/').at(-1),checked_at:'now'}})});
   assert.equal(result.checked,4);assert.equal(result.failures.length,1);
+});
+
+test('transient capture failures get one final retry before optional enrichment',async()=>{
+  let calls=0;
+  const result=await collectPlayers([{puuid,region:'eu',platform:'pc'}],{origin:'https://test',log:()=>{},
+    sleepImpl:async()=>{},
+    fetchImpl:async()=>{
+      if(++calls<=3)return Response.json({}, {status:503});
+      return Response.json({data:{puuid,checked_at:'now'}});
+    }});
+  assert.equal(result.checked,1);assert.equal(result.failures.length,0);
+  assert.equal(calls,4);
 });
 test('coverage SQL reports staleness using UTC timestamps and returns act sample counts',async t=>{
   const {db}=database(t);
@@ -300,7 +380,7 @@ test('feature sweep separates saved details, upstream deferrals and malformed er
     return Response.json({data:{puuid,match_id:id,saved:id==='saved',
       ...(id==='deferred'?{deferred:true,reason:'upstream_match_not_found',retry_at:'2030-01-01 00:00:00'}:{})}});
   }});
-  assert.deepEqual(result,{saved:1,deferred:1,failed:1});
+  assert.deepEqual(result,{saved:1,deferred:1,failed:1,budgetDeferred:0});
   assert.ok(logs.some(s=>s.includes('Detail deferred')&&s.includes('RR retained')));
   assert.ok(logs.some(s=>s.includes('Detail FAILED')));
 });

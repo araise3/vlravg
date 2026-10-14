@@ -26,13 +26,12 @@ const players = Object.entries(trackerLinks)
       team: meta.team || null,
       region: meta.region || null,
       countryCode: meta.countryCode || null,
-      accounts: accounts.map(({ puuid, riotId }) => ({
-        puuid: puuid || null,
-        riotId,
-        trackerUrl: `https://tracker.gg/valorant/profile/riot/${encodeURIComponent(riotId)}`,
-      })),
+      accounts: accounts
+        .filter(({ puuid }) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(puuid || ''))
+        .map(({ puuid }) => ({ puuid: puuid.toLowerCase() })),
     };
   })
+  .filter(player => player.accounts.length)
   .sort((a, b) => a.handle.localeCompare(b.handle, 'en', { sensitivity: 'base' }));
 
 const accountCount = players.reduce((total, player) => total + player.accounts.length, 0);

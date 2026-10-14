@@ -1,11 +1,17 @@
-// Cloudflare schedules actual upstream calls atomically. This wrapper only
-// authenticates proxy requests and sets their timeout: D1-only reads have no
-// client delay. requestJSON retries individual 429s using the proxy wait time.
-export function createRequestScheduler({fetchImpl=fetch,workflowKey,origin}={}) {
+// Cloudflare schedules actual upstream calls atomically. This wrapper
+// authenticates requests and sets their timeout. The collector opts into FIFO
+// admission and shared cooldowns; other callers retain immediate saved-data reads.
+export function createRequestScheduler({fetchImpl=fetch,workflowKey,origin,runId,serialize=false,
+  deadline=Infinity,now=Date.now,sleepImpl=ms=>new Promise(resolve=>setTimeout(resolve,ms))}={}) {
   if(workflowKey&&!origin)throw new Error('Workflow requests require SITE_ORIGIN');
   const workflowOrigin=workflowKey?new URL(origin).origin:null;
   let readiness;
-  return async (url,options) => {
+  let queue=Promise.resolve(),cooldownUntil=0;
+  const request=async (url,options) => {
+    if(now()<cooldownUntil)await sleepImpl(Math.min(cooldownUntil,deadline)-now());
+    if(now()>=deadline){
+      const error=new Error('Collection run budget exhausted');error.code='WORKFLOW_BUDGET';throw error;
+    }
     let requestOptions=options;
     if(workflowKey){
       const target=new URL(url);
@@ -14,6 +20,7 @@ export function createRequestScheduler({fetchImpl=fetch,workflowKey,origin}={}) 
       }
       const headers=new Headers(options?.headers);
       headers.set('X-Workflow-Key',workflowKey);
+      if(runId)headers.set('X-Workflow-Run',runId);
       // Refuse redirects so a changed origin can never receive this secret.
       requestOptions={...options,headers,redirect:'error'};
       // One shared, D1-only probe prevents a new client from sending unpaced
@@ -36,6 +43,18 @@ export function createRequestScheduler({fetchImpl=fetch,workflowKey,origin}={}) 
       })().catch(error=>{readiness=undefined;throw error;});
       await readiness;
     }
-    return fetchImpl(url,{...requestOptions,signal:AbortSignal.timeout(45000)});
+    const response=await fetchImpl(url,{...requestOptions,signal:AbortSignal.timeout(45000)});
+    if(serialize&&response.status===429){
+      const body=await response.clone().json().catch(()=>null);
+      const wait=Number.isFinite(body?.retryAfterMs)?Math.max(1000,body.retryAfterMs):60000;
+      cooldownUntil=Math.max(cooldownUntil,now()+wait);
+    }
+    return response;
   };
+  // FIFO admission avoids workers repeatedly racing for one server-side slot.
+  // A 429 pauses queued requests too; the proxy remains the quota authority.
+  return serialize?(url,options)=>{
+    const pending=queue.then(()=>request(url,options));
+    queue=pending.catch(()=>{});return pending;
+  }:request;
 }

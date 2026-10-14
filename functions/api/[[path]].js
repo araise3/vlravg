@@ -1092,7 +1092,9 @@ async function handleGet(context,{workflow,henrikKey}){
   const retryAfterMs=retry==null?0:/^\d+$/.test(retry)?Number(retry)*1000:Math.max(0,Date.parse(retry)-Date.now())||0;
   let upstreamRetryMs=0;
   try{upstreamRetryMs=await (workflow?observeWorkflowQuota:observePublicQuota)(env.APP_DB,parsed,
-    {startedAt:permit.startedAt,status:upstream.status,retryAfterMs});}
+    {startedAt:permit.startedAt,status:upstream.status,retryAfterMs,
+      expectedRemaining:permit.quota.remaining,expectedResetAt:permit.quota.resetAt,
+      runId:workflow?request.headers.get('X-Workflow-Run'):null});}
   catch{return json({error:'Upstream quota update failed'},503);}
 
   if (upstream.status === 429) {
