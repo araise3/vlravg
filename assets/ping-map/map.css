@@ -8,10 +8,6 @@
 #server-ping-map .country{stroke:#36363c;stroke-width:.7;vector-effect:non-scaling-stroke;cursor:pointer}
 #server-ping-map .country:hover{stroke:#85858f;stroke-width:1.1}
 #server-ping-map .country.selected{stroke:#797983;stroke-width:1.2}
-#server-ping-map .region{stroke:#484850;stroke-opacity:.55;stroke-width:.45;vector-effect:non-scaling-stroke;cursor:pointer}
-#server-ping-map .region.in-country{stroke:#777780;stroke-opacity:.75;stroke-width:.7}
-#server-ping-map .region:hover{stroke:#b4b4bd;stroke-opacity:1;stroke-width:1}
-#server-ping-map .region.selected{stroke:#e8eaf0;stroke-opacity:1;stroke-width:1.4}
 #server-ping-map .country-label{font:10px var(--font-body);fill:#707078;letter-spacing:.04em;pointer-events:none}
 #server-ping-map .ring{pointer-events:none;stroke-width:.8;vector-effect:non-scaling-stroke}
 #server-ping-map .ring-label{font:500 11px var(--font-body);paint-order:stroke;stroke:#111113;stroke-width:3;pointer-events:none;opacity:.7}
@@ -32,7 +28,6 @@
 #server-ping-map .map-location-selects{display:flex;gap:12px;flex-basis:100%;min-width:0}
 #server-ping-map .map-location-selects label{display:flex;flex:1;flex-direction:column;gap:6px;min-width:0;font-size:10px;color:#85858f}
 #server-ping-map .map-location-selects select{width:100%;min-width:0;height:34px;padding:0 10px;border:1px solid #303036;border-radius:5px;background:#111113;color:#e8eaf0;font:12px var(--font-body);color-scheme:dark}
-#server-ping-map .map-location-selects select:disabled{opacity:.5}
 #server-ping-map .map-location-selects select:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 #server-ping-map .map-readout{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 9px;font-size:11px;min-width:0;color:#b4b4bd}
 #server-ping-map .map-readout strong{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}

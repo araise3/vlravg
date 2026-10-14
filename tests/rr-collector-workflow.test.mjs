@@ -16,7 +16,11 @@ function fixture({capture,coverageFailure=false,detailQueryFailure=false}={}){
     selectPollingPlayers:players=>players,loadCandidates:async()=>[player],selectDiscoveryCandidates:players=>players,
     createRequestScheduler:()=>()=>{},pollingPolicy:()=>({cohort:'frequent'}),
     collectPlayers:async players=>{events.push('capture');return players.length&&capture?capture:{players:players.length,checked:players.length,failures:[],deferred:0};},
-    d1Query:async()=>{events.push('detail-query');if(detailQueryFailure)throw new Error('Detail query unavailable');return [];},
+    loadFeaturePlan:async(_env,limit)=>{
+      events.push('inventory');
+      if(limit){events.push('detail-query');if(detailQueryFailure)throw new Error('Detail query unavailable');}
+      return {inventory:{total:10,saved:8,missing:2,archived:1,waitingRetry:1,missingRegion:0},rows:[]};
+    },
     collectMatchFeatures:async()=>({saved:0,deferred:0,failed:0,budgetDeferred:0}),
     corpusReport:async()=>{events.push('coverage');if(coverageFailure)throw new Error('D1 unavailable');return {health:{stale:0,possible_gaps:0}};},
     mkdir:async()=>{},writeFile:async(_path,json)=>{events.push('write');writes.push(JSON.parse(json));},appendFile:async()=>{},
@@ -34,6 +38,7 @@ test('zero detail limit avoids detail queries and coverage failure retains commi
   assert.equal(report.coverageError,'D1 unavailable');
   assert.equal(f.writes.at(-1).coverageError,'D1 unavailable');
   assert.equal(f.process.exitCode,1);
+  assert.equal(report.detailInventory.saved,8);
 });
 
 test('incomplete transient capture skips optional scouting and detail queries',async()=>{
