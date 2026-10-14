@@ -1007,12 +1007,13 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
     <div id="servers-empty" class="page-empty" role="status">Search for a player above to compare their servers.</div>
     <section id="server-ping-map" class="map-panel" aria-label="Europe server ping map">
       <div class="map-heading">
-        <div class="map-server-heading"><strong id="map-server-name">Frankfurt</strong><span>Click a server to explore ping</span></div>
+        <div class="map-server-heading"><strong id="map-server-name">Frankfurt</strong><span>10 ms rings · select a server and region</span></div>
       </div>
-      <svg id="map" viewBox="0 0 1000 760" preserveAspectRatio="xMidYMid slice" aria-label="Select a server pin and a country to explore approximate ping."><defs><clipPath id="map-clip"><rect width="1000" height="760"/></clipPath></defs><g clip-path="url(#map-clip)"><g id="map-scene"></g></g></svg>
+      <svg id="map" viewBox="0 0 1000 760" preserveAspectRatio="xMidYMid slice" aria-label="Select a server pin and a country, state or region to explore approximate ping."><defs><clipPath id="map-clip"><rect width="1000" height="760"/></clipPath></defs><g clip-path="url(#map-clip)"><g id="map-scene"></g></g></svg>
       <div class="map-controls" aria-label="Map controls"><button id="zoom-in" type="button" aria-label="Zoom in">+</button><button id="zoom-out" type="button" aria-label="Zoom out">−</button><button id="reset-map" type="button" aria-label="Reset map view">↺</button></div>
       <div id="tooltip" role="tooltip" hidden></div>
       <div class="map-footer">
+      <div class="map-location-selects"><label>Country<select id="map-country" aria-label="Ping reference country"></select></label><label>State / region<select id="map-region" aria-label="Ping reference state or region"></select></label></div>
       <div id="map-readout" class="map-readout" role="status" aria-live="polite">Loading map…</div>
       <div class="legend" aria-label="Estimated ping bands"><span><i style="--color:#62dfb4"></i>&lt;20 ms</span><span><i style="--color:#9ad579"></i>20–35</span><span><i style="--color:#e2c06c"></i>35–50</span><span><i style="--color:#e99a68"></i>50–75</span><span><i style="--color:#dc758d"></i>75+ ms</span></div>
       </div>
@@ -1816,7 +1817,7 @@ function loadServerPingMap(){
     if(!document.querySelector('link[data-ping-map-style]')){
       const css=document.createElement('link');css.rel='stylesheet';css.href='/assets/ping-map/map.css';css.dataset.pingMapStyle='';document.head.appendChild(css);
     }
-    for(const file of ['d3.min.js','countries.js','map.js']){
+    for(const file of ['d3.min.js','countries.js','regions.js','map.js']){
       if(document.querySelector(`script[data-ping-map-file="${file}"]`))continue;
       await new Promise((resolve,reject)=>{
         const script=document.createElement('script');script.src='/assets/ping-map/'+file;script.dataset.pingMapFile=file;
