@@ -14,13 +14,14 @@ export async function loadActivity(env,players,query=d1Query){
   ), roster AS (
     SELECT puuid,platform,MAX(played_at) AS played_at,MAX(observed_at) AS observed_at
     FROM rr_candidate_games WHERE played_at>=strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days') GROUP BY puuid,platform
-  ) SELECT p.puuid,p.platform,c.checked_at,COALESCE(r.games_7d,0) AS games_7d,
+  ) SELECT p.puuid,p.platform,c.checked_at,failed.checked_at AS failed_probe_at,COALESCE(r.games_7d,0) AS games_7d,
     (SELECT date FROM rr_history h WHERE h.puuid=p.puuid ORDER BY date DESC LIMIT 1) AS last_played_at,
     (SELECT json_extract(data,'$.tier.id') FROM rr_history h WHERE h.puuid=p.puuid ORDER BY date DESC LIMIT 1) AS tier,
     roster.played_at AS candidate_played_at,roster.observed_at AS candidate_observed_at,
     season_start.started_at AS season_started_at
     FROM rr_players p LEFT JOIN recent r ON r.puuid=p.puuid
     LEFT JOIN rr_collection c ON c.puuid=p.puuid AND c.platform=p.platform
+    LEFT JOIN rr_candidate_checks failed ON failed.puuid=p.puuid AND failed.platform=p.platform
     LEFT JOIN roster ON roster.puuid=p.puuid AND roster.platform=p.platform
     CROSS JOIN season_start`);
   const byId=new Map(rows.map(p=>[`${p.puuid}:${p.platform}`,p]));
