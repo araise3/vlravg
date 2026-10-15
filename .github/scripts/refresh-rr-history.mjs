@@ -62,7 +62,7 @@ export async function requestJSON(url, fetchImpl = fetch, sleepImpl = sleep, {de
         }
         return { ok: false, reason: `http ${res.status}`, retryable: true };
       }
-      if (!res.ok) return { ok: false, reason: `http ${res.status}` };
+      if (!res.ok) return { ok: false, reason: `http ${res.status}`, status:res.status };
       if (!body?.data) return { ok: false, reason: 'invalid JSON response' };
       return { ok: true, data: body.data };
     } catch (error) {

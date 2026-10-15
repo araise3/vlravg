@@ -12,7 +12,7 @@ import {selectPollingPlayers,selectDiscoveryCandidates,pollingPolicy} from '../.
 export async function collectPlayers(players,{origin,fetchImpl,log=console.log,concurrency=4,
   deadline=Infinity,now=Date.now,retryPass=true,sleepImpl}){
   let index=0,checked=0,gaps=0;
-  const failures=[];
+  const failures=[],unavailable=[];
   async function worker(){
     while(index<players.length&&now()<deadline){
       const player=players[index++];
@@ -24,7 +24,33 @@ export async function collectPlayers(players,{origin,fetchImpl,log=console.log,c
           platform=discovered.rr.platform||platform;
         }
         if(!region||!platform)throw new Error('region/platform unavailable');
-        const result=await requestJSON(`${origin}/api/rr-collect/${region}/${platform}/${player.puuid}`,fetchImpl,sleepImpl,{deadline,now});
+        const collect=()=>requestJSON(`${origin}/api/rr-collect/${region}/${platform}/${player.puuid}`,fetchImpl,sleepImpl,{deadline,now});
+        let result=await collect();
+        if(result.status===404){
+          // PUUID stays stable across transfers; the stored shard may not.
+          // This route forces an upstream account refresh, independent of the
+          // saved name timeline. Only retry the shard reported for this PUUID.
+          const account=await requestJSON(`${origin}/api/account-by-puuid/${player.puuid}`,fetchImpl,sleepImpl,{deadline,now});
+          if(account.ok){
+            const fresh=account.data?.region?.toLowerCase();
+            if(account.data?.puuid?.toLowerCase()!==player.puuid||!['eu','na','ap','kr','latam','br'].includes(fresh))
+              throw new Error('invalid account region response');
+            if(fresh!==region){
+              log(`RR region changed ${player.puuid}: ${region} -> ${fresh}`);
+              region=fresh;player.region=fresh;
+              result=await collect();
+            }
+          }else if(account.status!==404){
+            const error=new Error(`Region lookup: ${account.reason}`);error.retryable=Boolean(account.retryable);throw error;
+          }
+          if(result.status===404){
+            // The proxy durably records this failed attempt in D1. Polling
+            // retries after a day, without pretending any RR was collected.
+            unavailable.push({puuid:player.puuid,region,platform,reason:'upstream_account_unavailable'});
+            log(`RR unavailable ${player.puuid}: ${region}/${platform}; retry after cooldown`);
+            continue;
+          }
+        }
         if(!result.ok||result.data?.puuid!==player.puuid||!result.data.checked_at){
           const error=new Error(result.reason||'invalid collection receipt');error.retryable=Boolean(result.retryable);throw error;
         }
@@ -44,9 +70,9 @@ export async function collectPlayers(players,{origin,fetchImpl,log=console.log,c
     const retried=await collectPlayers(players.filter(p=>retryIds.has(p.puuid)),{
       origin,fetchImpl,log,concurrency,deadline,now,retryPass:false,sleepImpl});
     for(let i=failures.length-1;i>=0;i--)if(retryIds.has(failures[i].puuid))failures.splice(i,1);
-    failures.push(...retried.failures);checked+=retried.checked;gaps+=retried.gaps;
+    failures.push(...retried.failures);unavailable.push(...retried.unavailable);checked+=retried.checked;gaps+=retried.gaps;
   }
-  return {players:players.length,checked,gaps,failures,deferred:players.length-checked-failures.length};
+  return {players:players.length,checked,gaps,failures,unavailable,deferred:players.length-checked-failures.length-unavailable.length};
 }
 
 export async function collectMatchFeatures(rows,{origin,fetchImpl,log=console.log,concurrency=4,
@@ -95,14 +121,17 @@ export async function corpusReport(env,query=d1Query){
     first_game:currentRows.map(row=>row.first_game).sort()[0],latest_game:latest.latest_game,
     payouts:currentRows.reduce((n,row)=>n+row.payouts,0),placements:currentRows.reduce((n,row)=>n+row.placements,0)}:null;
   const health=await query(env,`WITH activity AS (
-    SELECT p.puuid,c.checked_at,c.possible_gaps,
+    SELECT p.puuid,c.checked_at,c.possible_gaps,failed.checked_at AS failed_probe_at,
       (SELECT MAX(julianday(date)) FROM rr_history h WHERE h.puuid=p.puuid) AS last_game,
       (SELECT COUNT(*) FROM rr_history h WHERE h.puuid=p.puuid AND julianday(date)>=julianday('now','-7 days')) AS games
     FROM rr_players p LEFT JOIN rr_collection c ON c.puuid=p.puuid AND c.platform=p.platform
+    LEFT JOIN rr_candidate_checks failed ON failed.puuid=p.puuid AND failed.platform=p.platform
   ) SELECT COUNT(*) AS tracked,
     SUM(CASE WHEN (last_game<julianday('now','-7 days') OR (last_game IS NULL AND checked_at IS NOT NULL))
       AND (?1 IS NULL OR julianday(checked_at)>=julianday(?1)) THEN 1 ELSE 0 END) AS inactive,
-    SUM(CASE WHEN checked_at IS NULL AND (last_game IS NULL OR last_game>=julianday('now','-7 days')) THEN 1
+    SUM(CASE WHEN julianday(failed_probe_at)>julianday('now','-1 day')
+      AND (checked_at IS NULL OR julianday(failed_probe_at)>julianday(checked_at)) THEN 0
+      WHEN checked_at IS NULL AND (last_game IS NULL OR last_game>=julianday('now','-7 days')) THEN 1
       WHEN last_game>=julianday('now','-7 days') AND julianday(checked_at)<=julianday('now')-
         CASE WHEN games>=10 AND last_game>=julianday('now','-2 days') THEN 4.0/24
           WHEN games>=3 AND last_game>=julianday('now','-3 days') THEN 12.0/24 ELSE 1 END THEN 1
@@ -165,6 +194,7 @@ export async function main(env=process.env){
   if(env.GITHUB_STEP_SUMMARY)await appendFile(env.GITHUB_STEP_SUMMARY,
     `## RR corpus\n\n${refresh.checked}/${refresh.players} accounts committed; ${refresh.failures.length} failed; ${refresh.deferred} deferred by the run budget. ${report.details} match feature rows saved; ${report.detailDeferred} upstream matches deferred for retry (RR retained); ${report.detailFailed} detail errors; ${report.detailBudgetDeferred} details deferred by the run budget.\n\n${report.health?.stale??'Unknown'} accounts overdue; ${report.health?.possible_gaps??'Unknown'} possible rolling-window gaps.\n`+
     (report.currentAct?`\nObserved act: ${report.currentAct.act||report.currentAct.id}; ${report.currentAct.payouts} payouts, including ${report.currentAct.placements} placements.\n`:'')+
+    `\nAccounts unavailable after a region check: ${refresh.unavailable?.length||0}; saved RR retained, retry cooldown applied.\n`+
     (report.detailInventory?`\nDatabase inventory before enrichment: ${report.detailInventory.saved} completed feature rows skipped; ${report.detailInventory.missing} missing, including ${report.detailInventory.archived} archived matches ready without an upstream fetch, ${report.detailInventory.waitingRetry} waiting for retry, and ${report.detailInventory.missingRegion} without a known region.\n`:'')+
     `\nQuota check: ${report.quotaCheck.status}; ${report.quotaCheck.otherProxyCalls??'unknown'} other proxy calls; ${report.quotaCheck.unexplainedRequests??'unknown'} unexplained quota units. This cannot identify another instance or prove exclusive use.\n`+
     (report.enrichmentSkipped?'\nOptional enrichment skipped because tracked capture is incomplete.\n':'')+

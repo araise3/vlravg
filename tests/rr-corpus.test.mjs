@@ -163,11 +163,63 @@ test('compact evidence retains unknown party values, shields stay in raw payouts
   await saveFeatures(db,m,puuid);await saveFeatures(db,m,puuid);
   assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_match_features').get().n,1);
 });
-test('sweep checks every account even when one fails and counts committed receipts',async()=>{
+test('sweep checks every account and reports confirmed unavailable accounts separately',async()=>{
   const players=[1,2,3,4,5].map(n=>({puuid:String(n),region:'eu',platform:'pc'}));
   const result=await collectPlayers(players,{origin:'https://test',log:()=>{},fetchImpl:async url=>url.endsWith('/2')
     ?Response.json({}, {status:404}):Response.json({data:{puuid:url.split('/').at(-1),checked_at:'now'}})});
-  assert.equal(result.checked,4);assert.equal(result.failures.length,1);
+  assert.equal(result.checked,4);assert.equal(result.failures.length,0);
+  assert.equal(result.unavailable.length,1);assert.equal(result.deferred,0);
+});
+
+test('404 re-resolves the immutable account and collects a transferred Brazilian account',async t=>{
+  const {sql,db}=database(t),calls=[];
+  await collectRR(db,payload([entry('old-na-match')]),{puuid,region:'na',platform:'pc'});
+  const result=await collectPlayers([{puuid,region:'na',platform:'pc'}],{origin:'https://test',log:()=>{},fetchImpl:async url=>{
+    calls.push(url);
+    if(url.includes('/rr-collect/na/'))return Response.json({}, {status:404});
+    if(url.includes('/account-by-puuid/'))return Response.json({data:{puuid,region:'br'}});
+    assert.ok(url.includes('/rr-collect/br/pc/'));
+    return Response.json({data:await collectRR(db,payload([entry('new-br-match')]),{puuid,region:'br',platform:'pc'})});
+  }});
+  assert.equal(calls.length,3);assert.equal(result.checked,1);assert.equal(result.failures.length,0);
+  assert.equal(sql.prepare('SELECT region FROM rr_players').get().region,'br');
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_history').get().n,2);
+});
+
+test('unchanged or still unavailable regions stop after one account check and one bounded retry',async()=>{
+  for(const fresh of ['na','br']){
+    const calls=[];
+    const result=await collectPlayers([{puuid,region:'na',platform:'pc'}],{origin:'https://test',log:()=>{},fetchImpl:async url=>{
+      calls.push(url);
+      return url.includes('/account-by-puuid/')?Response.json({data:{puuid,region:fresh}}):Response.json({}, {status:404});
+    }});
+    assert.equal(calls.length,fresh==='na'?2:3);
+    assert.equal(result.checked,0);assert.equal(result.failures.length,0);
+    assert.equal(result.unavailable.length,1);assert.equal(result.deferred,0);
+  }
+});
+
+test('region recovery rejects a mismatched PUUID and preserves transient failures',async()=>{
+  for(const response of [()=>Response.json({data:{puuid:mid,region:'br'}}),()=>Response.json({}, {status:503})]){
+    const result=await collectPlayers([{puuid,region:'na',platform:'pc'}],{origin:'https://test',log:()=>{},retryPass:false,sleepImpl:async()=>{},
+      fetchImpl:async url=>url.includes('/account-by-puuid/')?response():Response.json({}, {status:404})});
+    assert.equal(result.failures.length,1);assert.equal(result.unavailable.length,0);assert.equal(result.checked,0);
+  }
+});
+
+test('D1 failed probe survives runs, applies a one-day cooldown and clears after successful collection',async t=>{
+  const {db,sql}=database(t),now=Date.now(),iso=h=>new Date(now-h*3600000).toISOString();
+  await collectRR(db,payload([{...entry(),date:iso(240)}]),{puuid,region:'na',platform:'pc'},iso(48));
+  sql.prepare('INSERT INTO rr_candidate_checks VALUES (?,?,?)').run(puuid,'pc',iso(1));
+  const query=async(_env,text,params=[]) => (await db.prepare(text).bind(...params).all()).results;
+  const [player]=await loadActivity({},[{puuid,platform:'pc'}],query);
+  assert.equal(pollingPolicy(player,now).cohort,'region-recheck');
+  assert.equal(pollingPolicy(player,now).due,false);
+  assert.equal(pollingPolicy(player,now+24*3600000).due,true);
+  assert.equal(pollingPolicy({...player,candidate_observed_at:iso(.5),candidate_played_at:iso(.5)},now).due,true);
+  assert.equal(pollingPolicy({...player,checked_at:iso(0)},now).cohort,'inactive');
+  const report=await corpusReport({},query);
+  assert.equal(report.health.stale,0);
 });
 
 test('transient capture failures get one final retry before optional enrichment',async()=>{

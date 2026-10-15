@@ -120,6 +120,16 @@ Ending-tier buckets are collection diagnostics, not model coordinates. Check
 these after rollout; increase detail capacity only if API and D1 budgets permit.
 Growth in tracked accounts should be accompanied by a sweep-duration check.
 
+Account regions can change after a transfer. When collection returns 404, the
+workflow refreshes the account by its immutable PUUID and retries once if the
+reported region changed. A successful collection persists the new region while
+retaining all previously saved RR. Accounts still returning 404 are reported as
+unavailable, rather than failed captures. The proxy's durable failed-probe
+timestamp applies a one-day retry cooldown; newer roster evidence can wake an
+account sooner. A successful collection supersedes the failed probe. Network,
+quota, invalid-response and storage failures remain errors, not unavailable
+accounts.
+
 The local export script can be run manually at act end to create an
 immutable gzip NDJSON file plus checksum manifest. It always reads fresh pages
 using `(puuid,match_id)` cursors; it never reuses stale OFFSET caches. Player keys
