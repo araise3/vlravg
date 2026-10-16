@@ -5,6 +5,11 @@
 const BERLIN_REFERENCE=[13.405,52.52];
 const TBILISI_REFERENCE=[44.8271,41.7151];
 const TBILISI_PINGS={frankfurt:52,paris:59,london:63,warsaw:68,stockholm:74,istanbul:40,madrid:85,riyadh:136};
+const OBSERVED_REFERENCES=[
+  {name:'Tbilisi',coords:TBILISI_REFERENCE,pings:TBILISI_PINGS},
+  {name:'Helsinki',coords:[24.9384,60.1699],pings:{frankfurt:33,paris:39,london:38,warsaw:28,stockholm:15,istanbul:63,madrid:64,riyadh:117}},
+  {name:'Luton',coords:[-.4175,51.8787],pings:{frankfurt:17,paris:13,london:8,warsaw:37,stockholm:34,istanbul:49,madrid:40,riyadh:104}},
+];
 const PING_SERVERS=[
   {id:'frankfurt',name:'Frankfurt',country:'Germany',coords:[8.6821,50.1109],berlinMs:13},
   {id:'paris',name:'Paris',country:'France',coords:[2.3522,48.8566],berlinMs:19},
@@ -15,8 +20,8 @@ const PING_SERVERS=[
   {id:'madrid',name:'Madrid',country:'Spain',coords:[-3.7038,40.4168],berlinMs:46},
   {id:'riyadh',name:'Riyadh',country:'Saudi Arabia',coords:[46.6753,24.7136],berlinMs:97},
 ];
-// Capital reference points, longitude then latitude. Country estimates never
-// imply that one capital represents the network routing of the whole country.
+// Reference points, longitude then latitude; capitals unless an observed city
+// is available. One city never represents routing across the whole country.
 const PING_COUNTRIES=[
   ['ALB','Albania','Tirana',19.8187,41.3275],['AND','Andorra','Andorra la Vella',1.5218,42.5063],
   ['AUT','Austria','Vienna',16.3738,48.2082],['BLR','Belarus','Minsk',27.5615,53.9045],
@@ -40,7 +45,7 @@ const PING_COUNTRIES=[
   ['SVK','Slovakia','Bratislava',17.1077,48.1486],['SVN','Slovenia','Ljubljana',14.5058,46.0569],
   ['ESP','Spain','Madrid',-3.7038,40.4168],['SWE','Sweden','Stockholm',18.0686,59.3293],
   ['CHE','Switzerland','Bern',7.4474,46.948],['TUR','Türkiye','Ankara',32.8597,39.9334],
-  ['UKR','Ukraine','Kyiv',30.5234,50.4501],['GBR','United Kingdom','London',-.1276,51.5072],
+  ['UKR','Ukraine','Kyiv',30.5234,50.4501],['GBR','United Kingdom','Luton',-.4175,51.8787],
   ['VAT','Vatican City','Vatican City',12.4534,41.9029],['GEO','Georgia','Tbilisi',44.8271,41.7151],
   ['ARM','Armenia','Yerevan',44.5152,40.1872],['AZE','Azerbaijan','Baku',49.8671,40.4093],
   ['KAZ','Kazakhstan','Astana',71.4304,51.1282],['MAR','Morocco','Rabat',-6.8498,34.0209],
@@ -60,9 +65,9 @@ function serverBaseline(server){return server.berlinMs-d3.geoDistance(BERLIN_REF
 function estimatePing(from,server){
   const km=d3.geoDistance(from,server.coords)*6371;
   const isBerlin=from[0]===BERLIN_REFERENCE[0]&&from[1]===BERLIN_REFERENCE[1];
-  const isTbilisi=from[0]===TBILISI_REFERENCE[0]&&from[1]===TBILISI_REFERENCE[1];
-  const observed=isBerlin||isTbilisi,reference=isBerlin?'Berlin':isTbilisi?'Tbilisi':null;
-  const ms=isBerlin?server.berlinMs:isTbilisi?TBILISI_PINGS[server.id]:Math.round(Math.max(5,serverBaseline(server)+km*.016));
+  const observation=OBSERVED_REFERENCES.find(r=>from[0]===r.coords[0]&&from[1]===r.coords[1]);
+  const observed=isBerlin||!!observation,reference=isBerlin?'Berlin':observation?.name||null;
+  const ms=isBerlin?server.berlinMs:observation?observation.pings[server.id]:Math.round(Math.max(5,serverBaseline(server)+km*.016));
   const margin=Math.max(5,Math.round(ms*.25));
   return {km,ms,observed,reference,low:Math.max(1,ms-margin),high:ms+margin};
 }
@@ -152,7 +157,7 @@ function render(){
   const value=document.createElement('strong');value.style.color=pingColor(ping.ms);value.textContent=(ping.observed?'':'~')+ping.ms+' ms';
   const note=document.createElement('small');note.textContent=ping.observed?'Observed '+ping.reference+' reference':'Capital-based estimate'+' · '+ping.low+'–'+ping.high+' ms';
   readout.append(route,value,note);
-  readout.title='Berlin and Tbilisi use observed pings. Other locations use a geographic reference estimate; actual ISP routing may differ. Rings are spaced every 10 ms.';
+  readout.title='Berlin, Tbilisi, Helsinki and Luton use observed pings. Other locations use a geographic reference estimate; actual ISP routing may differ. Rings are spaced every 10 ms.';
   positionPins();
 }
 function destination([lon,lat],km,bearing){
