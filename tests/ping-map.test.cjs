@@ -24,3 +24,20 @@ test('country selection preserves exact Berlin and Tbilisi observations for ever
     }
   }
 });
+
+test('Finland and UK use the Helsinki and Luton screenshot readings',()=>{
+  const screenshots=[
+    {code:'FIN',city:'Helsinki',coords:[24.9384,60.1699],pings:[33,39,38,28,15,63,64,117]},
+    {code:'GBR',city:'Luton',coords:[-.4175,51.8787],pings:[17,13,8,37,34,49,40,104]},
+  ];
+  for(const screenshot of screenshots){
+    const country=model.PING_COUNTRIES.find(c=>c.code===screenshot.code);
+    assert.equal(country.capital,screenshot.city);
+    assert.deepEqual(Array.from(country.coords),screenshot.coords);
+    model.PING_SERVERS.forEach((server,i)=>{
+      const ping=model.estimatePing(country.coords,server);
+      assert.equal(ping.observed,true);assert.equal(ping.reference,screenshot.city);
+      assert.equal(ping.ms,screenshot.pings[i]);
+    });
+  }
+});
