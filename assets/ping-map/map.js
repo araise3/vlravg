@@ -1,7 +1,7 @@
 'use strict';
 (()=>{
 // Observations supplied by the user from the VALORANT selector.
-// Unmeasured origins remain distance-adjusted estimates from Berlin.
+// Each server has its own smooth routing correction fitted to all four origins.
 const BERLIN_REFERENCE=[13.405,52.52];
 const TBILISI_REFERENCE=[44.8271,41.7151];
 const TBILISI_PINGS={frankfurt:52,paris:59,london:63,warsaw:68,stockholm:74,istanbul:40,madrid:85,riyadh:136};
@@ -61,23 +61,62 @@ const PING_COUNTRIES=[
 const PING_BANDS=[{ms:20,color:'#62dfb4'},{ms:35,color:'#9ad579'},{ms:50,color:'#e2c06c'},{ms:75,color:'#e99a68'},{ms:100,color:'#dc758d'}];
 const PING_RING_INTERVAL_MS=10;
 const PING_RING_THRESHOLDS=Array.from({length:15},(_,i)=>(i+1)*PING_RING_INTERVAL_MS);
-function serverBaseline(server){return server.berlinMs-d3.geoDistance(BERLIN_REFERENCE,server.coords)*6371*.016;}
+const PING_DISTANCE_SLOPE=.016;
+const PING_INFLUENCE_KM=1000;
+const routingModels=new Map(PING_SERVERS.map(server=>{
+  const samples=[{name:'Berlin',coords:BERLIN_REFERENCE,ms:server.berlinMs},
+    ...OBSERVED_REFERENCES.map(r=>({name:r.name,coords:r.coords,ms:r.pings[server.id]}))];
+  samples.forEach(s=>{s.offset=s.ms-d3.geoDistance(s.coords,server.coords)*6371*PING_DISTANCE_SLOPE;});
+  return [server.id,{samples,baseline:d3.median(samples,s=>s.offset)}];
+}));
+function serverBaseline(server){return routingModels.get(server.id).baseline;}
+function pingSurface(from,server){
+  const model=routingModels.get(server.id);
+  const km=d3.geoDistance(from,server.coords)*6371;
+  let correction=0,totalWeight=1;
+  // Inverse-square residual interpolation: nearby screenshots dominate, while
+  // the prior (weight 1) gradually restores distance-based extrapolation far away.
+  // No hard regions or nearest-city switches; the surface is continuous at samples.
+  for(const sample of model.samples){
+    const distance=d3.geoDistance(from,sample.coords)*6371;
+    if(distance<.000001)return sample.ms;
+    const weight=(PING_INFLUENCE_KM/distance)**2;
+    correction+=weight*(sample.offset-model.baseline);totalWeight+=weight;
+  }
+  return Math.max(5,model.baseline+km*PING_DISTANCE_SLOPE+correction/totalWeight);
+}
 function estimatePing(from,server){
   const km=d3.geoDistance(from,server.coords)*6371;
-  const isBerlin=from[0]===BERLIN_REFERENCE[0]&&from[1]===BERLIN_REFERENCE[1];
-  const observation=OBSERVED_REFERENCES.find(r=>from[0]===r.coords[0]&&from[1]===r.coords[1]);
-  const observed=isBerlin||!!observation,reference=isBerlin?'Berlin':observation?.name||null;
-  const ms=isBerlin?server.berlinMs:observation?observation.pings[server.id]:Math.round(Math.max(5,serverBaseline(server)+km*.016));
+  const observation=routingModels.get(server.id).samples.find(r=>from[0]===r.coords[0]&&from[1]===r.coords[1]);
+  const observed=!!observation,reference=observation?.name||null;
+  const ms=Math.round(pingSurface(from,server));
   const margin=Math.max(5,Math.round(ms*.25));
   return {km,ms,observed,reference,low:Math.max(1,ms-margin),high:ms+margin};
 }
 function pingColor(ms){return (PING_BANDS.find(b=>ms<b.ms)||PING_BANDS.at(-1)).color;}
+
+// Sample the same unrounded field as the readouts. D3 keeps separate islands
+// and interior holes; drawing all polygon rings preserves both topologies.
+function buildPingContours(server,projection,grid={x:-450,y:-350,step:6,width:317,height:244}){
+  const values=new Float64Array(grid.width*grid.height);
+  for(let y=0;y<grid.height;y++)for(let x=0;x<grid.width;x++){
+    const coords=projection.invert([grid.x+(x+.5)*grid.step,grid.y+(y+.5)*grid.step]);
+    values[y*grid.width+x]=-pingSurface(coords,server);
+  }
+  const contours=d3.contours().size([grid.width,grid.height])
+    .thresholds(PING_RING_THRESHOLDS.map(ms=>-ms))(values);
+  return contours.map(contour=>({ms:-contour.value,lines:contour.coordinates.flatMap(polygon=>polygon.map(ring=>
+    ring.map(([x,y])=>[grid.x+x*grid.step,grid.y+y*grid.step,
+      x>0&&x<grid.width&&y>0&&y<grid.height])))}));
+}
 
 let selectedServer=PING_SERVERS[0];
 let selectedCountry=PING_COUNTRIES.find(c=>c.code==='DEU');
 const countryByCode=new Map(PING_COUNTRIES.map(c=>[c.code,c]));
 const projection=d3.geoMercator().center([21,51]).scale(500).translate([500,355]);
 const path=d3.geoPath(projection);
+const contourCache=new Map();
+let renderedContourServer=null;
 const svg=d3.select('#map'),scene=d3.select('#map-scene');
 const land=scene.append('g'),rings=scene.append('g').attr('aria-hidden','true'),labels=scene.append('g').attr('aria-hidden','true');
 const origin=scene.append('g').attr('class','country-origin').attr('aria-hidden','true');
@@ -137,17 +176,7 @@ function render(){
   countryPaths.attr('fill',f=>{const c=countryByCode.get(f.properties.code);return c?d3.color(pingColor(estimatePing(c.coords,selectedServer).ms)).darker(3).formatHex():'#1c1c20';})
     .classed('selected',f=>f.properties.code===selectedCountry.code)
     .attr('aria-label',f=>{const c=countryByCode.get(f.properties.code);return c?c.name+', '+estimatePing(c.coords,selectedServer).ms+' milliseconds from '+c.capital:null;});
-  rings.selectAll('*').remove();
-  [...PING_RING_THRESHOLDS].reverse().forEach(ms=>{
-    const b={ms,color:pingColor(ms)};
-    const radiusKm=(b.ms-serverBaseline(selectedServer))/.016;
-    if(radiusKm<=0)return;
-    const circle=d3.geoCircle().center(selectedServer.coords).radius(radiusKm/6371*180/Math.PI).precision(2)();
-    rings.append('path').datum(circle).attr('d',path).attr('class','ring').attr('fill','none').attr('stroke',b.color).attr('stroke-opacity',.6);
-    // A true great-circle boundary, not a constant screen-pixel radius.
-    const labelPoint=destination(selectedServer.coords,radiusKm,105),p=projection(labelPoint);
-    if(p[0]>25&&p[0]<940&&p[1]>95&&p[1]<650)rings.append('text').attr('class','ring-label').attr('x',p[0]+5).attr('y',p[1]-6).attr('fill',b.color).text(b.ms+' ms');
-  });
+  renderContours();
   const place=selectedCountry,p=projection(place.coords);
   origin.selectAll('*').remove();
   origin.append('circle').attr('cx',p[0]).attr('cy',p[1]).attr('r',3).attr('fill','#b4b4bd').attr('stroke','#111113').attr('stroke-width',1.5);
@@ -155,23 +184,35 @@ function render(){
   readout.replaceChildren();
   const route=document.createElement('span');route.textContent=place.capital+' → '+selectedServer.name;
   const value=document.createElement('strong');value.style.color=pingColor(ping.ms);value.textContent=(ping.observed?'':'~')+ping.ms+' ms';
-  const note=document.createElement('small');note.textContent=ping.observed?'Observed '+ping.reference+' reference':'Capital-based estimate'+' · '+ping.low+'–'+ping.high+' ms';
+  const note=document.createElement('small');note.textContent=ping.observed?'Observed '+ping.reference+' reference':'Sample-informed estimate'+' · '+ping.low+'–'+ping.high+' ms';
   readout.append(route,value,note);
-  readout.title='Berlin, Tbilisi, Helsinki and Luton use observed pings. Other locations use a geographic reference estimate; actual ISP routing may differ. Rings are spaced every 10 ms.';
+  readout.title='Estimates and 10 ms contours use all four screenshot origins: Berlin, Tbilisi, Helsinki and Luton. Only those cities are measured; routing elsewhere is interpolated and may differ by ISP. Ranges are heuristic, not confidence intervals.';
   positionPins();
 }
-function destination([lon,lat],km,bearing){
-  const r=Math.PI/180,d=km/6371,b=bearing*r,phi=lat*r,lambda=lon*r;
-  const phi2=Math.asin(Math.sin(phi)*Math.cos(d)+Math.cos(phi)*Math.sin(d)*Math.cos(b));
-  const lambda2=lambda+Math.atan2(Math.sin(b)*Math.sin(d)*Math.cos(phi),Math.cos(d)-Math.sin(phi)*Math.sin(phi2));
-  return [lambda2/r,phi2/r];
+function renderContours(){
+  if(renderedContourServer===selectedServer.id)return;
+  if(!contourCache.has(selectedServer.id))contourCache.set(selectedServer.id,buildPingContours(selectedServer,projection));
+  rings.selectAll('*').remove();
+  const line=d3.line().defined(p=>p[2]),labelPositions=[];
+  for(const contour of contourCache.get(selectedServer.id)){
+    const color=pingColor(contour.ms);
+    // Exclude the artificial closing edges at the sampled grid's boundary.
+    const geometry=contour.lines.map(points=>line(points)||'').join('');
+    if(!geometry)continue;
+    rings.append('path').attr('d',geometry).attr('class','ring').attr('fill','none').attr('stroke',color).attr('stroke-opacity',.6);
+    const candidates=contour.lines.flat().filter(p=>p[2]&&p[0]>35&&p[0]<930&&p[1]>110&&p[1]<650)
+      .sort((a,b)=>b[0]-a[0]);
+    const p=candidates.find(p=>labelPositions.every(q=>Math.hypot(p[0]-q[0],p[1]-q[1])>42));
+    if(p){labelPositions.push(p);rings.append('text').attr('class','ring-label').attr('x',p[0]+5).attr('y',p[1]-6).attr('fill',color).text(contour.ms+' ms');}
+  }
+  renderedContourServer=selectedServer.id;
 }
 function showTooltip(event,feature){
   const c=countryByCode.get(feature.properties.code);if(!c){hideTooltip();return;}
   const t=document.getElementById('tooltip'),ping=estimatePing(c.coords,selectedServer);
   t.replaceChildren();const name=document.createElement('strong');name.textContent=c.name;
   const value=document.createElement('div');value.textContent=(ping.observed?'':'~')+ping.ms+' ms to '+selectedServer.name;value.style.color=pingColor(ping.ms);
-  const note=document.createElement('span');note.textContent=ping.observed?'Observed '+ping.reference+' reference':(c.capital+' reference')+' · '+ping.low+'–'+ping.high+' ms';t.append(name,value,note);t.hidden=false;
+  const note=document.createElement('span');note.textContent=ping.observed?'Observed '+ping.reference+' reference':(c.capital+' · sample-informed estimate')+' · '+ping.low+'–'+ping.high+' ms';t.append(name,value,note);t.hidden=false;
   const panel=document.getElementById('server-ping-map').getBoundingClientRect();
   t.style.left=Math.max(8,Math.min(event.clientX-panel.left+14,panel.width-t.offsetWidth-12))+'px';
   t.style.top=Math.max(8,Math.min(event.clientY-panel.top+14,panel.height-t.offsetHeight-70))+'px';
