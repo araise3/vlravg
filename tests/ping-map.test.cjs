@@ -85,10 +85,11 @@ test('contours follow the ping field and retain interior hole boundaries',()=>{
   assert.ok(holeCount>0,'routing field produces holes that must remain in the contours');
 });
 
-test('Finland and UK use the Helsinki and Luton screenshot readings',()=>{
+test('Finland, UK and Spain use the Helsinki, Luton and Jerez screenshot readings',()=>{
   const screenshots=[
     {code:'FIN',city:'Helsinki',coords:[24.9384,60.1699],pings:[33,39,38,28,15,63,64,117]},
     {code:'GBR',city:'Luton',coords:[-.4175,51.8787],pings:[17,13,8,37,34,49,40,104]},
+    {code:'ESP',city:'Jerez',coords:[-6.137,36.685],pings:[42,34,41,59,60,71,19,108]},
   ];
   for(const screenshot of screenshots){
     const country=model.PING_COUNTRIES.find(c=>c.code===screenshot.code);
