@@ -1,83 +1,116 @@
 # AGENTS.md
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+This file provides guidance to Codex when working with code in this repository. `CLAUDE.md` (local, gitignored) carries the same body for Claude Code; keep the two in sync.
 
 ## What this is
 
-vlravg — a Valorant stats tool that shows a player's average lobby rank, RR gains/losses, K/D breakdowns, clutch stats, most-played duos, and playtime, sourced from the HenrikDev Valorant API. It's a static site with one small serverless proxy, deployed on Cloudflare Pages.
+vlravg is a Valorant stats site: average lobby rank, RR gains/losses and trends, duos and encounters, servers and a ping map, clutches, match history and name history. Data comes from the HenrikDev API. It is a static `index.html` plus one Cloudflare Pages Function, backed by a D1 database, deployed on Cloudflare Pages.
+
+The repo also holds two long-running research workstreams that are not part of the shipped site:
+
+- **RR corpus**: an act-long per-account RR payout dataset collected by a GitHub Actions workflow. See [docs/rr-corpus.md](docs/rr-corpus.md).
+- **Replay line of sight**: offline VALORANT replay parsing, plus native reverse engineering of the game client toward validated exact LOS. See [docs/replay-progress.md](docs/replay-progress.md).
+
+Replay research moved on 2026-10-18 to the private standalone repository
+`araise3/valorant-replay-los`, with its local checkout at
+`C:\Users\leona\Desktop\valorant-replay-los`. Continue replay work there and use
+that repository's `AGENTS.md`/`CLAUDE.md`; this workspace is retained as historical
+migration evidence and as the stats site's project.
 
 ## Repo layout
 
-- [index.html](index.html) — the entire frontend: inline `<style>` (~500 lines of CSS) followed by one inline `<script>` (~3,400 lines of JS). No framework, no build step, no modules — plain globals and direct DOM manipulation.
-- [functions/api/[[path]].js](functions/api/[[path]].js) — a Cloudflare Pages Function. Catches all `/api/*` requests on the same origin and proxies a fixed allowlist of routes to `https://api.henrikdev.xyz`, injecting the API key server-side.
-- [favicon.svg](favicon.svg)
+- [index.html](index.html): the entire frontend, about 6,500 lines. It has an inline `<style>` (to ~line 850), body markup, then one inline `<script>` (~line 1151 on). There is no framework, bundler or modules: plain globals and direct DOM manipulation. Charts are hand-built SVG; there is no Chart.js.
+- [functions/api/[[path]].js](functions/api/[[path]].js): the API proxy, rate limiter and persistence layer (see Architecture).
+- [functions/riot-probe/](functions/riot-probe/) and [riot-probe.html](riot-probe.html): an isolated Riot-client experiment. It is disabled unless `RIOT_PROBE_ENABLED` and its keys are set. See [docs/cloudflare-riot-probe.md](docs/cloudflare-riot-probe.md).
+- [lib/](lib/): server-side modules imported by the Function and the workflow scripts. They cover upstream pacing, the workflow auth and quota audit, the RR corpus and activity policy, name history/backfill, match coverage and the Riot probe.
+- [schema.sql](schema.sql) and [migrations/](migrations/): the D1 schema (database `vlravg-calib`, bound as `APP_DB`).
+- [.github/workflows/collect-rr-corpus.yml](.github/workflows/collect-rr-corpus.yml) and [.github/scripts/](.github/scripts/): the only workflow, an RR corpus collector that runs every 4 hours.
+- [_redirects](_redirects): page routes (`/duos`, `/lobbyrank`, `/servers`, `/rr`, `/matches`, `/names`, `/player/*`) all serve `index.html`.
+- [assets/ping-map/](assets/ping-map/): the EU ping map (D3, lazy-loaded by `loadServerPingMap()`); its data sources are in `SOURCES.md`. [assets/ranks/](assets/ranks/) holds the 256px rank icons.
+- [pro-players.json](pro-players.json): the static pro-player search index ([docs/pro-player-library.md](docs/pro-player-library.md)). [showcase.html](showcase.html) is a standalone product film.
+- [tests/](tests/): Node and Python tests. [scripts/](scripts/): replay tooling, RR analysis, UI stress harness and exporters. [docs/](docs/): feature notes and research reports.
+- [artifacts/](artifacts/): screenshots and analysis outputs that back docs.
 
-There is no `package.json`, no bundler, no linter, and no test suite — this is intentionally a zero-build static deploy.
+Local-only, gitignored: `.local/` (research evidence, replay exports, REA ledgers), `.tools/`, `.venv-replay/`, `.dev.vars`, `.wrangler/`, `hidden-mmr-research/`, `CLAUDE.md`, `HANDOFF.md` (stale; describes the long-removed hidden-MMR card).
 
 ## Commands
 
-Run locally with Cloudflare's dev server (needed because `/api/*` only works through the Pages Function, not a plain static file server):
+Tests (no package.json; Node 24 built-ins):
 
 ```bash
-npx wrangler pages dev . --compatibility-date=<date>
+node --test --test-isolation=none tests/*.test.mjs tests/*.test.cjs
 ```
 
-The installed `wrangler` binary's `workerd` runtime supports compatibility dates only up to a certain point (it lags the calendar) — if you omit `--compatibility-date`, wrangler defaults to *today's* date and the runtime will refuse to start with `This Worker requires compatibility date "X", but the newest date supported by this server binary is "Y"`. Use the `Y` from that error message.
+Python tests use the replay venv, one file at a time (e.g. `.venv-replay/Scripts/python.exe tests/rendered_los_validation_test.py`; also `tests/*_test.py` and `scripts/test-*.py`).
 
-No build, lint, or test commands exist in this repo.
+Many Node tests slice functions out of `index.html` by literal text markers and run them in `vm` (e.g. `function rrBucketStats(` … `// ── Column renderer`). Renaming or removing such comments and function headers breaks tests. Grep `tests/` before touching them.
+
+Local dev server (`.claude/launch.json` entry `vlravg`):
+
+```bash
+npx wrangler pages dev . --compatibility-date=2026-07-13 --port=8788
+```
+
+The installed `workerd` lags the calendar. If wrangler rejects the date, use the "newest date supported" from its error. `.dev.vars` supplies `HENRIK_KEY`. Without an `APP_DB` D1 binding, every upstream cache miss returns 503: the quota gate needs D1 and fails closed. A local D1 is required to exercise live fetching.
+
+UI stress harness: `python scripts/serve-ui-stress.py` (localhost, synthetic fixtures, no live API; see [docs/ui-stress-report.md](docs/ui-stress-report.md)).
 
 ## Deployment
 
-Cloudflare Pages, connected to the `araise3/vlravg` GitHub repo. There's no `wrangler.toml` in the repo, so project-level config (build settings, the `HENRIK_KEY` secret, the `RATE_LIMIT_KV` binding) lives in the Cloudflare dashboard, not in version control. Both bindings are required for `/api/*` to work — see the header comment in [functions/api/[[path]].js](functions/api/[[path]].js) for exact names.
+Cloudflare Pages is connected to the `araise3/vlravg` GitHub repo (default origin `vlravg1.pages.dev`). There is no `wrangler.toml`; bindings live in the dashboard:
+
+- `HENRIK_KEY` (secret): the public site's HenrikDev key.
+- `HENRIK_WORKFLOW_KEY` (secret): a separate key for the workflow. It must also be set in GitHub Actions ([docs/workflow-api-key.md](docs/workflow-api-key.md)).
+- `APP_DB` (D1): apply `schema.sql`/migrations before deploying schema-dependent code, e.g. `npx wrangler d1 execute vlravg-calib --remote --file=schema.sql`.
+
+GitHub Actions needs `CF_API_TOKEN`, `CF_ACCOUNT_ID`, `CF_D1_DATABASE_ID` and `HENRIK_WORKFLOW_KEY`, plus optional variables `SITE_ORIGIN` and `RR_REPORT_EXPORT_ENABLED`.
 
 ## Architecture
 
-### API proxy (`functions/api/[[path]].js`)
+### Proxy (`functions/api/[[path]].js`)
 
-Only three routes are reachable — `/api/account/{name}/{tag}`, `/api/rank/{region}/{platform}/{name}/{tag}`, `/api/history/{region}/{platform}/{name}/{tag}` — each mapped to a specific upstream HenrikDev endpoint with its own edge-cache TTL (see the `ROUTES` array). Anything else 404s rather than forwarding arbitrary paths upstream.
+Only routes in the `ROUTES` array reach HenrikDev. Everything else 404s. The public paths include `account`, `account-by-puuid`, `rank`, `mmr-history`, `mmr-history-by-puuid`, `history`, `history-by-puuid`, `stored-matches`, `match-detail`, `name-history` and `name-backfill`. The workflow-only paths are `rr-collect` and `rr-feature`. D1-only routes are handled before `ROUTES`: `match-archive`, `match-archive-counts`, `match-coverage` (GET plus a POST that accepts only a scan ID) and `calib-model`.
 
-Rate-limit coordination is entirely server-side: quota state (`{remaining, resetAt}`) is kept in `RATE_LIMIT_KV`, shared across every concurrent visitor hitting the one HenrikDev key. Before calling upstream, the worker checks that shared state and declines immediately (429 with `retryAfterMs` in the JSON body, no headers) if quota is already exhausted; otherwise it may add a small pacing delay so concurrent users don't burst at once. Real HenrikDev rate-limit headers are read and persisted back to KV but are **never forwarded to the client** — this was a deliberate fix for a prior version that leaked live quota numbers to anyone with devtools open (a usable DoS vector). If you touch this file, preserve that: the client should only ever see success or a 429 body with `retryAfterMs`.
+Invariants to preserve:
 
-KV is eventually consistent, so this pacing is best-effort, not a hard guarantee — that's a known, accepted tradeoff (see the file's top comment for why a Durable Object wasn't used instead).
+- **No quota leakage.** Real HenrikDev rate-limit headers are read server-side only. Clients see success, or a 429 body `{error, retryAfterMs}`. A prior version leaked live quota, which was a DoS vector.
+- **Atomic D1 admission** (`lib/upstream-pacing.mjs`). Public and workflow keys have independent pools (`rate_quota`, `workflow_rate_quota`), and the workflow pool keeps ≥2.1 s spacing. Conditional writes, not reads, grant slots. Gate storage failure means 503, never unpaced traffic. Edge-cache hits and D1-only routes bypass the gate.
+- **Trusted-data only.** Shared D1 evidence (match archive, RR history, corpus, name history, coverage) is written only from server-fetched HenrikDev responses. It is never written from browser-supplied payloads or counts.
+- **Workflow requests** authenticate with `X-Workflow-Key` (`lib/workflow-auth.mjs`), bypass the edge cache and never fall back to the public key.
+
+Persistence highlights: `mergeRRHistory` accumulates every `mmr-history` entry ever seen per PUUID, beyond upstream's ~20-game window. `match_archive` stores gzip match payloads per player and act. Account lookups enrol players into `rr_players` for the corpus. `foldCalibration`/`calib-model` are leftovers of the removed hidden-MMR card; nothing in the client reads them.
 
 ### Frontend flow (`index.html`)
 
-Entry point is `runAnalysis()`, triggered by the search UI. It resets UI state and calls `loadAll()`, which orchestrates, in order: resolve the account (`/api/account`) → fetch season/MMR data (`/api/rank`) → paginate through match history (`/api/history`, `BATCH=10` per call, matches capped at 10 per page by the upstream API regardless of requested size). Each match is parsed by `processMatch()`, then a family of `render*()` functions (`renderStats`, `renderAll`, `renderMatches`, `renderTeammates`, `renderRankTrend`, `renderPlaytime`, `renderClutchCard`, `renderRRCard`, …) update the DOM and the two Chart.js instances (`chartInstances.rankTrend`, `chartInstances.playtime`).
+`runAnalysis()` resets state and calls `loadAll()`. That resolves the account, starts the saved-archive read, `mmr-history` and rank in parallel, then paginates live history (`BATCH=10`, upstream caps pages at 10) and recovers stored-season matches. Each raw match goes through `processMatch()`. `publishMatches()` re-renders progressively via `renderAll()` and the `render*` family. `apiGet()` retries network/5xx errors with backoff and sleeps for `retryAfterMs` on a 429. Requests per search go through a 2-slot `createRequestPool`. State is top-level globals (`PLAYER, TAG, REGION, PLATFORM, TARGET_SEASON, PUUID`, `allMatches`, the `_rr*ByMatchId` maps, …); grep to find readers and writers. Pages (`applyPage`) share one loaded dataset.
 
-`apiGet()` is the shared fetch wrapper: retries network errors and 5xx with exponential backoff, and on a 429 sleeps for the `retryAfterMs` the worker provides (it holds no quota state of its own — that all moved server-side, see above).
+Domain rules worth knowing:
 
-App state is plain top-level `let`/`const` globals (e.g. `PLAYER, TAG, REGION, PLATFORM, TARGET_SEASON, PUUID` near line 802, plus `allMatches`, `chartInstances`, `rankModeRows`, etc. scattered near their usage) — there's no store/framework, so grep for a variable name to find everywhere it's read/written.
+- **RR eligibility** (`isRREligible`): RR present, tier ≥3, not a placement (reported `is_placement_match` first, act-opening heuristic second), party size <5. Payout is Riot's `last_change`; reported bonus/penalty/forgiveness fields are shown verbatim, never re-added ([docs/rr-update-details.md](docs/rr-update-details.md)). Win rate everywhere is wins / (wins + losses).
+- **Overview RR** uses up to the last 20 matches (`overviewRecentMatches`). The RR page has all-time/50/30/20 ranges.
+- **Lobby rank** needs `MIN_RATED=7` rated players. Immortal+ RR uses a continuous axis rooted at 2100.
+- **Rank Shield**: `was_derank_protected` gives a blue shield on the match card's RR chip (`.match-rr-change.shielded`). There is no aggregate note.
+- **MVP**: shown only for the searched player on their collapsed match card, as a quiet `.mc-accolade` (trophy plus "Match MVP"/"Team MVP" text, no badge). Louder treatments were tried and rejected.
+- **Clutch detection** (`computeRealDeaths`/`detectClutch`/`classifyClutchOutcome`): its timing constants (`POST_ROUND_PHASE_MS`, `CLOVE_REVIVE_*_BOUNDARY_MS`, `MAX_CLOVE_SELF_REVIVE_WINDOW_MS`, …) are empirically derived and documented inline. Don't change them without equivalent evidence.
+- `RANK_ICONS` (~line 1152) holds embedded data URIs on very long lines. Grep; don't read it directly.
 
-### RR gains
+## Research workstreams
 
-RR / Win, RR / Loss, Games, and Win Rate are four of the eight pills in the Stats card's `.stat-pill-row` (a fixed 4-column grid, so they fall on the second row alongside Avg K/D/ACS/ADR/Playtime on the first) — there's no separate RR Gains card any more; that column used to sit opposite Avg Lobby (`#rr-col`, current rank not duplicated there — it lives in the header badge) but was merged into the Stats card so all 4 could sit on one row instead of a cramped half-width grid. `computeRRStats()` / `renderRRCard()` average Riot's own `last_change` values over matches that Riot pays by the ordinary RR rules (RR data present, tier 3+, not the act-opening placement, not a full 5-stack; draws counted in the net but not in the per-outcome averages). Games/Win Rate (`res.n` / `res.winRate`, from the shared `rrBucketStats()` helper) reflect that same RR-eligible set, not the plain all-match count elsewhere in the Stats card. There's no minimum-matches gate: with too few matches the pills just show "—". Nothing here is fitted or inferred.
+### RR corpus
 
-Lobbies vs Rank (the old `#lobby-gap-pill`, a mean lobby-vs-my-rank gap in RR) was removed entirely, not just relocated — `computeRRStats()` no longer computes a `gap`/`meanGap`/`gapN` at all, and `processMatch()` no longer sets `lobbyAvgTier` on the match object (only `avgRankRaw`, itself otherwise unread, remains).
+The workflow captures accounts by activity tier, enriches payouts with trusted match features and stores everything in D1. Analysis and benchmarking are run locally at act end (`scripts/export-rr-corpus.mjs`, `scripts/benchmark-rr-corpus.py`). Nothing is auto-published to the frontend.
 
-The Avg Lobby card (`.rank-card`) is back to its original two-column `.rank-compare` layout: Avg Lobby (title + left-aligned icon/name/RR, `setRankValue()`, 44px icon) on the left, a `.rank-compare-divider`, and `#lobby-rank-col` on the right — but that right column is no longer RR Gains or Lobbies vs Rank, it's K/D by Lobby Rank, extracted out of the K/D By card below (see next section). `renderLobbyRankCard()` hides both `#lobby-rank-col` and `#lobby-rank-divider` when `rankModeRows.lobby` is empty, so Avg Lobby falls back to full width rather than leaving a stray divider with nothing beside it.
+### Replay line of sight
 
-RR Gains always uses every eligible match saved for the current act, uncapped — a `'recent'` vs `'act'` toggle (`#rr-scope-toggle`) used to let the reader switch between the last 20 eligible matches and the full act; it was removed and the card now always behaves like the old `'act'` mode. This is possible because `allMatches` already holds more than the live `/api/mmr-history` endpoint's own ~20-game window: the server persists every match it's ever seen for this player (see `mergeRRHistory` in [functions/api/[[path]].js](functions/api/[[path]].js)), so repeated searches accumulate a real act-long history beyond any single fetch. `allMatches` is already scoped to the current act via `TARGET_SEASON` filtering in `loadAll()`, so no extra filtering is needed.
+Goal ([docs/replay-visibility-goal.md](docs/replay-visibility-goal.md)): load a replay and determine when an observer could actually see an enemy. Contact means the **first rendered enemy pixels** (user decision), validated against synchronized first-person recordings with enemy x-ray off. The work is **offline only**: never load replays through the game client or execute or emulate game code.
 
-This replaced a hidden-MMR estimate card that inverted Riot's payout formula to infer where hidden MMR sat relative to displayed rank. Its band constants, `c→elo` conversion, double-promotion evidence and `/api/calib-model` fetch are all gone from the client — but the worker still folds calibration on every `/history` call and still serves `/api/calib-model`, and nothing reads either any more.
+- Replay decoding, viewers and the estimated breakdown are under `scripts/replay*` and `.local/replay-transcripts/`. Historical exports are pinned to 13.06; two 13.08 replays are preserved under `.local/rea-replay-13.08-20261015/`.
+- Native analysis uses the REA MCP server (`rea-agents`, Ghidra 12.1.4 and Temurin JDK 21 under `C:\Users\leona\.codex\tools\rea\`). Whole-executable Ghidra analysis times out, so work proceeds on source-bound function "slices": `.local/rea-native-los-13.08-df3286e0-2026-10-14/los-slice-vNN.exe` plus a manifest. Findings are bound to the exe hash (current 13.08 `df3286e0…`). Re-verify the hash first, and never reuse addresses across builds.
+- Each pass: export the REA evidence bundle (`rea-slice-vNN-*-evidence.json`), run `.local/rea-setup/audit-native-los.py --root <namespace>`, then save `source-audit-vNN-<date>.json`. Write a ledger JSON and a `docs/replay-*.md` report, add the doc and audit to `.local/rea-setup/check-replay-progress-20261014.py`, archive and re-pin `.local/rea-native-los-2026-10-12/overall-progress-20261014.json`, and rerun the checker.
+- Every ledger keeps `native_visibility_verified` and `validated_exact_los` (and related achieved-state flags) false until rendered-frame validation actually passes.
 
-The Lobbies vs Rank pill went through a richer win/loss/net breakdown split by lobbies above vs at/below your rank, then a single mean-gap pill, before being removed outright. That richer version is still parked verbatim in [reference/lobby-gap.js](reference/lobby-gap.js) if it's ever worth reattaching as its own card again, but note it reuses `m.lobbyAvgTier`, a field `processMatch()` no longer sets — reattaching it needs that field restored too.
+## Working conventions
 
-`was_derank_protected` — a real flag on the same `/api/mmr-history` entries `myRR` comes from (see `_derankProtectedByMatchId`), not derived — applies a blue shield icon and outline directly to the individual match card's negative RR value (`.match-rr-change.shielded`) on a Rank Shield loss where `last_change` still applies its normal negative payout but the displayed tier/RR doesn't drop. There is no separate "SHIELDED" badge and no aggregate note on the RR Gains card.
-
-### Match MVP / Team MVP
-
-`matchMvpPuuid` (highest ACS in the whole match) and `teamMvpPuuids` (highest ACS per team, one per side) are computed once in `processMatch()`, but only shown for the searched user (`myPuuid`), and only on their own collapsed match card (`buildMatchCard()`) — not in the expanded roster, and not for other players. The indicator is a quiet inline accolade beside the score (`.mc-accolade`): a small trophy icon and plain "Match MVP" or "Team MVP" text in gold or silver, separated from the score by a thin rule. It deliberately has no badge background, border, or rounded container.
-
-Two louder treatments were tried here and dropped, in order: a whole-card gold/silver wash + glow, then a corner-ribbon banner, then a bare crown/star glyph next to the map name, then a foil-gradient badge in the expanded roster next to every relevant player's name. All were removed as too much for what's meant to be a quiet detail — multiple stacked or separate cues competing with the rest of the collapsed card.
-
-### Match history day headers
-
-Each day's header (`buildMatchRows()`) shows two aggregate figures, both computed once in `renderMatches()` over the full `mhData` set (not just the currently-paginated slice, so the numbers don't shift as more pages load): avg lobby rank (`mhDayStats[day].sum/count`, unchanged) and total RR change that day (`mhDayStats[day].rrTotal`, reusing the same `.match-rr-change` gain/loss pill style as the per-match chips). The RR total is a plain sum of `m.myRR` (Riot's `last_change`) across every match that day with RR data — no special-casing for Rank Shield needed, since `last_change` already carries the real payout on a shielded loss even though the displayed badge didn't drop, unlike naively diffing displayed ranks day-to-day would.
-
-### Clutch detection (~lines 1192–1900+)
-
-Riot's match API doesn't expose a "clutch" flag, so clutch rounds are reconstructed from raw kill-feed timestamps, round-phase timing constants, and per-agent revive-ability quirks (Sage resurrect, Clove's Not Dead Yet). The constants and boundary logic here (`ROUND_TIMER_MS`, `CLOVE_REVIVE_*_BOUNDARY_MS`, `IDLE_RATIO_THRESHOLD`, `MAX_CLOVE_SELF_REVIVE_WINDOW_MS`, etc.) were derived empirically from HAR-captured match data and cross-checked against dozens of confirmed real cases — the surrounding comments document the specific measurements that justify each value. Treat these as load-bearing: don't adjust them without the same kind of empirical justification, and read the adjacent comment block before changing anything in `computeRealDeaths()` / `detectClutch()` / `classifyClutchOutcome()`.
-
-### Rank data
-
-`RANK_ICONS` (line 532) embeds every rank icon as an inline data URI in one very long line — expect it to blow past normal line-read limits; search/grep rather than reading it directly. `RANK_MAP` / `RANK_MAP_SHORT` / `RANK_COLORS` hold the tier name/color tables used throughout rendering.
+- Claims are evidence-bound. Keep unknowns as unknown, label inferences as such, and never present estimates or model contacts as exact. Docs separate "reconstruction verified" from "native/real accuracy validated".
+- Behavior changes come with tests. Features and research passes get a `docs/` report. UI changes are checked in the browser at phone and desktop widths.
+- Commits are small, with imperative titles, straight to `main`. Commit or push only when asked.
