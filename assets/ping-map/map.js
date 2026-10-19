@@ -1,7 +1,7 @@
 'use strict';
 (()=>{
 // Observations supplied by the user from the VALORANT selector.
-// Each server has its own smooth routing correction fitted to all four origins.
+// Each server has its own smooth routing correction fitted to all measured origins.
 const BERLIN_REFERENCE=[13.405,52.52];
 const TBILISI_REFERENCE=[44.8271,41.7151];
 const TBILISI_PINGS={frankfurt:52,paris:59,london:63,warsaw:68,stockholm:74,istanbul:40,madrid:85,riyadh:136};
@@ -9,6 +9,7 @@ const OBSERVED_REFERENCES=[
   {name:'Tbilisi',coords:TBILISI_REFERENCE,pings:TBILISI_PINGS},
   {name:'Helsinki',coords:[24.9384,60.1699],pings:{frankfurt:33,paris:39,london:38,warsaw:28,stockholm:15,istanbul:63,madrid:64,riyadh:117}},
   {name:'Luton',coords:[-.4175,51.8787],pings:{frankfurt:17,paris:13,london:8,warsaw:37,stockholm:34,istanbul:49,madrid:40,riyadh:104}},
+  {name:'Jerez',coords:[-6.137,36.685],pings:{frankfurt:42,paris:34,london:41,warsaw:59,stockholm:60,istanbul:71,madrid:19,riyadh:108}},
 ];
 const PING_SERVERS=[
   {id:'frankfurt',name:'Frankfurt',country:'Germany',coords:[8.6821,50.1109],berlinMs:13},
@@ -43,7 +44,7 @@ const PING_COUNTRIES=[
   ['ROU','Romania','Bucharest',26.1025,44.4268],['RUS','Russia','Moscow',37.6173,55.7558],
   ['SMR','San Marino','San Marino',12.4473,43.9367],['SRB','Serbia','Belgrade',20.4489,44.7866],
   ['SVK','Slovakia','Bratislava',17.1077,48.1486],['SVN','Slovenia','Ljubljana',14.5058,46.0569],
-  ['ESP','Spain','Madrid',-3.7038,40.4168],['SWE','Sweden','Stockholm',18.0686,59.3293],
+  ['ESP','Spain','Jerez',-6.137,36.685],['SWE','Sweden','Stockholm',18.0686,59.3293],
   ['CHE','Switzerland','Bern',7.4474,46.948],['TUR','Türkiye','Ankara',32.8597,39.9334],
   ['UKR','Ukraine','Kyiv',30.5234,50.4501],['GBR','United Kingdom','Luton',-.4175,51.8787],
   ['VAT','Vatican City','Vatican City',12.4534,41.9029],['GEO','Georgia','Tbilisi',44.8271,41.7151],
@@ -66,12 +67,14 @@ const PING_INFLUENCE_KM=1000;
 const routingModels=new Map(PING_SERVERS.map(server=>{
   const samples=[{name:'Berlin',coords:BERLIN_REFERENCE,ms:server.berlinMs},
     ...OBSERVED_REFERENCES.map(r=>({name:r.name,coords:r.coords,ms:r.pings[server.id]}))];
-  samples.forEach(s=>{s.offset=s.ms-d3.geoDistance(s.coords,server.coords)*6371*PING_DISTANCE_SLOPE;});
-  return [server.id,{samples,baseline:d3.median(samples,s=>s.offset)}];
+  return [server.id,fitRoutingModel(server,samples)];
 }));
+function fitRoutingModel(server,observations){
+  const samples=observations.map(s=>({...s,offset:s.ms-d3.geoDistance(s.coords,server.coords)*6371*PING_DISTANCE_SLOPE}));
+  return {samples,baseline:d3.median(samples,s=>s.offset)};
+}
 function serverBaseline(server){return routingModels.get(server.id).baseline;}
-function pingSurface(from,server){
-  const model=routingModels.get(server.id);
+function pingSurface(from,server,model=routingModels.get(server.id)){
   const km=d3.geoDistance(from,server.coords)*6371;
   let correction=0,totalWeight=1;
   // Inverse-square residual interpolation: nearby screenshots dominate, while
@@ -186,7 +189,7 @@ function render(){
   const value=document.createElement('strong');value.style.color=pingColor(ping.ms);value.textContent=(ping.observed?'':'~')+ping.ms+' ms';
   const note=document.createElement('small');note.textContent=ping.observed?'Observed '+ping.reference+' reference':'Sample-informed estimate'+' · '+ping.low+'–'+ping.high+' ms';
   readout.append(route,value,note);
-  readout.title='Estimates and 10 ms contours use all four screenshot origins: Berlin, Tbilisi, Helsinki and Luton. Only those cities are measured; routing elsewhere is interpolated and may differ by ISP. Ranges are heuristic, not confidence intervals.';
+  readout.title='Estimates and 10 ms contours use all five screenshot origins: Berlin, Tbilisi, Helsinki, Luton and Jerez. Only those cities are measured; routing elsewhere is interpolated and may differ by ISP. Ranges are heuristic, not confidence intervals.';
   positionPins();
 }
 function renderContours(){
