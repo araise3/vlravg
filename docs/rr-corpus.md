@@ -77,9 +77,29 @@ Growth in tracked accounts should be accompanied by a check of the
 
 Up to 50 recent match rosters per collection run supply discovery evidence via
 `rr_candidate_games`. Only trusted match payloads are accepted; duplicate match
-fetches never count as extra games. Each run probes at most 25 new accounts from
-those rosters, prioritizing observed game frequency within rank bands and giving
-thin bands more slots. A first probe establishes the player's actual last-week
+fetches never count as extra games. Each run probes at most 40 new accounts from
+those rosters, prioritizing observed game frequency within rank bands (three
+tiers each) and giving thin bands more slots. A band's coverage is its number of
+*frequent* tracked players. Once a band reaches 250, it draws no more probes.
+
+The benchmark needs 20+ clean games per player, act and outcome, so frequent
+players supply almost all samples. On 2026-10-28 the tracked pool was already
+balanced by rank: 276 Iron, 345 Bronze, 316 Silver, 337 Gold, 666 Immortal,
+303 Radiant. Frequent players were not: 59 Iron and 115 Bronze, against 259
+Immortal and 214 Radiant. In e11a6, payouts per player ranged from about 15
+(Iron) to 37 (Radiant), and 5-stacks or party penalties removed 10–20% of
+featured Gold–Diamond rows. Only 29 Iron players had 20+ non-placement payouts
+in one outcome, against 233 Immortal players.
+
+The previous coverage measure counted every non-inactive player, so it spread
+probes evenly instead of toward the missing frequent players. Supply is not
+the limit: rosters from the previous seven days held 300–750 untracked players
+per band from Iron to Diamond.
+
+Growth is bounded. The deficit to 250 frequent players per band was about 860
+players. At six-hour polling, that adds roughly 3,400 captures a day.
+
+A first probe establishes the player's actual last-week
 activity from their RR history; occasional players get fewer subsequent checks.
 Trusted competitive placement rosters also admit players reported as Unrated (tier 0),
 so the new-act reset does not silently exclude them from discovery.
