@@ -8,6 +8,8 @@ const margins=html.slice(html.indexOf('function scoreMarginDistribution('),html.
 const distribution=runInNewContext(margins+'\nscoreMarginDistribution');
 const stats=html.slice(html.indexOf('function rrBucketStats('),html.indexOf('// ── Column renderer'));
 const table=html.slice(html.indexOf('function buildRRScoreRows('),html.indexOf('/* ── CLUTCHES'));
+const winRateHelpers=html.slice(html.indexOf('function winRateLabel('),html.indexOf('\nfunction renderOverviewPreviews('));
+const {winRateLabel,winRateTone}=runInNewContext(winRateHelpers+'\n({winRateLabel,winRateTone})');
 const scoreRows=runInNewContext(stats+'\n'+table+'\nbuildRRScoreRows');
 test('score margins use actual scores without requiring ranks or RR, with draws and exact unusual margins',()=>{
   const matches=[{myR:13,opR:11},{myR:11,opR:13},{myR:15,opR:15},{myR:13,opR:0},{myR:0,opR:14},
@@ -63,6 +65,18 @@ test('result table keeps regulation and overtime separate with eligible actual p
   assert.equal(scoreRows([]).length,0);
 });
 
+test('win rates show one decimal and colour by the shown value',()=>{
+  assert.equal(winRateLabel(2/3*100),'66.7%');
+  assert.equal(winRateLabel(50),'50.0%');
+  assert.equal(winRateLabel(0),'0.0%');
+  assert.equal(winRateLabel(null),'—');
+  assert.equal(winRateTone(50.04),'');
+  assert.equal(winRateTone(50.05),'rank-positive');
+  assert.equal(winRateTone(49.96),'');
+  assert.equal(winRateTone(49.9),'rank-negative');
+  assert.equal(winRateTone(null),'');
+});
+
 test('player-rank table includes every game and performance while preserving eligible RR averages',()=>{
   const base={myTierId:24,won:true,myRR:18,myStats:{kills:10,deaths:5,acs:200,performanceScore:0}};
   const matches=[base,{...base,won:false,myRR:-22},
@@ -74,7 +88,7 @@ test('player-rank table includes every game and performance while preserving eli
     {...base,myTierId:0,won:null,myRR:null,myStats:null}];
   const container={innerHTML:'',querySelector:()=>({})};
   let values;
-  const render=runInNewContext(stats+'\n'+html.slice(html.indexOf('function renderRRBreakdown('),html.indexOf('function buildRRScoreRows('))+'\nrenderRRBreakdown',{
+  const render=runInNewContext(winRateHelpers+'\n'+stats+'\n'+html.slice(html.indexOf('function renderRRBreakdown('),html.indexOf('function buildRRScoreRows('))+'\nrenderRRBreakdown',{
     allMatches:matches,document:{getElementById:()=>container},
     renderScoreMarginChart:()=>{},renderRRByScore:()=>{},renderRRTrend:()=>{},
     renderRRSummary:()=>{},rrTrendScopedMatches:m=>m,renderRRMovement:()=>{},
@@ -181,7 +195,7 @@ test('duo table shows your stats from the shared matches under each teammate fig
       myKills:24,myDeaths:30,myAcsSum:540,myAcsCount:3,myPerformanceSum:750,myPerformanceCount:3}],
     playerRouteUrl:()=>'/player/x',tableLobbyValue:()=>'—',decidedWinRate:(w,d)=>d?w/d*100:null,rrSigned:v=>(v>0?'+':'')+v,
     highlightTableMaxima(){},initTableSorting:(_,values)=>{sortValues=values;}};
-  runInNewContext(html.slice(start,end)+'\nrenderTeammates();',context);
+  runInNewContext(winRateHelpers+'\n'+html.slice(start,end)+'\nrenderTeammates();',context);
   assert.equal(rows.length,1);
   const cells=rows[0].split('<td').slice(1);
   assert.match(cells[2],/>1\.50<span class="duo-stat-you">.*You <span class="duo-you-negative">0\.80<\/span>/);

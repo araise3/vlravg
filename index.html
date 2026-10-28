@@ -4500,7 +4500,7 @@ function renderServers(matches){
   const mostPlayed=serverData[0]||null;
   const best=[...serverData].filter(row=>row.games>=3&&row.winRate!=null).sort((a,b)=>b.winRate-a.winRate||b.games-a.games)[0]||null;
   addSummary('Most played',mostPlayed?.name||'—',mostPlayed?`${mostPlayed.games} matches · ${Math.round(mostPlayed.share)}% share`:'');
-  addSummary('Best win rate',best?.name||'—',best?`${Math.round(best.winRate)}% across ${best.games} matches`:'Requires 3 matches on a server');
+  addSummary('Best win rate',best?.name||'—',best?`${winRateLabel(best.winRate)} across ${best.games} matches`:'Requires 3 matches on a server');
   addSummary('Servers played',serverData.length?String(serverData.length):'—','Distinct servers this selection');
   addSummary('Server coverage',selectedMatches.length?`${knownMatches}/${selectedMatches.length}`:'—',selectedMatches.length?`${Math.round(knownMatches/selectedMatches.length*100)}% of matches identified`:'');
 
@@ -4523,7 +4523,7 @@ function renderServers(matches){
     const acs=tr.insertCell();acs.textContent=row.acs==null?'—':Math.round(row.acs);
     const performance=tr.insertCell();performance.textContent=row.performanceScore==null?'—':Math.round(row.performanceScore);
     performance.title=`${row.performanceCount} of ${row.games} matches have Performance Score data`;
-    const winRate=tr.insertCell();winRate.textContent=row.winRate==null?'—':Math.round(row.winRate)+'%';if(row.winRate!=null&&Math.round(row.winRate)!==50)winRate.className=Math.round(row.winRate)>50?'rank-positive':'rank-negative';
+    const winRate=tr.insertCell();winRate.textContent=winRateLabel(row.winRate);if(winRateTone(row.winRate))winRate.className=winRateTone(row.winRate);
     tbody.appendChild(tr);
   });
   const values=serverData.map(row=>[row.name,row.games,row.avgLobby,row.kd,row.acs,row.performanceScore,row.winRate]);
@@ -4860,6 +4860,9 @@ function overviewRecentMatches(matches){
 }
 
 function decidedWinRate(wins,decided){return decided>0?wins/decided*100:null;}
+// Win rates show one decimal; the colour follows the shown value, so 50.0% stays neutral.
+function winRateLabel(rate){return rate==null?'—':rate.toFixed(1)+'%';}
+function winRateTone(rate){const shown=rate==null?null:Math.round(rate*10)/10;return shown==null||shown===50?'':shown>50?'rank-positive':'rank-negative';}
 function renderOverviewPreviews(){
   const rated=statMatches.filter(m=>m.avgRank!=null);
   const placements=allMatches.some(m=>m.postReset);
@@ -4881,7 +4884,7 @@ function renderOverviewPreviews(){
   }).join('')+'</tbody></table>':'';
   document.getElementById('overview-games').textContent=allMatches.length;
   const wins=allMatches.filter(m=>m.won===true).length,losses=allMatches.filter(m=>m.won===false).length;
-  document.getElementById('overview-winrate').textContent=wins+losses?Math.round(wins/(wins+losses)*100)+'%':'—';
+  document.getElementById('overview-winrate').textContent=winRateLabel(decidedWinRate(wins,wins+losses));
   const fill=(id,items,render,empty)=>{
     const container=document.getElementById(id);
     container.replaceChildren();
@@ -4944,7 +4947,6 @@ function renderTeammates(){
   const youLine=(value,tone='')=>`<span class="duo-stat-you"><span class="rank-sr-only">, </span>You <span class="${tone}">${value}</span></span>`;
   const kdTone=kd=>kd===1?'':kd>1?'duo-you-positive':'duo-you-negative';
   teammateRows.forEach(t=>{
-    const wr=t.wr==null?null:Math.round(t.wr);
     const row=document.createElement('tr');
     row.innerHTML=`<th scope="row"><a class="duo-player-name" href="${playerRouteUrl(t.name,t.tag)}"><span class="duo-name"></span><span class="duo-tag"></span></a></th>
       <td>${t.games}</td>
@@ -4952,7 +4954,7 @@ function renderTeammates(){
       <td class="${t.kd===1?'':t.kd>1?'rank-positive':'rank-negative'}" title="Teammate: ${t.kills} kills / ${t.deaths} deaths · You: ${t.myKills} kills / ${t.myDeaths} deaths">${t.kd.toFixed(2)}${youLine(t.myKd.toFixed(2),kdTone(t.myKd))}</td>
       <td>${t.acs==null?'—':Math.round(t.acs)}${youLine(t.myAcs==null?'—':Math.round(t.myAcs))}</td>
       <td title="${t.performanceCount} of ${t.games} shared matches have teammate Performance Score data · ${t.myPerformanceCount} have yours">${t.performanceScore==null?'—':Math.round(t.performanceScore)}${youLine(t.myPerformanceScore==null?'—':Math.round(t.myPerformanceScore))}</td>
-      <td class="${wr==null||wr===50?'':wr>50?'rank-positive':'rank-negative'}" title="Wins divided by wins plus losses; draws excluded">${wr==null?'—':wr+'%'}</td>
+      <td class="${winRateTone(t.wr)}" title="Wins divided by wins plus losses; draws excluded">${winRateLabel(t.wr)}</td>
       <td class="${!t.rrCount||t.rrTotal===0?'':t.rrTotal>0?'rank-positive':'rank-negative'}" title="${t.rrCount} of ${t.games} shared matches have recorded RR change">${t.rrCount?rrSigned(t.rrTotal,0):'—'}</td>`;
     row.querySelector('.duo-player-name').title=t.name+'#'+t.tag;
     row.querySelector('.duo-name').textContent=t.name;
@@ -5215,7 +5217,7 @@ function renderRRCard(matches){
   // rows — a subset of the 20 latest matches, since this excludes
   // unrated/placement/5-stack games.
   if(gamesVal)gamesVal.textContent=res.n>0?res.n:'—';
-  if(wrVal)wrVal.textContent=res.winRate!=null?`${Math.round(res.winRate)}%`:'—';
+  if(wrVal)wrVal.textContent=winRateLabel(res.winRate);
 }
 
 let overviewRRTrendMatches=[];
@@ -5824,7 +5826,7 @@ function renderRRSummary(matches){
     stat('RR / Win',summary.avgGain==null?'—':rrSigned(summary.avgGain,1),'rank-positive')+
     stat('RR / Loss',summary.avgLoss==null?'—':rrSigned(-summary.avgLoss,1),'rank-negative')+
     stat('Games',record(summary))+
-    stat('Win rate',summary.winRate==null?'—':Math.round(summary.winRate)+'%');
+    stat('Win rate',winRateLabel(summary.winRate));
   renderRRReportedSummary(matches);
 }
 function rrReportedStats(matches){
@@ -5874,8 +5876,8 @@ function renderRRBreakdown(matches){
   renderRRSummary(rrTrendScopedMatches(matches));
   renderRRMovement(matches);
   const columns=`<th scope="col">K/D</th><th scope="col" title="Average combat score">ACS</th><th scope="col" title="Avg PS across matches with available data">PS</th><th scope="col" title="Wins divided by wins plus losses across all games; draws excluded">WR%</th><th scope="col" title="Average recorded RR from eligible wins; excludes placements, unrated ranks and full 5-stacks">RR / Win</th><th scope="col" title="Average recorded RR from eligible losses; excludes placements, unrated ranks and full 5-stacks">RR / Loss</th>`;
-  const winRateClass=rate=>rate==null||Math.round(rate)===50?'':Math.round(rate)>50?'rank-positive':'rank-negative';
-  const cells=s=>`<td>${s.n}</td><td class="${s.kd==null||s.kd===1?'':s.kd>1?'rank-positive':'rank-negative'}">${s.kd==null?'—':s.kd.toFixed(2)}</td><td>${s.acs==null?'—':Math.round(s.acs)}</td><td>${s.performanceScore==null?'—':Math.round(s.performanceScore)}</td><td class="${winRateClass(s.winRate)}">${s.winRate==null?'—':Math.round(s.winRate)+'%'}</td><td class="rank-positive">${s.avgGain==null?'—':rrSigned(s.avgGain,1)}</td><td class="rank-negative">${s.avgLoss==null?'—':rrSigned(-s.avgLoss,1)}</td>`;
+  const winRateClass=winRateTone;
+  const cells=s=>`<td>${s.n}</td><td class="${s.kd==null||s.kd===1?'':s.kd>1?'rank-positive':'rank-negative'}">${s.kd==null?'—':s.kd.toFixed(2)}</td><td>${s.acs==null?'—':Math.round(s.acs)}</td><td>${s.performanceScore==null?'—':Math.round(s.performanceScore)}</td><td class="${winRateClass(s.winRate)}">${winRateLabel(s.winRate)}</td><td class="rank-positive">${s.avgGain==null?'—':rrSigned(s.avgGain,1)}</td><td class="rank-negative">${s.avgLoss==null?'—':rrSigned(-s.avgLoss,1)}</td>`;
   const scope='Games, K/D, ACS and win rate include all matches in this act. Performance Score averages only matches with reported scores. RR averages use eligible recorded payouts, excluding placements, unrated ranks and full 5-stacks.';
   const groups=new Map();
   matches.forEach(m=>{
@@ -6053,7 +6055,6 @@ function renderPerformanceTable(containerId,rows,party){
   rows.forEach(b=>{
     const kd=b.totalDeaths>0?b.totalKills/b.totalDeaths:b.totalKills>0?b.totalKills:null;
     const rate=decidedWinRate(b.wins,b.decided);
-    const wr=rate==null?null:Math.round(rate);
     const row=document.createElement('tr');
     row.innerHTML=`<th scope="row"><div class="rank-row-identity">${party?b.icon:rankIcon(b.tier,24)}<span class="rank-row-name"></span></div></th>
       <td>${b.total}</td>
@@ -6061,7 +6062,7 @@ function renderPerformanceTable(containerId,rows,party){
       <td class="${kd==null||kd===1?'':kd>1?'rank-positive':'rank-negative'}" title="${b.totalKills} kills / ${b.totalDeaths} deaths">${kd==null?'—':kd.toFixed(2)}</td>
       <td>${b.acsCount?Math.round(b.acsSum/b.acsCount):'—'}</td>
       <td title="${b.performanceCount} of ${b.total} matches have Performance Score data">${b.performanceCount?Math.round(b.performanceSum/b.performanceCount):'—'}</td>
-      <td class="${wr==null||wr===50?'':wr>50?'rank-positive':'rank-negative'}" title="Wins divided by wins plus losses; draws excluded">${wr==null?'—':wr+'%'}</td>
+      <td class="${winRateTone(rate)}" title="Wins divided by wins plus losses; draws excluded">${winRateLabel(rate)}</td>
       ${party?`<td class="${!b.rrCount||b.rrTotal===0?'':b.rrTotal>0?'rank-positive':'rank-negative'}" title="${b.rrCount} of ${b.total} matches have recorded RR change">${b.rrCount?rrSigned(b.rrTotal,0):'—'}</td>`:''}`;
     row.querySelector('.rank-row-name').textContent=b.label||rName(b.tier);
     tbody.appendChild(row);
@@ -6238,7 +6239,7 @@ function renderMatchHistorySummary(){
   for(const m of mhData){const award=matchAward(m);if(award==='match')matchMvps++;else if(award==='team')teamMvps++;}
   document.getElementById('match-history-summary').innerHTML=[
     [n.toLocaleString(),'Matches',''],
-    [winRate==null?'—':Math.round(winRate)+'%','Win rate',''],
+    [winRateLabel(winRate),'Win rate',''],
     [matchMvps,'Match MVP','mvp-match'],
     [teamMvps,'Team MVP','mvp-team'],
   ].map(([value,label,cls])=>'<div class="mh-summary-item '+cls+'"><span class="mh-summary-value">'+value+'</span><span class="mh-summary-label">'+label+'</span></div>').join('');
