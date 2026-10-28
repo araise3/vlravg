@@ -75,32 +75,48 @@ async function uploadExport({ origin, key, claim, files, fetchImpl }) {
     body: JSON.stringify({ claim: claim.claim, files: files.map(({ name, bytes, sha256 }) => ({ name, bytes, sha256 })) }) });
   if (start.status !== 201) return `export_http_${start.status}`;
   const { partBytes, files: plan } = (await json(start)).data;
-  for (const { name, parts } of plan) {
+  // Parts upload EXPORT_CONCURRENCY at a time across all files (sequential
+  // uploads of a 34 MB export took 39 s); each file completes after its parts.
+  const left = new Map(plan.map(({ name, parts }) => [name, parts]));
+  const parts = plan.flatMap(({ name, parts }) => Array.from({ length: parts }, (_, i) => ({ name, n: i + 1 })));
+  let failure = null;
+  await mapLimit(parts, EXPORT_CONCURRENCY, async ({ name, n }) => {
+    if (failure) return;
     const file = files.find(f => f.name === name);
+    const length = Math.min(partBytes, file.bytes - (n - 1) * partBytes);
+    const buffer = Buffer.alloc(length);
     const handle = await open(file.path);
-    try {
-      for (let n = 1; n <= parts; n++) {
-        const length = Math.min(partBytes, file.bytes - (n - 1) * partBytes);
-        const buffer = Buffer.alloc(length);
-        await handle.read(buffer, 0, length, (n - 1) * partBytes);
-        const res = await fetchImpl(`${base}/${name}/part/${n}?claim=${claim.claim}`, { method: 'PUT', headers: { 'X-Workflow-Key': key }, body: buffer });
-        if (!res.ok) return `export_http_${res.status}`;
-      }
-    } finally { await handle.close(); }
+    try { await handle.read(buffer, 0, length, (n - 1) * partBytes); } finally { await handle.close(); }
+    const res = await fetchImpl(`${base}/${name}/part/${n}?claim=${claim.claim}`, { method: 'PUT', headers: { 'X-Workflow-Key': key }, body: buffer });
+    if (!res.ok) { failure ??= `export_http_${res.status}`; return; }
+    left.set(name, left.get(name) - 1);
+    if (left.get(name)) return;
     const done = await fetchImpl(`${base}/${name}/complete?claim=${claim.claim}`, { method: 'POST', headers: { 'X-Workflow-Key': key } });
-    if (!done.ok) return `export_http_${done.status}`;
-  }
-  return null;
+    if (!done.ok) failure ??= `export_http_${done.status}`;
+  });
+  return failure;
+}
+
+const EXPORT_CONCURRENCY = 4;
+export async function mapLimit(items, limit, fn) {
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) await fn(items[next++]);
+  }));
 }
 
 export async function submitAll({ origin, key, work, decoder = null, fetchImpl = fetch }) {
   const claims = JSON.parse(await readFile(`${work}/claims/claims.json`, 'utf8'));
+  // Written by the trusted toolchain job from the decoder's transform registry.
+  let supported = null;
+  try { supported = JSON.parse(await readFile(`${work}/decoder/supported-builds.json`, 'utf8')); } catch {}
   const headers = { 'X-Workflow-Key': key, 'Content-Type': 'application/json' };
   const outcomes = [];
   for (const claim of claims) {
     const result = await prepareResult(claim, `${work}/parsed/${claim.match_id}`, decoder);
     const body = result.ok ? { claim: claim.claim, ok: true, summary: result.summary }
-      : { claim: claim.claim, ok: false, error: result.error, ...(decoder && { decoder: decoder.revision + (decoder.patch ? `+${decoder.patch}` : '') }) };
+      : { claim: claim.claim, ok: false, error: result.error, ...(decoder && { decoder: decoder.revision + (decoder.patch ? `+${decoder.patch}` : '') }),
+        ...(Array.isArray(supported) && { supported_builds: supported }) };
     const res = await fetchImpl(`${origin}/api/replays/result/${claim.match_id}`, { method: 'POST', headers, body: JSON.stringify(body) });
     let status = (await res.json().catch(() => ({})))?.data?.status || `http_${res.status}`;
     if (result.ok && status === 'awaiting_compact') {
