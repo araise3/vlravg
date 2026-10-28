@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { onRequest } from '../functions/api/replays/[[path]].js';
-import { REPLAY_LIMITS, REPLAY_PART_BYTES, replayHeader } from '../lib/replay-import.mjs';
+import { REPLAY_LIMITS, REPLAY_PART_BYTES, replayHeader, replayBuild } from '../lib/replay-import.mjs';
 import { validateCompact, validateSummary, summarizeCompact, decodeTrack } from '../lib/replay-compact.mjs';
 
 const matchId = 'a27d4487-c781-4b73-8a9e-f4a468139bba';
@@ -25,7 +25,10 @@ function replayBytes(size, embedded = matchId) {
   view.setInt32(44, -257, true);
   const name = embedded.padEnd(256, ' ') + '\0';
   for (let i = 0; i < name.length; i++) view.setUint16(48 + i * 2, name.charCodeAt(i), true);
-  for (let i = 600; i < size; i += 4096) bytes[i] = i % 251;
+  // Build FString as VALORANT writes it: length at 704, text at 708.
+  view.setInt32(704, 26, true);
+  [...'++Ares-Core+release-13.09\0'].forEach((c, i) => { bytes[708 + i] = c.charCodeAt(0); });
+  for (let i = 1000; i < size; i += 4096) bytes[i] = i % 251;
   return bytes;
 }
 
@@ -59,6 +62,7 @@ function bucket() {
   return r2;
 }
 
+let githubJobs = [];
 async function fixture(t, { archive = true, env: extra = {} } = {}) {
   const db = new DatabaseSync(':memory:');
   db.exec(readFileSync(new URL('../schema.sql', import.meta.url), 'utf8'));
@@ -83,6 +87,7 @@ async function fixture(t, { archive = true, env: extra = {} } = {}) {
   globalThis.fetch = async (address, init = {}) => {
     calls.push({ address: String(address), init });
     if (String(address).includes('turnstile')) return Response.json({ success: init.body.get('response') === 'ok' });
+    if (String(address).includes('/actions/runs/')) return Response.json({ jobs: githubJobs });
     if (String(address).startsWith('https://api.github.com/')) return new Response(null, { status: 204 });
     throw new Error('Unexpected fetch ' + address);
   };
@@ -382,4 +387,59 @@ test('uploads a decoder could not read are retried once by a different decoder b
   f.db.prepare("UPDATE replay_imports SET error='decoder_validate_failed',raw_key=NULL").run();
   assert.deepEqual((await claim(`${old}+${'9'.repeat(64)}`)).json.data, [], 'nothing to retry without the raw file');
   assert.equal((await claim('not a decoder; DROP TABLE x')).status, 200, 'an invalid decoder name is ignored');
+});
+
+test('status reports live pipeline progress from what the pipeline recorded', async t => {
+  const f = await fixture(t);
+  const bytes = replayBytes(2 * 1024 * 1024);
+  assert.equal(replayBuild(bytes), '13.09');
+  assert.equal(replayBuild(new Uint8Array(4096)), null);
+  await upload(f, bytes);
+  const progress = async () => (await f.call('GET', `/status?ids=${matchId}`)).json.data[matchId].progress;
+  let p = await progress();
+  assert.equal(p.header_build, '13.09', 'read from the replay header at upload');
+  assert.equal(p.dispatch.requested, true);
+  assert.equal(p.dispatch.ok, true);
+  assert.equal(p.queue_position, 1);
+  assert.equal(p.run_url, null);
+
+  githubJobs = [
+    { name: 'fetch', status: 'completed', conclusion: 'success', started_at: '2026-10-29T10:00:00Z', completed_at: '2026-10-29T10:00:20Z' },
+    { name: 'toolchain', status: 'completed', conclusion: 'success', started_at: '2026-10-29T10:00:21Z', completed_at: '2026-10-29T10:00:40Z',
+      steps: [{ name: 'Run git clone --filter=blob:none x', conclusion: 'skipped' }] },
+    { name: 'parse', status: 'in_progress', conclusion: null, started_at: '2026-10-29T10:00:41Z', completed_at: null },
+    { name: 'unrelated', status: 'queued' },
+  ];
+  const [job] = (await f.call('POST', '/claim', { workflow: true, body: { decoder: 'a'.repeat(40), run_id: '987654' } })).json.data;
+  p = await progress();
+  assert.equal(p.run_url, 'https://github.com/araise3/vlravg/actions/runs/987654');
+  assert.equal(p.attempt, 1);
+  assert.deepEqual(p.jobs.map(j => [j.name, j.status, j.cached]), [['fetch', 'completed', undefined], ['toolchain', 'completed', true], ['parse', 'in_progress', undefined]]);
+  const calls = f.calls.filter(c => c.address.includes('/actions/runs/')).length;
+  await progress();
+  assert.equal(f.calls.filter(c => c.address.includes('/actions/runs/')).length, calls, 'GitHub is asked at most every 15 s');
+
+  const doc = compactDoc(bytes);
+  const blob = await gzip(JSON.stringify(doc));
+  await f.call('POST', `/result/${matchId}`, { workflow: true, body: { claim: job.claim, ok: true, summary: summarizeCompact(doc, { bytes: blob.byteLength, sha256: sha(blob) }) } });
+  const files = exportFiles();
+  const list = Object.entries(files).map(([name, b]) => ({ name, bytes: b.byteLength, sha256: sha(b) }));
+  await f.call('POST', `/result/${matchId}/export`, { body: { claim: job.claim, files: list }, workflow: true });
+  await f.call('PUT', `/result/${matchId}/export/movement.parquet/part/1?claim=${job.claim}`, { workflow: true, body: files['movement.parquet'].subarray(0, REPLAY_PART_BYTES) });
+  p = await progress();
+  assert.ok(p.decoded_at);
+  assert.deepEqual(p.export, { files: 3, files_done: 0, bytes: list.reduce((s, x) => s + x.bytes, 0), bytes_done: REPLAY_PART_BYTES }, 'stored parts count live');
+});
+
+test("a decoder failure reports the decoder's supported builds", async t => {
+  const f = await fixture(t);
+  await upload(f, replayBytes(2 * 1024 * 1024));
+  const [job] = (await f.call('POST', '/claim', { workflow: true, body: {} })).json.data;
+  await f.call('POST', `/result/${matchId}`, { workflow: true, body: { claim: job.claim, ok: false, error: 'decoder_validate_failed', supported_builds: ['13.06', '13.08', '<b>'] } });
+  let p = (await f.call('GET', `/status?ids=${matchId}`)).json.data[matchId].progress;
+  assert.equal(p.supported_builds, null, 'a malformed list is dropped');
+  f.db.prepare("UPDATE replay_imports SET status='parsing',claim_id=?1").run(job.claim);
+  await f.call('POST', `/result/${matchId}`, { workflow: true, body: { claim: job.claim, ok: false, error: 'decoder_validate_failed', supported_builds: ['13.06', '13.08'] } });
+  p = (await f.call('GET', `/status?ids=${matchId}`)).json.data[matchId].progress;
+  assert.deepEqual([p.header_build, p.supported_builds], ['13.09', ['13.06', '13.08']]);
 });
