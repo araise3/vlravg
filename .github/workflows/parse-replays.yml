@@ -67,9 +67,10 @@ jobs:
           path: replay-work/claims
           retention-days: 1
 
+  # Runs alongside fetch on every run, so a decoder change is compiled once by
+  # the push that makes it, never while an upload waits. The key names only
+  # what the cached binaries are built from: the workflow's other edits reuse it.
   toolchain:
-    needs: fetch
-    if: needs.fetch.outputs.count != '0'
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     permissions:
@@ -80,7 +81,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: toolchain-cache
-          key: replay-toolchain-${{ env.VRFKIT_REVISION }}-${{ env.VRFKIT_PATCH_SHA256 }}-${{ env.DUCKDB_VERSION }}-${{ hashFiles('.github/workflows/parse-replays.yml') }}
+          key: replay-toolchain-v2-${{ env.VRFKIT_REVISION }}-${{ env.VRFKIT_PATCH_SHA256 }}-${{ hashFiles('.github/replay-decoder/**') }}-${{ env.DUCKDB_VERSION }}-${{ env.RUST_IMAGE }}-${{ env.PYTHON_IMAGE }}
       # Built inside the same Debian release as the parse image, so the binary
       # links against the glibc it will run with.
       - if: steps.cache.outputs.cache-hit != 'true'
@@ -94,6 +95,9 @@ jobs:
           docker run --rm -v "$PWD/vrfkit:/src" -w /src "$RUST_IMAGE" cargo build --release --locked -p vrfkit
           mkdir -p toolchain-cache
           cp vrfkit/target/release/vrfkit toolchain-cache/vrfkit
+          # The builds this decoder registers, shown when a replay is unsupported.
+          grep -oE '^\s+V[0-9]+ V[0-9]+_[0-9]+ "[0-9]+\.[0-9]+"' vrfkit/crates/vrf-transform/src/lib.rs \
+            | grep -oE '[0-9]+\.[0-9]+' | jq -R . | jq -sc . > toolchain-cache/supported-builds.json
           docker run --rm -v "$PWD/toolchain-cache:/out" "$PYTHON_IMAGE" \
             pip install --no-cache-dir --only-binary=:all: --target /out/pydeps "duckdb==$DUCKDB_VERSION"
       - run: |
@@ -105,9 +109,15 @@ jobs:
           name: toolchain
           path: toolchain
           retention-days: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: decoder
+          path: toolchain/supported-builds.json
+          retention-days: 1
 
   parse:
     needs: [fetch, toolchain]
+    if: needs.fetch.outputs.count != '0'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     # No secrets, no repository token scopes, no checkout, no cache.
@@ -150,6 +160,10 @@ jobs:
         with:
           name: parsed
           path: replay-work/parsed
+      - uses: actions/download-artifact@v4
+        with:
+          name: decoder
+          path: replay-work/decoder
       - env:
           HENRIK_WORKFLOW_KEY: ${{ secrets.HENRIK_WORKFLOW_KEY }}
           SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg1.pages.dev' }}

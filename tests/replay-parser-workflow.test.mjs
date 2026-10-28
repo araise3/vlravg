@@ -35,9 +35,9 @@ async function writeExport(dir, files = exportBytes()) {
 test('fetch keeps claim IDs out of the parse job artifact', async () => {
   const out = await mkdtemp(join(tmpdir(), 'replay-fetch-'));
   const calls = [];
-  const claims = await fetchJobs({ origin: 'https://site.test', key: 'k', out, decoder: 'd', fetchImpl: async (url, init) => {
+  const claims = await fetchJobs({ origin: 'https://site.test', key: 'k', out, decoder: 'd', runId: '42', fetchImpl: async (url, init) => {
     calls.push([url, init.headers['X-Workflow-Key']]);
-    if (url.endsWith('/claim')) assert.deepEqual(JSON.parse(init.body), { decoder: 'd' }, 'the claim names the decoder build');
+    if (url.endsWith('/claim')) assert.deepEqual(JSON.parse(init.body), { decoder: 'd', run_id: '42' }, 'the claim names the decoder build and the run');
     if (url.endsWith('/claim')) return Response.json({ data: [{ match_id: matchId, claim: claimId, bytes: raw.byteLength }, { match_id: '../x', claim: claimId, bytes: 1 }] });
     return new Response(raw);
   } });
@@ -96,8 +96,12 @@ test('submit posts the summary, then the matching blob', async () => {
   assert.equal(requests[0].url, base);
   const declared = JSON.parse(requests[1].body).files;
   assert.equal(declared.find(f => f.name === 'movement.parquet').sha256, sha(exportBytes()['movement.parquet']));
-  const movementParts = requests.filter(r => r.url.includes('/export/movement.parquet/part/'));
+  // Parts upload concurrently, so they can finish in any order.
+  const movementParts = requests.filter(r => r.url.includes('/export/movement.parquet/part/'))
+    .sort((a, b) => Number(a.url.match(/part\/(\d+)/)[1]) - Number(b.url.match(/part\/(\d+)/)[1]));
   assert.deepEqual(movementParts.map(r => r.body.byteLength), [10485760, 10485760, 5]);
+  const movementDone = requests.findIndex(r => r.url.includes('/export/movement.parquet/complete'));
+  assert.ok(requests.slice(movementDone).every(r => !r.url.includes('/export/movement.parquet/part/')), 'a file completes after all its parts');
   assert.equal(sha(Buffer.concat(movementParts.map(r => r.body))), sha(exportBytes()['movement.parquet']));
   assert.equal(requests.at(-1).url, `${base}/compact?claim=${claimId}`, 'compact last, after every export file');
   assert.equal(JSON.parse(requests[0].body).summary.compact.sha256, sha(requests.at(-1).body));
@@ -164,4 +168,27 @@ test('the vrfkit watcher names the builds a newer release adds', async () => {
   assert.equal(issue.title, 'vrfkit v0.4.0 is available (adds 13.09, 13.10)');
   assert.match(issue.body, /drop the patch/);
   assert.deepEqual(pinnedDecoder("  VRFKIT_REVISION: " + 'a'.repeat(40) + "\n  VRFKIT_PATCH: ''\n"), { revision: 'a'.repeat(40), patch: '' });
+});
+
+test('mapLimit runs at most the limit at once and covers every item', async () => {
+  const { mapLimit } = await import('../.github/scripts/replay-submit.mjs');
+  let running = 0, peak = 0;
+  const seen = [];
+  await mapLimit([1, 2, 3, 4, 5, 6, 7], 3, async n => {
+    running++; peak = Math.max(peak, running);
+    await new Promise(r => setTimeout(r, 5 * (n % 3)));
+    seen.push(n); running--;
+  });
+  assert.equal(peak, 3);
+  assert.deepEqual(seen.sort(), [1, 2, 3, 4, 5, 6, 7]);
+});
+
+test('the toolchain builds in parallel with fetch under a key that ignores unrelated workflow edits', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/parse-replays.yml', import.meta.url), 'utf8');
+  const toolchain = workflow.slice(workflow.indexOf('\n  toolchain:'), workflow.indexOf('\n  parse:'));
+  assert.doesNotMatch(toolchain, /needs:/, 'no wait for fetch');
+  assert.doesNotMatch(toolchain, /hashFiles\('\.github\/workflows/, 'editing the workflow does not force a rebuild');
+  assert.match(toolchain, /key: replay-toolchain-v2-\$\{\{ env\.VRFKIT_REVISION \}\}-\$\{\{ env\.VRFKIT_PATCH_SHA256 \}\}/);
+  const parse = workflow.slice(workflow.indexOf('\n  parse:'), workflow.indexOf('\n  submit:'));
+  assert.match(parse, /needs: \[fetch, toolchain\]\n\s+if: needs\.fetch\.outputs\.count != '0'/);
 });
