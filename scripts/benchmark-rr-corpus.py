@@ -8,6 +8,12 @@ import argparse, collections, gzip, hashlib, json, math, random, statistics
 from pathlib import Path
 
 MODELS = ['act_mean', 'linear', 'near30_k5_prior8', 'gaussian40_prior8', 'gaussian80_prior8']
+# Pre-registered 2026-10-28 (docs/rr-benchmark-e11.md) before any later data was
+# seen: `linear` for games starting Immortal 1+ (x >= 2100), the player's act
+# mean below. Scored separately and never part of the tuning-based selection.
+HYBRID = 'hybrid_linear_immortal'
+IMMORTAL_X = 2100
+BOOTSTRAP_SEED, BOOTSTRAP_DRAWS = 17431, 1000
 
 
 def finite_number(value):
@@ -118,6 +124,8 @@ def eligible_rows(records, act=None, include_adjustments=False):
 
 
 def predict(train, target, model):
+    if model == HYBRID:
+        return predict(train, target, 'linear' if target['x'] >= IMMORTAL_X else 'act_mean')
     mean = statistics.fmean(r['y'] for r in train)
     x = target['x']
     if model == 'act_mean':
@@ -143,12 +151,54 @@ def predict(train, target, model):
     return (sum(w * r['y'] for w, r in zip(weights, train)) + 8 * mean) / (sum(weights) + 8)
 
 
+def paired_bootstrap(chosen, control):
+    """Player-resampled RMSE difference; negative favours `chosen`."""
+    ids = sorted(chosen.keys() & control.keys())
+    if not ids:
+        return None
+    rng = random.Random(BOOTSTRAP_SEED)
+    differences = []
+    for _ in range(BOOTSTRAP_DRAWS):
+        sample = rng.choices(ids, k=len(ids))
+        differences.append(math.sqrt(statistics.fmean(chosen[p] for p in sample)) -
+                           math.sqrt(statistics.fmean(control[p] for p in sample)))
+    differences.sort()
+    return dict(players=len(ids),
+                rmse_difference=math.sqrt(statistics.fmean(chosen[p] for p in ids)) - math.sqrt(statistics.fmean(control[p] for p in ids)),
+                bootstrap_95=[differences[int(BOOTSTRAP_DRAWS * .025)], differences[int(BOOTSTRAP_DRAWS * .975) - 1]])
+
+
+def preregistered_tests(holdout_errors):
+    """Fixed comparisons from docs/rr-benchmark-e11.md; pass = upper bound < 0."""
+    def player_mse(model, keep=lambda x: True):
+        values = collections.defaultdict(list)
+        for player, x, error in holdout_errors[model]:
+            if keep(x):
+                values[player].append(error)
+        return {p: statistics.fmean(v) for p, v in values.items()}
+    immortal, below = (lambda x: x >= IMMORTAL_X), (lambda x: x < IMMORTAL_X)
+    tests = dict(
+        primary_hybrid_vs_current_curve=paired_bootstrap(player_mse(HYBRID), player_mse('near30_k5_prior8')),
+        hybrid_vs_act_mean=paired_bootstrap(player_mse(HYBRID), player_mse('act_mean')),
+        immortal_plus_linear_vs_act_mean=paired_bootstrap(player_mse('linear', immortal), player_mse('act_mean', immortal)),
+        below_immortal_linear_vs_act_mean=paired_bootstrap(player_mse('linear', below), player_mse('act_mean', below)))
+    for result in tests.values():
+        if result:
+            result['passes'] = result['bootstrap_95'][1] < 0
+    tests['rule'] = ('Ship the hybrid only if primary_hybrid_vs_current_curve passes on an act none of whose games '
+                     'were in the 2026-10-28 snapshot; immortal_plus_linear_vs_act_mean must also pass. '
+                     'below_immortal_linear_vs_act_mean is informational.')
+    return tests
+
+
 def evaluate(rows):
     groups = collections.defaultdict(list)
     for row in rows:
         groups[(row['player'], row['season'], row['won'])].append(row)
-    scores = {m: {'tuning': [], 'holdout': []} for m in MODELS}
-    tier_errors = {m: collections.defaultdict(list) for m in MODELS}
+    scored = MODELS + [HYBRID]
+    scores = {m: {'tuning': [], 'holdout': []} for m in scored}
+    tier_errors = {m: collections.defaultdict(list) for m in scored}
+    holdout_errors = {m: [] for m in scored}
     groups_used, test_rows = 0, 0
     for (player, season, won), seq in sorted(groups.items()):
         seq.sort(key=lambda r: (r['date'], r['mid']))
@@ -159,13 +209,14 @@ def evaluate(rows):
         split = 'tuning' if int(hashlib.sha256(player.encode()).hexdigest()[:8], 16) % 10 < 5 else 'holdout'
         groups_used += 1
         test_rows += len(test)
-        for model in MODELS:
+        for model in scored:
             errors = [(predict(train, r, model) - r['y']) ** 2 for r in test]
             scores[model][split].append(dict(player=player, season=season, won=won,
                                            mse=statistics.fmean(errors), n=len(test)))
             if split == 'holdout':
                 for row, error in zip(test, errors):
                     tier_errors[model][(row['tier'], row['won'], row['platform'])].append((player, error))
+                    holdout_errors[model].append((player, row['x'], error))
     def summarize(items):
         players = collections.defaultdict(list)
         for item in items:
@@ -184,21 +235,10 @@ def evaluate(rows):
     if selected:
         chosen = by_player(scores[selected]['holdout'])
         for baseline in ['act_mean', 'near30_k5_prior8']:
-            control = by_player(scores[baseline]['holdout'])
-            ids = sorted(chosen.keys() & control.keys())
-            if not ids:
-                continue
-            rng = random.Random(17431)
-            differences = []
-            for _ in range(1000):
-                sample = rng.choices(ids, k=len(ids))
-                differences.append(math.sqrt(statistics.fmean(chosen[p] for p in sample)) -
-                                   math.sqrt(statistics.fmean(control[p] for p in sample)))
-            differences.sort()
-            comparisons[baseline] = dict(players=len(ids),
-                rmse_difference=math.sqrt(statistics.fmean(chosen.values())) - math.sqrt(statistics.fmean(control.values())),
-                bootstrap_95=[differences[25], differences[974]],
-                interpretation='Negative means selected curve has lower error; resampling unit is permanent player.')
+            result = paired_bootstrap(chosen, by_player(scores[baseline]['holdout']))
+            if result:
+                comparisons[baseline] = dict(result,
+                    interpretation='Negative means selected curve has lower error; resampling unit is permanent player.')
     strata = {}
     for model, groups in tier_errors.items():
         strata[model] = []
@@ -211,6 +251,7 @@ def evaluate(rows):
                 player_rmse=math.sqrt(statistics.fmean(statistics.fmean(v) for v in by.values()))))
     return dict(models=table, tuning_selected=selected, groups=groups_used, temporal_test_rows=test_rows,
                 paired_holdout_comparisons=comparisons, holdout_by_starting_tier=strata,
+                preregistered=preregistered_tests(holdout_errors),
                 ready_to_review=bool(selected and table[selected]['holdout']['players'] >= 30),
                 method='Permanent-player split for model selection; earliest 70% trains each player/act/outcome curve, later 30% tests; equal player weights. 20 matches per outcome minimum. Nearby curve falls back to training-act mean when local support is empty; frontend currently hides unsupported points. Review rank-specific coverage before shipping.')
 

@@ -137,3 +137,65 @@ Pooled holdout RMSE by band (approximate aggregation, as above):
   The natural check is the completed e11a6 plus the next act.
 - Unknown: whether the Immortal+ gain holds for a full act, and anything
   reliable below Gold (at most 5–12 holdout players per tier/outcome).
+
+## Pre-registration (recorded 2026-10-28, before any later data was seen)
+
+The hypothesis below came from the exploratory results above. It is fixed in
+code by the commit that adds this section, so the confirming test cannot be
+adjusted after its data is seen. Changing any of it requires a new,
+separately dated pre-registration.
+
+**Hypothesis.** The model `hybrid_linear_immortal` beats the current frontend
+curve. It predicts a payout with `linear` when the game's starting position
+is Immortal 1 or higher (`x >= 2100`), and with the player's act mean
+(`act_mean`) below that.
+
+**Fixed analysis.** This is `scripts/benchmark-rr-corpus.py` as of that commit,
+unchanged:
+
+- clean-row filter;
+- per player/act/outcome groups of 20+ games, with the earliest 70% training
+  and the latest 30% testing;
+- tuning/holdout split by SHA-256 of the player key;
+- player-weighted RMSE;
+- 1,000 player bootstrap draws with seed 17431.
+
+The hybrid is scored separately and is never part of tuning selection. The
+report's `evaluation.preregistered` block computes:
+
+| Test | Role |
+|---|---|
+| `primary_hybrid_vs_current_curve`: hybrid vs `near30_k5_prior8` | Decides |
+| `immortal_plus_linear_vs_act_mean`: Immortal+ test rows only | Must also pass |
+| `hybrid_vs_act_mean` | Reported |
+| `below_immortal_linear_vs_act_mean` | Reported; expected not to pass |
+
+A test passes when the upper bound of its 95% interval is below zero.
+
+**Data.**
+
+- *Confirmatory*: the first act none of whose games were in the 2026-10-28
+  snapshot, i.e. the act after e11a6, benchmarked with `--act` once it is
+  superseded. At least 30 holdout players in the Immortal+ subset are
+  required; with fewer, the result is inconclusive, not a failure.
+- *Consistency only*: the completed e11a6. Its first two weeks were used to
+  form the hypothesis, so it cannot confirm it.
+
+**Decision.** Ship the hybrid to the frontend only if both deciding tests pass
+on the confirmatory act. Otherwise keep the current curve, and record the
+outcome here either way.
+
+**Exploratory values on the 2026-10-28 snapshot** (not evidence for the
+hypothesis, since they formed it):
+
+| Test | e11a5 | e11a6 | Pooled |
+|---|---|---|---|
+| Hybrid vs current curve | −0.00 [−0.11, +0.10] | −0.79 [−0.95, −0.62] | −0.60 [−0.74, −0.46] |
+| Immortal+ linear vs act mean | −0.10 [−0.33, +0.15] | −1.48 [−1.72, −1.21] | −1.20 [−1.43, −0.96] |
+| Below Immortal linear vs act mean | +0.02 [−0.27, +0.30] | +0.04 [−0.08, +0.16] | −0.00 [−0.09, +0.08] |
+
+Adding the hybrid changed none of the existing outputs. Model tables, the
+tuning selection and paired comparisons are identical to the runs above.
+`tests/rr_benchmark_preregistered_test.py` checks that the hybrid switches
+exactly at Immortal 1, is never selected, and that pass flags follow the
+interval rule.
