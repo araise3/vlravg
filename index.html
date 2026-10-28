@@ -622,31 +622,51 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
 .name-history-note{font-size:12px;color:#a1a1aa;line-height:1.6;margin-top:14px;}
 .replay-import-notice{font-size:13px;color:#a1a1aa;line-height:1.6;margin-bottom:14px;}
 .replay-import-notice:empty{display:none;}
-.replay-list{list-style:none;margin:0;padding:0;border:1px solid #29292d;border-radius:8px;background:#111113;overflow:hidden;}
-.replay-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px 16px;padding:14px 18px;border-bottom:1px solid #262629;}
-.replay-row:last-child{border-bottom:0;}
+.replay-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;}
+/* Map art sits behind a left-to-right dark gradient so text keeps contrast. */
+.replay-row{position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px 16px;padding:16px 18px;border:1px solid #29292d;border-radius:8px;background:#111113;}
+.replay-map-image{position:absolute;inset:0;z-index:-2;width:100%;height:100%;object-fit:cover;object-position:center 40%;opacity:.55;}
+.replay-row::before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(14,14,16,.96) 0%,rgba(14,14,16,.86) 45%,rgba(14,14,16,.62) 100%);}
 .replay-match{min-width:0;display:flex;flex-direction:column;gap:4px;}
 .replay-match-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;font-size:15px;}
 .replay-match-head strong{color:#f4f4f5;font-weight:700;}
 .replay-score{font-variant-numeric:tabular-nums;font-weight:650;}
 .replay-score.win{color:#4ade80;}.replay-score.loss{color:#f87171;}.replay-score.draw{color:var(--draw);}
-.replay-date{color:#a1a1aa;font-size:12px;}
-.replay-id{font-family:var(--font-mono);font-size:12px;color:#8b8b94;overflow-wrap:anywhere;}
+.replay-date{color:#c4c4cc;font-size:12px;}
+.replay-id{font-family:var(--font-mono);font-size:12px;color:#a1a1aa;overflow-wrap:anywhere;}
 .replay-state{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px 12px;text-align:right;}
-.replay-status{font-size:12px;font-weight:600;color:#a1a1aa;}
+.replay-status{font-size:12px;font-weight:600;color:#c4c4cc;}
 .replay-status.parsed{color:#4ade80;}.replay-status.busy{color:var(--brand);}.replay-status.bad{color:#f87171;}
-.replay-detail{flex-basis:100%;font-size:12px;color:#8b8b94;line-height:1.5;}
+.replay-detail{grid-column:1/-1;margin:0;font-size:12px;color:#f87171;line-height:1.5;}
 .replay-detail:empty{display:none;}
-.replay-upload-btn{min-height:36px;padding:0 14px;border:1px solid #3a3a40;border-radius:6px;background:#1b1b1f;color:var(--text);font:inherit;font-size:13px;cursor:pointer;}
+.replay-upload-btn{min-height:36px;padding:0 14px;border:1px solid #3a3a40;border-radius:6px;background:rgba(27,27,31,.9);color:var(--text);font:inherit;font-size:13px;cursor:pointer;}
 .replay-upload-btn:hover{border-color:var(--brand);}
 .replay-upload-btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
-.replay-row progress{width:120px;height:6px;}
+.replay-steps{grid-column:1/-1;list-style:none;margin:2px 0 0;padding:10px 0 0;border-top:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:6px;}
+.replay-steps[hidden]{display:none;}
+.replay-step{display:grid;grid-template-columns:14px minmax(0,190px) minmax(0,1fr);align-items:baseline;gap:8px;font-size:12px;line-height:1.5;color:#a1a1aa;}
+.replay-step::before{content:'';width:8px;height:8px;border-radius:50%;border:1.5px solid #52525b;align-self:center;}
+.replay-step.done::before{background:#4ade80;border-color:#4ade80;}
+.replay-step.active::before{border-color:var(--brand);background:var(--brand);animation:replay-pulse 1.2s ease-in-out infinite;}
+.replay-step.failed::before{background:#f87171;border-color:#f87171;}
+.replay-step.skipped::before{border-style:dashed;}
+.replay-step-label{color:#e4e4e7;font-weight:600;}
+.replay-step.pending .replay-step-label{color:#71717a;font-weight:500;}
+.replay-step.failed .replay-step-label,.replay-step.failed .replay-step-detail{color:#fca5a5;}
+.replay-step-detail{font-variant-numeric:tabular-nums;overflow-wrap:anywhere;}
+.replay-step-detail a{color:var(--brand);text-underline-offset:2px;}
+@keyframes replay-pulse{50%{opacity:.35;}}
+@media(prefers-reduced-motion:reduce){.replay-step.active::before{animation:none;}}
+.replay-turnstile{grid-column:1/-1;}
 .replay-turnstile:empty{display:none;}
 .replay-import-note{font-size:12px;color:#a1a1aa;line-height:1.6;margin-top:14px;}
 .replay-import-note code{font-family:var(--font-mono);font-size:11px;color:#c4c4cc;overflow-wrap:anywhere;}
 @media(max-width:520px){
-  .replay-row{grid-template-columns:1fr;padding:13px 16px;}
+  .replay-row{grid-template-columns:1fr;padding:14px 16px;}
   .replay-state{justify-content:flex-start;text-align:left;}
+  .replay-row::before{background:linear-gradient(180deg,rgba(14,14,16,.7) 0%,rgba(14,14,16,.9) 110px,rgba(14,14,16,.95) 100%);}
+  .replay-step{grid-template-columns:14px minmax(0,1fr);}
+  .replay-step-detail{grid-column:2;}
 }
 .name-history-retry{color:var(--brand);text-decoration:underline;text-underline-offset:3px;margin-left:8px;}
 .name-backfill-controls{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:16px;font-size:12px;color:#a1a1aa;}
@@ -1847,26 +1867,33 @@ function updateDetailPages(){
 /* ── REPLAY IMPORT ──────────────────────────────────────── */
 // Uploads go to /api/replays (functions/api/replays, docs/replay-import.md).
 // The row list is keyed by match ID and updated in place so a running upload
-// keeps its progress while matches keep loading.
+// keeps its progress while matches keep loading. Every progress figure shown
+// is one the browser measured or the pipeline reported; nothing is estimated.
 const REPLAY_MAGIC=0x43f4efdd;
 const REPLAY_STATUS_BATCH=60;
-const REPLAY_POLL_MS=20000;
+const REPLAY_POLL_MS=5000;
+const REPLAY_POLL_LIMIT=720;
+const REPLAY_UPLOAD_CONCURRENCY=3;
 const REPLAY_ERRORS={
-  players_mismatch:'The replay’s players do not match this match.',
+  players_mismatch:'The replay’s players do not match the players HenrikDev lists for this match.',
   size_mismatch:'The stored file size did not match the upload.',
   decoder_validate_failed:'The parser does not support this game version yet. It is retried automatically once support is added.',
-  decoder_export_failed:'The parser could not export this replay.',
-  compact_failed:'The replay could not be reduced to the compact format.',
+  decoder_export_failed:'The parser read the replay but could not export it.',
+  compact_failed:'The replay could not be reduced to the compact timeline.',
   compact_invalid:'The parser produced invalid output.',
-  timeout:'Parsing took too long.',
-  oversize:'The parsed result was too large.',
-  download_failed:'The parser could not read the stored file.',
-  output_rejected:'The parser output was rejected.',
+  timeout:'The sandbox ran out of time (15 minutes).',
+  oversize:'The parsed result was larger than allowed.',
+  download_failed:'The parser could not download the stored file.',
+  output_rejected:'The sandbox output contained files that are not allowed.',
   export_missing:'The full parser export was missing.',
-  parser_attempts_exhausted:'Parsing failed repeatedly.',
+  parser_attempts_exhausted:'Three parser runs did not finish this replay.',
   upload_aborted:'The upload was cancelled.',
 };
-const replayImport={config:null,configLoad:null,status:new Map(),rows:new Map(),busy:new Set(),pollTimer:null,polls:0,turnstileLoad:null};
+// The pipeline step each failure code belongs to.
+const REPLAY_FAILED_STEP={upload_aborted:'upload',download_failed:'download',decoder_validate_failed:'decode',decoder_export_failed:'decode',
+  compact_failed:'decode',timeout:'decode',oversize:'decode',output_rejected:'decode',parser_failed:'decode',compact_invalid:'store',
+  export_missing:'store',players_mismatch:'store',size_mismatch:'store',parser_attempts_exhausted:'run'};
+const replayImport={config:null,configLoad:null,status:new Map(),rows:new Map(),busy:new Set(),live:new Map(),uploadFailed:new Set(),pollTimer:null,polls:0,ticker:null,turnstileLoad:null};
 
 // One row per loaded match with a valid ID, newest first.
 function replayMatchRows(matches){
@@ -1895,20 +1922,128 @@ function replayFileMatchId(bytes){
   }catch{return null;}
 }
 
+// ...and names the game build ("++Ares-Core+release-13.09", an FString near byte 708).
+function replayFileBuild(bytes){
+  if(!(bytes instanceof Uint8Array))return null;
+  const text=String.fromCharCode(...bytes.subarray(0,Math.min(bytes.byteLength,4096)));
+  const m=/\+\+Ares-Core\+release-(\d{1,2}\.\d{1,2})\0/.exec(text);
+  return m?m[1]:null;
+}
+
+function replayClock(iso){
+  const date=new Date(iso);
+  if(Number.isNaN(date.getTime()))return '';
+  const time=date.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  return date.toDateString()===new Date().toDateString()?time:`${date.toLocaleDateString('en-GB',{day:'numeric',month:'short'})}, ${time}`;
+}
+function replayDuration(ms){
+  if(!(ms>=0))return '';
+  const s=Math.round(ms/1000);
+  return s<60?`${s} s`:s<3600?`${Math.floor(s/60)} min ${s%60} s`:`${Math.floor(s/3600)} h ${Math.floor(s%3600/60)} min`;
+}
+const replayMB=bytes=>(bytes/1048576).toFixed(1);
+function replayBuildRange(builds){
+  if(!Array.isArray(builds)||!builds.length)return '';
+  const key=b=>b.split('.').map(Number);
+  const sorted=[...builds].sort((a,b)=>{const[x,y]=key(a),[u,v]=key(b);return x-u||y-v;});
+  return sorted.length>1?`${sorted[0]}–${sorted.at(-1)}`:sorted[0];
+}
+
+// The short headline next to the upload button.
 function replayStatusView(status){
   const s=status?.status||'none';
+  if(s==='parsed')return{text:'Parsed',tone:'parsed'};
+  if(s==='pending')return{text:'Queued',tone:'busy'};
+  if(s==='parsing')return{text:'Parsing',tone:'busy'};
+  if(s==='uploading')return{text:'Upload in progress',tone:'busy'};
+  if(s==='failed'||s==='rejected')return{text:s==='failed'?'Parse failed':'Rejected',tone:'bad'};
+  if(status&&!status.eligible)return{text:'Not in the verified archive',tone:''};
+  return{text:'No replay',tone:''};
+}
+
+function replayFailureText(status){
+  const p=status.progress||{};
+  if(status.error==='decoder_validate_failed'&&p.header_build){
+    const range=replayBuildRange(p.supported_builds);
+    return `Game version ${p.header_build} is not supported by this parser build${range?` (it reads ${range})`:''}. It is retried automatically once support is added.`;
+  }
+  return REPLAY_ERRORS[status.error]||'The replay could not be processed.';
+}
+
+// The pipeline's own record as steps: {key,label,state,detail,since?,link?}.
+// state is done | active | failed | skipped | pending.
+function replayProgressSteps(status){
+  const s=status?.status;
+  if(!s||s==='none')return [];
+  const p=status.progress||{};
+  const steps=[];
+  const uploadedDetail=[p.header_build&&`build ${p.header_build} per the replay header`,status.uploaded_at&&replayClock(status.uploaded_at)].filter(Boolean).join(' · ');
+  steps.push(s==='uploading'?{key:'upload',label:'Upload in progress',state:'active',detail:'Another upload of this match has not finished.'}
+    :{key:'upload',label:'Uploaded',state:'done',detail:uploadedDetail});
+  if(s==='uploading')return steps;
+  const claimed=Boolean(p.claimed_at);
+  const dispatch=!p.dispatch?'':!p.dispatch.requested?'waiting for the daily parser run at 04:23 UTC'
+    :p.dispatch.ok?`parser run requested ${replayClock(p.dispatch.at)}`:'the parser run request failed; the daily run at 04:23 UTC picks it up';
+  steps.push(s==='pending'
+    ?{key:'queue',label:'Queued',state:'active',since:status.uploaded_at,detail:[p.queue_position&&`position ${p.queue_position}`,dispatch].filter(Boolean).join(' · ')}
+    :{key:'queue',label:'Queued',state:claimed?'done':'pending',detail:claimed&&status.uploaded_at?`waited ${replayDuration(Date.parse(p.claimed_at)-Date.parse(status.uploaded_at))}`:''});
+  if(claimed){
+    const runLink=p.run_url?{href:p.run_url,text:'View parser run'}:null;
+    const jobs=new Map((p.jobs||[]).map(job=>[job.name,job]));
+    const jobStep=(key,name,labels)=>{
+      const job=jobs.get(name);
+      if(!job)return{key,label:labels.pending,state:'pending',detail:''};
+      const took=job.started_at&&job.completed_at?replayDuration(Date.parse(job.completed_at)-Date.parse(job.started_at)):'';
+      if(job.status==='completed'){
+        if(job.conclusion==='success')return{key,label:labels.done,state:'done',detail:took};
+        if(job.conclusion==='skipped')return{key,label:labels.done,state:'skipped',detail:'skipped'};
+        return{key,label:labels.done,state:'failed',detail:`job ${job.conclusion||'failed'}`};
+      }
+      if(job.status==='in_progress')return{key,label:labels.active,state:'active',since:job.started_at,detail:''};
+      return{key,label:labels.pending,state:'pending',detail:''};
+    };
+    if(jobs.size){
+      const download=jobStep('download','fetch',{done:'Downloaded by the parser',active:'Downloading',pending:'Download'});
+      download.link=runLink;
+      steps.push(download);
+      const decoder=jobStep('decoder','toolchain',{done:'Decoder ready',active:'Preparing the decoder',pending:'Decoder'});
+      if(jobs.get('toolchain')?.cached&&decoder.state==='done')decoder.detail='from cache';
+      else if(decoder.state==='done'&&decoder.detail)decoder.detail=`built in ${decoder.detail}`;
+      steps.push(decoder);
+      steps.push(jobStep('decode','parse',{done:'Decoded in the sandbox',active:'Decoding in the sandbox',pending:'Decode in the sandbox'}));
+      steps.push(jobStep('store','submit',{done:'Checked and stored',active:'Checking and storing',pending:'Check and store'}));
+    }else{
+      steps.push({key:'run',label:s==='parsing'?'Parser run in progress':'Parser run',state:s==='parsing'?'active':'done',since:p.claimed_at,
+        detail:[`started ${replayClock(p.claimed_at)}`,p.attempt>1&&`attempt ${p.attempt}`].filter(Boolean).join(' · '),link:runLink});
+    }
+    const store=steps.find(step=>step.key==='store')||steps.at(-1);
+    const extra=[p.decoded_at&&`result validated ${replayClock(p.decoded_at)}`,
+      p.export&&`${p.export.files_done} of ${p.export.files} export files · ${replayMB(p.export.bytes_done)} of ${replayMB(p.export.bytes)} MB`].filter(Boolean);
+    if(extra.length&&s==='parsing')store.detail=[store.detail,...extra].filter(Boolean).join(' · ');
+  }
   if(s==='parsed'){
     const c=status.counts||{};
-    const minutes=status.duration_ms?Math.round(status.duration_ms/60000):null;
-    const parts=[c.rounds!=null&&`${c.rounds} rounds`,c.kills!=null&&`${c.kills} kills`,minutes&&`${minutes} min`,status.build&&status.build.replace(/^\+\+Ares-Core\+release-/,'build '),status.export_bytes&&`full export ${(status.export_bytes/1048576).toFixed(1)} MB`].filter(Boolean);
-    return{text:'Parsed',tone:'parsed',detail:parts.join(' · ')};
+    steps.push({key:'stored',label:'Stored',state:'done',detail:[status.parsed_at&&replayClock(status.parsed_at),c.rounds!=null&&`${c.rounds} rounds`,c.kills!=null&&`${c.kills} kills`,
+      status.duration_ms&&`${Math.round(status.duration_ms/60000)} min`,status.build&&status.build.replace(/^\+\+Ares-Core\+release-/,'build '),
+      status.export_bytes&&`full export ${replayMB(status.export_bytes)} MB`].filter(Boolean).join(' · ')});
   }
-  if(s==='pending')return{text:'Queued for parsing',tone:'busy',detail:''};
-  if(s==='parsing')return{text:'Parsing',tone:'busy',detail:''};
-  if(s==='uploading')return{text:'Upload in progress',tone:'busy',detail:''};
-  if(s==='failed'||s==='rejected')return{text:s==='failed'?'Parse failed':'Rejected',tone:'bad',detail:REPLAY_ERRORS[status.error]||'The replay could not be processed.'};
-  if(status&&!status.eligible)return{text:'Not in the verified archive',tone:'',detail:''};
-  return{text:'No replay',tone:'',detail:''};
+  if(s==='failed'||s==='rejected'){
+    const key=REPLAY_FAILED_STEP[status.error]||'decode';
+    let at=steps.findIndex(step=>step.key===key||(key!=='upload'&&step.key==='run'));
+    if(at<0){steps.push({key,label:'Parser run',state:'failed'});at=steps.length-1;}
+    steps[at]={...steps[at],state:'failed',since:undefined,detail:replayFailureText(status)};
+    steps.splice(at+1);
+  }
+  return steps;
+}
+
+// Upload speed over the last three seconds of measured progress; null until
+// at least half a second has been measured.
+function replaySpeed(samples,now,sent){
+  samples.push([now,sent]);
+  while(samples.length>2&&now-samples[0][0]>3000)samples.shift();
+  const [t0,b0]=samples[0];
+  return now-t0>=500?(sent-b0)/((now-t0)/1000):null;
 }
 
 async function loadReplayConfig(){
@@ -1935,7 +2070,8 @@ function replayRowElement(row){
   li.className='replay-row';
   li.dataset.matchId=row.matchId;
   li.innerHTML='<div class="replay-match"><div class="replay-match-head"><strong></strong><span class="replay-score"></span><span class="replay-date"></span></div><span class="replay-id"></span></div>'
-    +'<div class="replay-state"><span class="replay-status"></span><progress max="1" value="0" hidden></progress><button class="replay-upload-btn" type="button" hidden>Upload .vrf</button><input type="file" accept=".vrf" hidden><span class="replay-detail"></span><div class="replay-turnstile"></div></div>';
+    +'<div class="replay-state"><span class="replay-status" role="status"></span><button class="replay-upload-btn" type="button" hidden>Upload .vrf</button><input type="file" accept=".vrf" hidden></div>'
+    +'<p class="replay-detail"></p><ol class="replay-steps" aria-label="Replay processing steps"></ol><div class="replay-turnstile"></div>';
   li.querySelector('strong').textContent=row.map;
   const score=li.querySelector('.replay-score');
   score.textContent=row.score;score.classList.add(row.result);
@@ -1945,20 +2081,74 @@ function replayRowElement(row){
   button.setAttribute('aria-label',`Upload replay for ${row.map} ${row.date}`);
   button.addEventListener('click',()=>input.click());
   input.addEventListener('change',()=>{const file=input.files?.[0];input.value='';if(file)uploadReplay(row.matchId,file,li);});
+  // The same map artwork the match history cards use, behind a dark gradient.
+  loadMatchMapMetadata().then(maps=>{
+    const src=maps.get(row.map.toLowerCase());
+    if(!src)return;
+    const img=document.createElement('img');
+    img.className='replay-map-image';img.alt='';img.loading='lazy';img.decoding='async';
+    img.addEventListener('error',()=>img.remove(),{once:true});
+    img.src=src;
+    li.prepend(img);
+  });
   return li;
+}
+
+function renderReplaySteps(ol,steps){
+  ol.replaceChildren(...steps.map(step=>{
+    const item=document.createElement('li');
+    item.className='replay-step '+step.state;
+    const label=document.createElement('span');
+    label.className='replay-step-label';label.textContent=step.label;
+    item.append(label);
+    const detail=document.createElement('span');
+    detail.className='replay-step-detail';detail.textContent=step.detail||'';
+    if(step.since&&step.state==='active'){
+      const elapsed=document.createElement('span');
+      elapsed.className='replay-elapsed';elapsed.dataset.since=step.since;
+      elapsed.textContent=replayDuration(Date.now()-Date.parse(step.since));
+      detail.append(detail.textContent?' · ':'',elapsed);
+    }
+    if(step.link){
+      const a=document.createElement('a');
+      a.href=step.link.href;a.textContent=step.link.text;a.target='_blank';a.rel='noopener noreferrer';
+      detail.append(detail.textContent?' · ':'',a);
+    }
+    item.append(detail);
+    return item;
+  }));
+  ol.hidden=!steps.length;
+  replayTick();
+}
+
+// Running steps show live elapsed time, updated each second while visible.
+function replayTick(){
+  if(replayImport.ticker)return;
+  replayImport.ticker=setInterval(()=>{
+    const spans=document.querySelectorAll('#replay-list .replay-elapsed');
+    if(!spans.length||activePage!=='replays'){clearInterval(replayImport.ticker);replayImport.ticker=null;return;}
+    for(const span of spans)span.textContent=replayDuration(Date.now()-Date.parse(span.dataset.since));
+  },1000);
 }
 
 function paintReplayRow(li){
   const id=li.dataset.matchId;
-  if(replayImport.busy.has(id))return;
+  if(replayImport.busy.has(id)){renderReplaySteps(li.querySelector('.replay-steps'),replayImport.live.get(id)||[]);return;}
   const status=replayImport.status.get(id);
-  const view=replayStatusView(status);
   const label=li.querySelector('.replay-status');
+  // A failed upload keeps its own steps until the server has something newer.
+  if(replayImport.uploadFailed.has(id)&&!['uploading','pending','parsing','parsed'].includes(status?.status)){
+    label.textContent='Not uploaded';label.className='replay-status bad';
+    li.querySelector('button').hidden=!(replayImport.config?.enabled&&status?.can_upload);
+    renderReplaySteps(li.querySelector('.replay-steps'),replayImport.live.get(id)||[]);
+    return;
+  }
+  const view=replayStatusView(status);
   label.textContent=status?view.text:'Checking…';
   label.className='replay-status'+(view.tone?' '+view.tone:'');
-  li.querySelector('.replay-detail').textContent=view.detail;
+  li.querySelector('.replay-detail').textContent='';
   li.querySelector('button').hidden=!(replayImport.config?.enabled&&status?.can_upload);
-  li.querySelector('progress').hidden=true;
+  renderReplaySteps(li.querySelector('.replay-steps'),replayProgressSteps(status));
 }
 
 async function renderReplayImport(){
@@ -1978,13 +2168,14 @@ async function renderReplayImport(){
   scheduleReplayPoll();
 }
 
-// Re-check queued and parsing rows while the page is open.
+// Re-check queued and parsing rows every few seconds while the page is open.
 function scheduleReplayPoll(){
   clearTimeout(replayImport.pollTimer);
   const waiting=[...replayImport.status].filter(([,s])=>['pending','parsing'].includes(s.status)).map(([id])=>id);
-  if(!waiting.length||replayImport.polls>=90){replayImport.polls=0;return;}
+  if(!waiting.length||replayImport.polls>=REPLAY_POLL_LIMIT){replayImport.polls=0;return;}
   replayImport.pollTimer=setTimeout(async()=>{
     if(activePage!=='replays')return;
+    if(document.hidden){scheduleReplayPoll();return;}
     replayImport.polls++;
     await refreshReplayStatuses(waiting);
     replayImport.rows.forEach(paintReplayRow);
@@ -2026,48 +2217,101 @@ async function replayRequest(url,init,attempts=3){
   }
 }
 
+// One part over XHR, which reports bytes sent; fetch cannot.
+function replayPutPart(url,token,blob,onSent){
+  return new Promise((resolve,reject)=>{
+    const xhr=new XMLHttpRequest();
+    xhr.open('PUT',url);
+    xhr.setRequestHeader('X-Upload-Token',token);
+    xhr.upload.onprogress=event=>onSent(event.loaded);
+    xhr.onload=()=>{let body={};try{body=JSON.parse(xhr.responseText);}catch{}resolve({ok:xhr.status>=200&&xhr.status<300,status:xhr.status,body});};
+    xhr.onerror=()=>reject(new Error('Network error'));
+    xhr.send(blob);
+  });
+}
+
 async function uploadReplay(matchId,file,li){
-  const label=li.querySelector('.replay-status'),detail=li.querySelector('.replay-detail'),progress=li.querySelector('progress'),button=li.querySelector('button');
+  const label=li.querySelector('.replay-status'),detail=li.querySelector('.replay-detail'),button=li.querySelector('button');
   const config=replayImport.config;
-  const show=(text,tone='busy',more='')=>{label.textContent=text;label.className='replay-status '+tone;detail.textContent=more;};
+  const reject=text=>{label.textContent='Not uploaded';label.className='replay-status bad';detail.textContent=text;};
   if(!config?.enabled)return;
   if(file.size<config.minBytes||file.size>config.maxBytes){
-    show('Not uploaded','bad',`Replays must be between ${config.minBytes/1048576} and ${config.maxBytes/1048576} MB.`);return;
+    reject(`Replays must be between ${config.minBytes/1048576} and ${config.maxBytes/1048576} MB.`);return;
   }
-  const embedded=replayFileMatchId(new Uint8Array(await file.slice(0,2048).arrayBuffer()));
-  if(!embedded){show('Not uploaded','bad','This is not a VALORANT replay file.');return;}
-  if(embedded!==matchId){show('Not uploaded','bad',`This replay is from match ${embedded}.`);return;}
+  const head=new Uint8Array(await file.slice(0,4096).arrayBuffer());
+  const embedded=replayFileMatchId(head);
+  if(!embedded){reject('This is not a VALORANT replay file.');return;}
+  if(embedded!==matchId){reject(`This replay is from match ${embedded}.`);return;}
+  const build=replayFileBuild(head);
+  const steps=[
+    {key:'check',label:'File checked',state:'done',detail:[`replay of this match`,build&&`build ${build}`,`${replayMB(file.size)} MB`].filter(Boolean).join(' · ')},
+    {key:'verify',label:'Verifying you are human',state:'active',detail:''},
+    {key:'send',label:'Upload',state:'pending',detail:''},
+    {key:'finish',label:'Finish upload',state:'pending',detail:''},
+  ];
+  const update=(key,patch)=>{Object.assign(steps.find(step=>step.key===key),patch);replayImport.live.set(matchId,steps);paintReplayRow(li);};
+  replayImport.uploadFailed.delete(matchId);
   replayImport.busy.add(matchId);
-  button.hidden=true;
+  button.hidden=true;detail.textContent='';
+  label.textContent='Uploading';label.className='replay-status busy';
+  update('verify',{});
   try{
-    show('Verifying…');
     const turnstileToken=await replayTurnstileToken(li.querySelector('.replay-turnstile'));
-    show('Uploading…');
+    update('verify',{state:'done',label:'Verified'});
+    update('send',{state:'active',label:'Uploading',detail:`0.0 of ${replayMB(file.size)} MB · 0%`});
     const start=await replayRequest(`/api/replays/upload/${matchId}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({size:file.size,turnstileToken})},1);
     const started=await start.json().catch(()=>({}));
-    if(!start.ok)throw new Error(started.error||'Upload could not start.');
+    if(!start.ok)throw Object.assign(new Error(started.error||'Upload could not start.'),{step:'send'});
     const {uploadToken,partBytes,parts}=started.data;
-    progress.hidden=false;progress.value=0;
-    for(let n=1;n<=parts;n++){
-      const res=await replayRequest(`/api/replays/upload/${matchId}/part/${n}`,{method:'PUT',headers:{'X-Upload-Token':uploadToken},body:file.slice((n-1)*partBytes,n*partBytes)});
-      if(!res.ok){
-        const body=await res.json().catch(()=>({}));
-        fetch(`/api/replays/upload/${matchId}/abort`,{method:'POST',headers:{'X-Upload-Token':uploadToken}}).catch(()=>{});
-        throw new Error(body.error||'Upload failed.');
+    const began=Date.now(),samples=[],loaded=new Array(parts).fill(0);
+    let lastPaint=0,finished=0,failure=null;
+    const paint=(force=false)=>{
+      const now=Date.now(),sent=loaded.reduce((sum,b)=>sum+b,0),speed=replaySpeed(samples,now,sent);
+      if(!force&&now-lastPaint<200)return;
+      lastPaint=now;
+      update('send',{detail:[`${replayMB(sent)} of ${replayMB(file.size)} MB`,`${Math.floor(sent/file.size*100)}%`,speed!=null&&`${replayMB(speed)} MB/s`,`${finished} of ${parts} parts done`].filter(Boolean).join(' · ')});
+    };
+    const sendPart=async n=>{
+      if(failure)return;
+      const blob=file.slice((n-1)*partBytes,n*partBytes);
+      let res;
+      for(let attempt=1;;attempt++){
+        loaded[n-1]=0;
+        try{res=await replayPutPart(`/api/replays/upload/${matchId}/part/${n}`,uploadToken,blob,bytes=>{loaded[n-1]=bytes;paint();});if(res.status<500||attempt>=3)break;}
+        catch(e){if(attempt>=3){failure??=e;return;}}
+        await new Promise(r=>setTimeout(r,1500*attempt));
       }
-      progress.value=n/parts;
+      if(!res.ok){failure??=new Error(res.body.error||'Upload failed.');return;}
+      loaded[n-1]=blob.size;finished++;paint(true);
+    };
+    // Part 1 goes first: the server checks the replay header in it. The rest
+    // go REPLAY_UPLOAD_CONCURRENCY at a time.
+    await sendPart(1);
+    let next=2;
+    await Promise.all(Array.from({length:Math.min(REPLAY_UPLOAD_CONCURRENCY,parts-1)},async()=>{while(next<=parts&&!failure)await sendPart(next++);}));
+    if(failure){
+      fetch(`/api/replays/upload/${matchId}/abort`,{method:'POST',headers:{'X-Upload-Token':uploadToken}}).catch(()=>{});
+      throw Object.assign(failure,{step:'send'});
     }
+    const took=Date.now()-began;
+    update('send',{state:'done',label:'Uploaded',detail:`${replayMB(file.size)} MB in ${replayDuration(took)} · ${replayMB(file.size/Math.max(took/1000,0.001))} MB/s average`});
+    update('finish',{state:'active',label:'Finishing upload'});
     const done=await replayRequest(`/api/replays/upload/${matchId}/complete`,{method:'POST',headers:{'X-Upload-Token':uploadToken}});
-    if(!done.ok)throw new Error((await done.json().catch(()=>({}))).error||'Upload could not be finished.');
-    replayImport.status.set(matchId,{...replayImport.status.get(matchId),status:'pending',can_upload:false});
+    if(!done.ok)throw Object.assign(new Error((await done.json().catch(()=>({}))).error||'Upload could not be finished.'),{step:'finish'});
   }catch(e){
+    const failed=steps.find(step=>step.key===(e.step||'verify'));
+    Object.assign(failed,{state:'failed',detail:e.message||'Upload failed.'});
+    steps.splice(steps.indexOf(failed)+1);
+    replayImport.live.set(matchId,steps);
+    replayImport.uploadFailed.add(matchId);
     replayImport.busy.delete(matchId);
     await refreshReplayStatuses([matchId]);
     paintReplayRow(li);
-    show('Not uploaded','bad',e.message||'Upload failed.');
     return;
   }
   replayImport.busy.delete(matchId);
+  replayImport.live.delete(matchId);
+  await refreshReplayStatuses([matchId]);
   paintReplayRow(li);
   scheduleReplayPoll();
 }
