@@ -1,8 +1,12 @@
 name: Collect act RR corpus
 
 on:
+  # Hourly triggers keep one run queued behind the active one, so collection
+  # runs back to back. GitHub delayed or dropped many four-hourly triggers,
+  # leaving only 3-4 runs a day; the 6-8 hour polling intervals need more.
+  # A newer queued trigger replaces an older queued one (shown as cancelled).
   schedule:
-    - cron: '37 */4 * * *'
+    - cron: '37 * * * *'
   workflow_dispatch:
     inputs:
       detail_limit:
