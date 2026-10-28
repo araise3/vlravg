@@ -1,0 +1,147 @@
+name: Parse uploaded replays
+
+# Uploaded .vrf files are hostile input (docs/replay-import.md). Three jobs keep
+# the key away from the parser: fetch (key) -> parse (no secrets, sandboxed
+# container) -> submit (key, validates the parser's output as untrusted data).
+on:
+  # Started by the Function after each completed upload (GITHUB_DISPATCH_TOKEN,
+  # Actions: write only). No inputs: every run just drains the queue.
+  workflow_dispatch:
+  # Daily sweep for a dispatch that failed or a claim that went stale.
+  schedule:
+    - cron: '23 4 * * *'
+
+# One run at a time; a newer queued trigger replaces an older queued one.
+concurrency:
+  group: parse-replays
+  cancel-in-progress: false
+permissions: {}
+env:
+  # vrfkit v0.3.0: payload transforms for 11.06-13.08.
+  VRFKIT_REVISION: b9496df61c40fa304d4f539689c1dd627804946e
+  # Optional patch on top of upstream (a repo path) and its SHA-256, recorded
+  # as decoder.patch in every compact record. Empty: plain upstream.
+  VRFKIT_PATCH: ''
+  VRFKIT_PATCH_SHA256: ''
+  PYTHON_IMAGE: python:3.12-slim-bookworm@sha256:e697c81897302a4c4333bade000d98038fbb21eb064f8ee1fd42d02ebcd9d337
+  RUST_IMAGE: rust:1.86-slim-bookworm@sha256:57d415bbd61ce11e2d5f73de068103c7bd9f3188dc132c97cef4a8f62989e944
+  DUCKDB_VERSION: '1.4.3'
+
+jobs:
+  fetch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    outputs:
+      count: ${{ steps.claim.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - id: claim
+        env:
+          HENRIK_WORKFLOW_KEY: ${{ secrets.HENRIK_WORKFLOW_KEY }}
+          SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg1.pages.dev' }}
+        run: node .github/scripts/replay-fetch.mjs replay-work
+      - if: steps.claim.outputs.count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: replays
+          path: replay-work/replays
+          retention-days: 1
+      - if: steps.claim.outputs.count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: claims
+          path: replay-work/claims
+          retention-days: 1
+
+  toolchain:
+    needs: fetch
+    if: needs.fetch.outputs.count != '0'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          path: toolchain-cache
+          key: replay-toolchain-${{ env.VRFKIT_REVISION }}-${{ env.VRFKIT_PATCH_SHA256 }}-${{ env.DUCKDB_VERSION }}-${{ hashFiles('.github/workflows/parse-replays.yml') }}
+      # Built inside the same Debian release as the parse image, so the binary
+      # links against the glibc it will run with.
+      - if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          git clone --filter=blob:none https://github.com/yakisoba0728/vrfkit.git vrfkit
+          git -C vrfkit checkout --detach "$VRFKIT_REVISION"
+          if [ -n "$VRFKIT_PATCH" ]; then
+            echo "$VRFKIT_PATCH_SHA256  $VRFKIT_PATCH" | sha256sum -c -
+            git -C vrfkit apply "$PWD/$VRFKIT_PATCH"
+          fi
+          docker run --rm -v "$PWD/vrfkit:/src" -w /src "$RUST_IMAGE" cargo build --release --locked -p vrfkit
+          mkdir -p toolchain-cache
+          cp vrfkit/target/release/vrfkit toolchain-cache/vrfkit
+          docker run --rm -v "$PWD/toolchain-cache:/out" "$PYTHON_IMAGE" \
+            pip install --no-cache-dir --only-binary=:all: --target /out/pydeps "duckdb==$DUCKDB_VERSION"
+      - run: |
+          mkdir -p toolchain
+          cp -r toolchain-cache/. toolchain/
+          cp scripts/replay-compact.py .github/scripts/replay-parse-sandbox.sh .github/scripts/replay-unpack.py toolchain/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: toolchain
+          path: toolchain
+          retention-days: 1
+
+  parse:
+    needs: [fetch, toolchain]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    # No secrets, no repository token scopes, no checkout, no cache.
+    permissions: {}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: replays
+          path: replay-work/replays
+      - uses: actions/download-artifact@v4
+        with:
+          name: toolchain
+          path: toolchain
+      - run: docker pull "$PYTHON_IMAGE"
+      - run: bash toolchain/replay-parse-sandbox.sh replay-work toolchain "$PYTHON_IMAGE"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: parsed
+          path: replay-work/parsed
+          retention-days: 1
+
+  submit:
+    needs: [fetch, parse]
+    # A failed parse job leaves its claims to go stale and be retried.
+    if: needs.parse.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/download-artifact@v4
+        with:
+          name: claims
+          path: replay-work/claims
+      - uses: actions/download-artifact@v4
+        with:
+          name: parsed
+          path: replay-work/parsed
+      - env:
+          HENRIK_WORKFLOW_KEY: ${{ secrets.HENRIK_WORKFLOW_KEY }}
+          SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg1.pages.dev' }}
+        run: node .github/scripts/replay-submit.mjs replay-work
