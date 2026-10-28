@@ -14,7 +14,7 @@ for its reproducible corpus build. Native LOS remains unverified.
 - [vrfkit](https://github.com/yakisoba0728/vrfkit) is a Rust parser with an `inspect` command and Parquet exports for movement, events, replicated fields and actors. It preserves unknown fields and names supported builds explicitly. It needs Oodle decompression and should be run as a separate process, not inside this Pages Function.
 - [ValorantWebReplayer](https://github.com/talhakoek/ValorantWebReplayer) runs a C# parser locally, extracts positions, round events and ability spawns with Node scripts, then renders a browser minimap. Its raw decode can exceed 1 GB for one replay. It labels gameplay information unavailable without Riot's authoritative match details.
 
-The replay upload and archive prototype has been removed from the website. The workflow below operates on local files only; no replay endpoints or storage bindings are required by the site.
+The September replay upload prototype was removed from the website. Public uploads now go through the separate, sandboxed pipeline in [replay import](replay-import.md). The workflow below operates on local files only.
 
 ## Local parse proof (sample replay, 2026-09-21)
 
