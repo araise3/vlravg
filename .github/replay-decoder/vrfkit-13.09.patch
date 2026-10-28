@@ -1,0 +1,267 @@
+diff --git a/crates/vrf-decode/src/structs.rs b/crates/vrf-decode/src/structs.rs
+index 571709f..88c5376 100644
+--- a/crates/vrf-decode/src/structs.rs
++++ b/crates/vrf-decode/src/structs.rs
+@@ -21,10 +21,13 @@
+ //!
+ //! Members and payload types, with each build's handles as a reading aid ONLY:
+ //!
+-//! - RoundResults (`BombGameState`; 13.01: 93..=96, 13.02: 81..=84):
++//! - RoundResults (`BombGameState`; 13.01: 93..=96, 13.02: 81..=84,
++//!   13.09: 82..=93):
+ //!   `WinningTeam` (FName), `WinningTeamRole` and `RoundResult` (enum bytes of
+ //!   variable width), `EliminatedTeams` (skipped; declared at TWO consecutive
+-//!   handles in both builds, one name arm covering both).
++//!   handles in every build, one name arm covering both). 13.09 adds
++//!   `WinningTeamMode` (an enum byte with unknown names, kept raw) and the
++//!   nested `TeamResults` array (skipped).
+ //! - RoundInfos (`OwnerExclusivePlayerInfo`; 40..=44 in both builds):
+ //!   `RoundNumber`, `StartOfRoundMoney`, `StartOfRoundLoadoutValue`,
+ //!   `EndOfRoundMoney`, `EndOfRoundLoadoutValue` (all Int32).
+diff --git a/crates/vrf-decode/src/structs/round_results.rs b/crates/vrf-decode/src/structs/round_results.rs
+index 16d077b..24828d2 100644
+--- a/crates/vrf-decode/src/structs/round_results.rs
++++ b/crates/vrf-decode/src/structs/round_results.rs
+@@ -81,6 +81,8 @@ pub struct RoundResult {
+     pub winning_team_role: Option<AresTeamRole>,
+     /// How the round ended.
+     pub round_result: Option<AresRoundOutcome>,
++    /// Raw `WinningTeamMode` enum byte, declared from 13.09; its names are unknown.
++    pub winning_team_mode: Option<u8>,
+ }
+ 
+ /// Decode a `BombGameState.RoundResults` blob; see the module docs for
+@@ -102,10 +104,13 @@ pub fn decode_round_results(
+                 "WinningTeam" => row.winning_team = Some(read_fname::<StructBlobError>(sub, 1024)?),
+                 "WinningTeamRole" => row.winning_team_role = Some(AresTeamRole::read(sub, name)?),
+                 "RoundResult" => row.round_result = Some(AresRoundOutcome::read(sub, name)?),
+-                // Opaque nested array at two handles, skipped EXPLICITLY: the
++                "WinningTeamMode" => {
++                    row.winning_team_mode = Some(read_narrow_byte(sub, name, CONTEXT)?);
++                }
++                // Opaque nested arrays, skipped EXPLICITLY: the
+                 // consumption check would read a fall-through as a member that
+                 // left its window unread.
+-                "EliminatedTeams" => sub.skip_remaining(),
++                "EliminatedTeams" | "TeamResults" => sub.skip_remaining(),
+                 _ => return Ok(None),
+             }
+             // `read_fname` is self-delimiting, `read_narrow_byte` takes the
+diff --git a/crates/vrf-decode/src/structs/tests.rs b/crates/vrf-decode/src/structs/tests.rs
+index 74ae0f5..0af541f 100644
+--- a/crates/vrf-decode/src/structs/tests.rs
++++ b/crates/vrf-decode/src/structs/tests.rs
+@@ -43,6 +43,25 @@ fn bomb_game_state_1302() -> Vec<Option<&'static str>> {
+     d
+ }
+ 
++/// `BombGameState_C` on build 13.09: `WinningTeamMode` and the nested
++/// `TeamResults` (86..=89 its members) join the RoundResults members.
++fn bomb_game_state_1309() -> Vec<Option<&'static str>> {
++    let mut d = vec![None; 94];
++    d[81] = Some("RoundResults");
++    d[82] = Some("WinningTeamMode");
++    d[83] = Some("WinningTeam");
++    d[84] = Some("WinningTeamRole");
++    d[85] = Some("TeamResults");
++    d[86] = Some("TeamName");
++    d[87] = Some("TeamNumber");
++    d[88] = Some("TeamRole");
++    d[89] = Some("TeamOutcome");
++    d[91] = Some("RoundResult");
++    d[92] = Some("EliminatedTeams");
++    d[93] = Some("EliminatedTeams");
++    d
++}
++
+ /// `OwnerExclusivePlayerInfo`, identical on both builds measured.
+ fn owner_exclusive_player_info() -> Vec<Option<&'static str>> {
+     let mut d = vec![None; 45];
+@@ -98,11 +117,32 @@ fn round_results_rows_decode_to_the_pinned_values() {
+             winning_team: Some(team.to_owned()),
+             winning_team_role: Some(role),
+             round_result: Some(outcome),
++            winning_team_mode: None,
+         };
+         assert_eq!(results, [want], "{digits}");
+     }
+ }
+ 
++/// Round 0 of a recorded 13.09 RoundResults update: 761 bits, every member
++/// present, TeamResults holding Blue and Red.
++#[test]
++fn round_results_1309_reads_winning_team_mode_and_skips_team_results() {
++    let data = hex(
++        "0202a60641955600000020c456570600000000a06a20d646030201576905000000426c7565         0000000000b04001000000b206a235080081ab3002000000a9323200000000005820010000         005983d01a080000170174e104047821200100000000",
++    );
++    let mut reader = BitReader::with_bit_len(&data, 761).unwrap();
++    let results = decode_round_results(&mut reader, &bomb_game_state_1309()).unwrap();
++    let want = RoundResult {
++        round_number: 0,
++        winning_team: Some("Blue".to_owned()),
++        winning_team_role: Some(AresTeamRole::Defender),
++        round_result: Some(AresRoundOutcome::Elimination),
++        winning_team_mode: Some(1),
++    };
++    assert_eq!(results, [want]);
++    assert_eq!(reader.bits_remaining(), 0);
++}
++
+ /// Bytes under the other build's declaration, or under none, FAIL by the
+ /// first member's handle rather than return an empty vector: that is how a
+ /// whole build's missing match scores looked like a clean export. The decoder
+diff --git a/crates/vrf-transform/src/helpers.rs b/crates/vrf-transform/src/helpers.rs
+index 9b654b7..f539c2a 100644
+--- a/crates/vrf-transform/src/helpers.rs
++++ b/crates/vrf-transform/src/helpers.rs
+@@ -1,5 +1,5 @@
+ //! Primitives shared by every build's payload transform, identical from
+-//! release-11.06 through release-13.08: the PRNG, its seed mixing, the bit
++//! release-11.06 through release-13.09: the PRNG, its seed mixing, the bit
+ //! permutations the steps use and little-endian word IO.
+ 
+ /// Multiplier used by both PRNG seeds.
+diff --git a/crates/vrf-transform/src/lib.rs b/crates/vrf-transform/src/lib.rs
+index 5c360b5..07d2f48 100644
+--- a/crates/vrf-transform/src/lib.rs
++++ b/crates/vrf-transform/src/lib.rs
+@@ -5,7 +5,7 @@
+ //! each block's transform is independent of the others. The key comes from the stream:
+ //! `seed = (bit_count as u32) ^ actor_net_guid` ([`seed_for`]).
+ //!
+-//! The skeleton is shared from release-11.06 to release-13.08; a build is one
++//! The skeleton is shared from release-11.06 to release-13.09; a build is one
+ //! line of the `transforms!` registry at the end of this file.
+ //!
+ //! # Example
+@@ -52,7 +52,7 @@ pub trait SeededTransform {
+     /// Whether the offset is added (`true`) or subtracted (`false`).
+     const ADD_OFFSET: bool = false;
+     /// XORed into the final partial byte alongside the keystream byte. Equals
+-    /// `SEED_ADDEND as u8` in all 25 builds; a build that broke that would
++    /// `SEED_ADDEND as u8` in all 26 builds; a build that broke that would
+     /// fail its 1- and 7-bit vectors.
+     const TAIL_XOR: u8 = Self::SEED_ADDEND as u8;
+ 
+@@ -327,6 +327,7 @@ transforms! {
+     V1305 V13_05 "13.05" 0x48c2_6613  0x13: xor 8, sub 7, rotl 6, sub 5, xor 4, xor 3, rotl 2, rotl 1;
+     V1306 V13_06 "13.06" 0xe974_593c  0x3c: swap, xor 7, swap, rev, sbox, not, add 2, sbox;
+     V1308 V13_08 "13.08" 0x3c17_a9fa -0x06: add 8, rev, rotl 6, sbox, rotr 4, sbox, sbox, rev;
++    V1309 V13_09 "13.09" 0x7e8c_b50f  0x0f: add 8, add 7, sbox, sub 5, swap, sub 3, sbox, rev;
+ }
+ 
+ #[cfg(test)]
+diff --git a/crates/vrf-transform/tests/data/native_vectors.rs b/crates/vrf-transform/tests/data/native_vectors.rs
+index 278a6c9..e565de7 100644
+--- a/crates/vrf-transform/tests/data/native_vectors.rs
++++ b/crates/vrf-transform/tests/data/native_vectors.rs
+@@ -1379,4 +1379,85 @@ pub const NATIVE_VECTORS: &[(&str, usize, u32, &str, &str)] = &[
+     ("++Ares-Core+release-13.08", 501, 733364371, "3B89BC65F7319F5097828D89A9DAD4DA94B2E4C856184A9953D28AD68E1FF6E9B31910103C868AE29A5FB9A6BEF8D59631BEEB80B0A5551C272F23AB565AA9", "776AD698D6920DC314D113B88EC510D2FA90458FB2687431CED4C005D43E34EFC3F0772937F8B46B6C47431AD97E2C958EDF5521C9E8D81E6C706294B1BF09"),
+     ("++Ares-Core+release-13.08", 471, 373269261, "EA5BAB2AD011F554C22A2335B17C27A67A34D7ECD6EA3070A86A2BA4586B7762C7F79296D0B61C4453738EFFE52E3D4CA7702D922A171776F88BFE", "21591C0300E2A6D916302514F44B94F58CF76C16D2AED3D910820EA7F7A3DD71AEB544EBE9135535F8D0C7EB50D2E24813C118E7DCCCBD446FB06D"),
+     ("++Ares-Core+release-13.08", 341, 719044195, "8D828383440112224B51B112DE4B6A7205B2013FD66F7383F0EAD1B9E19EEDD4F0DDC2CF05A59EAA8477CC", "5279E978FA82F5A15816187FAE0DAFEC81C47E85DE752FFF3587479638D38FCDAB1EA8F4F3EFF1E2C0960F"),
++    // 13.09: executable SHA-256 0c46f331f9bb734fe07c84c6fdceda512d44c827874b6521e172b679f771f4a2
++    // Reader RVA 0x42fda70.
++    ("++Ares-Core+release-13.09", 0, 2, "BFDF6F9EA1F27BA00000C66EAFAF2E0000339C0DD34B0C45C48063038003562A43C0C949", ""),
++    ("++Ares-Core+release-13.09", 1, 3, "BFDF6F9EA1F27BA00000C66EAFAF2E0000339C0DD34B0C45C48063038003562A43C0C949", "01"),
++    ("++Ares-Core+release-13.09", 7, 5, "BFDF6F9EA1F27BA00000C66EAFAF2E0000339C0DD34B0C45C48063038003562A43C0C949", "35"),
++    ("++Ares-Core+release-13.09", 8, 10, "BFDF6F9EA1F27BA00000C66EAFAF2E0000339C0DD34B0C45C48063038003562A43C0C949", "08"),
++    ("++Ares-Core+release-13.09", 31, 29, "BFDF6F9EA1F27BA00000C66EAFAF2E0000339C0DD34B0C45C48063038003562A43C0C949", "C3699152"),
++    ("++Ares-Core+release-13.09", 32, 34, "BFDF6F9EA1F27BA00000C66EAFAF2E0000339C0DD34B0C45C48063038003562A43C0C949", "5C3A4865"),
++    ("++Ares-Core+release-13.09", 63, 61, "BFDF6F9EA1F27BA00000C66EAFAF2E0000339C0DD34B0C45C48063038003562A43C0C949", "5C3A9DBB7B2AC43C"),
++    ("++Ares-Core+release-13.09", 64, 66, "BFDF6F9EA1F27BA00000C66EAFAF2E0000339C0DD34B0C45C48063038003562A43C0C949", "747A81305478E8BC"),
++    ("++Ares-Core+release-13.09", 65, 67, "BFDF6F9EA1F27BA00000C66EAFAF2E0000339C0DD34B0C45C48063038003562A43C0C949", "747A8130547845BC01"),
++    ("++Ares-Core+release-13.09", 287, 285, "BFDF6F9EA1F27BA00000C66EAFAF2E0000339C0DD34B0C45C48063038003562A43C0C949", "746F81305432F1BC76855FC9C87E5A13DC8B51F8900F914E1EED0EC732B2DF6894989551"),
++    ("++Ares-Core+release-13.09", 288, 290, "BFDF6F9EA1F27BA00000C66EAFAF2E0000339C0DD34B0C45C48063038003562A43C0C949", "747A8130543250BC76125FC9C6B96D06DCEB51F8C24667D61E7A0EC7EB44A620BD896415"),
++    ("++Ares-Core+release-13.09", 8, 0, "03", "5D"),
++    ("++Ares-Core+release-13.09", 32, 0, "F0AAC5D1", "FB7FE998"),
++    ("++Ares-Core+release-13.09", 64, 0, "9FB677F0A1E725A9", "A86F98588FAD3A2B"),
++    ("++Ares-Core+release-13.09", 96, 0, "E8C8E4E9F37DE38B053C8DA1", "CC37C4C1E9F0FBC30D365C37"),
++    ("++Ares-Core+release-13.09", 255, 0, "6C5893B36F3C2C2590D9078FCC7C93916D5D37C973C45ABA3E5DA4D0AC2DA00E", "62BC58F9BDE17C5E0AFB6A5E7D0412BF1348E5DD1B6AD23CBE262D7058989D10"),
++    ("++Ares-Core+release-13.09", 512, 0, "9134E7D8458E3B6D4DC432478C40205E2D1144C31640B6A615076671F02E60C01630F089EBF48BEE3560455558D37EF094FE5C582F300671E4AC5E8A3740853E", "BB51B541BF6A27A866161089302338EE66B8678FD78EBAD1C9DF5588D689A1BE79EE53C447A4599C9EE33A1BDD105E17A56C420526C23FA26629D6195AB0C45C"),
++    ("++Ares-Core+release-13.09", 8, 1, "B8", "9E"),
++    ("++Ares-Core+release-13.09", 32, 1, "0F42ED0E", "BFE0F0A3"),
++    ("++Ares-Core+release-13.09", 64, 1, "42EA8343E3D5C134", "71C1BFE32DD2C900"),
++    ("++Ares-Core+release-13.09", 96, 1, "02070744DE1B17D7B51D3E09", "B39C24A92E22982EC50BE0E5"),
++    ("++Ares-Core+release-13.09", 255, 1, "F4312516C7E8CA9755729B5EFE8C59C8C48D65787BF3ABE42732B7C1AE4B1553", "F061F34AA679035880AAE9E2C382C791370BC385828E170500B64FA9A56A882B"),
++    ("++Ares-Core+release-13.09", 512, 1, "BC995413C5214F417420BA76D6374A38E55B908023900D9931076C7E6B1380D9E43E9C751CC3DDE27231E3733B5AC86E7B1B92F6DD3A64EEE42D3E72EE2B14F9", "9B5DF103070C901429243932A2F912FDD13B07D95211FB39609156873148B68134568E20DF96B714DD4150E9F01365092CAA53AE5F29C3FE7EC8B6FD9441A57E"),
++    ("++Ares-Core+release-13.09", 8, 2147483647, "FE", "17"),
++    ("++Ares-Core+release-13.09", 32, 2147483647, "F9BA22FF", "037B28BD"),
++    ("++Ares-Core+release-13.09", 64, 2147483647, "103AEB460F15EB09", "7D1A029A2C4E4B28"),
++    ("++Ares-Core+release-13.09", 96, 2147483647, "D64A05D1CF746AD99626E78E", "5B20562332C02019F2A56B00"),
++    ("++Ares-Core+release-13.09", 255, 2147483647, "B7A6B22A01AA9A8CB0FD7D64D1DCDBA7298685BA3388AF9A97948F69873D361E", "EC7A801C675C8FC6388BBECD8BDBDF8840B51C760144B4F9A63668B3FAEAE752"),
++    ("++Ares-Core+release-13.09", 512, 2147483647, "4078FF80BDD9004632D61BD150E8262CC74DBA74A1E96ECE2CAF2A8438E4719361F8AB6BE334F0818F10613D0BF957D8B2CB301ECFC739BCF90AC1056CDDC37C", "56BC9F5F12652369F0A2F995711A9514FB7B0D50C7A8934DC3CA5E428D076478BFC1E83AC5409252B6F827AFB0AE59B961A80CA052AF05BA20B50A341243F427"),
++    ("++Ares-Core+release-13.09", 8, 2147483648, "39", "9C"),
++    ("++Ares-Core+release-13.09", 32, 2147483648, "0E5C1CC9", "59A6D0A9"),
++    ("++Ares-Core+release-13.09", 64, 2147483648, "5DB85B97BD6362F0", "EF523AB197D04FCD"),
++    ("++Ares-Core+release-13.09", 96, 2147483648, "C0ACAD4A539C2D6A1BFD071B", "BAE623B7AC558DB714CAB80D"),
++    ("++Ares-Core+release-13.09", 255, 2147483648, "50AFA32072EB6C71DA995E23739F3C0644387A03887A754F7AE5706845429230", "9AD442E1766B26F4AD5B0562688ED8CCEAE70348EE3F368481B9527D795A3C24"),
++    ("++Ares-Core+release-13.09", 512, 2147483648, "6749BF609A9A138E07F4C3A106AF909CCA5428F4071A8959AA9AD1E8B6E0E093AD70387C01DAFC37398A95D47635A17DFD56ECCDCAF237389830945F9BF6670F", "1C1CBB6068996686762EBAD163AF27518B2FE26C88D5159A7BB25E7B99092F81C5932926CDDC6E6F5C12CC6F54419250741E392965DBAE9557721A99826FCF22"),
++    ("++Ares-Core+release-13.09", 8, 4294967295, "F2", "A4"),
++    ("++Ares-Core+release-13.09", 32, 4294967295, "7074B3A4", "20A12533"),
++    ("++Ares-Core+release-13.09", 64, 4294967295, "5BA5FCBF976DD087", "B507B43D3FE2CF26"),
++    ("++Ares-Core+release-13.09", 96, 4294967295, "09A11AE43A00874EDBFE7F60", "5FAC72B46F2EC38B448C3830"),
++    ("++Ares-Core+release-13.09", 255, 4294967295, "06A8179367D241053D14F01B382032CC258AA39B783AFDB5DD89C0FEFEBB873F", "4B02DFF115805EA989F30BC68AC1656D2C2583ED4CCE555F1681EEF8F940A402"),
++    ("++Ares-Core+release-13.09", 512, 4294967295, "C04EE27CDF6F95508680D8C0A86B98B2BB5A26BB48BC54B09B7549664E6C0B5F5E13B781CE9204008069A0261E71C64B42089505334A911868EC5DAFDBC68B4A", "BCD76B8D723C0A8E284DDBA4D56F32D70C68FA14CE61F14DE13A3EA15ED9670877805FF27B4D434342CEDCF51E5B015B32C1B86A72F7FD1DF57132C4C4B3F757"),
++    ("++Ares-Core+release-13.09", 8, 3735928559, "9B", "9B"),
++    ("++Ares-Core+release-13.09", 32, 3735928559, "DFE3E635", "7FC9BD76"),
++    ("++Ares-Core+release-13.09", 64, 3735928559, "6ED09EFA73D968EE", "566553FE48338388"),
++    ("++Ares-Core+release-13.09", 96, 3735928559, "8C60BAA65801CFB56E3E5E1C", "7FE2831698C28A6D5C0CCA45"),
++    ("++Ares-Core+release-13.09", 255, 3735928559, "4301AA83C82368BC1F820322CCCA790F9F0A949BD925F58C0FF711A1F15EA0FC", "F4E60CFE7D7783B44A701AC067B5AD0C587F80C25F04EA2A521E795DA7B5C25E"),
++    ("++Ares-Core+release-13.09", 512, 3735928559, "032ED5061E2A6A4D84FEC1A9E272CB581FF09ACB9759A41262105DACA3B9430AD750608002C7D016C0E1933781EA2F971A953EAB844C7B42CE53B38F43496430", "0E5F09238A16F46FD4F0BDD5D976B704E2EFCBA3ABAD51556E3F63DECF120383617A493DFA8F744E2D36F359CE56D610ABBAD2300BCE99EE6869A5AEEFB21BA6"),
++    ("++Ares-Core+release-13.09", 107, 2541190791, "98025314D9C6FEC156C240F4BFEC", "F5A7E30FF066550010A88EDD4C00"),
++    ("++Ares-Core+release-13.09", 297, 3880698340, "125865F1BD78CD0263C8B25944670AC24587177D3B6A3E61053CBC1BBB71BE738EED1CBD176F", "12CF22A2A345D5BC99D306638761586C2309FFD6DC1DE04B42616536D77DD1E15B0AD2A7B200"),
++    ("++Ares-Core+release-13.09", 369, 1971406028, "0CFA84A040FC427E42415D2AC7DD01B937925173D4D4560ECC4CD262256ABA52D068AD3C2D348CE88EB65AFEDF2747", "26901BD28527B87720536E7FA09B792725714EC793868C7A235892E5AD6FF438BF35F08099962C65E80F176D0CD400"),
++    ("++Ares-Core+release-13.09", 96, 2554866637, "A28D30280C53527D908420BB", "E69BCC92B48CE3D5CF2E0666"),
++    ("++Ares-Core+release-13.09", 261, 1360141923, "CFF4AFE6BDCC03D714B7EAFC6721926EDC60C39086449249FE26B84D4DA39268FA", "0BCF241E1B5B3B179B525077431B9B6811076877B8F6978E0427FE771E230D4112"),
++    ("++Ares-Core+release-13.09", 15, 57517079, "8704", "4B09"),
++    ("++Ares-Core+release-13.09", 197, 1206185612, "A0DCA01924416A95960DEA5165D34D61DE0DF7694A28FED3B4", "F12F8D231FD43DE19E44FF092BE3746133249E0F8993F20615"),
++    ("++Ares-Core+release-13.09", 64, 995596699, "68D6BC2A9F344133", "BFADB9F1334D6168"),
++    ("++Ares-Core+release-13.09", 196, 970195804, "ACC5B4F42C986E79B250FFE6B2B5D06A4017EAE99DBF958B93", "A465C050A18A3DC983DD233D3A90037ACF7CC48DF6650AC708"),
++    ("++Ares-Core+release-13.09", 448, 1796017318, "7066503DB71BA0120A2AD4515A4184B1B227C754E48F63395C0493C3564D79B792647BFEBEF52AE355FEE1196CACAA9535B8567E2D3926EE", "B392CB81E493345BF185455A3BC488B996F0A0EFC8B85B08096CB2C015226775C282C10E3105ED4CACB38DEC8E5819EFA0655395098737EF"),
++    ("++Ares-Core+release-13.09", 474, 3284329641, "D5391C3158F137367392063DCEF98EDBC793A389B30401CD6AFA191478A293E8545CA888DB8FE51D26280568DEBFC8DA5199F1A11DA342AD642BA1B7", "F706B029321275C5B680CDBBB1B50D16F2DDA27FBDCB46BB7AD5F05E83F9159A96714F087971B761CF54C5E94BC4A12D04222AD2BC3641CAFC068602"),
++    ("++Ares-Core+release-13.09", 170, 2802474976, "761106576D700CA4EBF8937C0991F5F8F3376363E005", "6D50A3F8EAF81CF66AED35C23C35696B9CF7F48C0D00"),
++    ("++Ares-Core+release-13.09", 106, 63158886, "EE48C4AF7C65658608A542BB9A6E", "E0F5D7E0BC91A7FDC6BD7C298A00"),
++    ("++Ares-Core+release-13.09", 438, 2895643637, "D5AD56DFAD196E21C65D3FBB91AF892B3F48DE7FC02C03938A45BD740D62F98A29A1D768837C69E38E0754F45BE0777C22122B2DC411E2", "1DED9B50E344AF8776C47E6C71EE6776F9E25E1EAD61D71CB136E4B6FAF5D46C0AFFC14DAAD62C897BFE0A2B85ABA08566A3152B82670B"),
++    ("++Ares-Core+release-13.09", 161, 811236578, "9985BF809BA631AB267EA17EC5A19662426895504F", "677885A6396F341F6F02B1CA914F19F74CEB289900"),
++    ("++Ares-Core+release-13.09", 198, 1391030767, "909C7205575A0AF8469FB467C3E45F5D783ACFDA334C9A82DD", "DD8C3563A2E2E2FFC3E0D03EAC176B3BAB5C731C061F7CD208"),
++    ("++Ares-Core+release-13.09", 77, 2175268921, "862E035F5F6A1B42A9CF", "23E0D2B368923B023407"),
++    ("++Ares-Core+release-13.09", 483, 2980410447, "E73B1C1637D6A73BF48DB971E1311548D729AC1DA78C85390059F85D0127142D644CA913EFB06EDC157391BFDB746B0B042B3E44953E7E7366ACF1DF2E", "84E941BE3DD6CEFCA68EA77D7C67CBC88015A0194A448B5D6420B7FDA584C9A9FA3A385083794B875BCDA128DD35D855D6F3651B0A35235774E27ACB02"),
++    ("++Ares-Core+release-13.09", 435, 3455891249, "B62E380F993E7CCFAAD69E6DED61786F623AE0D26712329B60711B4D4E37535C00F371B89A9BCABBC9989278086B3B10263E4879FEF912", "D6EF160ABAE83CF7FFACBC12A337A8A8CB5217C690710BE729D390E677B0B2361717184AEE934F0F28F99141AE3BECADE2F6EBB1C62A01"),
++    ("++Ares-Core+release-13.09", 14, 1432442171, "6660", "AF2D"),
++    ("++Ares-Core+release-13.09", 509, 3887971338, "0D60000D8C9DBB272A06B9622D623F5226598F934A2E12F8851D8DD40C9899A2C38ACF320CE5B58E01FFB2A8648E8E5639FEB39F3BD1DA2089B3BFB64B4E78A3", "788064187C8E708FB16B928617E7C48CC9F135CBD4BE22BFA4787A07AEB416C908DCBB83CA1395F0BBE0C7BB3D5F9C0A9D8E89C5D81179D43F4D5E5E0A403F1B"),
++    ("++Ares-Core+release-13.09", 153, 2770228704, "1118E8E7FC06314B3E30A550D8A2FB03B07AD149", "0526DCA6FE7F614A7A561ED34B764F9AB6036401"),
++    ("++Ares-Core+release-13.09", 224, 2615410383, "715376C2142F63A01EE523B25A36BDBB24A2172ACFD6F0FE14E64FB3", "597981EF22CBDAD2B0DA1852B3F37B38843D0F3A61E596C04EEE0F74"),
++    ("++Ares-Core+release-13.09", 463, 9191541, "66D3A4A5CF70F97A86C0E373E53815D4A487E452A60165415255A166C0FA1EAADAD309F166108C32F4C24D2A2AF8C635A5ADB4F5EF9AC20036CA", "6DEEEAB6B96CA5B3393D257DD3254CBD7FBEF1E0855BC75F0155ECCE4068ADDE91D0C68041BA732035AB5CF5028B92091C375F0658D98E2AEE6A"),
++    ("++Ares-Core+release-13.09", 247, 2930161450, "B630ABDCC9656CA34112A27BF5390803146DAD496ED6E266904D3D81753CD9", "E07F04E14C604E64A0D81E479B3BF87A842D448E15E12A179E0F62AA6F3F13"),
++    ("++Ares-Core+release-13.09", 61, 3507244380, "CC8CA0D35BE83858", "1275A52485122A0F"),
++    ("++Ares-Core+release-13.09", 131, 1565089176, "44D6B6E671466CC7904C0C5C4DCFF27936", "9FB761E156DB5EE51603C07468A0E67800"),
++    ("++Ares-Core+release-13.09", 7, 1191105186, "63", "4E"),
++    ("++Ares-Core+release-13.09", 147, 3186370345, "3FC892E38204981D0823E2F638268800391CB2", "F2004FA4E034C7F495CA5F4072B8DB415E0403"),
++    ("++Ares-Core+release-13.09", 501, 733364371, "3B89BC65F7319F5097828D89A9DAD4DA94B2E4C856184A9953D28AD68E1FF6E9B31910103C868AE29A5FB9A6BEF8D59631BEEB80B0A5551C272F23AB565AA9", "A66B6BAD95B03039C54DC525BB06E5B8B8AF0732A10CC7FE211BFB5734C3C262D7E78EE4C3DE0FE4351CCA715862403B3F85461F92A66F4C7F9D1103AF720B"),
++    ("++Ares-Core+release-13.09", 471, 373269261, "EA5BAB2AD011F554C22A2335B17C27A67A34D7ECD6EA3070A86A2BA4586B7762C7F79296D0B61C4453738EFFE52E3D4CA7702D922A171776F88BFE", "E76414C2DEA2A32A0A45676478D907732D776DA5F57E28672806B12BBECC4C418F20114610A50577C9F2AB75ADA0E80BA9BC3CA9E022DC96AB0E48"),
++    ("++Ares-Core+release-13.09", 341, 719044195, "8D828383440112224B51B112DE4B6A7205B2013FD66F7383F0EAD1B9E19EEDD4F0DDC2CF05A59EAA8477CC", "7F5170CBC6876F6CDC54D423602B2D11BC840065B06EFC252F8925EBE85175023F84EC2F34F33062FA6E11"),
+ ];
+diff --git a/crates/vrfkit/src/sink/blobs.rs b/crates/vrfkit/src/sink/blobs.rs
+index 07535d7..8a01947 100644
+--- a/crates/vrfkit/src/sink/blobs.rs
++++ b/crates/vrfkit/src/sink/blobs.rs
+@@ -706,6 +706,7 @@ impl ExportSink<'_> {
+                                 ("WinningTeam", None, rr.winning_team),
+                                 ("WinningTeamRole", None, role),
+                                 ("RoundResult", None, outcome),
++                                ("WinningTeamMode", rr.winning_team_mode.map(i64::from), None),
+                             ];
+                             (rr.round_number, members)
+                         })
+diff --git a/crates/vrfkit/src/sink/measured_routes.rs b/crates/vrfkit/src/sink/measured_routes.rs
+index a4c9b05..1f6b16c 100644
+--- a/crates/vrfkit/src/sink/measured_routes.rs
++++ b/crates/vrfkit/src/sink/measured_routes.rs
+@@ -237,6 +237,7 @@ mod tests {
+         ("++Ares-Core+release-13.05", ALL),
+         ("++Ares-Core+release-13.06", ALL),
+         ("++Ares-Core+release-13.08", &[]),
++        ("++Ares-Core+release-13.09", &[]),
+     ];
+ 
+     #[test]

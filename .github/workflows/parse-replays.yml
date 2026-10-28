@@ -10,6 +10,13 @@ on:
   # Daily sweep for a dispatch that failed or a claim that went stale.
   schedule:
     - cron: '23 4 * * *'
+  # A decoder change re-queues uploads the previous decoder could not read.
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/parse-replays.yml
+      - .github/replay-decoder/**
+      - scripts/replay-compact.py
 
 # One run at a time; a newer queued trigger replaces an older queued one.
 concurrency:
@@ -21,8 +28,10 @@ env:
   VRFKIT_REVISION: b9496df61c40fa304d4f539689c1dd627804946e
   # Optional patch on top of upstream (a repo path) and its SHA-256, recorded
   # as decoder.patch in every compact record. Empty: plain upstream.
-  VRFKIT_PATCH: ''
-  VRFKIT_PATCH_SHA256: ''
+  # 13.09: the code of upstream PR yakisoba0728/vrfkit#37 (e86a376), reviewed
+  # line by line; drop it once a release contains 13.09 (vrfkit-watch.yml).
+  VRFKIT_PATCH: .github/replay-decoder/vrfkit-13.09.patch
+  VRFKIT_PATCH_SHA256: 715ba5f85d1c7dc48a77c18b3c224c1c6178fde9b77ddebe96f651f8a78a03a9
   PYTHON_IMAGE: python:3.12-slim-bookworm@sha256:e697c81897302a4c4333bade000d98038fbb21eb064f8ee1fd42d02ebcd9d337
   RUST_IMAGE: rust:1.86-slim-bookworm@sha256:57d415bbd61ce11e2d5f73de068103c7bd9f3188dc132c97cef4a8f62989e944
   DUCKDB_VERSION: '1.4.3'
