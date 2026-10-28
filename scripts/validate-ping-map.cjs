@@ -43,6 +43,7 @@ function formatReport(result){
     groups.map(g=>`| ${g.name} | ${number(g.mae)} | ${number(g.rmse)} | ${number(g.bias)} | ${number(g.maxError)} |`).join('\n');
   const current=result.rows.filter(r=>r.method===result.methods[0].name);
   const worst=d3.greatest(current,r=>Math.abs(r.error));
+  const gain=result.methods[1].mae-result.methods[0].mae;
   const details=result.byCity.map(({name})=>`### ${name} held out\n\n`+
     '| Server | Screenshot | Predicted | Error |\n|---|---:|---:|---:|\n'+
     current.filter(r=>r.city===name).map(r=>`| ${r.server} | ${r.observed} | ${number(r.predicted)} | ${number(r.error)} |`).join('\n')).join('\n\n');
@@ -52,7 +53,7 @@ function formatReport(result){
     `There are ${result.comparisons} city/server predictions, but only ${result.origins} distinct geographic holdouts. The eight server readings from one connection are related, so these are not ${result.comparisons} independent geographic samples. Predictions are scored before display rounding. Errors are predicted minus observed; positive bias means overprediction. All metrics are milliseconds.\n\n`+
     `## Model comparison\n\n${table('Method',result.methods)}\n\n`+
     `Baselines use only training origins: distance plus median routing offset omits the local correction; nearest city copies the nearest origin's ping; median ping ignores geography. The old Berlin-only model is excluded because it cannot hold Berlin out without leaking its reading.\n\n`+
-    `The current interpolation's mean absolute error is ${number(result.methods[0].mae)} ms versus ${number(result.methods[1].mae)} ms for the distance baseline, an improvement of ${number(result.methods[1].mae-result.methods[0].mae)} ms on these holdouts. Its worst prediction is ${worst.city} → ${worst.server}: ${number(worst.predicted)} ms versus ${worst.observed} ms observed. This is evidence of a routing difference the remaining origins do not predict, not evidence that the held-out reading is wrong.\n\n`+
+    `The current interpolation's mean absolute error is ${number(result.methods[0].mae)} ms versus ${number(result.methods[1].mae)} ms for the distance baseline, ${gain>=0?'an improvement':'a deterioration'} of ${number(Math.abs(gain))} ms on these holdouts. Its worst prediction is ${worst.city} → ${worst.server}: ${number(worst.predicted)} ms versus ${worst.observed} ms observed. This is evidence of a routing difference the remaining origins do not predict, not evidence that the held-out reading is wrong.\n\n`+
     `## Current model by hidden city\n\n${table('City',result.byCity)}\n\n`+
     `## Current model by server\n\n${table('Server',result.byServer)}\n\n`+
     `## Individual predictions\n\n${details}\n\n`+
