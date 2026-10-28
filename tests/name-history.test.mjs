@@ -10,6 +10,7 @@ import { onRequestGet } from '../functions/api/[[path]].js';
 const puuid = '11111111-1111-4111-8111-111111111111';
 const account = (name='Alpha',tag='EU') => ({puuid,name,tag,region:'eu'});
 const day = n => `2026-09-${String(n).padStart(2,'0')}T05:17:00.000Z`;
+const ago = days => new Date(Date.parse(day(1))-days*86400000).toISOString();
 const migration = readFileSync(new URL('../migrations/0001_name_history.sql',import.meta.url),'utf8');
 const compactMigration = readFileSync(new URL('../migrations/0003_compact_name_evidence.sql',import.meta.url),'utf8');
 const storedMigration = readFileSync(new URL('../migrations/0004_stored_name_backfill.sql',import.meta.url),'utf8');
@@ -218,7 +219,8 @@ async function trackedDatabase(t){
 test('backfill merges historical ranges, preserves name reuse, and never changes the current identity',async t=>{
   const {db}=await trackedDatabase(t);
   const state=await backfillState(db,puuid);
-  const page=[historicalMatch('1','Alpha','EU',day(1)),historicalMatch('2','Beta','EU',day(2)),historicalMatch('3','Alpha','EU',day(3))];
+  // Renames at least 90 days apart, as Riot's cooldown requires.
+  const page=[historicalMatch('1','Alpha','EU',ago(400)),historicalMatch('2','Beta','EU',ago(300)),historicalMatch('3','Alpha','EU',ago(200))];
   await saveBackfillPage(db,puuid,state,page);
   let rows=await readNameHistory(db,puuid);
   assert.deepEqual(rows.map(r=>r.name),['Current','Alpha','Beta','Alpha']);
@@ -232,8 +234,8 @@ test('backfill merges historical ranges, preserves name reuse, and never changes
 test('legacy rows and compact evidence form one historical timeline',async t=>{
   const {db}=await trackedDatabase(t);
   await db.prepare(`INSERT INTO player_name_matches(puuid,match_id,name,tag,played_at)
-    VALUES(?1,?2,?3,?4,?5)`).bind(puuid,'legacy','Beta','EU',day(2)).run();
-  await saveBackfillPage(db,puuid,await backfillState(db,puuid),[historicalMatch('compact','Alpha','EU',day(1))]);
+    VALUES(?1,?2,?3,?4,?5)`).bind(puuid,'legacy','Beta','EU',ago(150)).run();
+  await saveBackfillPage(db,puuid,await backfillState(db,puuid),[historicalMatch('compact','Alpha','EU',ago(300))]);
   assert.deepEqual((await readNameHistory(db,puuid)).map(row=>row.name),['Current','Beta','Alpha']);
 });
 
@@ -241,6 +243,84 @@ test('matching historical names extend the current range without assuming a 90-d
   const live=[{name:'A',tag:'EU',first_seen:day(4),last_seen:day(5),ended_at:null}];
   const rows=mergeNameTimeline(live,[{name:'A',tag:'EU',played_at:day(1)},{name:'A',tag:'EU',played_at:day(3)}]);
   assert.equal(rows.length,1);assert.equal(rows[0].first_seen,day(1));assert.equal(rows[0].last_seen,day(5));assert.equal(rows[0].source,'Matches + checks');
+});
+
+// PRC Squirrel#dead (00268c23-…): HenrikDev returns the current ID on match
+// 66c92aec-1ed2-4448-b8a0-fcd58f389847 from 2026-03-20, between Eggster and
+// F4Q Bunny. Period endpoints are the live values read on 2026-10-28.
+const squirrelEvidence=[
+  {name:'catatwo',tag:'third',played_at:'2023-08-02T23:22:05.403Z'},{name:'catatwo',tag:'third',played_at:'2024-06-16T21:59:44.831Z'},
+  {name:'SK catatwo',tag:'third',played_at:'2024-11-29T01:01:28.825Z'},{name:'SK catatwo',tag:'third',played_at:'2025-04-01T00:03:21.215Z'},
+  {name:'Eggster',tag:'greg',played_at:'2025-08-07T01:31:16.100Z'},{name:'Eggster',tag:'greg',played_at:'2026-03-19T06:43:07.860Z'},
+  {name:'PRC Squirrel',tag:'dead',played_at:'2026-03-20T20:55:35.638Z'},{name:'PRC Squirrel',tag:'dead',played_at:'2026-03-20T21:39:45.865Z'},
+  {name:'F4Q Bunny',tag:'hop',played_at:'2026-04-19T18:58:31.987Z'},{name:'F4Q Bunny',tag:'hop',played_at:'2026-04-26T20:17:24.135Z'},
+  {name:'PRC Squirrel',tag:'dead',played_at:'2026-05-02T05:16:49.765Z'},{name:'PRC Squirrel',tag:'dead',played_at:'2026-06-01T00:00:00.000Z'},
+];
+const squirrelCheck={name:'PRC Squirrel',tag:'dead',first_seen:'2026-06-10T00:00:00.000Z',last_seen:'2026-10-28T16:35:56.913Z',ended_at:null};
+
+test('a later ID leaked onto an older match is hidden by the 90-day rename cooldown',()=>{
+  const rows=mergeNameTimeline([squirrelCheck],compactMatchEvidence(squirrelEvidence));
+  const ids=rows.map(r=>r.name+'#'+r.tag);
+  // Mar 20 -> Apr 19 is 30 days: the one-day Squirrel blip cannot be a rename.
+  assert.equal(rows.some(r=>r.first_seen==='2026-03-20T20:55:35.638Z'),false);
+  // Eggster (last Mar 19) -> Bunny -> Squirrel (first May 2) is also under 90
+  // days, but Bunny is never used later, so nothing marks it as the leak; it
+  // stays as observed (v4 match details still report F4Q Bunny#hop).
+  assert.deepEqual(ids,['PRC Squirrel#dead','F4Q Bunny#hop','Eggster#greg','SK catatwo#third','catatwo#third']);
+  assert.equal(rows[0].first_seen,'2026-05-02T05:16:49.765Z');assert.equal(rows[0].ended_at,null);
+  assert.equal(rows[2].last_seen,'2026-03-19T06:43:07.860Z');assert.equal(rows[2].ended_at,'2026-04-19T18:58:31.987Z');
+});
+
+test('the rename cooldown keeps spaced name reuse and never hides live checks',()=>{
+  const reuse=mergeNameTimeline([{name:'A',tag:'EU',first_seen:day(1),last_seen:day(1),ended_at:null}],[
+    {name:'A',tag:'EU',played_at:'2025-01-01T00:00:00.000Z'},{name:'B',tag:'EU',played_at:'2025-04-15T00:00:00.000Z'},
+    {name:'A',tag:'EU',played_at:'2025-08-01T00:00:00.000Z'},
+  ]);
+  assert.deepEqual(reuse.map(r=>r.name+' '+r.source),['A Matches + checks','B Matches','A Matches']);
+  // A short conflict whose ID never recurs is kept: the data cannot say which side is wrong.
+  const unresolved=mergeNameTimeline([{name:'C',tag:'EU',first_seen:day(1),last_seen:day(1),ended_at:null}],[
+    {name:'A',tag:'EU',played_at:'2026-05-01T00:00:00.000Z'},{name:'B',tag:'EU',played_at:'2026-05-10T00:00:00.000Z'},
+    {name:'C',tag:'EU',played_at:'2026-06-01T00:00:00.000Z'},
+  ]);
+  assert.deepEqual(unresolved.map(r=>r.name),['C','B','A']);
+  // Without the cooldown violation, a reused later ID is ordinary name reuse.
+  const spacedLeak=mergeNameTimeline([{name:'C',tag:'EU',first_seen:day(1),last_seen:day(1),ended_at:null}],[
+    {name:'A',tag:'EU',played_at:'2025-01-01T00:00:00.000Z'},{name:'C',tag:'EU',played_at:'2025-02-01T00:00:00.000Z'},
+    {name:'B',tag:'EU',played_at:'2025-06-01T00:00:00.000Z'},
+  ]);
+  assert.deepEqual(spacedLeak.map(r=>r.name),['C','B','C','A']);
+  // Production D1: frequent renamers hold a recurring ID for weeks inside a
+  // 90-day window (e.g. NXM Movv -> Movv for a month -> aGaa). Not a leak.
+  const monthLong=mergeNameTimeline([{name:'Movv',tag:'rina',first_seen:day(1),last_seen:day(1),ended_at:null}],[
+    {name:'NXM Movv',tag:'rina',played_at:'2025-09-17T00:00:00.000Z'},{name:'NXM Movv',tag:'rina',played_at:'2025-10-26T00:00:00.000Z'},
+    {name:'Movv',tag:'rina',played_at:'2025-10-26T12:00:00.000Z'},{name:'Movv',tag:'rina',played_at:'2025-11-29T00:00:00.000Z'},
+    {name:'aGaa',tag:'rina',played_at:'2025-11-30T00:00:00.000Z'},{name:'aGaa',tag:'rina',played_at:'2025-12-14T00:00:00.000Z'},
+  ]);
+  assert.deepEqual(monthLong.map(r=>r.name),['Movv','aGaa','Movv','NXM Movv']);
+  // Before the 2023-11-20 Riot ID transition VALORANT allowed a change every
+  // 30 days, so a one-day recurring ID in a 49-day window stays.
+  const legacy=mergeNameTimeline([{name:'ImmorTill',tag:'982',first_seen:day(1),last_seen:day(1),ended_at:null}],[
+    {name:'LFT Qwaiz',tag:'6969',played_at:'2022-07-28T00:00:00.000Z'},{name:'ImmorTill',tag:'982',played_at:'2022-08-21T00:00:00.000Z'},
+    {name:'PA Qwaiz',tag:'982',played_at:'2022-09-15T00:00:00.000Z'},
+  ]);
+  assert.deepEqual(legacy.map(r=>r.name),['ImmorTill','PA Qwaiz','ImmorTill','LFT Qwaiz']);
+  const checks=mergeNameTimeline([
+    {name:'A',tag:'EU',first_seen:day(1),last_seen:day(1),ended_at:day(2)},
+    {name:'B',tag:'EU',first_seen:day(2),last_seen:day(2),ended_at:day(3)},
+    {name:'C',tag:'EU',first_seen:day(3),last_seen:day(3),ended_at:null},
+  ],[]);
+  assert.deepEqual(checks.map(r=>r.name),['C','B','A']);
+});
+
+test('the rename cooldown is applied on read and leaves stored evidence intact',async t=>{
+  const {db}=database(t);
+  await observeName(db,account('PRC Squirrel','dead'),squirrelCheck.first_seen);
+  await db.prepare(`INSERT INTO player_name_backfill(puuid,region,platform,next_start,complete,updated_at,evidence)
+    VALUES(?1,'na','pc',155,1,?2,?3)`).bind(puuid,day(6),JSON.stringify(squirrelEvidence)).run();
+  const rows=await readNameHistory(db,puuid);
+  assert.deepEqual(rows.map(r=>r.name),['PRC Squirrel','F4Q Bunny','Eggster','SK catatwo','catatwo']);
+  const saved=JSON.parse((await db.prepare('SELECT evidence FROM player_name_backfill WHERE puuid=?1').bind(puuid).first()).evidence);
+  assert.deepEqual(saved,squirrelEvidence);
 });
 
 test('backfill retries deduplicate evidence and concurrent old pages cannot advance or rewind progress',async t=>{
@@ -274,12 +354,12 @@ test('stored pages add named identities and queue older blank records for match 
   const {db}=await trackedDatabase(t);
   let state=await backfillState(db,puuid);
   await saveBackfillPage(db,puuid,state,[]);state=await backfillState(db,puuid);
-  const page=[storedMatch('blank',null,null,day(1)),storedMatch('named','Cereal Killer','007',day(2))];
+  const page=[storedMatch('blank',null,null,ago(300)),storedMatch('named','Cereal Killer','007',ago(150))];
   assert.deepEqual(storedNameEvidence(page,puuid).map(row=>row.name),['Cereal Killer']);
   state=await saveStoredBackfillPage(db,puuid,state,{data:page,results:{after:0}});
   assert.equal(state.complete,false);assert.equal(state.phase,'stored-detail');assert.equal(state.stored_pending_count,1);
   state=await backfillState(db,puuid,true);
-  state=await saveStoredMatchDetail(db,puuid,state,historicalMatch('blank','Earlier','EU',day(1)));
+  state=await saveStoredMatchDetail(db,puuid,state,historicalMatch('blank','Earlier','EU',ago(300)));
   assert.equal(state.complete,true);assert.equal(state.stored_scanned,2);
   assert.deepEqual((await readNameHistory(db,puuid)).map(row=>row.name),['Current','Cereal Killer','Earlier']);
 });
