@@ -13,6 +13,7 @@ Cloudflare for ordinary visitors.
 
 `Collect act RR corpus` is the only remaining workflow and requires this secret.
 Missing workflow secrets fail explicitly; jobs do not fall back to the public key.
+The only use of the public key is borrowing idle slots (below).
 
 Jobs authenticate to the existing proxy over HTTPS using `X-Workflow-Key`. The
 proxy verifies that credential before reading stored data or contacting HenrikDev,
@@ -41,8 +42,38 @@ real Henrik call, with at least 2.1 seconds between admissions (at most 29 per
 rolling minute). Known remaining quota is reserved for in-flight calls, and
 headers can stretch spacing or pause the gate until reset. Late responses cannot
 restore capacity already reserved by newer calls; a real 429 pauses upstream
-callers using that key even when its response arrives late. Public and workflow
-cooldowns never consume or pause each other's capacity.
+callers using that key even when its response arrives late. A workflow 429
+never pauses the public pool.
+
+## Borrowing idle site-key slots
+
+The site key (`HENRIK_KEY`, 60 calls/minute) is idle most of the time. Collector
+calls may use its spare capacity, never the capacity visitors need:
+
+1. A collector call first tries its own pool without waiting.
+2. If no workflow slot is free, it tries to borrow a public slot through the same
+   atomic `rate_quota` admission visitors use. It does not wait for one.
+   Borrowing is allowed only while the public window is fresh (no known quota
+   yet, or the known window has reset) or still has at least
+   `PUBLIC_BORROW_RESERVE` = 30 calls left. With a 60/minute key, visitors keep
+   at least 29 calls of every window.
+3. Otherwise it waits on its own pool exactly as before.
+
+A borrowed call is sent with `HENRIK_KEY`, and its quota headers update
+`rate_quota`, so visitors' pacing sees it. It takes a slot on the public schedule
+(`next_start_at`), so visitors queue behind it rather than beside it, and the
+key's own spacing never tightens. It never touches `workflow_rate_quota` or the
+workflow quota audit. Gate storage failures still return 503 and never borrow.
+
+The collector keeps up to three calls in flight (`inFlight: 3`) so that one can
+wait on its own pool while another uses a borrowed slot. Requests are still
+admitted in FIFO order, and a 429 still pauses every queued call. Before this
+change, calls were strictly serial at about 4.2 s per account capture, below
+even the workflow pool's 2.1 s spacing.
+
+Each workflow response carries `X-Workflow-Upstream-Pool: workflow|public`, a
+pool name only. The run report counts both under `upstreamPools`, and the job
+summary prints them.
 
 The collector uses a FIFO request queue and shares proxy-requested cooldowns
 across its workers. The proxy remains the quota authority. Other script callers

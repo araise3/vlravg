@@ -160,7 +160,9 @@ export async function main(env=process.env){
   console.log(`Polling ${players.length}/${tracked.length} tracked accounts due by activity; scouting ${candidates.length} recent roster candidates.`);
   const runId=env.GITHUB_RUN_ID?`${env.GITHUB_RUN_ID}:${env.GITHUB_RUN_ATTEMPT||1}:${randomUUID()}`:randomUUID();
   const quotaBefore=await readQuotaAudit(env,runId);
-  const fetchImpl=createRequestScheduler({workflowKey:env.HENRIK_WORKFLOW_KEY,origin,runId,serialize:true,deadline});
+  // Three calls in flight: the proxy admits each to the workflow pool or, while
+  // the site is quiet, to a borrowed public slot.
+  const fetchImpl=createRequestScheduler({workflowKey:env.HENRIK_WORKFLOW_KEY,origin,runId,serialize:true,inFlight:3,deadline});
   // Capture the irreplaceable rolling payout window before slower detail work.
   const refresh=await collectPlayers(players,{origin,fetchImpl,deadline});
   // Spend remaining quota on incomplete tracked capture before optional research work.
@@ -187,6 +189,7 @@ export async function main(env=process.env){
   }catch(error){report.enrichmentError=error.message;console.error(`Enrichment failed: ${error.message}`);}
   try{Object.assign(report,await corpusReport(env));}
   catch(error){report.coverageError=error.message;console.error(`Coverage report failed: ${error.message}`);}
+  report.upstreamPools={...fetchImpl.pools};
   report.quotaCheck=quotaCheckReport(quotaBefore,await readQuotaAudit(env,runId));
   if(['other_proxy_activity','possible_external_usage'].includes(report.quotaCheck.status))
     console.warn(`::warning::Workflow key may be shared: ${report.quotaCheck.otherProxyCalls} other proxy calls; ${report.quotaCheck.unexplainedRequests} unexplained quota units.`);
@@ -197,6 +200,7 @@ export async function main(env=process.env){
     (report.currentAct?`\nObserved act: ${report.currentAct.act||report.currentAct.id}; ${report.currentAct.payouts} payouts, including ${report.currentAct.placements} placements.\n`:'')+
     `\nAccounts unavailable after a region check: ${refresh.unavailable?.length||0}; saved RR retained, retry cooldown applied.\n`+
     (report.detailInventory?`\nDatabase inventory before enrichment: ${report.detailInventory.saved} completed feature rows skipped; ${report.detailInventory.missing} missing, including ${report.detailInventory.archived} archived matches ready without an upstream fetch, ${report.detailInventory.waitingRetry} waiting for retry, and ${report.detailInventory.missingRegion} without a known region.\n`:'')+
+    `\nUpstream calls: ${report.upstreamPools.workflow} on the workflow key, ${report.upstreamPools.public} on borrowed idle site-key slots.\n`+
     `\nQuota check: ${report.quotaCheck.status}; ${report.quotaCheck.otherProxyCalls??'unknown'} other proxy calls; ${report.quotaCheck.unexplainedRequests??'unknown'} unexplained quota units. This cannot identify another instance or prove exclusive use.\n`+
     (report.enrichmentSkipped?'\nOptional enrichment skipped because tracked capture is incomplete.\n':'')+
     (report.enrichmentError||report.coverageError?'\nEnrichment or coverage reporting failed; see the job log. Committed RR is retained.\n':''));

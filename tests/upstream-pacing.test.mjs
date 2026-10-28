@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {acquireWorkflowPermit,observeWorkflowQuota,WORKFLOW_SPACING_MS,
-  acquirePublicPermit,observePublicQuota,PUBLIC_UNKNOWN_SPACING_MS} from '../lib/upstream-pacing.mjs';
+  acquirePublicPermit,observePublicQuota,PUBLIC_UNKNOWN_SPACING_MS,
+  acquireBorrowedPublicPermit,PUBLIC_BORROW_RESERVE} from '../lib/upstream-pacing.mjs';
 
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function database(t){
@@ -138,4 +139,27 @@ test('public gate upgrades old schema preserving exhaustion and refuses failed s
   assert.equal(sql.prepare('SELECT next_start_at FROM rate_quota').get().next_start_at,0);
   await assert.rejects(acquirePublicPermit(null),/requires APP_DB/);
   await assert.rejects(acquirePublicPermit({prepare(){throw new Error('D1 unavailable');}}),/D1 unavailable/);
+});
+
+test('borrowed slots share the public schedule, keep the site reserve and never wait',async t=>{
+  const {db,sql}=database(t);let clock=100000;
+  // Fresh window: a borrowed call is admitted at the unknown-quota spacing.
+  const fresh=await acquireBorrowedPublicPermit(db,{now:()=>clock});
+  assert.ok(fresh.quota);
+  assert.equal(sql.prepare('SELECT next_start_at FROM rate_quota').get().next_start_at,clock+PUBLIC_UNKNOWN_SPACING_MS);
+  // The same slot is taken for visitors too: they queue behind it, not beside it.
+  assert.equal((await acquirePublicPermit(db,{now:()=>clock,maxWaitMs:0})).retryAfterMs,PUBLIC_UNKNOWN_SPACING_MS);
+  assert.equal((await acquireBorrowedPublicPermit(db,{now:()=>clock,maxWaitMs:60000})).retryAfterMs,PUBLIC_UNKNOWN_SPACING_MS,'never waits');
+  // Known budget: borrowing stops at the reserve; visitors may still use it.
+  clock=200000;
+  sql.prepare('UPDATE rate_quota SET remaining=?,reset_at=?,next_start_at=0').run(PUBLIC_BORROW_RESERVE,clock+60000);
+  assert.equal((await acquireBorrowedPublicPermit(db,{now:()=>clock})).quota.remaining,PUBLIC_BORROW_RESERVE-1);
+  clock=sql.prepare('SELECT next_start_at FROM rate_quota').get().next_start_at;
+  assert.ok((await acquireBorrowedPublicPermit(db,{now:()=>clock})).retryAfterMs>0);
+  assert.equal(sql.prepare('SELECT remaining FROM rate_quota').get().remaining,PUBLIC_BORROW_RESERVE-1);
+  assert.equal((await acquirePublicPermit(db,{now:()=>clock})).quota.remaining,PUBLIC_BORROW_RESERVE-2);
+  // A new window makes idle capacity borrowable again; the workflow pool is untouched.
+  clock+=60000;
+  assert.ok((await acquireBorrowedPublicPermit(db,{now:()=>clock})).quota);
+  assert.equal(sql.prepare('SELECT * FROM workflow_rate_quota').get(),undefined);
 });

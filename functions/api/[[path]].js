@@ -88,7 +88,7 @@ import { beginCoverageScan, readCoverageScan, recordCoveragePage, finishCoverage
 import { collectRR, mergeRRUpdate, saveFeatures, trackRRAccount } from "../../lib/rr-corpus.mjs";
 import { discoverMatchPlayers } from "../../lib/rr-activity.mjs";
 import { workflowAuthorized } from "../../lib/workflow-auth.mjs";
-import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, observePublicQuota } from "../../lib/upstream-pacing.mjs";
+import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, observePublicQuota, acquireBorrowedPublicPermit } from "../../lib/upstream-pacing.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
 const PREFIX = "/api";
@@ -879,12 +879,17 @@ export async function onRequestGet(context) {
     if(!await workflowAuthorized(request,env.HENRIK_WORKFLOW_KEY))return json({error:'Unauthorized workflow request'},401);
   }
   const henrikKey=workflow?env.HENRIK_WORKFLOW_KEY:env.HENRIK_KEY;
-  const response=await handleGet(context,{workflow,henrikKey});
-  if(workflow)response.headers.set('X-Workflow-Pacing','upstream-v1');
+  const admission={pool:null};
+  const response=await handleGet(context,{workflow,henrikKey,admission});
+  if(workflow){
+    response.headers.set('X-Workflow-Pacing','upstream-v1');
+    // Pool name only; the public key's quota headers are never forwarded.
+    if(admission.pool)response.headers.set('X-Workflow-Upstream-Pool',admission.pool);
+  }
   return response;
 }
 
-async function handleGet(context,{workflow,henrikKey}){
+async function handleGet(context,{workflow,henrikKey,admission={}}){
   const {request,env}=context;
   const url = new URL(request.url);
   const requestPath = url.pathname.slice(PREFIX.length);
@@ -1063,9 +1068,23 @@ async function handleGet(context,{workflow,henrikKey}){
 
   // Cache and D1-only responses have already returned. Reserve a distinct slot
   // atomically for the selected key immediately before a real upstream call.
-  let permit;
-  try{permit=await (workflow?acquireWorkflowPermit:acquirePublicPermit)(env.APP_DB);}
-  catch{return json({error:'Upstream quota storage unavailable'},503);}
+  // A collector call takes its own slot if one is free now. Otherwise it may
+  // borrow an idle public slot (lib/upstream-pacing.mjs PUBLIC_BORROW_RESERVE),
+  // and only then waits on its own pool. Storage failure never borrows.
+  let permit,borrowed=false;
+  try{
+    if(workflow){
+      permit=await acquireWorkflowPermit(env.APP_DB,{maxWaitMs:0});
+      if(permit.retryAfterMs&&env.HENRIK_KEY){
+        const loan=await acquireBorrowedPublicPermit(env.APP_DB);
+        if(!loan.retryAfterMs){permit=loan;borrowed=true;}
+      }
+      if(!borrowed&&permit.retryAfterMs)permit=await acquireWorkflowPermit(env.APP_DB);
+    }else permit=await acquirePublicPermit(env.APP_DB);
+  }catch{return json({error:'Upstream quota storage unavailable'},503);}
+  if(workflow&&!permit.retryAfterMs)admission.pool=borrowed?'public':'workflow';
+  const upstreamKey=borrowed?env.HENRIK_KEY:henrikKey;
+  const ownPool=workflow&&!borrowed;
   if(permit.retryAfterMs){
     if(route.nameHistory&&storedNameHistory.history.length)return savedNameHistoryResponse(storedNameHistory,'SAVED-REFRESH-DEFERRED',true);
     return json({error:'Rate limited',retryAfterMs:permit.retryAfterMs},429);
@@ -1076,7 +1095,7 @@ async function handleGet(context,{workflow,henrikKey}){
   let upstream;
   try {
     upstream = await fetch(upstreamUrl, {
-      headers: { Authorization: henrikKey, Accept: "application/json" },
+      headers: { Authorization: upstreamKey, Accept: "application/json" },
     });
   } catch (e) {
     if (route.nameHistory && storedNameHistory.history.length) {
@@ -1091,10 +1110,10 @@ async function handleGet(context,{workflow,henrikKey}){
   const retry=upstream.headers.get('retry-after');
   const retryAfterMs=retry==null?0:/^\d+$/.test(retry)?Number(retry)*1000:Math.max(0,Date.parse(retry)-Date.now())||0;
   let upstreamRetryMs=0;
-  try{upstreamRetryMs=await (workflow?observeWorkflowQuota:observePublicQuota)(env.APP_DB,parsed,
+  try{upstreamRetryMs=await (ownPool?observeWorkflowQuota:observePublicQuota)(env.APP_DB,parsed,
     {startedAt:permit.startedAt,status:upstream.status,retryAfterMs,
       expectedRemaining:permit.quota.remaining,expectedResetAt:permit.quota.resetAt,
-      runId:workflow?request.headers.get('X-Workflow-Run'):null});}
+      runId:ownPool?request.headers.get('X-Workflow-Run'):null});}
   catch{return json({error:'Upstream quota update failed'},503);}
 
   if (upstream.status === 429) {
