@@ -93,6 +93,12 @@ test('a parsing replay follows the parser run\'s real jobs', () => {
   const storing = ui.replayProgressSteps({ ...base, status: 'parsing', progress: { ...progress, decoded_at: '2026-10-29T10:02:00Z',
     export: { files: 14, files_done: 9, bytes: 24814693, bytes_done: 19000000 } } });
   assert.match(storing.at(-1).detail, /result validated .* · 9 of 14 export files · 18\.1 of 23\.7 MB$/);
+
+  // The snapshot stops refreshing once the row is parsed; its running submit job is stale.
+  const parsed = ui.replayProgressSteps({ ...base, status: 'parsed', parsed_at: '2026-10-29T10:02:30Z', progress: { ...progress, decoded_at: '2026-10-29T10:02:00Z' } });
+  assert.deepEqual(plain(parsed).slice(-2), ['store:done:Checked and stored', 'stored:done:Stored']);
+  assert.equal(parsed.some(step => step.state === 'active' || step.state === 'pending'), false, 'nothing keeps running after the row is parsed');
+  assert.equal(parsed.at(-2).detail, '', 'no duration is invented for the unfinished snapshot');
 });
 
 test('a failure names the failing step and the reason the pipeline reported', () => {

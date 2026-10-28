@@ -642,6 +642,9 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
 .replay-upload-btn{min-height:36px;padding:0 14px;border:1px solid #3a3a40;border-radius:6px;background:rgba(27,27,31,.9);color:var(--text);font:inherit;font-size:13px;cursor:pointer;}
 .replay-upload-btn:hover{border-color:var(--brand);}
 .replay-upload-btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
+.replay-steps-toggle{min-height:32px;padding:0 4px;border:0;background:none;color:#a1a1aa;font:inherit;font-size:12px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
+.replay-steps-toggle:hover{color:var(--text);}
+.replay-steps-toggle:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px;}
 .replay-steps{grid-column:1/-1;list-style:none;margin:2px 0 0;padding:10px 0 0;border-top:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:6px;}
 .replay-steps[hidden]{display:none;}
 .replay-step{display:grid;grid-template-columns:14px minmax(0,190px) minmax(0,1fr);align-items:baseline;gap:8px;font-size:12px;line-height:1.5;color:#a1a1aa;}
@@ -1893,7 +1896,7 @@ const REPLAY_ERRORS={
 const REPLAY_FAILED_STEP={upload_aborted:'upload',download_failed:'download',decoder_validate_failed:'decode',decoder_export_failed:'decode',
   compact_failed:'decode',timeout:'decode',oversize:'decode',output_rejected:'decode',parser_failed:'decode',compact_invalid:'store',
   export_missing:'store',players_mismatch:'store',size_mismatch:'store',parser_attempts_exhausted:'run'};
-const replayImport={config:null,configLoad:null,status:new Map(),rows:new Map(),busy:new Set(),live:new Map(),uploadFailed:new Set(),pollTimer:null,polls:0,ticker:null,turnstileLoad:null};
+const replayImport={config:null,configLoad:null,status:new Map(),rows:new Map(),busy:new Set(),live:new Map(),uploadFailed:new Set(),expanded:new Set(),pollTimer:null,polls:0,ticker:null,turnstileLoad:null};
 
 // One row per loaded match with a valid ID, newest first.
 function replayMatchRows(matches){
@@ -1990,8 +1993,12 @@ function replayProgressSteps(status){
   if(claimed){
     const runLink=p.run_url?{href:p.run_url,text:'View parser run'}:null;
     const jobs=new Map((p.jobs||[]).map(job=>[job.name,job]));
+    // The job snapshot is only refreshed while parsing, so once the row is
+    // finished an unfinished job there is stale: the pipeline got past it.
+    const finished=s!=='parsing';
     const jobStep=(key,name,labels)=>{
       const job=jobs.get(name);
+      if(finished&&job?.status!=='completed')return{key,label:labels.done,state:'done',detail:''};
       if(!job)return{key,label:labels.pending,state:'pending',detail:''};
       const took=job.started_at&&job.completed_at?replayDuration(Date.parse(job.completed_at)-Date.parse(job.started_at)):'';
       if(job.status==='completed'){
@@ -2070,14 +2077,19 @@ function replayRowElement(row){
   li.className='replay-row';
   li.dataset.matchId=row.matchId;
   li.innerHTML='<div class="replay-match"><div class="replay-match-head"><strong></strong><span class="replay-score"></span><span class="replay-date"></span></div><span class="replay-id"></span></div>'
-    +'<div class="replay-state"><span class="replay-status" role="status"></span><button class="replay-upload-btn" type="button" hidden>Upload .vrf</button><input type="file" accept=".vrf" hidden></div>'
+    +'<div class="replay-state"><span class="replay-status" role="status"></span><button class="replay-steps-toggle" type="button" aria-expanded="false" hidden>Details</button><button class="replay-upload-btn" type="button" hidden>Upload .vrf</button><input type="file" accept=".vrf" hidden></div>'
     +'<p class="replay-detail"></p><ol class="replay-steps" aria-label="Replay processing steps"></ol><div class="replay-turnstile"></div>';
   li.querySelector('strong').textContent=row.map;
   const score=li.querySelector('.replay-score');
   score.textContent=row.score;score.classList.add(row.result);
   li.querySelector('.replay-date').textContent=row.date;
   li.querySelector('.replay-id').textContent=row.matchId;
-  const button=li.querySelector('button'),input=li.querySelector('input');
+  const button=li.querySelector('.replay-upload-btn'),input=li.querySelector('input');
+  li.querySelector('.replay-steps-toggle').addEventListener('click',()=>{
+    const id=row.matchId;
+    if(!replayImport.expanded.delete(id))replayImport.expanded.add(id);
+    paintReplayRow(li);
+  });
   button.setAttribute('aria-label',`Upload replay for ${row.map} ${row.date}`);
   button.addEventListener('click',()=>input.click());
   input.addEventListener('change',()=>{const file=input.files?.[0];input.value='';if(file)uploadReplay(row.matchId,file,li);});
@@ -2094,7 +2106,7 @@ function replayRowElement(row){
   return li;
 }
 
-function renderReplaySteps(ol,steps){
+function renderReplaySteps(ol,steps,folded=false){
   ol.replaceChildren(...steps.map(step=>{
     const item=document.createElement('li');
     item.className='replay-step '+step.state;
@@ -2117,7 +2129,7 @@ function renderReplaySteps(ol,steps){
     item.append(detail);
     return item;
   }));
-  ol.hidden=!steps.length;
+  ol.hidden=!steps.length||folded;
   replayTick();
 }
 
@@ -2133,13 +2145,15 @@ function replayTick(){
 
 function paintReplayRow(li){
   const id=li.dataset.matchId;
+  const toggle=li.querySelector('.replay-steps-toggle');
+  toggle.hidden=true;
   if(replayImport.busy.has(id)){renderReplaySteps(li.querySelector('.replay-steps'),replayImport.live.get(id)||[]);return;}
   const status=replayImport.status.get(id);
   const label=li.querySelector('.replay-status');
   // A failed upload keeps its own steps until the server has something newer.
   if(replayImport.uploadFailed.has(id)&&!['uploading','pending','parsing','parsed'].includes(status?.status)){
     label.textContent='Not uploaded';label.className='replay-status bad';
-    li.querySelector('button').hidden=!(replayImport.config?.enabled&&status?.can_upload);
+    li.querySelector('.replay-upload-btn').hidden=!(replayImport.config?.enabled&&status?.can_upload);
     renderReplaySteps(li.querySelector('.replay-steps'),replayImport.live.get(id)||[]);
     return;
   }
@@ -2147,8 +2161,15 @@ function paintReplayRow(li){
   label.textContent=status?view.text:'Checking…';
   label.className='replay-status'+(view.tone?' '+view.tone:'');
   li.querySelector('.replay-detail').textContent='';
-  li.querySelector('button').hidden=!(replayImport.config?.enabled&&status?.can_upload);
-  renderReplaySteps(li.querySelector('.replay-steps'),replayProgressSteps(status));
+  li.querySelector('.replay-upload-btn').hidden=!(replayImport.config?.enabled&&status?.can_upload);
+  // A parsed replay folds its steps away; failures stay open to show why.
+  const steps=replayProgressSteps(status);
+  const foldable=status?.status==='parsed'&&steps.length>0;
+  const folded=foldable&&!replayImport.expanded.has(id);
+  toggle.hidden=!foldable;
+  toggle.setAttribute('aria-expanded',String(!folded));
+  toggle.textContent=folded?'Details':'Hide details';
+  renderReplaySteps(li.querySelector('.replay-steps'),steps,folded);
 }
 
 async function renderReplayImport(){
@@ -2231,7 +2252,7 @@ function replayPutPart(url,token,blob,onSent){
 }
 
 async function uploadReplay(matchId,file,li){
-  const label=li.querySelector('.replay-status'),detail=li.querySelector('.replay-detail'),button=li.querySelector('button');
+  const label=li.querySelector('.replay-status'),detail=li.querySelector('.replay-detail'),button=li.querySelector('.replay-upload-btn');
   const config=replayImport.config;
   const reject=text=>{label.textContent='Not uploaded';label.className='replay-status bad';detail.textContent=text;};
   if(!config?.enabled)return;
