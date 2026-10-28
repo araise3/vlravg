@@ -21,15 +21,27 @@ Uploaded replays are **user-supplied data**. They are stored in `replay_*` table
 | `fetch` and `submit` scripts | Verified locally against the dev server, and by `tests/replay-parser-workflow.test.mjs` |
 | `parse` job (Docker sandbox) and the GitHub Actions workflow | **Not run.** There is no Docker on the development PC, and the workflow has never executed. The local runs replaced the container with the same commands, run natively on the user's own replays. The sandbox flags are checked statically by tests |
 | 13.08 replays | Decoded by vrfkit v0.3.0 (validate passes, 0 malformed packets, on `79397d00…` and `a27d4487…`) |
-| 13.09 replays | **Not decodable yet.** v0.3.0 rejects all three local 13.09 replays: `no payload transform is registered for replay branch '++Ares-Core+release-13.09'`. Uploads end as `failed` / `decoder_validate_failed`, verified end to end with `97d3b0af…` |
+| 13.09 replays | Patched decoder, **not verified here**. Plain v0.3.0 rejects all three local 13.09 replays (`no payload transform is registered for replay branch '++Ares-Core+release-13.09'`); such uploads end as `failed` / `decoder_validate_failed`, verified end to end with `97d3b0af…`. The workflow now applies the 13.09 code from upstream PR #37 (see [Decoder support](#decoder-support)). This session's sandbox refused to build that unmerged code on the development PC, so its first build and run are the workflow's |
+| Retry after a decoder change | Verified by `tests/replay-import.test.mjs` |
 
 ## Decoder support
 
-The workflow builds upstream [vrfkit](https://github.com/yakisoba0728/vrfkit) v0.3.0, `b9496df61c40fa304d4f539689c1dd627804946e` (2026-10-16, Apache-2.0). It registers payload transforms for 11.06–13.08. Its 13.08 registry line is identical to the one the `valorant-replay-los` research build carries. The compact output of `79397d00…` from v0.3.0 is byte-identical to that research build's output, apart from the `decoder` field.
+VALORANT changes the replay payload transform with every patch. Each of upstream's 26 registry lines has its own seed and operation list, so no decoder can read a build released after it. Each new build needs a new transform line. vrfkit derives those from the game client's reader function; this project does not do that work itself. What is automated instead:
 
-Upstream's own verification lists 13.08 as 1 of 2 replays clean. The failing one fails the checkpoint GUID cross-check on a case-only name difference, and no structured-array child routes are admitted for 13.08 yet. A clean `validate` is container and net-stream decoding, not semantic validation of every field.
+- **Retry.** A failure a newer decoder could fix (`decoder_validate_failed`, `decoder_export_failed`) keeps its raw file and records the decoder build (`decoder_id`). Every parser run names its decoder build when it claims jobs. The Function re-queues those uploads exactly once per new build, and never for other failures or when the raw file is gone. Pushing a decoder change runs the parser (`push` trigger on the workflow and `.github/replay-decoder/`), so pending uploads are retried at once. The page tells the uploader this.
+- **Watch.** `.github/workflows/vrfkit-watch.yml` checks daily whether upstream released a vrfkit newer than the pin. If so, it opens one issue naming the builds the release adds. Bumping the pin stays a reviewed change, because new upstream code is read before it runs.
 
-The workflow can apply an optional patch on top of upstream (`VRFKIT_PATCH`, checked against `VRFKIT_PATCH_SHA256` before `git apply`). Both are empty now. Every compact record carries `decoder {revision, patch}`, and the submit job refuses a record that names any other build. This is how a 13.09 transform could be added before upstream ships one, once its evidence exists.
+Current decoder: upstream [vrfkit](https://github.com/yakisoba0728/vrfkit) v0.3.0, `b9496df61c40fa304d4f539689c1dd627804946e` (2026-10-16, Apache-2.0, 11.06–13.08). Its 13.08 registry line is identical to the one the `valorant-replay-los` research build carries. On `79397d00…` its compact output is byte-identical to that build's, apart from the `decoder` field. Upstream's own verification lists 13.08 as 1 of 2 replays clean. The failing one fails the checkpoint GUID cross-check on a case-only name difference.
+
+On top of it, the workflow applies [`.github/replay-decoder/vrfkit-13.09.patch`](../.github/replay-decoder/vrfkit-13.09.patch) (SHA-256 `715ba5f8…`, checked before `git apply`). The patch is the complete `crates/` diff of upstream's open PR [yakisoba0728/vrfkit#37](https://github.com/yakisoba0728/vrfkit/pull/37) at `e86a376` (2026-10-27). Every code line was read before it was taken:
+
+- the 13.09 registry line `0x7e8c_b50f 0x0f: add 8, add 7, sbox, sub 5, swap, sub 3, sbox, rev`
+- the RoundResults decoder learning 13.09's new `WinningTeamMode` byte and skipping the nested `TeamResults` array
+- the matching export column, and test data
+
+It applies cleanly to v0.3.0. Upstream's PR reports 4 of 4 13.09 replays meeting every criterion (validation 1,883,501/1,883,501, checkpoint export with no transform, framing, field-stream, array, struct-blob or typed-overlay failure). Its 79 native vectors were captured by emulating the 13.09 client's reader: that is upstream's method, not one this project runs. None of this was reproduced here. Once a vrfkit release includes 13.09, the watcher opens an issue, and the patch should be dropped for the release pin.
+
+A clean `validate` is container and net-stream decoding, not semantic validation of every field. Records name their decoder in `decoder {revision, patch}`, and the submit job refuses a record from any other build.
 
 ## Flow
 
@@ -119,10 +131,11 @@ Cloudflare Pages:
 - optionally `GITHUB_DISPATCH_TOKEN`: a fine-grained token with only *Actions: read and write* on `araise3/vlravg`. Without it, the daily 04:23 UTC sweep is the only trigger
 - the existing `HENRIK_WORKFLOW_KEY`, which authenticates the parser routes
 
-Apply the migration first:
+Apply the migrations first, in order (0008 adds `decoder_id`; deploy code that writes it only after it):
 
 ```bash
 npx wrangler d1 execute vlravg-calib --remote --file=migrations/0007_replay_imports.sql
+npx wrangler d1 execute vlravg-calib --remote --file=migrations/0008_replay_decoder_id.sql
 ```
 
 Without the R2 binding or the Turnstile keys, `/api/replays/config` reports `enabled: false` and the page shows the matches without upload buttons.
@@ -135,6 +148,6 @@ Local development uses the `vlravg-replays` entry in `.claude/launch.json` (port
 
 - `tests/replay-import.test.mjs`: routes, gating, quotas, claims, cross-check, export file list and multipart storage, the storage cap, blob hash, and isolation from the trusted tables
 - `tests/replay-import-ui.test.mjs`: row building, browser header check, status labels, routing
-- `tests/replay-parser-workflow.test.mjs`: artifact separation, untrusted-output validation, static checks of the sandbox and workflow
+- `tests/replay-parser-workflow.test.mjs`: artifact separation, untrusted-output validation, static checks of the sandbox and workflow, the pinned 13.09 patch, the vrfkit watcher
 - `tests/replay_compact_test.py`: kill order, pawn joins, bucketing, rounding and delta encoding
 - `tests/replay_unpack_test.py`: traversal, absolute paths, links, unknown and duplicate names, missing compact
