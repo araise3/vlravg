@@ -198,10 +198,10 @@ test('party aggregation attaches your stats only to your same-team party teammat
   assert.equal(rows[0].myPerformanceSum,250);assert.equal(rows[0].myPerformanceCount,1);
 });
 
-test('duo table shows your stats from the shared matches under each teammate figure',()=>{
-  const start=html.indexOf('function renderTeammates('),end=html.indexOf('\n// Keep each table\'s chosen sort',start);
+test('duo table switches its K/D, ACS and PS columns between the teammate and you',()=>{
+  const start=html.indexOf('// Which side of each shared match'),end=html.indexOf('\n// Keep each table\'s chosen sort',start);
   assert.ok(start>0&&end>start);
-  const rows=[];let sortValues=null;
+  let rows=[],sortValues=null;
   const stub=()=>({title:'',textContent:''});
   const createElement=()=>({innerHTML:'',querySelector(sel){return sel==='tbody'?{appendChild:row=>rows.push(row.innerHTML)}:stub();}});
   const context={document:{getElementById:()=>({replaceChildren(){},appendChild(){}}),createElement},
@@ -210,12 +210,24 @@ test('duo table shows your stats from the shared matches under each teammate fig
       myKills:24,myDeaths:30,myAcsSum:540,myAcsCount:3,myPerformanceSum:750,myPerformanceCount:3}],
     playerRouteUrl:()=>'/player/x',tableLobbyValue:()=>'—',decidedWinRate:(w,d)=>d?w/d*100:null,rrSigned:v=>(v>0?'+':'')+v,
     highlightTableMaxima(){},initTableSorting:(_,values)=>{sortValues=values;}};
-  runInNewContext(winRateHelpers+'\n'+html.slice(start,end)+'\nrenderTeammates();',context);
+  runInNewContext(winRateHelpers+'\n'+html.slice(start,end)+'\nrenderTeammates();this.setView=setDuoStatsView;',context);
+  const cellsOf=()=>rows[0].split('<td').slice(1);
+  const sortedStats=()=>JSON.parse(JSON.stringify(sortValues[0].slice(3,6)));
+  // Default view: the teammate's figures, one value per cell, yours in the tooltip.
   assert.equal(rows.length,1);
-  const cells=rows[0].split('<td').slice(1);
-  assert.match(cells[2],/>1\.50<span class="duo-stat-you">.*You <span class="duo-you-negative">0\.80<\/span>/);
-  assert.match(cells[3],/>200<span class="duo-stat-you">.*You <span class="">180<\/span>/);
-  assert.match(cells[4],/>—<span class="duo-stat-you">.*You <span class="">250<\/span>/);
-  // Sorting and highlights keep using the teammate's figures.
-  assert.deepEqual(JSON.parse(JSON.stringify(sortValues[0].slice(3,6))),[1.5,200,null]);
+  let cells=cellsOf();
+  assert.match(cells[2],/class="rank-positive" title="Teammate: 1\.50 \(30 kills \/ 20 deaths\) · You: 0\.80 \(24 kills \/ 30 deaths\)">1\.50<\/td>/);
+  assert.match(cells[3],/title="Teammate: 200 · You: 180">200<\/td>/);
+  assert.match(cells[4],/title="Teammate: — · You: 250 · [^"]*">—<\/td>/);
+  assert.doesNotMatch(rows[0],/duo-stat-you/);
+  assert.deepEqual(sortedStats(),[1.5,200,null]);
+  // You view: your figures from the same matches drive the cells, sorting and highlights.
+  rows=[];context.setView('you');
+  cells=cellsOf();
+  assert.match(cells[2],/class="rank-negative" [^>]*>0\.80<\/td>/);
+  assert.match(cells[3],/>180<\/td>/);
+  assert.match(cells[4],/>250<\/td>/);
+  // Win rate and Total RR are shared results and do not change.
+  assert.match(cells[6],/>\+12<\/td>/);
+  assert.deepEqual(sortedStats(),[0.8,180,250]);
 });

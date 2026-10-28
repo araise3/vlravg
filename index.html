@@ -657,9 +657,7 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
 .rank-table{width:100%;min-width:620px;border-collapse:separate;border-spacing:0;text-align:right;font-family:var(--font-display);font-variant-numeric:tabular-nums;}
 .rank-table.duos-table{min-width:680px;}
 #teammate-list .duos-table{min-width:800px;}
-#teammate-list .duo-stat-you{display:block;margin-top:2px;font-size:11px;font-weight:500;color:#a1a1aa;}
-#teammate-list .duo-stat-you .duo-you-positive{color:#72e6a0;}
-#teammate-list .duo-stat-you .duo-you-negative{color:#ff9999;}
+.party-size-filter.duo-stats-view{display:flex;padding:12px 16px;border-bottom:1px solid #29292d;}
 #teammate-list .duos-table th:first-child{width:auto;}
 #teammate-list .duos-table th:not(:first-child){width:1%;}
 #teammate-list .duo-player-name{max-width:none;vertical-align:middle;}
@@ -958,6 +956,13 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
     </section>
     <div id="duos-card-host">
         <div class="s-card teammates-section" id="teammates-section" style="display:none">
+          <div class="duo-stats-view party-size-filter" role="radiogroup" aria-labelledby="duo-stats-view-label">
+            <span id="duo-stats-view-label">K/D, ACS and PS</span>
+            <div class="party-size-options">
+              <label><input type="radio" name="duo-stats-view" value="teammate" checked onchange="setDuoStatsView(this.value)"><span>Teammate</span></label>
+              <label><input type="radio" name="duo-stats-view" value="you" onchange="setDuoStatsView(this.value)"><span>You</span></label>
+            </div>
+          </div>
           <div class="table-scroll" id="teammate-list" role="region" aria-label="Teammate comparison table" tabindex="0"></div>
         </div>
     </div>
@@ -4944,14 +4949,22 @@ function statChartBar(svg,attrs,detail){
   const bar=statChartNode('rect',{...attrs,tabindex:'0',role:'img','aria-label':detail});
   bar.appendChild(statChartNode('title',{},detail));svg.appendChild(bar);
 }
+// Which side of each shared match the K/D, ACS and PS columns show.
+let duoStatsView='teammate';
+function setDuoStatsView(value){
+  duoStatsView=value==='you'?'you':'teammate';
+  renderTeammates();
+}
 function renderTeammates(){
   const list=document.getElementById('teammate-list');
   list.replaceChildren();
   if(!allTeammates.length)return;
+  const you=duoStatsView==='you';
+  const whose=you?'Your':'Teammate';
   const table=document.createElement('table');
   table.className='rank-table duos-table';
-  table.innerHTML=`<caption class="rank-sr-only">Party teammates, including their K/D, average ACS and Avg PS with yours in the same matches beneath, and your total recorded RR change together</caption>
-    <thead><tr><th scope="col">Teammate</th><th scope="col">Matches</th><th scope="col">Avg Lobby</th><th scope="col" title="Teammate K/D; yours in the same matches beneath">K/D</th><th scope="col" title="Teammate average ACS; yours in the same matches beneath">ACS</th><th scope="col" title="Avg PS across matches with available data; yours in the same matches beneath">PS</th><th scope="col">Win rate</th><th scope="col" title="Your net RR change in matches with this teammate">Total RR</th></tr></thead><tbody></tbody>`;
+  table.innerHTML=`<caption class="rank-sr-only">Party teammates, with ${you?'your':'their'} K/D, average ACS and Avg PS in the matches you shared, and your total recorded RR change together</caption>
+    <thead><tr><th scope="col">Teammate</th><th scope="col">Matches</th><th scope="col">Avg Lobby</th><th scope="col" title="${whose} K/D in matches with this teammate">K/D</th><th scope="col" title="${whose} average ACS in matches with this teammate">ACS</th><th scope="col" title="${whose} Avg PS across matches with this teammate that have data">PS</th><th scope="col">Win rate</th><th scope="col" title="Your net RR change in matches with this teammate">Total RR</th></tr></thead><tbody></tbody>`;
   const tbody=table.querySelector('tbody');
   const teammateRows=allTeammates.map(t=>({
     ...t,
@@ -4964,17 +4977,18 @@ function renderTeammates(){
     lobby:t.rankCount?t.rankSum/t.rankCount:null,
     wr:decidedWinRate(t.wins,t.decided),
   }));
-  // Your own figure from the same shared matches, under the teammate's.
-  const youLine=(value,tone='')=>`<span class="duo-stat-you"><span class="rank-sr-only">, </span>You <span class="${tone}">${value}</span></span>`;
-  const kdTone=kd=>kd===1?'':kd>1?'duo-you-positive':'duo-you-negative';
+  // The other side's figure stays in each tooltip for a quick comparison.
+  const shown=t=>you?{kd:t.myKd,acs:t.myAcs,ps:t.myPerformanceScore}:{kd:t.kd,acs:t.acs,ps:t.performanceScore};
+  const roundOrDash=value=>value==null?'—':Math.round(value);
   teammateRows.forEach(t=>{
+    const s=shown(t);
     const row=document.createElement('tr');
     row.innerHTML=`<th scope="row"><a class="duo-player-name" href="${playerRouteUrl(t.name,t.tag)}"><span class="duo-name"></span><span class="duo-tag"></span></a></th>
       <td>${t.games}</td>
       <td>${tableLobbyValue(t.rankSum,t.rankCount)}</td>
-      <td class="${t.kd===1?'':t.kd>1?'rank-positive':'rank-negative'}" title="Teammate: ${t.kills} kills / ${t.deaths} deaths · You: ${t.myKills} kills / ${t.myDeaths} deaths">${t.kd.toFixed(2)}${youLine(t.myKd.toFixed(2),kdTone(t.myKd))}</td>
-      <td>${t.acs==null?'—':Math.round(t.acs)}${youLine(t.myAcs==null?'—':Math.round(t.myAcs))}</td>
-      <td title="${t.performanceCount} of ${t.games} shared matches have teammate Performance Score data · ${t.myPerformanceCount} have yours">${t.performanceScore==null?'—':Math.round(t.performanceScore)}${youLine(t.myPerformanceScore==null?'—':Math.round(t.myPerformanceScore))}</td>
+      <td class="${s.kd===1?'':s.kd>1?'rank-positive':'rank-negative'}" title="Teammate: ${t.kd.toFixed(2)} (${t.kills} kills / ${t.deaths} deaths) · You: ${t.myKd.toFixed(2)} (${t.myKills} kills / ${t.myDeaths} deaths)">${s.kd.toFixed(2)}</td>
+      <td title="Teammate: ${roundOrDash(t.acs)} · You: ${roundOrDash(t.myAcs)}">${roundOrDash(s.acs)}</td>
+      <td title="Teammate: ${roundOrDash(t.performanceScore)} · You: ${roundOrDash(t.myPerformanceScore)} · ${t.performanceCount} of ${t.games} shared matches have teammate Performance Score data, ${t.myPerformanceCount} have yours">${roundOrDash(s.ps)}</td>
       <td class="${winRateTone(t.wr)}" title="Wins divided by wins plus losses; draws excluded">${winRateLabel(t.wr)}</td>
       <td class="${!t.rrCount||t.rrTotal===0?'':t.rrTotal>0?'rank-positive':'rank-negative'}" title="${t.rrCount} of ${t.games} shared matches have recorded RR change">${t.rrCount?rrSigned(t.rrTotal,0):'—'}</td>`;
     row.querySelector('.duo-player-name').title=t.name+'#'+t.tag;
@@ -4982,7 +4996,7 @@ function renderTeammates(){
     row.querySelector('.duo-tag').textContent='#'+t.tag;
     tbody.appendChild(row);
   });
-  const values=teammateRows.map(t=>[t.name+'#'+t.tag,t.games,t.lobby,t.kd,t.acs,t.performanceScore,t.wr,t.rrCount?t.rrTotal:null]);
+  const values=teammateRows.map(t=>{const s=shown(t);return [t.name+'#'+t.tag,t.games,t.lobby,s.kd,s.acs,s.ps,t.wr,t.rrCount?t.rrTotal:null];});
   highlightTableMaxima(table,values,[
     {column:2,label:'average lobby rank'},{column:3,label:'K/D'},
     {column:4,label:'average ACS'},{column:5,label:'Avg PS'},{column:6,label:'win rate'},
