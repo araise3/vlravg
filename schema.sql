@@ -288,7 +288,8 @@ CREATE TABLE IF NOT EXISTS replay_imports (
   compact_key TEXT,
   compact_sha256 TEXT,
   compact_bytes INTEGER,
-  export_bytes INTEGER
+  export_bytes INTEGER,
+  decoder_id TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_replay_imports_queue ON replay_imports(status, uploaded_at);
 

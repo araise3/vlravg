@@ -12,9 +12,11 @@ import { pipeline } from 'node:stream/promises';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
-export async function fetchJobs({ origin, key, out, fetchImpl = fetch }) {
+export async function fetchJobs({ origin, key, out, decoder = '', fetchImpl = fetch }) {
   const headers = { 'X-Workflow-Key': key };
-  const res = await fetchImpl(`${origin}/api/replays/claim`, { method: 'POST', headers });
+  // Naming this run's decoder lets the Function retry uploads an older decoder could not read.
+  const res = await fetchImpl(`${origin}/api/replays/claim`, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ decoder }) });
   if (!res.ok) throw new Error(`claim failed: ${res.status}`);
   const jobs = (await res.json()).data.filter(job => UUID.test(job.match_id) && UUID.test(job.claim));
   await mkdir(`${out}/replays`, { recursive: true });
@@ -41,7 +43,8 @@ export async function fetchJobs({ origin, key, out, fetchImpl = fetch }) {
 }
 
 if (process.argv[1]?.endsWith('replay-fetch.mjs')) {
-  const claims = await fetchJobs({ origin: process.env.SITE_ORIGIN, key: process.env.HENRIK_WORKFLOW_KEY, out: process.argv[2] || 'replay-work' });
+  const decoder = (process.env.VRFKIT_REVISION || '') + (process.env.VRFKIT_PATCH_SHA256 ? `+${process.env.VRFKIT_PATCH_SHA256}` : '');
+  const claims = await fetchJobs({ origin: process.env.SITE_ORIGIN, key: process.env.HENRIK_WORKFLOW_KEY, out: process.argv[2] || 'replay-work', decoder });
   console.log(`Claimed ${claims.length} replay(s)`);
   // Lets the workflow skip the parse and submit jobs when nothing is queued.
   if (process.env.GITHUB_OUTPUT) await writeFile(process.env.GITHUB_OUTPUT, `count=${claims.length}\n`, { flag: 'a' });

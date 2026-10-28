@@ -35,8 +35,9 @@ async function writeExport(dir, files = exportBytes()) {
 test('fetch keeps claim IDs out of the parse job artifact', async () => {
   const out = await mkdtemp(join(tmpdir(), 'replay-fetch-'));
   const calls = [];
-  const claims = await fetchJobs({ origin: 'https://site.test', key: 'k', out, fetchImpl: async (url, init) => {
+  const claims = await fetchJobs({ origin: 'https://site.test', key: 'k', out, decoder: 'd', fetchImpl: async (url, init) => {
     calls.push([url, init.headers['X-Workflow-Key']]);
+    if (url.endsWith('/claim')) assert.deepEqual(JSON.parse(init.body), { decoder: 'd' }, 'the claim names the decoder build');
     if (url.endsWith('/claim')) return Response.json({ data: [{ match_id: matchId, claim: claimId, bytes: raw.byteLength }, { match_id: '../x', claim: claimId, bytes: 1 }] });
     return new Response(raw);
   } });

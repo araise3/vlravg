@@ -363,3 +363,23 @@ test('stored exports count against the storage cap', async t => {
     .run(REPLAY_LIMITS.storedRawBytes - 1024 * 1024);
   assert.equal((await f.call('POST', `/upload/${matchId}`, { body: { size: 2 * 1024 * 1024, turnstileToken: 'ok' } })).status, 429);
 });
+
+test('uploads a decoder could not read are retried once by a different decoder build', async t => {
+  const f = await fixture(t);
+  await upload(f, replayBytes(2 * 1024 * 1024));
+  const old = 'b9496df61c40fa304d4f539689c1dd627804946e';
+  const patched = `${old}+${'7'.repeat(64)}`;
+  const claim = decoder => f.call('POST', '/claim', { workflow: true, body: { decoder } });
+  let [job] = (await claim(old)).json.data;
+  await f.call('POST', `/result/${matchId}`, { workflow: true, body: { claim: job.claim, ok: false, error: 'decoder_validate_failed', decoder: old } });
+  assert.deepEqual((await claim(old)).json.data, [], 'the same decoder does not retry');
+  [job] = (await claim(patched)).json.data;
+  assert.equal(job?.match_id, matchId, 'a new decoder re-queues it');
+  await f.call('POST', `/result/${matchId}`, { workflow: true, body: { claim: job.claim, ok: false, error: 'decoder_validate_failed', decoder: patched } });
+  assert.deepEqual((await claim(patched)).json.data, [], 'and does not loop');
+  f.db.prepare("UPDATE replay_imports SET error='timeout',decoder_id=NULL").run();
+  assert.deepEqual((await claim(`${old}+${'8'.repeat(64)}`)).json.data, [], 'other failures are not retried');
+  f.db.prepare("UPDATE replay_imports SET error='decoder_validate_failed',raw_key=NULL").run();
+  assert.deepEqual((await claim(`${old}+${'9'.repeat(64)}`)).json.data, [], 'nothing to retry without the raw file');
+  assert.equal((await claim('not a decoder; DROP TABLE x')).status, 200, 'an invalid decoder name is ignored');
+});

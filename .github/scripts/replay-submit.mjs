@@ -99,7 +99,8 @@ export async function submitAll({ origin, key, work, decoder = null, fetchImpl =
   const outcomes = [];
   for (const claim of claims) {
     const result = await prepareResult(claim, `${work}/parsed/${claim.match_id}`, decoder);
-    const body = result.ok ? { claim: claim.claim, ok: true, summary: result.summary } : { claim: claim.claim, ok: false, error: result.error };
+    const body = result.ok ? { claim: claim.claim, ok: true, summary: result.summary }
+      : { claim: claim.claim, ok: false, error: result.error, ...(decoder && { decoder: decoder.revision + (decoder.patch ? `+${decoder.patch}` : '') }) };
     const res = await fetchImpl(`${origin}/api/replays/result/${claim.match_id}`, { method: 'POST', headers, body: JSON.stringify(body) });
     let status = (await res.json().catch(() => ({})))?.data?.status || `http_${res.status}`;
     if (result.ok && status === 'awaiting_compact') {
