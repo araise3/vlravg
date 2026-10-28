@@ -19,9 +19,9 @@ Uploaded replays are **user-supplied data**. They are stored in `replay_*` table
 | Tar output and allowlist unpack | Verified locally on that replay's real export, and against hostile archives by `tests/replay_unpack_test.py` |
 | Browser upload with Turnstile | Verified locally with Cloudflare's always-pass test keys at desktop and 375 px widths. Real keys are untested |
 | `fetch` and `submit` scripts | Verified locally against the dev server, and by `tests/replay-parser-workflow.test.mjs` |
-| `parse` job (Docker sandbox) and the GitHub Actions workflow | **Not run.** There is no Docker on the development PC, and the workflow has never executed. The local runs replaced the container with the same commands, run natively on the user's own replays. The sandbox flags are checked statically by tests |
+| `parse` job (Docker sandbox) and the GitHub Actions workflow | Verified in production on 2026-10-28, run 40786014791: fetch, toolchain (vrfkit build 2 min 18 s), sandboxed parse (21 s) and submit (46 s) all succeeded. The development PC still has no Docker; the local runs replaced the container with the same commands |
 | 13.08 replays | Decoded by vrfkit v0.3.0 (validate passes, 0 malformed packets, on `79397d00…` and `a27d4487…`) |
-| 13.09 replays | Patched decoder, **not verified here**. Plain v0.3.0 rejects all three local 13.09 replays (`no payload transform is registered for replay branch '++Ares-Core+release-13.09'`); such uploads end as `failed` / `decoder_validate_failed`, verified end to end with `97d3b0af…`. The workflow now applies the 13.09 code from upstream PR #37 (see [Decoder support](#decoder-support)). This session's sandbox refused to build that unmerged code on the development PC, so its first build and run are the workflow's |
+| 13.09 replays | Decoded in production by the patched decoder (see [Decoder support](#decoder-support)): `97d3b0af…` (Abyss, 5–13) parsed with 18 rounds, which matches the HenrikDev score, 144 kills and a 33,943,170 B full export, recorded with `decoder.patch` `715ba5f8…`. Plain v0.3.0 rejects 13.09 (`no payload transform is registered…`). The patched decoder was never built on the development PC, because this session's sandbox refused to build unmerged upstream code |
 | Retry after a decoder change | Verified by `tests/replay-import.test.mjs` |
 
 ## Decoder support
@@ -42,6 +42,44 @@ On top of it, the workflow applies [`.github/replay-decoder/vrfkit-13.09.patch`]
 It applies cleanly to v0.3.0. Upstream's PR reports 4 of 4 13.09 replays meeting every criterion (validation 1,883,501/1,883,501, checkpoint export with no transform, framing, field-stream, array, struct-blob or typed-overlay failure). Its 79 native vectors were captured by emulating the 13.09 client's reader: that is upstream's method, not one this project runs. None of this was reproduced here. Once a vrfkit release includes 13.09, the watcher opens an issue, and the patch should be dropped for the release pin.
 
 A clean `validate` is container and net-stream decoding, not semantic validation of every field. Records name their decoder in `decoder {revision, patch}`, and the submit job refuses a record from any other build.
+
+## Live progress on the page
+
+Each match card shows the match's map art (the valorant-api.com `splash` the match history cards use) behind a dark gradient, and the replay's progress as a list of steps. Each step shows a time, a duration, or a live elapsed counter. Every figure is measured or reported by the pipeline; nothing is estimated, and no step has a made-up percentage.
+
+| Step | Source |
+| --- | --- |
+| File checked: this match, build, size | The browser reads the file's header before uploading |
+| Uploading: MB sent, %, MB/s, parts done | `XMLHttpRequest` upload progress events, summed over parts. Part 1 goes first, because the server checks its header, then 3 parts at a time. Speed is measured over the last 3 s and shown only after at least 0.5 s has been measured |
+| Uploaded: build per the replay header, time | Part 1's header, read by the Function (`progress.build`) |
+| Queued: position, dispatch | Queue order in D1. Whether `workflow_dispatch` was requested and accepted (`progress.dispatch`), or that the daily run will pick it up |
+| Downloaded, Decoder ready (built or from cache), Decoding in the sandbox, Checked and stored | The parser run's GitHub job states and times. The fetch job sends its `GITHUB_RUN_ID` with the claim. The status route asks the GitHub API (with `GITHUB_DISPATCH_TOKEN`) at most every 15 s per row. Without the token only a single "Parser run" step with a link to the run is shown |
+| Result validated, export files *k* of *n*, MB stored | The accepted summary's time (`progress.decoded_at`), and stored export files and parts counted in D1 |
+| Stored | `parsed_at` and the summary |
+| Failure | The failing step and reason from the error code. An unsupported build names the header's build and the builds the decoder registers (`supported_builds`, written by the toolchain job from the patched transform registry) |
+
+Inside the sandbox nothing reports live: it has no network by design. So decoding, export and compacting are one step, timed by the parse job.
+
+Migration `0009_replay_progress.sql` adds the `progress` JSON column.
+
+## Pipeline timing
+
+The first production run (2026-10-28, run 40786014791, one 50.8 MB replay) took 3 min 51 s from upload to stored:
+
+| Job | Time | Of which |
+| --- | --- | --- |
+| fetch | 16 s | 4 s claiming and downloading |
+| toolchain | 138 s | 126 s compiling vrfkit: no cached build existed yet |
+| parse | 21 s | 5 s in the sandbox, 5 s pulling the image |
+| submit | 46 s | 39 s uploading the 34 MB export one part at a time |
+
+Changes since then:
+
+- The toolchain job no longer waits for fetch. It runs on every parser run, and its cache key names only what the binaries are built from (vrfkit revision, patch, DuckDB version, image digests). Editing the workflow no longer forces a rebuild. A decoder change is compiled by the run that its push triggers, not while an upload waits.
+- The submit job uploads export parts 4 at a time.
+- The browser uploads replay parts 3 at a time after part 1. Locally this raised a 120 MB synthetic upload from 15–19 MB/s to a peak of 28 MB/s. On the site, the user's connection is the limit.
+
+Production timings after these changes have not been measured. With a cached toolchain, the toolchain job's fixed cost overlaps fetch; the remaining time is mostly parse and submit.
 
 ## Flow
 
@@ -136,6 +174,7 @@ Apply the migrations first, in order (0008 adds `decoder_id`; deploy code that w
 ```bash
 npx wrangler d1 execute vlravg-calib --remote --file=migrations/0007_replay_imports.sql
 npx wrangler d1 execute vlravg-calib --remote --file=migrations/0008_replay_decoder_id.sql
+npx wrangler d1 execute vlravg-calib --remote --file=migrations/0009_replay_progress.sql
 ```
 
 Without the R2 binding or the Turnstile keys, `/api/replays/config` reports `enabled: false` and the page shows the matches without upload buttons.
@@ -147,7 +186,7 @@ Local development uses the `vlravg-replays` entry in `.claude/launch.json` (port
 ## Tests
 
 - `tests/replay-import.test.mjs`: routes, gating, quotas, claims, cross-check, export file list and multipart storage, the storage cap, blob hash, and isolation from the trusted tables
-- `tests/replay-import-ui.test.mjs`: row building, browser header check, status labels, routing
+- `tests/replay-import-ui.test.mjs`: row building, browser header and build checks, status labels, the progress steps (queued, parsing by job, failure with supported builds), upload speed, routing
 - `tests/replay-parser-workflow.test.mjs`: artifact separation, untrusted-output validation, static checks of the sandbox and workflow, the pinned 13.09 patch, the vrfkit watcher
 - `tests/replay_compact_test.py`: kill order, pawn joins, bucketing, rounding and delta encoding
 - `tests/replay_unpack_test.py`: traversal, absolute paths, links, unknown and duplicate names, missing compact
