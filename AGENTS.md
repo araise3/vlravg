@@ -76,7 +76,7 @@ Invariants to preserve:
 - **No quota leakage.** Real HenrikDev rate-limit headers are read server-side only. Clients see success, or a 429 body `{error, retryAfterMs}`. A prior version leaked live quota, which was a DoS vector.
 - **Atomic D1 admission** (`lib/upstream-pacing.mjs`). Public and workflow keys have independent pools (`rate_quota`, `workflow_rate_quota`), and the workflow pool keeps ≥2.1 s spacing. Conditional writes, not reads, grant slots. Gate storage failure means 503, never unpaced traffic. Edge-cache hits and D1-only routes bypass the gate.
 - **Trusted-data only.** Shared D1 evidence (match archive, RR history, corpus, name history, coverage) is written only from server-fetched HenrikDev responses. It is never written from browser-supplied payloads or counts.
-- **Workflow requests** authenticate with `X-Workflow-Key` (`lib/workflow-auth.mjs`), bypass the edge cache and never fall back to the public key.
+- **Workflow requests** authenticate with `X-Workflow-Key` (`lib/workflow-auth.mjs`) and bypass the edge cache. They use the public key only by borrowing an idle public slot when their own pool has no free slot. Borrowing goes through the public pool's atomic admission, and only while that window is fresh or has at least `PUBLIC_BORROW_RESERVE` (30) calls left. Missing secrets or gate storage failures never fall back to the public key.
 
 Persistence highlights: `mergeRRHistory` accumulates every `mmr-history` entry ever seen per PUUID, beyond upstream's ~20-game window. `match_archive` stores gzip match payloads per player and act. Account lookups enrol players into `rr_players` for the corpus. `foldCalibration`/`calib-model` are leftovers of the removed hidden-MMR card; nothing in the client reads them.
 

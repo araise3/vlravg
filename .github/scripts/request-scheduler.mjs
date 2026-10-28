@@ -1,12 +1,14 @@
 // Cloudflare schedules actual upstream calls atomically. This wrapper
 // authenticates requests and sets their timeout. The collector opts into FIFO
 // admission and shared cooldowns; other callers retain immediate saved-data reads.
-export function createRequestScheduler({fetchImpl=fetch,workflowKey,origin,runId,serialize=false,
+export function createRequestScheduler({fetchImpl=fetch,workflowKey,origin,runId,serialize=false,inFlight=1,
   deadline=Infinity,now=Date.now,sleepImpl=ms=>new Promise(resolve=>setTimeout(resolve,ms))}={}) {
+  if(!Number.isSafeInteger(inFlight)||inFlight<1)throw new Error('inFlight must be a positive integer');
+  const pools={workflow:0,public:0};
   if(workflowKey&&!origin)throw new Error('Workflow requests require SITE_ORIGIN');
   const workflowOrigin=workflowKey?new URL(origin).origin:null;
   let readiness;
-  let queue=Promise.resolve(),cooldownUntil=0;
+  let cooldownUntil=0;
   const request=async (url,options) => {
     if(now()<cooldownUntil)await sleepImpl(Math.min(cooldownUntil,deadline)-now());
     if(now()>=deadline){
@@ -44,6 +46,8 @@ export function createRequestScheduler({fetchImpl=fetch,workflowKey,origin,runId
       await readiness;
     }
     const response=await fetchImpl(url,{...requestOptions,signal:AbortSignal.timeout(45000)});
+    const pool=response.headers?.get?.('X-Workflow-Upstream-Pool');
+    if(pool in pools)pools[pool]++;
     if(serialize&&response.status===429){
       const body=await response.clone().json().catch(()=>null);
       const wait=Number.isFinite(body?.retryAfterMs)?Math.max(1000,body.retryAfterMs):60000;
@@ -51,10 +55,17 @@ export function createRequestScheduler({fetchImpl=fetch,workflowKey,origin,runId
     }
     return response;
   };
-  // FIFO admission avoids workers repeatedly racing for one server-side slot.
+  // FIFO admission avoids workers repeatedly racing for server-side slots.
   // A 429 pauses queued requests too; the proxy remains the quota authority.
-  return serialize?(url,options)=>{
-    const pending=queue.then(()=>request(url,options));
-    queue=pending.catch(()=>{});return pending;
-  }:request;
+  // inFlight > 1 lets one call wait on the workflow pool while another uses a
+  // borrowed public slot; the proxy still admits every upstream call.
+  let active=0;const waiting=[];
+  const run=(url,options)=>{
+    active++;
+    return request(url,options).finally(()=>{active--;waiting.shift()?.();});
+  };
+  const scheduled=serialize?(url,options)=>active<inFlight&&!waiting.length?run(url,options)
+    :new Promise(resolve=>waiting.push(()=>resolve(run(url,options)))):request;
+  scheduled.pools=pools;
+  return scheduled;
 }

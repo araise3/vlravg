@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {onRequestGet} from '../functions/api/[[path]].js';
+import {PUBLIC_BORROW_RESERVE} from '../lib/upstream-pacing.mjs';
 import {createRequestScheduler} from '../.github/scripts/request-scheduler.mjs';
 import {main as refresh,requestJSON} from '../.github/scripts/refresh-rr-history.mjs';
 import {main as collect,collectPlayers} from '../.github/scripts/collect-rr-corpus.mjs';
@@ -96,14 +97,43 @@ test('real public 429 with HTTP-date Retry-After pauses only the public pool and
   assert.equal(f.sql.prepare('SELECT * FROM workflow_rate_quota').get(),undefined);
 });
 
-test('exhausted workflow quota returns only retryAfterMs without contacting upstream',async t=>{
+test('exhausted workflow quota with no idle site slot returns only retryAfterMs without contacting upstream',async t=>{
   const f=fixture(t);
   f.sql.prepare('INSERT INTO workflow_rate_quota (id,remaining,reset_at,last_request_at) VALUES(1,0,?,0)').run(Date.now()+60000);
+  f.sql.prepare('UPDATE rate_quota SET remaining=?,reset_at=? WHERE id=1').run(PUBLIC_BORROW_RESERVE-1,Date.now()+60000);
   const response=await f.request(workflowKey),body=await response.json();
   assert.equal(response.status,429);assert.ok(body.retryAfterMs>0);
   assert.deepEqual(Object.keys(body).sort(),['error','retryAfterMs']);
   assert.equal(response.headers.get('x-ratelimit-remaining'),null);
   assert.equal(f.upstream.length,0);
+});
+
+test('a busy workflow pool borrows an idle site-key slot through the public schedule',async t=>{
+  const f=fixture(t);
+  f.sql.prepare('INSERT INTO workflow_rate_quota VALUES(1,NULL,0,0,?)').run(Date.now()+60000);
+  const workflowBefore=f.sql.prepare('SELECT * FROM workflow_rate_quota').get();
+  const response=await f.request(workflowKey);
+  assert.equal(response.status,200);
+  assert.equal(f.upstream[0].options.headers.Authorization,publicKey);
+  assert.equal(response.headers.get('X-Workflow-Upstream-Pool'),'public');
+  assert.equal(response.headers.get('x-ratelimit-remaining'),null);
+  assert.equal(f.cacheReads.length,0);assert.equal(f.cacheWrites.length,0);
+  assert.equal(f.sql.prepare('SELECT remaining FROM rate_quota').get().remaining,7,'site quota learns from the borrowed call');
+  assert.deepEqual(f.sql.prepare('SELECT * FROM workflow_rate_quota').get(),workflowBefore);
+});
+
+test('collector calls never borrow below the site reserve or when their own slot is free',async t=>{
+  const f=fixture(t);
+  f.sql.prepare('INSERT INTO workflow_rate_quota VALUES(1,NULL,0,0,?)').run(Date.now()+60000);
+  f.sql.prepare('UPDATE rate_quota SET remaining=?,reset_at=? WHERE id=1').run(PUBLIC_BORROW_RESERVE-1,Date.now()+60000);
+  const busy=await f.request(workflowKey);
+  assert.equal(busy.status,429);assert.equal(f.upstream.length,0);
+  assert.equal(f.sql.prepare('SELECT remaining FROM rate_quota').get().remaining,PUBLIC_BORROW_RESERVE-1);
+  const g=fixture(t);
+  const own=await g.request(workflowKey);
+  assert.equal(g.upstream[0].options.headers.Authorization,workflowKey);
+  assert.equal(own.headers.get('X-Workflow-Upstream-Pool'),'workflow');
+  assert.equal(g.sql.prepare('SELECT remaining FROM rate_quota').get().remaining,null);
 });
 
 test('workflow quota storage is created automatically for existing databases',async t=>{
@@ -217,6 +247,23 @@ test('collector FIFO requests share quota cooldowns and cannot starve competing 
   const results=await Promise.all([scheduled(url),scheduled(url),scheduled(url)]);
   assert.equal(maximum,1);assert.deepEqual(starts,[0,9000,9000]);assert.deepEqual(waits,[9000]);
   assert.equal(results[0].status,429);assert.equal(results[2].status,200);
+});
+
+test('collector scheduler keeps FIFO order with a bounded number of calls in flight and counts pools',async()=>{
+  let active=0,maximum=0;const order=[];const gates=[];
+  const scheduled=createRequestScheduler({workflowKey,origin,serialize:true,inFlight:3,fetchImpl:async target=>{
+    if(target.endsWith('/api/calib-model'))return Response.json({data:{}},{headers:{'X-Workflow-Pacing':'upstream-v1'}});
+    active++;maximum=Math.max(maximum,active);order.push(new URL(target).searchParams.get('n'));
+    await new Promise(resolve=>gates.push(resolve));active--;
+    return Response.json({data:{}},{headers:{'X-Workflow-Upstream-Pool':order.length%2?'workflow':'public'}});
+  }});
+  const jobs=Array.from({length:7},(_,i)=>scheduled(`${url}?n=${i}`));
+  while(order.length<7){await new Promise(resolve=>setImmediate(resolve));gates.splice(0).forEach(open=>open());}
+  await Promise.all(jobs);
+  assert.equal(maximum,3);
+  assert.deepEqual(order,['0','1','2','3','4','5','6']);
+  assert.equal(scheduled.pools.workflow+scheduled.pools.public,7);
+  assert.throws(()=>createRequestScheduler({inFlight:0}),/positive integer/);
 });
 
 test('quota cooldown cannot hold a collector past its run budget',async()=>{
