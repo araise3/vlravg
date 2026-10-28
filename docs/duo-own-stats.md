@@ -1,6 +1,6 @@
 # Your stats with each duo
 
-The Duos page teammate table shows the searched player's own K/D, average ACS and Avg PS under each teammate's figure. Both lines come from the same set of shared matches.
+The Duos page teammate table can show either each teammate's K/D, average ACS and Avg PS, or the searched player's own figures in the matches they shared. Both come from the same set of shared matches.
 
 ## What is counted
 
@@ -14,11 +14,14 @@ Matches without `myStats` are still skipped for the whole row, as before, so the
 
 ## Display
 
-Each stat cell shows the teammate's value first, with a muted `You <value>` line beneath it. Your K/D is coloured green above 1 and red below 1, matching the teammate K/D. Sorting and the "Highest … in this table" highlights still use the teammate's figures.
+A Teammate / You switch at the top of the card (`setDuoStatsView`) chooses which side the K/D, ACS and PS columns show. Each cell holds one value; its tooltip gives both sides (and, for K/D, kills and deaths). K/D is coloured green above 1 and red below 1 for whichever side is shown. Sorting and the "Highest … in this table" highlights follow the shown figures, so the You view can be sorted by how well you play with each teammate. Matches, Avg Lobby, Win rate and Total RR are shared results and do not change. The chosen view persists across re-renders and searches in the same page session.
 
-An earlier draft used separate "Your"/"Their" columns. That made the table 1,190 px wide, wider than the 910 px content column at a 1440 px viewport, so Total RR was scrolled out of view on desktop. The stacked layout keeps the original 8 columns and 800 px minimum width.
+Earlier layouts:
+
+- Separate "Your"/"Their" columns made the table 1,190 px wide, wider than the 910 px content column at a 1440 px viewport, so Total RR was scrolled out of view on desktop.
+- A muted `You <value>` line under every teammate figure kept 8 columns but doubled row height and repeated "You" in every stat cell; it was replaced by the switch.
 
 ## Verification
 
-- `tests/stat-charts.test.mjs`: aggregation of own stats per teammate, and the rendered cells (teammate value, `You` line, K/D tone, sort values unchanged).
-- Checked in the UI stress preview (`scripts/serve-ui-stress.py`, `/duos?data=demo`). At 1440 px the table fits its container with no horizontal scroll. At 375 px the table scrolls inside its card as before, and the page itself does not overflow.
+- `tests/stat-charts.test.mjs`: aggregation of own stats per teammate, and the rendered cells in both views (single value, both sides in the tooltip, K/D tone, sort values following the view, Win rate and Total RR unchanged).
+- Checked in the UI stress preview (`scripts/serve-ui-stress.py`, `/duos?data=demo`) at 1440 px and 375 px.
