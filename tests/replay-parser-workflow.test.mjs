@@ -140,3 +140,14 @@ test('the unpacker accepts exactly the export allowlist the Function accepts', (
   assert.match(sandbox, /vrfkit export \/in\/replay\.vrf --out \/work\/export --checkpoints/);
   assert.match(sandbox, /replay-unpack\.py/);
 });
+
+test('the 13.09 patch is the pinned, reviewed upstream PR code', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/parse-replays.yml', import.meta.url), 'utf8');
+  const patch = readFileSync(new URL('../.github/replay-decoder/vrfkit-13.09.patch', import.meta.url));
+  assert.ok(workflow.includes('VRFKIT_PATCH: .github/replay-decoder/vrfkit-13.09.patch\n'));
+  assert.equal(sha(patch), workflow.match(/VRFKIT_PATCH_SHA256: ([0-9a-f]{64})/)[1]);
+  assert.ok(!patch.includes(13), 'LF-only, so it applies to the upstream blobs');
+  assert.ok(patch.toString().includes('\n+    V1309 V13_09 "13.09" 0x7e8c_b50f  0x0f: add 8, add 7, sbox, sub 5, swap, sub 3, sbox, rev;\n'));
+  const push = workflow.slice(workflow.indexOf('  push:'), workflow.indexOf('\nconcurrency:'));
+  assert.ok(push.includes('branches: [main]') && push.includes('- .github/replay-decoder/**'), 'a decoder change runs the parser');
+});
