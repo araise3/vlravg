@@ -156,7 +156,7 @@ export async function main(env=process.env){
   const deadline=Date.now()+(runtime-5)*60000; // Reserve time for the report; the next queued run starts afterwards.
   const tracked=await loadActivity(env,await listPlayers(env));
   const players=selectPollingPlayers(tracked);
-  const candidates=selectDiscoveryCandidates(await loadCandidates(env),tracked,25);
+  const candidates=selectDiscoveryCandidates(await loadCandidates(env),tracked);
   console.log(`Polling ${players.length}/${tracked.length} tracked accounts due by activity; scouting ${candidates.length} recent roster candidates.`);
   const runId=env.GITHUB_RUN_ID?`${env.GITHUB_RUN_ID}:${env.GITHUB_RUN_ATTEMPT||1}:${randomUUID()}`:randomUUID();
   const quotaBefore=await readQuotaAudit(env,runId);

@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {collectRR,matchFeatures,saveFeatures,trackRRAccount} from '../lib/rr-corpus.mjs';
 import {collectPlayers,collectMatchFeatures,corpusReport} from '../.github/scripts/collect-rr-corpus.mjs';
 import {onRequestGet} from '../functions/api/[[path]].js';
-import {pollingPolicy,selectPollingPlayers,selectDiscoveryCandidates,discoverMatchPlayers} from '../lib/rr-activity.mjs';
+import {pollingPolicy,selectPollingPlayers,selectDiscoveryCandidates,discoverMatchPlayers,DISCOVERY_BAND_TARGET} from '../lib/rr-activity.mjs';
 import {loadActivity,loadCandidates} from '../.github/scripts/rr-activity-query.mjs';
 import {loadFeaturePlan} from '../.github/scripts/rr-feature-plan.mjs';
 
@@ -513,10 +513,28 @@ test('discovery prioritizes activity within thin rank bands and bounds probes',(
   const base={platform:'pc',last_played_at:'2026-10-03T00:00:00Z',games_7d:5};
   const candidates=[{...base,puuid:'weak',tier:3,games_7d:1},{...base,puuid:'strong',tier:3,games_7d:4},
     {...base,puuid:'high',tier:24,games_7d:20},{...base,puuid:'known',tier:24}];
-  const players=[{...base,puuid:'known',tier:24}];
+  const players=[{...base,puuid:'known',tier:24,games_7d:12}];
   const chosen=selectDiscoveryCandidates(candidates,players,2,now);
   assert.deepEqual(chosen.map(p=>p.puuid),['strong','weak']);
   assert.equal(selectDiscoveryCandidates(candidates,players,25,now).some(p=>p.puuid==='known'),false);
+});
+
+test('discovery balances rank bands by frequent players and stops at the band target',()=>{
+  const now=Date.parse('2026-10-03T12:00:00Z');
+  const recent={platform:'pc',last_played_at:'2026-10-03T00:00:00Z'};
+  // Many casual Iron players do not count as coverage; one frequent Radiant player does.
+  const players=[...Array.from({length:30},(_,i)=>({...recent,puuid:`casual${i}`,tier:4,games_7d:2})),
+    {...recent,puuid:'grinder',tier:27,games_7d:30}];
+  const candidates=[{...recent,puuid:'iron',tier:4,games_7d:6},{...recent,puuid:'radiant',tier:27,games_7d:9}];
+  assert.deepEqual(selectDiscoveryCandidates(candidates,players,1,now).map(p=>p.puuid),['iron']);
+  // A band at the target draws no probes, even when nothing else is left.
+  const full=Array.from({length:DISCOVERY_BAND_TARGET},(_,i)=>({...recent,puuid:`imm${i}`,tier:25,games_7d:15}));
+  assert.deepEqual(selectDiscoveryCandidates([{...recent,puuid:'imm-new',tier:25,games_7d:20}],full,40,now),[]);
+  // A band reaching the target mid-selection stops there.
+  const almost=full.slice(1);
+  const many=Array.from({length:5},(_,i)=>({...recent,puuid:`imm-new${i}`,tier:25,games_7d:10+i}));
+  assert.equal(selectDiscoveryCandidates(many,almost,40,now).length,1);
+  assert.equal(selectDiscoveryCandidates(many.map(p=>({...p,tier:6})),almost,40,now).length,5);
 });
 
 test('trusted roster evidence deduplicates fetches and ignores stale matches',async t=>{
