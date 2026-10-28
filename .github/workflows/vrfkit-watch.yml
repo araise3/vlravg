@@ -1,0 +1,25 @@
+name: Watch vrfkit releases
+
+# Every VALORANT patch changes the replay payload transform. This opens an
+# issue when upstream vrfkit releases a decoder newer than parse-replays.yml
+# pins; bumping the pin stays a reviewed change.
+on:
+  schedule:
+    - cron: '41 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+jobs:
+  watch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node .github/scripts/vrfkit-watch.mjs

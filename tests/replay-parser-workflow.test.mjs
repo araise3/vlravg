@@ -151,3 +151,17 @@ test('the 13.09 patch is the pinned, reviewed upstream PR code', () => {
   const push = workflow.slice(workflow.indexOf('  push:'), workflow.indexOf('\nconcurrency:'));
   assert.ok(push.includes('branches: [main]') && push.includes('- .github/replay-decoder/**'), 'a decoder change runs the parser');
 });
+
+test('the vrfkit watcher names the builds a newer release adds', async () => {
+  const { registeredBuilds, pinnedDecoder, plan } = await import('../.github/scripts/vrfkit-watch.mjs');
+  const lib = builds => builds.map(b => `    V${b.replace('.', '')} V${b.replace('.', '_')} "${b}" 0x1234_5678  0x78: not;`).join('\n');
+  assert.deepEqual(registeredBuilds(lib(['13.06', '13.08'])), ['13.06', '13.08']);
+  const workflow = readFileSync(new URL('../.github/workflows/parse-replays.yml', import.meta.url), 'utf8');
+  const pinned = pinnedDecoder(workflow);
+  assert.equal(pinned.patch, '.github/replay-decoder/vrfkit-13.09.patch');
+  assert.equal(plan({ pinned, release: 'v0.3.0', releaseSha: pinned.revision, pinnedBuilds: [], releaseBuilds: [] }), null);
+  const issue = plan({ pinned, release: 'v0.4.0', releaseSha: 'f'.repeat(40), pinnedBuilds: ['13.08'], releaseBuilds: ['13.08', '13.09', '13.10'] });
+  assert.equal(issue.title, 'vrfkit v0.4.0 is available (adds 13.09, 13.10)');
+  assert.match(issue.body, /drop the patch/);
+  assert.deepEqual(pinnedDecoder("  VRFKIT_REVISION: " + 'a'.repeat(40) + "\n  VRFKIT_PATCH: ''\n"), { revision: 'a'.repeat(40), patch: '' });
+});
