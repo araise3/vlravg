@@ -127,15 +127,16 @@ export async function corpusReport(env,query=d1Query){
     FROM rr_players p LEFT JOIN rr_collection c ON c.puuid=p.puuid AND c.platform=p.platform
     LEFT JOIN rr_candidate_checks failed ON failed.puuid=p.puuid AND failed.platform=p.platform
   ) SELECT COUNT(*) AS tracked,
-    SUM(CASE WHEN (last_game<julianday('now','-7 days') OR (last_game IS NULL AND checked_at IS NOT NULL))
+    SUM(CASE WHEN (last_game<julianday('now','-30 days') OR (last_game IS NULL AND checked_at IS NOT NULL))
       AND (?1 IS NULL OR julianday(checked_at)>=julianday(?1)) THEN 1 ELSE 0 END) AS inactive,
     SUM(CASE WHEN julianday(failed_probe_at)>julianday('now','-1 day')
       AND (checked_at IS NULL OR julianday(failed_probe_at)>julianday(checked_at)) THEN 0
-      WHEN checked_at IS NULL AND (last_game IS NULL OR last_game>=julianday('now','-7 days')) THEN 1
-      WHEN last_game>=julianday('now','-7 days') AND julianday(checked_at)<=julianday('now')-
-        CASE WHEN games>=10 AND last_game>=julianday('now','-2 days') THEN 4.0/24
-          WHEN games>=3 AND last_game>=julianday('now','-3 days') THEN 12.0/24 ELSE 1 END THEN 1
-      WHEN ?1 IS NOT NULL AND (checked_at IS NULL OR julianday(checked_at)<julianday(?1)) THEN 1 ELSE 0 END) AS stale,
+      WHEN checked_at IS NULL THEN 1
+      WHEN julianday(checked_at)<=julianday('now')-
+        CASE WHEN last_game>=julianday('now','-7 days') THEN
+          CASE WHEN games>=10 AND last_game>=julianday('now','-2 days') THEN 6.0/24 ELSE 8.0/24 END
+          WHEN last_game>=julianday('now','-30 days') THEN 1 ELSE 3 END THEN 1
+      WHEN ?1 IS NOT NULL AND julianday(checked_at)<julianday(?1) THEN 1 ELSE 0 END) AS stale,
     SUM(COALESCE(possible_gaps,0)) AS possible_gaps FROM activity`,[currentAct?.first_game??null]);
   const competitiveUpdates={};
   for(const field of ['payouts','reported_start','bonus_known','bonus_nonzero','afk_penalty_known','rr_penalty_known','map_forgiveness_known','placement_known']){
@@ -152,7 +153,7 @@ export async function main(env=process.env){
   if(!Number.isSafeInteger(limit)||limit<0||limit>5000)throw new Error('Invalid DETAIL_LIMIT');
   const runtime=Number(env.RUNTIME_MINUTES||180);
   if(!Number.isSafeInteger(runtime)||runtime<10||runtime>210)throw new Error('RUNTIME_MINUTES must be between 10 and 210');
-  const deadline=Date.now()+(runtime-5)*60000; // Reserve time for the report before the next four-hour run.
+  const deadline=Date.now()+(runtime-5)*60000; // Reserve time for the report; the next queued run starts afterwards.
   const tracked=await loadActivity(env,await listPlayers(env));
   const players=selectPollingPlayers(tracked);
   const candidates=selectDiscoveryCandidates(await loadCandidates(env),tracked,25);

@@ -22,32 +22,58 @@ dashboard binding continues to show upstream data.
 The existing collection job includes these visitor-discovered accounts under
 the activity policy below and enriches saved payouts with trusted match details.
 
-`Collect act RR corpus` runs every four hours, reads the activity index for
-every tracked account, and captures only accounts due under the activity policy
-before slower match-detail work. Four workers
+`Collect act RR corpus` is triggered hourly. The concurrency group keeps one
+run queued behind the active one, so runs follow each other back to back; a
+newer queued trigger replaces an older one and shows as cancelled. Each run
+reads the activity index for every tracked account and captures every account
+due under the activity policy before slower match-detail work. Four workers
 share a FIFO client queue. The proxy atomically paces actual upstream calls;
 a 429 pauses queued client requests too, preventing workers from repeatedly
 racing for the same slot. Manual and scheduled collector runs share one workflow lock. No name refresh
-or historical backfill workflows run alongside collection. GitHub scheduling is best-effort; a four-hour schedule is not a guarantee.
+or historical backfill workflows run alongside collection. GitHub scheduling is best-effort; hourly triggers make a dropped trigger cost minutes instead of hours.
 
-Polling uses actual ranked-game dates, never the date someone searched an account:
+Polling uses actual ranked-game dates, never the date someone searched an account.
+Henrik keeps about 20 payouts, so every interval must end before a player can
+finish 20 more games:
 
-- Frequent: 10+ games in the last week and a game in the last 48 hours; every 4 hours.
-- Regular: 3+ games in the last week and a game in the last 72 hours; every 12 hours.
-- Occasional: a game in the last week; once a day.
-- Inactive: no ranked game in the last week; no routine RR polling or daily name refresh.
+- Frequent: 10+ games in the last week and a game in the last 48 hours; every 6 hours.
+- Active: any other ranked game in the last week; every 8 hours.
+- Dormant: last ranked game 7–30 days ago; once a day.
+- Inactive: last ranked game over 30 days ago, or no ranked game; every 3 days.
+
+These bounds come from production RR saved 2026-10-06 to 10-28 (3,206 players).
+No player reached 20 games within 8 hours (most: 15; within 6 hours: 13). Within
+12 hours 28 players did, and within 24 hours 151. These are lower bounds,
+because games lost in gaps are not counted.
+
+The previous policy (4/12/24 hours, nothing for accounts quiet for a week, at
+most 1,000 accounts per run, a four-hourly trigger) lost payouts. A read-only
+check on 2026-10-28 found 38 proven gaps (one per player) where a payout's
+reported starting rank/RR did not match the previous saved payout's ending
+rank/RR and the two were never seen in the same 20-game window. Each needed at
+least 11.6 hours (median 32.5) without a poll. From Oct 15, almost every run
+logged `Polling 1000/<tracked>`, and GitHub started only 3–4 of the six daily
+triggers. Several gaps spanned 2–6 weeks: players returned from a quiet week
+and played a full window before roster evidence woke them. Detection needs the
+reported starting fields, which were complete only from Oct 6, so earlier gaps
+are undercounted.
 
 Accounts without a prior check get one assessment. Once a newly observed act
-appears in saved RR, previously inactive accounts last checked before its first
-observed game receive one new assessment. A successful check pauses them again
-if they still have no recent ranked games. Act detection uses saved season IDs
+appears in saved RR, accounts last checked before its first observed game
+receive one new assessment. Act detection uses saved season IDs
 and game dates, with no hardcoded act or guessed release date. Fresh, unseen roster evidence
 can wake an inactive account once, and its returned RR history determines the
 new interval. Existing history is retained. Names are resolved when a profile is loaded; there is no daily name workflow or
 automatic enrollment of the static pro library.
-At most 1,000 tracked accounts are polled per run. Due accounts are ordered by
-how overdue they are relative to their interval, then by frequency. This keeps
-sweeps bounded as discovery grows the pool and prevents permanent starvation.
+There is no per-run account cap; the run deadline bounds capture. Due accounts
+are ordered by how overdue they are relative to their interval, then by
+frequency, so the most at-risk windows are fetched first. Optional scouting and
+match details only run once every due account has been captured. With the
+2026-10-28 pool (1,009 frequent, 1,333 active, 958 dormant, 234 inactive) this
+is about 9,100 captures a day. At the measured ~4.2 s per capture, that is
+about 10.6 hours of run time, leaving the rest of the day for details.
+Growth in tracked accounts should be accompanied by a check of the
+`Polling <due>/<tracked>` line and the report's overdue count.
 
 Up to 50 recent match rosters per collection run supply discovery evidence via
 `rr_candidate_games`. Only trusted match payloads are accepted; duplicate match
@@ -102,7 +128,7 @@ for quota queries under the D1 invocation limit.
 
 The default run budget is 180 minutes, configurable from 10 to 210 minutes for
 manual runs. Five minutes are reserved for reporting; the job timeout is 220
-minutes, below the four-hour schedule. Work not attempted before the deadline
+minutes. The next queued run starts when this one ends. Work not attempted before the deadline
 remains in D1 and is reported as deferred. Capture results are written before optional scouting, detail queries or aggregate
 coverage queries, so later failures cannot erase the capture report. These
 failures remain visible in the job outcome.

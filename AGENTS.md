@@ -13,7 +13,7 @@ The repo also holds two long-running research workstreams that are not part of t
 
 Replay research moved on 2026-10-18 to the private standalone repository
 `araise3/valorant-replay-los`, with its local checkout at
-`C:\Users\leona\Desktop\valorant-replay-los`. Continue replay work there and use
+`D:\Dokumente\Repositories\valorant-replay-los`. Continue replay work there and use
 that repository's `AGENTS.md`/`CLAUDE.md`; this workspace is retained as historical
 migration evidence and as the stats site's project.
 
@@ -24,7 +24,7 @@ migration evidence and as the stats site's project.
 - [functions/riot-probe/](functions/riot-probe/) and [riot-probe.html](riot-probe.html): an isolated Riot-client experiment. It is disabled unless `RIOT_PROBE_ENABLED` and its keys are set. See [docs/cloudflare-riot-probe.md](docs/cloudflare-riot-probe.md).
 - [lib/](lib/): server-side modules imported by the Function and the workflow scripts. They cover upstream pacing, the workflow auth and quota audit, the RR corpus and activity policy, name history/backfill, match coverage and the Riot probe.
 - [schema.sql](schema.sql) and [migrations/](migrations/): the D1 schema (database `vlravg-calib`, bound as `APP_DB`).
-- [.github/workflows/collect-rr-corpus.yml](.github/workflows/collect-rr-corpus.yml) and [.github/scripts/](.github/scripts/): the only workflow, an RR corpus collector that runs every 4 hours.
+- [.github/workflows/collect-rr-corpus.yml](.github/workflows/collect-rr-corpus.yml) and [.github/scripts/](.github/scripts/): the only workflow, an RR corpus collector triggered hourly that runs back to back.
 - [_redirects](_redirects): page routes (`/duos`, `/lobbyrank`, `/servers`, `/rr`, `/matches`, `/names`, `/player/*`) all serve `index.html`.
 - [assets/ping-map/](assets/ping-map/): the EU ping map (D3, lazy-loaded by `loadServerPingMap()`); its data sources are in `SOURCES.md`. [assets/ranks/](assets/ranks/) holds the 256px rank icons.
 - [pro-players.json](pro-players.json): the static pro-player search index ([docs/pro-player-library.md](docs/pro-player-library.md)). [showcase.html](showcase.html) is a standalone product film.

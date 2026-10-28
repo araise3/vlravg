@@ -123,7 +123,7 @@ test('a new season reassesses inactive players once, without turning searches in
   const player={puuid,platform:'pc',checked_at:iso(48),last_played_at:iso(240),games_7d:0,season_started_at:iso(24)};
   assert.equal(pollingPolicy(player,now).cohort,'season-assessment');
   assert.equal(selectPollingPlayers([player],now).length,1);
-  assert.equal(pollingPolicy({...player,checked_at:iso(1)},now).cohort,'inactive');
+  assert.equal(pollingPolicy({...player,checked_at:iso(1)},now).cohort,'dormant');
   const {db}=database(t);
   await collectRR(db,payload([{...entry(),date:iso(240)}]),{puuid,region:'eu',platform:'pc'},iso(48));
   const other='55555555-5555-4555-8555-555555555555';
@@ -217,7 +217,7 @@ test('D1 failed probe survives runs, applies a one-day cooldown and clears after
   assert.equal(pollingPolicy(player,now).due,false);
   assert.equal(pollingPolicy(player,now+24*3600000).due,true);
   assert.equal(pollingPolicy({...player,candidate_observed_at:iso(.5),candidate_played_at:iso(.5)},now).due,true);
-  assert.equal(pollingPolicy({...player,checked_at:iso(0)},now).cohort,'inactive');
+  assert.equal(pollingPolicy({...player,checked_at:iso(0)},now).cohort,'dormant');
   const report=await corpusReport({},query);
   assert.equal(report.health.stale,0);
 });
@@ -462,16 +462,35 @@ test('feature sweep separates saved details, upstream deferrals and malformed er
   assert.ok(logs.some(s=>s.includes('Detail FAILED')));
 });
 
-test('activity policy stops inactive accounts and assigns 4/12/24-hour intervals',()=>{
+test('activity policy polls before a 20-game window can roll over: 6/8/24/72-hour intervals',()=>{
   const now=Date.parse('2026-10-03T12:00:00Z'),ago=h=>new Date(now-h*3600000).toISOString();
-  const player={puuid,last_played_at:ago(1),checked_at:ago(5),games_7d:12};
-  assert.equal(pollingPolicy(player,now).intervalHours,4);assert.equal(pollingPolicy(player,now).due,true);
-  assert.equal(pollingPolicy({...player,games_7d:4},now).intervalHours,12);
-  assert.equal(pollingPolicy({...player,games_7d:1},now).intervalHours,24);
-  assert.equal(pollingPolicy({...player,last_played_at:ago(200)},now).due,false);
+  const player={puuid,last_played_at:ago(1),checked_at:ago(7),games_7d:12};
+  assert.deepEqual([pollingPolicy(player,now).cohort,pollingPolicy(player,now).intervalHours],['frequent',6]);
+  assert.equal(pollingPolicy(player,now).due,true);
+  assert.equal(pollingPolicy({...player,checked_at:ago(5)},now).due,false);
+  // Anyone who played in the last week is polled every 8 hours, however few games.
+  for(const games_7d of [1,4,9])assert.deepEqual([pollingPolicy({...player,games_7d},now).cohort,pollingPolicy({...player,games_7d},now).intervalHours],['active',8]);
+  assert.equal(pollingPolicy({...player,games_7d:1,last_played_at:ago(150)},now).intervalHours,8);
+  // Quiet accounts are still checked so a return from a break is noticed.
+  const dormant={...player,last_played_at:ago(200)};
+  assert.deepEqual([pollingPolicy(dormant,now).cohort,pollingPolicy(dormant,now).intervalHours],['dormant',24]);
+  assert.equal(pollingPolicy(dormant,now).due,false);
+  assert.equal(pollingPolicy({...dormant,checked_at:ago(25)},now).due,true);
+  const old={...player,last_played_at:ago(40*24)};
+  assert.deepEqual([pollingPolicy(old,now).cohort,pollingPolicy(old,now).intervalHours],['inactive',72]);
+  assert.equal(pollingPolicy({...old,checked_at:ago(71)},now).due,false);
+  assert.equal(pollingPolicy({...old,checked_at:ago(73)},now).due,true);
   assert.equal(pollingPolicy({...player,last_played_at:null},now).due,false);
+  assert.equal(pollingPolicy({...player,last_played_at:null,checked_at:ago(73)},now).due,true);
   assert.equal(pollingPolicy({puuid},now).due,true);
-  assert.equal(selectPollingPlayers([{...player,last_played_at:ago(200)},player],now).length,1);
+  assert.equal(selectPollingPlayers([dormant,player],now).length,1);
+});
+
+test('polling selection has no count cap; the run deadline bounds capture',()=>{
+  const now=Date.parse('2026-10-03T12:00:00Z');
+  const players=Array.from({length:2500},(_,i)=>({puuid:`p${i}`,games_7d:12,last_played_at:'2026-10-03T10:00:00Z',checked_at:'2026-10-03T01:00:00Z'}));
+  assert.equal(selectPollingPlayers(players,now).length,2500);
+  assert.equal(selectPollingPlayers(players,now,10).length,10);
 });
 
 test('a paused account wakes once for a newly observed recent roster match',()=>{
