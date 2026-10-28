@@ -65,6 +65,21 @@ test('result table keeps regulation and overtime separate with eligible actual p
   assert.equal(scoreRows([]).length,0);
 });
 
+test('team/enemy rank chart rows convert the rank gap to RR and keep one-sided data',()=>{
+  const source=html.slice(html.indexOf('function lobbyTeamsChartRows('),html.indexOf('function renderLobbyTeamsChart('));
+  const {lobbyTeamsChartRows,lobbyTeamsGapLabel}=runInNewContext(source+'\n({lobbyTeamsChartRows,lobbyTeamsGapLabel})');
+  const rows=lobbyTeamsChartRows([
+    {tier:13,total:4,teamRankSum:52.4,teamRankCount:4,enemyRankSum:53.48,enemyRankCount:4},
+    {tier:20,total:2,teamRankSum:41,teamRankCount:2,enemyRankSum:0,enemyRankCount:0},
+  ]);
+  assert.equal(rows[0].gap,27);
+  assert.equal(lobbyTeamsGapLabel(rows[0].gap),'Enemy +27 RR');
+  assert.equal(lobbyTeamsGapLabel(-12),'Team +12 RR');
+  assert.equal(lobbyTeamsGapLabel(0),'Even');
+  assert.equal(rows[1].enemy,null);assert.equal(rows[1].gap,null);
+  assert.equal(lobbyTeamsGapLabel(null),'—');
+});
+
 test('win rates show one decimal and colour by the shown value',()=>{
   assert.equal(winRateLabel(2/3*100),'66.7%');
   assert.equal(winRateLabel(50),'50.0%');

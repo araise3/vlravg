@@ -629,7 +629,26 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
 #name-backfill-progress[hidden]{display:none;}
 #sg-rank-overview,.table-scroll{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#414145 #141416;}
 #sg-rank-overview .rank-table{min-width:650px;}
-#lobby-teams-table .rank-table{min-width:640px;}
+#lobby-teams-card{padding:6px 20px 14px;}
+/* Team #3b82f6 / enemy #ef4444: validated for lightness, CVD and contrast on #111113. */
+.lobby-teams-legend{margin:10px 0 2px;}
+.stat-chart-key.team,.stat-chart-key.enemy{width:10px;height:10px;border-radius:50%;}
+.stat-chart-key.team{background:#3b82f6;}.stat-chart-key.enemy{background:#ef4444;}
+.lobby-teams-svg .dot{stroke:#111113;stroke-width:2;}
+.lobby-teams-svg .dot.team{fill:#3b82f6;}.lobby-teams-svg .dot.enemy{fill:#ef4444;}
+.lobby-teams-svg .gap{stroke:#52525b;stroke-width:2;stroke-linecap:round;}
+.lobby-teams-svg .row-hit{fill:transparent;}
+.lobby-teams-svg .row{cursor:default;outline:none;}
+.lobby-teams-svg .row:hover .row-hit,.lobby-teams-svg .row:focus .row-hit{fill:rgba(255,255,255,.04);}
+.lobby-teams-svg .row:focus-visible .row-hit{stroke:var(--brand);stroke-width:1.5;}
+.lobby-teams-svg .count{fill:#a1a1aa;font-size:10px;}
+.lobby-teams-svg .diff{fill:#c4c4cc;font-size:11px;font-variant-numeric:tabular-nums;}
+.lobby-teams-svg.compact{display:none;min-width:0;}
+@media(max-width:640px){
+  #lobby-teams-card{padding:6px 12px 12px;}
+  .lobby-teams-svg.wide{display:none;}
+  .lobby-teams-svg.compact{display:block;}
+}
 #sg-rank-overview:focus-visible,.table-scroll:focus-visible{outline:2px solid var(--brand);outline-offset:-2px;}
 .duo-player-name{display:inline-flex;align-items:baseline;gap:3px;max-width:240px;position:relative;}
 .duo-player-name .duo-name{overflow:hidden;text-overflow:ellipsis;min-width:0;white-space:nowrap;}
@@ -978,8 +997,10 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
         </div>
         <section id="lobby-teams-section" hidden aria-labelledby="lobby-teams-title">
           <h2 id="lobby-teams-title" class="rr-score-heading">Team and enemy ranks</h2>
-          <p class="rr-score-note">Average rank of rated players on each side, grouped by lobby rank. Your team includes you.</p>
-          <div class="s-card" id="lobby-teams-card"><div id="lobby-teams-table" class="table-scroll" role="region" aria-label="Average team and enemy rank by lobby" tabindex="0"></div></div>
+          <div class="s-card" id="lobby-teams-card">
+            <div class="stat-chart-legend lobby-teams-legend" aria-hidden="true"><span><i class="stat-chart-key team"></i>Your team</span><span><i class="stat-chart-key enemy"></i>Enemy team</span></div>
+            <div id="lobby-teams-chart" class="stat-chart-scroll" role="region" aria-label="Average team and enemy rank by lobby" tabindex="0"></div>
+          </div>
         </section>
     </div>
     <div id="lobby-rank-empty" class="page-empty" role="status">Search for a player above to explore their rank breakdown.</div>
@@ -6030,7 +6051,7 @@ function renderRankByRankCard(){
     return{tier:size,label:PARTY_LABELS[size]||size+'-Stack',icon:partyIcon(size)};
   },{includeLobby:true});
   renderPerformanceTable('sg-rank-overview',lobbyRankData,false);
-  renderLobbyTeamsTable(lobbyRankData);
+  renderLobbyTeamsChart(lobbyRankData);
   renderPerformanceTable('party-size-list',partySizeData,true);
   document.getElementById('sg-rank-card').style.display=lobbyRankData.length?'block':'none';
   document.getElementById('lobby-teams-section').hidden=!lobbyRankData.length;
@@ -6086,23 +6107,67 @@ function renderPerformanceTable(containerId,rows,party){
   initTableSorting(container,values);
 }
 
-function renderLobbyTeamsTable(rows){
-  const container=document.getElementById('lobby-teams-table');
-  container.replaceChildren();
-  if(!rows.length)return;
-  const table=document.createElement('table');table.className='rank-table';
-  table.innerHTML='<caption class="rank-sr-only">Average team and enemy rank for each lobby rank group, using rated players only</caption><thead><tr><th scope="col">Lobby rank</th><th scope="col">Matches</th><th scope="col">Avg team rank</th><th scope="col">Avg enemy rank</th></tr></thead><tbody></tbody>';
-  const body=table.querySelector('tbody');
-  rows.forEach(b=>{
-    const row=document.createElement('tr');
-    row.innerHTML=`<th scope="row"><div class="rank-row-identity">${rankIcon(b.tier,24)}<span>${avgLabel(b.tier)}</span></div></th><td>${b.total}</td><td>${tableLobbyValue(b.teamRankSum,b.teamRankCount)}</td><td>${tableLobbyValue(b.enemyRankSum,b.enemyRankCount)}</td>`;
-    body.appendChild(row);
+// Dot plot: one row per lobby-rank group on a shared rank axis, your team's and
+// the enemy team's average rated rank joined by a line, gap labelled in RR.
+function lobbyTeamsChartRows(rows){
+  return rows.map(b=>{
+    const team=b.teamRankCount?b.teamRankSum/b.teamRankCount:null;
+    const enemy=b.enemyRankCount?b.enemyRankSum/b.enemyRankCount:null;
+    // Rank values move 0.01 per RR (see tierRR), so the gap converts directly.
+    const gap=team!=null&&enemy!=null?Math.round((enemy-team)*100):null;
+    return{tier:b.tier,total:b.total,team,enemy,gap};
   });
-  const values=rows.map(b=>[b.tier,b.total,
-    b.teamRankCount?b.teamRankSum/b.teamRankCount:null,
-    b.enemyRankCount?b.enemyRankSum/b.enemyRankCount:null]);
-  container.appendChild(table);
-  initTableSorting(container,values);
+}
+function lobbyTeamsGapLabel(gap){
+  return gap==null?'—':gap===0?'Even':gap>0?`Enemy +${gap} RR`:`Team +${-gap} RR`;
+}
+// Wide: label column, track, gap label in one line per group. Compact (phones):
+// label and gap on one line with a full-width track beneath, so no scrolling.
+function lobbyTeamsSvg(data,compact){
+  const values=data.flatMap(r=>[r.team,r.enemy]).filter(v=>v!=null);
+  const lo=Math.floor(Math.min(...values))-.5,hi=Math.ceil(Math.max(...values))+.5;
+  const width=compact?360:900,left=compact?14:196,right=compact?14:112,top=10;
+  const rowHeight=compact?58:44,axis=30,plotRight=width-right,plotBottom=top+data.length*rowHeight;
+  const x=v=>left+(v-lo)/(hi-lo)*(plotRight-left);
+  const svg=statChartNode('svg',{class:`stat-chart-svg lobby-teams-svg ${compact?'compact':'wide'}`,viewBox:`0 0 ${width} ${plotBottom+axis}`,role:'group',
+    'aria-label':'Average rank of rated players on your team and the enemy team, by lobby rank'});
+  // Whole tiers centre each division. Label every tier that fits, else every division I.
+  const every=[1,3,6,9].find(step=>(plotRight-left)/(hi-lo)*step>=(compact?46:56))||12;
+  for(let tier=Math.ceil(lo);tier<=hi;tier++){
+    if(tier%every)continue;
+    svg.appendChild(statChartNode('line',{x1:x(tier),y1:top,x2:x(tier),y2:plotBottom,class:'grid'}));
+    svg.appendChild(statChartNode('text',{x:x(tier),y:plotBottom+18,'text-anchor':'middle',class:'tick'},avgLabelShort(tier)));
+  }
+  const rankText=v=>{const r=tierRR(v);return `${avgLabel(r.tier)} (${r.rr} RR)`;};
+  data.forEach((r,i)=>{
+    const rowTop=top+i*rowHeight,mid=compact?rowTop+40:rowTop+rowHeight/2,labelY=compact?rowTop+17:mid-2;
+    const matches=`${r.total} ${r.total===1?'match':'matches'}`;
+    const detail=`${avgLabel(r.tier)} lobbies, ${matches}. `+
+      `Your team: ${r.team==null?'no rated data':rankText(r.team)}. Enemy team: ${r.enemy==null?'no rated data':rankText(r.enemy)}. `+
+      (r.gap==null?'':r.gap===0?'Both teams even.':`${r.gap>0?'Enemy':'Your team'} ${Math.abs(r.gap)} RR higher.`);
+    const row=statChartNode('g',{class:'row',tabindex:'0',role:'img','aria-label':detail});
+    row.appendChild(statChartNode('title',{},detail));
+    row.appendChild(statChartNode('rect',{x:0,y:rowTop+2,width,height:rowHeight-4,rx:6,class:'row-hit'}));
+    const icon=RANK_ICONS[r.tier<=2?0:r.tier],size=compact?18:24,iconX=compact?2:4;
+    if(icon)row.appendChild(statChartNode('image',{href:icon,x:iconX,y:labelY-(compact?13:10),width:size,height:size}));
+    const textX=iconX+size+8;
+    row.appendChild(statChartNode('text',{x:textX,y:labelY,class:'label'},avgLabel(r.tier)));
+    if(compact)row.lastChild.appendChild(statChartNode('tspan',{class:'count',dx:6},matches));
+    else row.appendChild(statChartNode('text',{x:textX,y:mid+13,class:'count'},matches));
+    if(r.team!=null&&r.enemy!=null)row.appendChild(statChartNode('line',{x1:x(r.team),y1:mid,x2:x(r.enemy),y2:mid,class:'gap'}));
+    if(r.team!=null)row.appendChild(statChartNode('circle',{cx:x(r.team),cy:mid,r:6,class:'dot team'}));
+    if(r.enemy!=null)row.appendChild(statChartNode('circle',{cx:x(r.enemy),cy:mid,r:6,class:'dot enemy'}));
+    row.appendChild(statChartNode('text',{x:width-4,y:compact?labelY:mid+4,'text-anchor':'end',class:'diff'},lobbyTeamsGapLabel(r.gap)));
+    svg.appendChild(row);
+  });
+  return svg;
+}
+function renderLobbyTeamsChart(rows){
+  const container=document.getElementById('lobby-teams-chart');
+  container.replaceChildren();
+  const data=lobbyTeamsChartRows(rows).filter(r=>r.team!=null||r.enemy!=null);
+  if(!data.length)return;
+  container.append(lobbyTeamsSvg(data,false),lobbyTeamsSvg(data,true));
 }
 
 /* ── MATCH LIST ──────────────────────────────────────────── */
