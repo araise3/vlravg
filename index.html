@@ -638,6 +638,9 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
 .rank-table{width:100%;min-width:620px;border-collapse:separate;border-spacing:0;text-align:right;font-family:var(--font-display);font-variant-numeric:tabular-nums;}
 .rank-table.duos-table{min-width:680px;}
 #teammate-list .duos-table{min-width:800px;}
+#teammate-list .duo-stat-you{display:block;margin-top:2px;font-size:11px;font-weight:500;color:#a1a1aa;}
+#teammate-list .duo-stat-you .duo-you-positive{color:#72e6a0;}
+#teammate-list .duo-stat-you .duo-you-negative{color:#ff9999;}
 #teammate-list .duos-table th:first-child{width:auto;}
 #teammate-list .duos-table th:not(:first-child){width:1%;}
 #teammate-list .duo-player-name{max-width:none;vertical-align:middle;}
@@ -4658,7 +4661,8 @@ function buildTeammates(){
       // Only count players who were in the same party (duo/trio/5-stack)
       if(!m.myPartyId||p.party_id!==m.myPartyId)return;
       const key=p.puuid||`${p.name}#${p.tag}`;
-      if(!tmap[key])tmap[key]={name:p.name,tag:p.tag,key,lastSeen:-1,games:0,wins:0,decided:0,kills:0,deaths:0,rankSum:0,rankCount:0,acsSum:0,acsCount:0,performanceSum:0,performanceCount:0,placeSum:0,placeCount:0,rrTotal:0,rrCount:0};
+      if(!tmap[key])tmap[key]={name:p.name,tag:p.tag,key,lastSeen:-1,games:0,wins:0,decided:0,kills:0,deaths:0,rankSum:0,rankCount:0,acsSum:0,acsCount:0,performanceSum:0,performanceCount:0,placeSum:0,placeCount:0,rrTotal:0,rrCount:0,
+        myKills:0,myDeaths:0,myAcsSum:0,myAcsCount:0,myPerformanceSum:0,myPerformanceCount:0};
       if((m.startedAtMs||0)>tmap[key].lastSeen){
         const identity=currentTeammateIdentity(p);
         tmap[key].name=identity.name;tmap[key].tag=identity.tag;
@@ -4677,6 +4681,11 @@ function buildTeammates(){
         // ACS placement (1 = highest) is precomputed per player at load.
         if(p._acsPlace!=null){tmap[key].placeSum+=p._acsPlace;tmap[key].placeCount++;}
       }
+      // The searched player's own line in the same shared matches.
+      tmap[key].myKills+=m.myStats.kills||0;
+      tmap[key].myDeaths+=m.myStats.deaths||0;
+      if(Number.isFinite(m.myStats.acs)){tmap[key].myAcsSum+=m.myStats.acs;tmap[key].myAcsCount++;}
+      if(Number.isFinite(m.myStats.performanceScore)){tmap[key].myPerformanceSum+=m.myStats.performanceScore;tmap[key].myPerformanceCount++;}
     });
   });
 
@@ -4917,26 +4926,32 @@ function renderTeammates(){
   if(!allTeammates.length)return;
   const table=document.createElement('table');
   table.className='rank-table duos-table';
-  table.innerHTML=`<caption class="rank-sr-only">Party teammates, including their K/D, average ACS, Avg PS, and your total recorded RR change together</caption>
-    <thead><tr><th scope="col">Teammate</th><th scope="col">Matches</th><th scope="col">Avg Lobby</th><th scope="col" title="Teammate K/D">K/D</th><th scope="col" title="Teammate average ACS">ACS</th><th scope="col" title="Avg PS across matches with available data">PS</th><th scope="col">Win rate</th><th scope="col" title="Your net RR change in matches with this teammate">Total RR</th></tr></thead><tbody></tbody>`;
+  table.innerHTML=`<caption class="rank-sr-only">Party teammates, including their K/D, average ACS and Avg PS with yours in the same matches beneath, and your total recorded RR change together</caption>
+    <thead><tr><th scope="col">Teammate</th><th scope="col">Matches</th><th scope="col">Avg Lobby</th><th scope="col" title="Teammate K/D; yours in the same matches beneath">K/D</th><th scope="col" title="Teammate average ACS; yours in the same matches beneath">ACS</th><th scope="col" title="Avg PS across matches with available data; yours in the same matches beneath">PS</th><th scope="col">Win rate</th><th scope="col" title="Your net RR change in matches with this teammate">Total RR</th></tr></thead><tbody></tbody>`;
   const tbody=table.querySelector('tbody');
   const teammateRows=allTeammates.map(t=>({
     ...t,
     kd:t.deaths>0?t.kills/t.deaths:t.kills,
     acs:t.acsCount?t.acsSum/t.acsCount:null,
     performanceScore:t.performanceCount?t.performanceSum/t.performanceCount:null,
+    myKd:t.myDeaths>0?t.myKills/t.myDeaths:t.myKills,
+    myAcs:t.myAcsCount?t.myAcsSum/t.myAcsCount:null,
+    myPerformanceScore:t.myPerformanceCount?t.myPerformanceSum/t.myPerformanceCount:null,
     lobby:t.rankCount?t.rankSum/t.rankCount:null,
     wr:decidedWinRate(t.wins,t.decided),
   }));
+  // Your own figure from the same shared matches, under the teammate's.
+  const youLine=(value,tone='')=>`<span class="duo-stat-you"><span class="rank-sr-only">, </span>You <span class="${tone}">${value}</span></span>`;
+  const kdTone=kd=>kd===1?'':kd>1?'duo-you-positive':'duo-you-negative';
   teammateRows.forEach(t=>{
     const wr=t.wr==null?null:Math.round(t.wr);
     const row=document.createElement('tr');
     row.innerHTML=`<th scope="row"><a class="duo-player-name" href="${playerRouteUrl(t.name,t.tag)}"><span class="duo-name"></span><span class="duo-tag"></span></a></th>
       <td>${t.games}</td>
       <td>${tableLobbyValue(t.rankSum,t.rankCount)}</td>
-      <td class="${t.kd===1?'':t.kd>1?'rank-positive':'rank-negative'}" title="${t.kills} kills / ${t.deaths} deaths">${t.kd.toFixed(2)}</td>
-      <td>${t.acs==null?'—':Math.round(t.acs)}</td>
-      <td title="${t.performanceCount} of ${t.games} shared matches have Performance Score data">${t.performanceScore==null?'—':Math.round(t.performanceScore)}</td>
+      <td class="${t.kd===1?'':t.kd>1?'rank-positive':'rank-negative'}" title="Teammate: ${t.kills} kills / ${t.deaths} deaths · You: ${t.myKills} kills / ${t.myDeaths} deaths">${t.kd.toFixed(2)}${youLine(t.myKd.toFixed(2),kdTone(t.myKd))}</td>
+      <td>${t.acs==null?'—':Math.round(t.acs)}${youLine(t.myAcs==null?'—':Math.round(t.myAcs))}</td>
+      <td title="${t.performanceCount} of ${t.games} shared matches have teammate Performance Score data · ${t.myPerformanceCount} have yours">${t.performanceScore==null?'—':Math.round(t.performanceScore)}${youLine(t.myPerformanceScore==null?'—':Math.round(t.myPerformanceScore))}</td>
       <td class="${wr==null||wr===50?'':wr>50?'rank-positive':'rank-negative'}" title="Wins divided by wins plus losses; draws excluded">${wr==null?'—':wr+'%'}</td>
       <td class="${!t.rrCount||t.rrTotal===0?'':t.rrTotal>0?'rank-positive':'rank-negative'}" title="${t.rrCount} of ${t.games} shared matches have recorded RR change">${t.rrCount?rrSigned(t.rrTotal,0):'—'}</td>`;
     row.querySelector('.duo-player-name').title=t.name+'#'+t.tag;

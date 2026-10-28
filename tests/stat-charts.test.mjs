@@ -152,7 +152,7 @@ test('party aggregation attaches your stats only to your same-team party teammat
   const opponent={puuid:'opponent',name:'Opponent',team_id:'Red',party_id:'party'};
   const context={PUUID:'me',PLAYER:'Me',TAG:'EU',allMatches:[],
     statMatches:[{players:[me,friend,stranger,opponent],myPartyId:'party',myRR:21,won:true,
-      myStats:{kills:10,deaths:20,score:4000,rounds_played:20}}],
+      myStats:{kills:10,deaths:20,score:4000,rounds_played:20,acs:200,performanceScore:250}}],
     document:{getElementById:()=>({style:{}})},computeEncounters:()=>[],
     currentTeammateIdentity:p=>p,
     renderTeammates:()=>{},renderEncounters:()=>{},renderWintradeSignals:()=>{},renderOverviewPreviews:()=>{},updateDetailPages:()=>{}};
@@ -163,4 +163,30 @@ test('party aggregation attaches your stats only to your same-team party teammat
   assert.equal(rows[0].performanceSum,312.5);assert.equal(rows[0].performanceCount,1);
   assert.equal(rows[0].chartStats,undefined);
   assert.equal(rows[0].rrTotal,21);
+  // The searched player's own line in the shared match, beside the teammate's.
+  assert.equal(rows[0].myKills,10);assert.equal(rows[0].myDeaths,20);
+  assert.equal(rows[0].myAcsSum,200);assert.equal(rows[0].myAcsCount,1);
+  assert.equal(rows[0].myPerformanceSum,250);assert.equal(rows[0].myPerformanceCount,1);
+});
+
+test('duo table shows your stats from the shared matches under each teammate figure',()=>{
+  const start=html.indexOf('function renderTeammates('),end=html.indexOf('\n// Keep each table\'s chosen sort',start);
+  assert.ok(start>0&&end>start);
+  const rows=[];let sortValues=null;
+  const stub=()=>({title:'',textContent:''});
+  const createElement=()=>({innerHTML:'',querySelector(sel){return sel==='tbody'?{appendChild:row=>rows.push(row.innerHTML)}:stub();}});
+  const context={document:{getElementById:()=>({replaceChildren(){},appendChild(){}}),createElement},
+    allTeammates:[{name:'Friend',tag:'EU',games:3,wins:2,decided:3,kills:30,deaths:20,rankSum:0,rankCount:0,
+      acsSum:600,acsCount:3,performanceSum:0,performanceCount:0,rrTotal:12,rrCount:3,
+      myKills:24,myDeaths:30,myAcsSum:540,myAcsCount:3,myPerformanceSum:750,myPerformanceCount:3}],
+    playerRouteUrl:()=>'/player/x',tableLobbyValue:()=>'—',decidedWinRate:(w,d)=>d?w/d*100:null,rrSigned:v=>(v>0?'+':'')+v,
+    highlightTableMaxima(){},initTableSorting:(_,values)=>{sortValues=values;}};
+  runInNewContext(html.slice(start,end)+'\nrenderTeammates();',context);
+  assert.equal(rows.length,1);
+  const cells=rows[0].split('<td').slice(1);
+  assert.match(cells[2],/>1\.50<span class="duo-stat-you">.*You <span class="duo-you-negative">0\.80<\/span>/);
+  assert.match(cells[3],/>200<span class="duo-stat-you">.*You <span class="">180<\/span>/);
+  assert.match(cells[4],/>—<span class="duo-stat-you">.*You <span class="">250<\/span>/);
+  // Sorting and highlights keep using the teammate's figures.
+  assert.deepEqual(JSON.parse(JSON.stringify(sortValues[0].slice(3,6))),[1.5,200,null]);
 });
