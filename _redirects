@@ -16,4 +16,6 @@
 /names / 200
 /names/ /names 301
 /player/* /index.html 200
-/replays.html / 301
+/replays /index.html 200
+/replays/ /replays 301
+/replays.html /replays 301

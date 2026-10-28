@@ -620,6 +620,34 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
   .name-history-table th,.name-history-table td{padding:13px 16px;}
 }
 .name-history-note{font-size:12px;color:#a1a1aa;line-height:1.6;margin-top:14px;}
+.replay-import-notice{font-size:13px;color:#a1a1aa;line-height:1.6;margin-bottom:14px;}
+.replay-import-notice:empty{display:none;}
+.replay-list{list-style:none;margin:0;padding:0;border:1px solid #29292d;border-radius:8px;background:#111113;overflow:hidden;}
+.replay-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px 16px;padding:14px 18px;border-bottom:1px solid #262629;}
+.replay-row:last-child{border-bottom:0;}
+.replay-match{min-width:0;display:flex;flex-direction:column;gap:4px;}
+.replay-match-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px;font-size:15px;}
+.replay-match-head strong{color:#f4f4f5;font-weight:700;}
+.replay-score{font-variant-numeric:tabular-nums;font-weight:650;}
+.replay-score.win{color:#4ade80;}.replay-score.loss{color:#f87171;}.replay-score.draw{color:var(--draw);}
+.replay-date{color:#a1a1aa;font-size:12px;}
+.replay-id{font-family:var(--font-mono);font-size:12px;color:#8b8b94;overflow-wrap:anywhere;}
+.replay-state{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px 12px;text-align:right;}
+.replay-status{font-size:12px;font-weight:600;color:#a1a1aa;}
+.replay-status.parsed{color:#4ade80;}.replay-status.busy{color:var(--brand);}.replay-status.bad{color:#f87171;}
+.replay-detail{flex-basis:100%;font-size:12px;color:#8b8b94;line-height:1.5;}
+.replay-detail:empty{display:none;}
+.replay-upload-btn{min-height:36px;padding:0 14px;border:1px solid #3a3a40;border-radius:6px;background:#1b1b1f;color:var(--text);font:inherit;font-size:13px;cursor:pointer;}
+.replay-upload-btn:hover{border-color:var(--brand);}
+.replay-upload-btn:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
+.replay-row progress{width:120px;height:6px;}
+.replay-turnstile:empty{display:none;}
+.replay-import-note{font-size:12px;color:#a1a1aa;line-height:1.6;margin-top:14px;}
+.replay-import-note code{font-family:var(--font-mono);font-size:11px;color:#c4c4cc;overflow-wrap:anywhere;}
+@media(max-width:520px){
+  .replay-row{grid-template-columns:1fr;padding:13px 16px;}
+  .replay-state{justify-content:flex-start;text-align:left;}
+}
 .name-history-retry{color:var(--brand);text-decoration:underline;text-underline-offset:3px;margin-left:8px;}
 .name-backfill-controls{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:16px;font-size:12px;color:#a1a1aa;}
 .name-backfill-controls[hidden]{display:none;}
@@ -929,7 +957,20 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
     <a href="/rr" data-page="rr">RR Breakdown</a>
     <a href="/matches" data-page="matches">Match History</a>
     <a href="/names" data-page="names">Name History</a>
+    <a href="/replays" data-page="replays">Replays</a>
   </nav>
+  <main id="replays-page" class="detail-page" hidden aria-labelledby="replays-title">
+    <div class="page-heading">
+      <h1 id="replays-title" tabindex="-1">Replay import</h1>
+      <p>Upload the VALORANT replay (.vrf) of a loaded match. It is parsed offline in a sandbox into a compact timeline of rounds, kills and positions every 250 ms. Uploaded replays are user-supplied and kept apart from HenrikDev match data.</p>
+    </div>
+    <div id="replays-empty" class="page-empty" role="status">Search for a player above to upload replays for their matches.</div>
+    <div id="replay-import-section" hidden>
+      <p id="replay-import-notice" class="replay-import-notice" role="status" aria-live="polite"></p>
+      <ul id="replay-list" class="replay-list" aria-label="Loaded matches and their replays"></ul>
+      <p class="replay-import-note">Replays are saved in <code>%LOCALAPPDATA%\VALORANT\Saved\Demos</code> and named by match ID. A file is accepted only for the match it was recorded in, and the parsed replay must contain every player HenrikDev lists for that match.</p>
+    </div>
+  </main>
   <main id="names-page" class="detail-page" hidden aria-labelledby="names-title">
     <div class="page-heading">
       <h1 id="names-title" tabindex="-1">Name History</h1>
@@ -1794,8 +1835,243 @@ function updateDetailPages(){
   empty.textContent=analysisState==='loading'?'Loading this player’s matches…':ready
     ?(allMatches.length?'No party teammates found for these filters.':'No matches found for this season. Try another act.')
     :'Search for a player above to see who they queue with.';
+  const replaysEmpty=document.getElementById('replays-empty');
+  replaysEmpty.hidden=hasMatches||analysisState==='error';
+  replaysEmpty.textContent=analysisState==='loading'?'Loading this player’s matches…':ready
+    ?'No matches found for this season. Try another act.'
+    :'Search for a player above to upload replays for their matches.';
+  document.getElementById('replay-import-section').hidden=!hasMatches;
+  if(activePage==='replays'&&hasMatches)renderReplayImport();
 }
-const PAGE_SLUGS={overview:'',duos:'duos',matches:'matches','lobby-rank':'lobbyrank',servers:'servers',rr:'rr',names:'names'};
+
+/* ── REPLAY IMPORT ──────────────────────────────────────── */
+// Uploads go to /api/replays (functions/api/replays, docs/replay-import.md).
+// The row list is keyed by match ID and updated in place so a running upload
+// keeps its progress while matches keep loading.
+const REPLAY_MAGIC=0x43f4efdd;
+const REPLAY_STATUS_BATCH=60;
+const REPLAY_POLL_MS=20000;
+const REPLAY_ERRORS={
+  players_mismatch:'The replay’s players do not match this match.',
+  size_mismatch:'The stored file size did not match the upload.',
+  decoder_validate_failed:'The parser does not support this replay yet.',
+  decoder_export_failed:'The parser could not export this replay.',
+  compact_failed:'The replay could not be reduced to the compact format.',
+  compact_invalid:'The parser produced invalid output.',
+  timeout:'Parsing took too long.',
+  oversize:'The parsed result was too large.',
+  download_failed:'The parser could not read the stored file.',
+  output_rejected:'The parser output was rejected.',
+  export_missing:'The full parser export was missing.',
+  parser_attempts_exhausted:'Parsing failed repeatedly.',
+  upload_aborted:'The upload was cancelled.',
+};
+const replayImport={config:null,configLoad:null,status:new Map(),rows:new Map(),busy:new Set(),pollTimer:null,polls:0,turnstileLoad:null};
+
+// One row per loaded match with a valid ID, newest first.
+function replayMatchRows(matches){
+  const seen=new Set();
+  return matches.filter(m=>{
+    const id=String(m.matchId||'').toLowerCase();
+    if(!PUUID_RE.test(id)||seen.has(id))return false;
+    seen.add(id);return true;
+  }).sort((a,b)=>(b.startedAtMs??0)-(a.startedAtMs??0)).map(m=>({
+    matchId:m.matchId.toLowerCase(),map:m.mapName||'Unknown',date:m.startedAt||'',
+    score:m.myR!=null&&m.opR!=null?`${m.myR}–${m.opR}`:'—',
+    result:m.won===true?'win':m.won===false?'loss':'draw',
+  }));
+}
+
+// The replay header carries the match UUID (UTF-16 FString at offset 44).
+function replayFileMatchId(bytes){
+  if(!(bytes instanceof Uint8Array)||bytes.byteLength<48)return null;
+  const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+  if(view.getUint32(0,true)!==REPLAY_MAGIC||view.getInt32(32,true)<=0)return null;
+  const units=view.getInt32(44,true);
+  if(units>=0||units<-1024||48-units*2>bytes.byteLength)return null;
+  try{
+    const name=new TextDecoder('utf-16le',{fatal:true}).decode(bytes.subarray(48,48-units*2)).replace(/\0+$/,'').trim().toLowerCase();
+    return PUUID_RE.test(name)?name:null;
+  }catch{return null;}
+}
+
+function replayStatusView(status){
+  const s=status?.status||'none';
+  if(s==='parsed'){
+    const c=status.counts||{};
+    const minutes=status.duration_ms?Math.round(status.duration_ms/60000):null;
+    const parts=[c.rounds!=null&&`${c.rounds} rounds`,c.kills!=null&&`${c.kills} kills`,minutes&&`${minutes} min`,status.build&&status.build.replace(/^\+\+Ares-Core\+release-/,'build '),status.export_bytes&&`full export ${(status.export_bytes/1048576).toFixed(1)} MB`].filter(Boolean);
+    return{text:'Parsed',tone:'parsed',detail:parts.join(' · ')};
+  }
+  if(s==='pending')return{text:'Queued for parsing',tone:'busy',detail:''};
+  if(s==='parsing')return{text:'Parsing',tone:'busy',detail:''};
+  if(s==='uploading')return{text:'Upload in progress',tone:'busy',detail:''};
+  if(s==='failed'||s==='rejected')return{text:s==='failed'?'Parse failed':'Rejected',tone:'bad',detail:REPLAY_ERRORS[status.error]||'The replay could not be processed.'};
+  if(status&&!status.eligible)return{text:'Not in the verified archive',tone:'',detail:''};
+  return{text:'No replay',tone:'',detail:''};
+}
+
+async function loadReplayConfig(){
+  replayImport.configLoad??=fetch('/api/replays/config').then(r=>r.ok?r.json():null).then(body=>{
+    replayImport.config=body?.data||{enabled:false};
+  }).catch(()=>{replayImport.config={enabled:false};replayImport.configLoad=null;});
+  return replayImport.configLoad;
+}
+
+async function refreshReplayStatuses(ids){
+  for(let i=0;i<ids.length;i+=REPLAY_STATUS_BATCH){
+    const batch=ids.slice(i,i+REPLAY_STATUS_BATCH);
+    try{
+      const res=await fetch('/api/replays/status?ids='+batch.join(','));
+      if(!res.ok)continue;
+      const body=await res.json();
+      for(const id of batch)if(body.data?.[id])replayImport.status.set(id,body.data[id]);
+    }catch{}
+  }
+}
+
+function replayRowElement(row){
+  const li=document.createElement('li');
+  li.className='replay-row';
+  li.dataset.matchId=row.matchId;
+  li.innerHTML='<div class="replay-match"><div class="replay-match-head"><strong></strong><span class="replay-score"></span><span class="replay-date"></span></div><span class="replay-id"></span></div>'
+    +'<div class="replay-state"><span class="replay-status"></span><progress max="1" value="0" hidden></progress><button class="replay-upload-btn" type="button" hidden>Upload .vrf</button><input type="file" accept=".vrf" hidden><span class="replay-detail"></span><div class="replay-turnstile"></div></div>';
+  li.querySelector('strong').textContent=row.map;
+  const score=li.querySelector('.replay-score');
+  score.textContent=row.score;score.classList.add(row.result);
+  li.querySelector('.replay-date').textContent=row.date;
+  li.querySelector('.replay-id').textContent=row.matchId;
+  const button=li.querySelector('button'),input=li.querySelector('input');
+  button.setAttribute('aria-label',`Upload replay for ${row.map} ${row.date}`);
+  button.addEventListener('click',()=>input.click());
+  input.addEventListener('change',()=>{const file=input.files?.[0];input.value='';if(file)uploadReplay(row.matchId,file,li);});
+  return li;
+}
+
+function paintReplayRow(li){
+  const id=li.dataset.matchId;
+  if(replayImport.busy.has(id))return;
+  const status=replayImport.status.get(id);
+  const view=replayStatusView(status);
+  const label=li.querySelector('.replay-status');
+  label.textContent=status?view.text:'Checking…';
+  label.className='replay-status'+(view.tone?' '+view.tone:'');
+  li.querySelector('.replay-detail').textContent=view.detail;
+  li.querySelector('button').hidden=!(replayImport.config?.enabled&&status?.can_upload);
+  li.querySelector('progress').hidden=true;
+}
+
+async function renderReplayImport(){
+  const rows=replayMatchRows(allMatches);
+  const list=document.getElementById('replay-list');
+  const ids=rows.map(r=>r.matchId);
+  for(const row of rows)if(!replayImport.rows.has(row.matchId))replayImport.rows.set(row.matchId,replayRowElement(row));
+  const wanted=ids.map(id=>replayImport.rows.get(id));
+  if(list.children.length!==wanted.length||wanted.some((el,i)=>list.children[i]!==el))list.replaceChildren(...wanted);
+  wanted.forEach(paintReplayRow);
+  await loadReplayConfig();
+  const notice=document.getElementById('replay-import-notice');
+  notice.textContent=replayImport.config?.enabled?'':'Replay uploads are not available right now.';
+  const missing=ids.filter(id=>!replayImport.status.has(id));
+  if(missing.length)await refreshReplayStatuses(missing);
+  wanted.forEach(paintReplayRow);
+  scheduleReplayPoll();
+}
+
+// Re-check queued and parsing rows while the page is open.
+function scheduleReplayPoll(){
+  clearTimeout(replayImport.pollTimer);
+  const waiting=[...replayImport.status].filter(([,s])=>['pending','parsing'].includes(s.status)).map(([id])=>id);
+  if(!waiting.length||replayImport.polls>=90){replayImport.polls=0;return;}
+  replayImport.pollTimer=setTimeout(async()=>{
+    if(activePage!=='replays')return;
+    replayImport.polls++;
+    await refreshReplayStatuses(waiting);
+    replayImport.rows.forEach(paintReplayRow);
+    scheduleReplayPoll();
+  },REPLAY_POLL_MS);
+}
+
+function loadTurnstile(){
+  replayImport.turnstileLoad??=new Promise((resolve,reject)=>{
+    const script=document.createElement('script');
+    script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    script.async=true;script.onload=resolve;
+    script.onerror=()=>{script.remove();replayImport.turnstileLoad=null;reject(new Error('Verification could not load.'));};
+    document.head.appendChild(script);
+  });
+  return replayImport.turnstileLoad;
+}
+
+async function replayTurnstileToken(host){
+  await loadTurnstile();
+  return new Promise((resolve,reject)=>{
+    const box=document.createElement('div');
+    host.appendChild(box);
+    const done=()=>setTimeout(()=>{try{turnstile.remove(widget);}catch{}box.remove();},0);
+    const widget=turnstile.render(box,{sitekey:replayImport.config.turnstileSiteKey,action:'replay-upload',appearance:'interaction-only',
+      callback:token=>{done();resolve(token);},
+      'error-callback':()=>{done();reject(new Error('Verification failed. Try again.'));return true;},
+      'expired-callback':()=>{done();reject(new Error('Verification expired. Try again.'));}});
+  });
+}
+
+async function replayRequest(url,init,attempts=3){
+  for(let attempt=1;;attempt++){
+    try{
+      const res=await fetch(url,init);
+      if(res.status<500||attempt>=attempts)return res;
+    }catch(e){if(attempt>=attempts)throw e;}
+    await new Promise(r=>setTimeout(r,1500*attempt));
+  }
+}
+
+async function uploadReplay(matchId,file,li){
+  const label=li.querySelector('.replay-status'),detail=li.querySelector('.replay-detail'),progress=li.querySelector('progress'),button=li.querySelector('button');
+  const config=replayImport.config;
+  const show=(text,tone='busy',more='')=>{label.textContent=text;label.className='replay-status '+tone;detail.textContent=more;};
+  if(!config?.enabled)return;
+  if(file.size<config.minBytes||file.size>config.maxBytes){
+    show('Not uploaded','bad',`Replays must be between ${config.minBytes/1048576} and ${config.maxBytes/1048576} MB.`);return;
+  }
+  const embedded=replayFileMatchId(new Uint8Array(await file.slice(0,2048).arrayBuffer()));
+  if(!embedded){show('Not uploaded','bad','This is not a VALORANT replay file.');return;}
+  if(embedded!==matchId){show('Not uploaded','bad',`This replay is from match ${embedded}.`);return;}
+  replayImport.busy.add(matchId);
+  button.hidden=true;
+  try{
+    show('Verifying…');
+    const turnstileToken=await replayTurnstileToken(li.querySelector('.replay-turnstile'));
+    show('Uploading…');
+    const start=await replayRequest(`/api/replays/upload/${matchId}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({size:file.size,turnstileToken})},1);
+    const started=await start.json().catch(()=>({}));
+    if(!start.ok)throw new Error(started.error||'Upload could not start.');
+    const {uploadToken,partBytes,parts}=started.data;
+    progress.hidden=false;progress.value=0;
+    for(let n=1;n<=parts;n++){
+      const res=await replayRequest(`/api/replays/upload/${matchId}/part/${n}`,{method:'PUT',headers:{'X-Upload-Token':uploadToken},body:file.slice((n-1)*partBytes,n*partBytes)});
+      if(!res.ok){
+        const body=await res.json().catch(()=>({}));
+        fetch(`/api/replays/upload/${matchId}/abort`,{method:'POST',headers:{'X-Upload-Token':uploadToken}}).catch(()=>{});
+        throw new Error(body.error||'Upload failed.');
+      }
+      progress.value=n/parts;
+    }
+    const done=await replayRequest(`/api/replays/upload/${matchId}/complete`,{method:'POST',headers:{'X-Upload-Token':uploadToken}});
+    if(!done.ok)throw new Error((await done.json().catch(()=>({}))).error||'Upload could not be finished.');
+    replayImport.status.set(matchId,{...replayImport.status.get(matchId),status:'pending',can_upload:false});
+  }catch(e){
+    replayImport.busy.delete(matchId);
+    await refreshReplayStatuses([matchId]);
+    paintReplayRow(li);
+    show('Not uploaded','bad',e.message||'Upload failed.');
+    return;
+  }
+  replayImport.busy.delete(matchId);
+  paintReplayRow(li);
+  scheduleReplayPoll();
+}
+const PAGE_SLUGS={overview:'',duos:'duos',matches:'matches','lobby-rank':'lobbyrank',servers:'servers',rr:'rr',names:'names',replays:'replays'};
 function playerRouteUrl(name,tag,page='overview',act=''){
   const base=`/player/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`;
   const suffix=PAGE_SLUGS[page];
@@ -1864,7 +2140,7 @@ function applyPage(focus=false){
     path='/lobbyrank';
     history.replaceState(history.state,'',path+location.search+location.hash);
   }
-  activePage=playerRoute?.page||(path==='/duos'?'duos':path==='/matches'?'matches':path==='/lobbyrank'?'lobby-rank':path==='/servers'?'servers':path==='/rr'?'rr':path==='/names'?'names':'overview');
+  activePage=playerRoute?.page||(path==='/duos'?'duos':path==='/matches'?'matches':path==='/lobbyrank'?'lobby-rank':path==='/servers'?'servers':path==='/rr'?'rr':path==='/names'?'names':path==='/replays'?'replays':'overview');
   const isDuos=activePage==='duos';
   document.body.classList.toggle('duos-view',isDuos);
   document.body.classList.toggle('detail-view',activePage!=='overview');
@@ -1875,8 +2151,9 @@ function applyPage(focus=false){
   if(activePage==='servers')loadServerPingMap();
   document.getElementById('rr-page').hidden=activePage!=='rr';
   document.getElementById('names-page').hidden=activePage!=='names';
-  const titles={overview:'vlravg — Average Lobby Rank & Valorant Stats',duos:'Duos — vlravg',matches:'Match History — vlravg','lobby-rank':'Lobby Rank — vlravg',servers:'Servers — vlravg',rr:'RR Breakdown — vlravg',names:'Name History — vlravg'};
-  const profileTitles={overview:'Overview',duos:'Duos',matches:'Match History','lobby-rank':'Lobby Rank',servers:'Servers',rr:'RR Breakdown',names:'Name History'};
+  document.getElementById('replays-page').hidden=activePage!=='replays';
+  const titles={overview:'vlravg — Average Lobby Rank & Valorant Stats',duos:'Duos — vlravg',matches:'Match History — vlravg','lobby-rank':'Lobby Rank — vlravg',servers:'Servers — vlravg',rr:'RR Breakdown — vlravg',names:'Name History — vlravg',replays:'Replay Import — vlravg'};
+  const profileTitles={overview:'Overview',duos:'Duos',matches:'Match History','lobby-rank':'Lobby Rank',servers:'Servers',rr:'RR Breakdown',names:'Name History',replays:'Replay Import'};
   document.title=playerRoute?`${playerRoute.name}#${playerRoute.tag} — ${profileTitles[activePage]} — vlravg`:titles[activePage];
   document.querySelectorAll('a[data-page]').forEach(link=>{
     const page=link.dataset.page;
@@ -1889,7 +2166,7 @@ function applyPage(focus=false){
     else link.removeAttribute('aria-current');
   });
   const resetToggle=document.getElementById('reset-toggle');
-  if(activePage!=='overview'&&activePage!=='names')document.getElementById(activePage+'-filter-host').appendChild(resetToggle);
+  if(activePage!=='overview'&&activePage!=='names'&&activePage!=='replays')document.getElementById(activePage+'-filter-host').appendChild(resetToggle);
   else document.getElementById('overview-filter-host').appendChild(resetToggle);
   updateDetailPages();
   if(focus){
@@ -2572,7 +2849,7 @@ function runAnalysis(searchOverride,{fromUrl=false,initialAct=null}={}){
   document.getElementById('rr-loss-value').className='stat-pill-value';
   CURRENT_TIER_ID=null;
   CURRENT_RR=null;
-  allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;mhDayStats={};
+  allMatches=[];mhVisible=PER_PAGE;mhData=[];mhLastDayKey=null;mhDayStats={};replayImport.status.clear();
   _rrChangeByMatchId={};_rrDetailsByMatchId={};_preRRByMatchId={};_preTierByMatchId={};_postRRByMatchId={};_postTierByMatchId={};_refundedRRByMatchId={};_derankProtectedByMatchId={};
   allTeammates=[];allEncounters=[];serverData=[];serverPartySize=0;serverFilteredMatchCount=0;lobbyRankPartySize=0;lobbyRankFilteredMatchCount=0;rrMovementZoomTier=null;
   rrTrendRange='all';
