@@ -63,7 +63,7 @@ function bucket() {
 }
 
 let githubJobs = [];
-async function fixture(t, { archive = true, env: extra = {} } = {}) {
+async function fixture(t, { archive = true, match, env: extra = {} } = {}) {
   const db = new DatabaseSync(':memory:');
   db.exec(readFileSync(new URL('../schema.sql', import.meta.url), 'utf8'));
   const statement = (sql, args = []) => ({
@@ -78,7 +78,7 @@ async function fixture(t, { archive = true, env: extra = {} } = {}) {
     try { const r = list.map(s => s.execute()); db.exec('COMMIT'); return r; } catch (e) { db.exec('ROLLBACK'); throw e; }
   } };
   if (archive) {
-    const payload = await gzip(JSON.stringify({ metadata: { match_id: matchId }, players: players.map(puuid => ({ puuid })) }));
+    const payload = await gzip(JSON.stringify(match || { metadata: { match_id: matchId }, players: players.map(puuid => ({ puuid })) }));
     db.prepare('INSERT INTO match_archive (puuid,season_id,match_id,started_at,payload) VALUES (?,?,?,?,?)')
       .run(players[0], id(99), matchId, '2026-10-15T18:00:00Z', payload);
   }
@@ -267,6 +267,44 @@ test('daily and per-match budgets are enforced atomically', async t => {
   REPLAY_LIMITS.ipUploads = 99;
   f.db.prepare("UPDATE replay_imports SET status='failed',uploads=?1").run(REPLAY_LIMITS.uploadsPerMatch);
   assert.equal((await start()).status, 429, 'per-match attempt cap');
+  assert.equal((await f.call('GET', `/status?ids=${matchId}`)).json.data[matchId].can_upload, false);
+  // Junk uploads cannot lock a match for good: the cap is per UTC day.
+  f.db.prepare("UPDATE replay_imports SET created_at='2026-01-01T10:00:00.000Z'").run();
+  assert.equal((await f.call('GET', `/status?ids=${matchId}`)).json.data[matchId].can_upload, true);
+  assert.equal((await start()).status, 201, 'a new day starts a new count');
+  assert.equal(f.db.prepare('SELECT uploads FROM replay_imports').get().uploads, 1);
+});
+
+// An archived HenrikDev match shaped like the v4 payloads match_archive holds.
+function henrikMatch({ won = 1, lost = 0, mapId = '2c9d57ec-4431-9c5e-2939-8f9ef6dd5cba', kills = players.map((_, i) => (i === 0 ? 1 : 0)) } = {}) {
+  return { metadata: { match_id: matchId, map: { id: mapId, name: 'Bind' } }, teams: [{ rounds: { won, lost } }, { rounds: { won: lost, lost: won } }],
+    players: players.map((puuid, i) => ({ puuid, stats: { kills: kills[i] } })) };
+}
+
+test('a replay must match the archived match: rounds, map and kills per player', async t => {
+  const bytes = replayBytes(2 * 1024 * 1024);
+  const run = async (match, doc = compactDoc(bytes)) => {
+    const f = await fixture(t, { match });
+    await upload(f, bytes);
+    const [job] = (await f.call('POST', '/claim', { workflow: true })).json.data;
+    const { result } = await submit(f, job, doc);
+    const status = (await f.call('GET', `/status?ids=${matchId}`)).json.data[matchId].status;
+    return { status, reason: result.json.data.reason, rawLeft: [...f.r2.objects.keys()].some(k => k.startsWith('raw/')) };
+  };
+  const parsed = { status: 'parsed', reason: undefined, rawLeft: true };
+  assert.deepEqual(await run(henrikMatch()), parsed);
+  assert.deepEqual(await run(henrikMatch({ won: 13, lost: 9 })), { status: 'rejected', reason: 'rounds_mismatch', rawLeft: false });
+  assert.equal((await run(henrikMatch({ mapId: '7eaecc1b-4337-bbf6-6ab9-04b8f06b3319' }))).reason, 'map_mismatch');
+  assert.deepEqual(await run(henrikMatch({ mapId: 'ffffffff-0000-4000-8000-000000000000' })), parsed, 'a map not listed is not checked');
+  assert.equal((await run(henrikMatch({ kills: players.map((_, i) => (i === 1 ? 4 : 0)) }))).reason, 'kills_mismatch', 'kills credited to the wrong player');
+  // Missed kills are allowed only as far as deaths with an unresolved killer explain them.
+  const unresolved = compactDoc(bytes);
+  unresolved.events.kills = [...Array.from({ length: 20 }, (_, i) => [58000 + i * 1000, 0, 6]), [90000, -1, 7], [91000, -1, 8]];
+  const killsOf = n => henrikMatch({ kills: players.map((_, i) => (i === 0 ? n : 0)) });
+  assert.deepEqual(await run(killsOf(24), unresolved), parsed);
+  assert.equal((await run(killsOf(25), unresolved)).reason, 'kills_mismatch');
+  unresolved.events.kills.push(...Array.from({ length: 3 }, (_, i) => [92000 + i * 1000, -1, 9]));
+  assert.equal((await run(killsOf(27), unresolved)).reason, 'kills_mismatch', 'too many unresolved killers');
 });
 
 test('parser results are validated and cross-checked against HenrikDev players', async t => {
@@ -326,8 +364,11 @@ test('compact validator rejects malformed or out-of-range documents', () => {
     { t_ms: 500, x: 15100, y: -700, z: 200, yaw: 180 }, { t_ms: 750, x: 15105, y: -700, z: 200, yaw: 170 }]);
   const summary = summarizeCompact(doc, { bytes: 100, sha256: '0'.repeat(64) });
   assert.equal(summary.counts.movement_samples, 2);
+  assert.deepEqual(summary.kills, { by_player: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0], unresolved: 0 });
   assert.doesNotThrow(() => validateSummary(summary, { matchId }));
   assert.throws(() => validateSummary({ ...summary, counts: { ...summary.counts, kills: -1 } }));
+  assert.throws(() => validateSummary({ ...summary, kills: { by_player: [1], unresolved: 0 } }), 'one entry per player');
+  assert.throws(() => validateSummary({ ...summary, kills: { ...summary.kills, unresolved: 1 } }), 'more kills than counted');
 });
 
 test('the full vrfkit export is stored opaque, file by file, before the compact record', async t => {
@@ -387,6 +428,76 @@ test('uploads a decoder could not read are retried once by a different decoder b
   f.db.prepare("UPDATE replay_imports SET error='decoder_validate_failed',raw_key=NULL").run();
   assert.deepEqual((await claim(`${old}+${'9'.repeat(64)}`)).json.data, [], 'nothing to retry without the raw file');
   assert.equal((await claim('not a decoder; DROP TABLE x')).status, 200, 'an invalid decoder name is ignored');
+});
+
+test('storage nothing will use is given back', async t => {
+  const f = await fixture(t);
+  const saved = { ...REPLAY_LIMITS };
+  t.after(() => Object.assign(REPLAY_LIMITS, saved));
+  const rawKeys = () => [...f.r2.objects.keys()].filter(k => k.startsWith('raw/'));
+  const row = () => f.db.prepare('SELECT status,error,raw_key FROM replay_imports').get();
+  const status = async () => (await f.call('GET', `/status?ids=${matchId}`)).json.data[matchId];
+  const claim = () => f.call('POST', '/claim', { workflow: true, body: {} });
+
+  // An upload left unfinished releases its reservation after 2 hours.
+  const start = await f.call('POST', `/upload/${matchId}`, { body: { size: 2 * 1024 * 1024, turnstileToken: 'ok' } });
+  await f.call('PUT', `/upload/${matchId}/part/1`, { body: replayBytes(2 * 1024 * 1024), headers: { 'X-Upload-Token': start.json.data.uploadToken } });
+  f.db.prepare("UPDATE replay_imports SET created_at='2026-01-01T10:00:00.000Z'").run();
+  await claim();
+  assert.deepEqual({ ...row() }, { status: 'failed', error: 'upload_abandoned', raw_key: null });
+  assert.equal(f.r2.uploads.size, 0, 'the multipart upload is aborted');
+  assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM replay_import_parts').get().n, 0);
+
+  // A failure no decoder can fix loses its raw file.
+  await upload(f, replayBytes(2 * 1024 * 1024));
+  let [job] = (await claim()).json.data;
+  await f.call('POST', `/result/${matchId}`, { workflow: true, body: { claim: job.claim, ok: false, error: 'timeout' } });
+  assert.equal(rawKeys().length, 1);
+  await claim();
+  assert.deepEqual([row().raw_key, rawKeys().length], [null, 0]);
+
+  // A decoder failure keeps its file, within the retention cap and for 30 days.
+  f.db.prepare("UPDATE replay_imports SET created_at='2026-01-01T10:00:00.000Z'").run();
+  await upload(f, replayBytes(2 * 1024 * 1024));
+  [job] = (await claim()).json.data;
+  await f.call('POST', `/result/${matchId}`, { workflow: true, body: { claim: job.claim, ok: false, error: 'decoder_validate_failed', decoder: 'a'.repeat(40) } });
+  await claim();
+  assert.equal((await status()).raw_kept, true);
+  REPLAY_LIMITS.retainedRawBytes = 1024 * 1024;
+  await claim();
+  assert.deepEqual([rawKeys().length, (await status()).raw_kept], [0, false], 'beyond the retention cap');
+  REPLAY_LIMITS.retainedRawBytes = saved.retainedRawBytes;
+
+  f.db.prepare("UPDATE replay_imports SET created_at='2026-01-01T10:00:00.000Z'").run();
+  await upload(f, replayBytes(2 * 1024 * 1024));
+  [job] = (await claim()).json.data;
+  await f.call('POST', `/result/${matchId}`, { workflow: true, body: { claim: job.claim, ok: false, error: 'decoder_validate_failed', decoder: 'a'.repeat(40) } });
+  f.db.prepare("UPDATE replay_imports SET uploaded_at='2026-01-01T10:00:00.000Z'").run();
+  await claim();
+  assert.equal(rawKeys().length, 0, 'older than 30 days');
+});
+
+test('an admin reset removes a replay so the match can be uploaded again', async t => {
+  const f = await fixture(t, { env: { REPLAY_ADMIN_KEY: 'admin-test-key' } });
+  const bytes = replayBytes(2 * 1024 * 1024);
+  await upload(f, bytes);
+  const [job] = (await f.call('POST', '/claim', { workflow: true })).json.data;
+  const reset = (key = 'admin-test-key') => f.call('POST', `/admin/reset/${matchId}`, { headers: key ? { 'X-Replay-Admin-Key': key } : {} });
+  assert.equal((await reset()).status, 409, 'not while the parser holds a claim');
+  await submit(f, job, compactDoc(bytes));
+  assert.equal((await f.call('GET', `/status?ids=${matchId}`)).json.data[matchId].status, 'parsed');
+  assert.equal((await reset(null)).status, 401);
+  assert.equal((await reset('wrong')).status, 401);
+  assert.equal((await f.call('POST', `/admin/reset/${matchId}`, { workflow: true })).status, 401, 'the workflow key is not the admin key');
+  const done = await reset();
+  assert.deepEqual(done.json.data, { reset: matchId, status: 'parsed' });
+  assert.equal(f.r2.objects.size, 0, 'raw, export and compact are deleted');
+  for (const table of ['replay_imports', 'replay_export_files', 'replay_export_parts', 'replay_import_parts'])
+    assert.equal(f.db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get().n, 0, table);
+  assert.equal((await f.call('GET', `/status?ids=${matchId}`)).json.data[matchId].can_upload, true);
+  assert.equal((await reset()).status, 404);
+  delete f.env.REPLAY_ADMIN_KEY;
+  assert.equal((await reset()).status, 503, 'disabled without its own secret');
 });
 
 test('status reports live pipeline progress from what the pipeline recorded', async t => {

@@ -1879,8 +1879,11 @@ const REPLAY_POLL_LIMIT=720;
 const REPLAY_UPLOAD_CONCURRENCY=3;
 const REPLAY_ERRORS={
   players_mismatch:'The replay’s players do not match the players HenrikDev lists for this match.',
+  rounds_mismatch:'The replay’s round count does not match HenrikDev’s score for this match.',
+  map_mismatch:'The replay’s map does not match the map HenrikDev lists for this match.',
+  kills_mismatch:'The replay’s kills per player do not match HenrikDev’s for this match.',
   size_mismatch:'The stored file size did not match the upload.',
-  decoder_validate_failed:'The parser does not support this game version yet. It is retried automatically once support is added.',
+  decoder_validate_failed:'The parser does not support this game version yet.',
   decoder_export_failed:'The parser read the replay but could not export it.',
   compact_failed:'The replay could not be reduced to the compact timeline.',
   compact_invalid:'The parser produced invalid output.',
@@ -1891,11 +1894,12 @@ const REPLAY_ERRORS={
   export_missing:'The full parser export was missing.',
   parser_attempts_exhausted:'Three parser runs did not finish this replay.',
   upload_aborted:'The upload was cancelled.',
+  upload_abandoned:'The upload did not finish within 2 hours.',
 };
 // The pipeline step each failure code belongs to.
-const REPLAY_FAILED_STEP={upload_aborted:'upload',download_failed:'download',decoder_validate_failed:'decode',decoder_export_failed:'decode',
+const REPLAY_FAILED_STEP={upload_aborted:'upload',upload_abandoned:'upload',download_failed:'download',decoder_validate_failed:'decode',decoder_export_failed:'decode',
   compact_failed:'decode',timeout:'decode',oversize:'decode',output_rejected:'decode',parser_failed:'decode',compact_invalid:'store',
-  export_missing:'store',players_mismatch:'store',size_mismatch:'store',parser_attempts_exhausted:'run'};
+  export_missing:'store',players_mismatch:'store',rounds_mismatch:'store',map_mismatch:'store',kills_mismatch:'store',size_mismatch:'store',parser_attempts_exhausted:'run'};
 const replayImport={config:null,configLoad:null,status:new Map(),rows:new Map(),busy:new Set(),live:new Map(),uploadFailed:new Set(),expanded:new Set(),pollTimer:null,polls:0,ticker:null,turnstileLoad:null};
 
 // One row per loaded match with a valid ID, newest first.
@@ -1966,11 +1970,14 @@ function replayStatusView(status){
 
 function replayFailureText(status){
   const p=status.progress||{};
+  // Decoder failures keep their file for a retry, within limits (raw_kept).
+  const retry=status.raw_kept===false?' The file was not kept, so upload it again once support is added.':' It is retried automatically once support is added.';
   if(status.error==='decoder_validate_failed'&&p.header_build){
     const range=replayBuildRange(p.supported_builds);
-    return `Game version ${p.header_build} is not supported by this parser build${range?` (it reads ${range})`:''}. It is retried automatically once support is added.`;
+    return `Game version ${p.header_build} is not supported by this parser build${range?` (it reads ${range})`:''}.${retry}`;
   }
-  return REPLAY_ERRORS[status.error]||'The replay could not be processed.';
+  const text=REPLAY_ERRORS[status.error]||'The replay could not be processed.';
+  return ['decoder_validate_failed','decoder_export_failed'].includes(status.error)?text+retry:text;
 }
 
 // The pipeline's own record as steps: {key,label,state,detail,since?,link?}.

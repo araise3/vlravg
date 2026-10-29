@@ -28,7 +28,7 @@ Uploaded replays are **user-supplied data**. They are stored in `replay_*` table
 
 VALORANT changes the replay payload transform with every patch. Each of upstream's 26 registry lines has its own seed and operation list, so no decoder can read a build released after it. Each new build needs a new transform line. vrfkit derives those from the game client's reader function; this project does not do that work itself. What is automated instead:
 
-- **Retry.** A failure a newer decoder could fix (`decoder_validate_failed`, `decoder_export_failed`) keeps its raw file and records the decoder build (`decoder_id`). Every parser run names its decoder build when it claims jobs. The Function re-queues those uploads exactly once per new build, and never for other failures or when the raw file is gone. Pushing a decoder change runs the parser (`push` trigger on the workflow and `.github/replay-decoder/`), so pending uploads are retried at once. The page tells the uploader this.
+- **Retry.** A failure a newer decoder could fix (`decoder_validate_failed`, `decoder_export_failed`) keeps its raw file, for at most 30 days and within 2 GiB of such files in total, and records the decoder build (`decoder_id`). Every parser run names its decoder build when it claims jobs. The Function re-queues those uploads exactly once per new build, and never for other failures or when the raw file is gone. Pushing a decoder change runs the parser (`push` trigger on the workflow and `.github/replay-decoder/`), so pending uploads are retried at once. The page tells the uploader this.
 - **Watch.** `.github/workflows/vrfkit-watch.yml` checks daily whether upstream released a vrfkit newer than the pin. If so, it opens one issue naming the builds the release adds. Bumping the pin stays a reviewed change, because new upstream code is read before it runs.
 
 Current decoder: upstream [vrfkit](https://github.com/yakisoba0728/vrfkit) v0.3.0, `b9496df61c40fa304d4f539689c1dd627804946e` (2026-10-16, Apache-2.0, 11.06–13.08). Its 13.08 registry line is identical to the one the `valorant-replay-los` research build carries. On `79397d00…` its compact output is byte-identical to that build's, apart from the `decoder` field. Upstream's own verification lists 13.08 as 1 of 2 replays clean. The failing one fails the checkpoint GUID cross-check on a case-only name difference.
@@ -94,7 +94,28 @@ Production timings after these changes have not been measured. With a cached too
 3. **`fetch` job** (holds `HENRIK_WORKFLOW_KEY`). It claims up to 2 pending replays and downloads them. It records each file's size and SHA-256 in a `claims` artifact that the parse job never receives.
 4. **`parse` job** (`permissions: {}`, no secrets, no checkout, no cache). For each replay, `replay-parse-sandbox.sh` runs `vrfkit validate`, `vrfkit export --checkpoints` and `scripts/replay-compact.py` in a throwaway container (see the next section). The only output is a tar on stdout, capped at 640 MiB. `.github/scripts/replay-unpack.py` accepts only `compact.json` and the 14 known export file names, as regular files within size limits. Any link, path, unknown name or duplicate rejects the whole archive (`output_rejected`). Failures map to fixed exit codes.
 5. **`submit` job** (holds the key). It parses each output with the strict validator in `lib/replay-compact.mjs` and requires its source size and hash to match the fetch job's record. It requires an export containing `manifest.json` and `movement.parquet` with only allowlisted names (`export_missing` otherwise). It gzips the document and posts a summary (`POST /result/<match>`). It then declares the export files with their sizes and SHA-256 (`POST /result/<match>/export`), uploads each in 10 MiB parts, and finally sends the compact blob (`PUT /result/<match>/compact`). The export tables are never opened in this job.
-6. **Function.** It validates the summary strictly and requires every PUUID that HenrikDev lists for the match (read from `match_archive`) to appear among the replay's subjects. Otherwise the upload becomes `rejected`/`players_mismatch` and its raw file is deleted. The export is accepted only after the summary, only for allowlisted names, up to 256 MiB per file and 512 MiB in total. Every declared file must be complete before the compact blob is accepted. The blob is stored only if its size, gzip magic and SHA-256 equal the summary's, and storing it is what marks the replay `parsed`.
+6. **Function.** It validates the summary strictly and cross-checks it against the HenrikDev match in `match_archive` (see [Match cross-check](#match-cross-check)). A mismatch makes the upload `rejected` with the failing check's code, and its raw file is deleted. The export is accepted only after the summary, only for allowlisted names, up to 256 MiB per file and 512 MiB in total. Every declared file must be complete before the compact blob is accepted. The blob is stored only if its size, gzip magic and SHA-256 equal the summary's, and storing it is what marks the replay `parsed`.
+
+## Match cross-check
+
+A `.vrf` carries no signature that the pipeline checks, so a decodable replay is not proof that it is the real one. The Function therefore requires the replay to describe the archived HenrikDev match. The submit job adds each player's kills to the summary, counted from the compact document it validated (deaths with an unresolved killer apart, self-kills in neither). The checks, in order:
+
+| Code | Check | Skipped when |
+| --- | --- | --- |
+| `players_mismatch` | every PUUID HenrikDev lists is among the replay's subjects | never; no archived match also fails it |
+| `rounds_mismatch` | `roundStarted` events equal the HenrikDev score's rounds (won + lost) | the archive has no team score |
+| `map_mismatch` | the replay's map path is the one for HenrikDev's map UUID (table from valorant-api.com, 2026-10-29) | the map UUID is not in the table |
+| `kills_mismatch` | kills credited beyond HenrikDev's ≤ 2 in total; kills missing ≤ unresolved killers + 2; unresolved killers ≤ 15 % of deaths | a HenrikDev player has no kill count |
+
+The tolerances come from 38 replays on the development PC (13.05/13.06 exports, all competitive, `.local/replays/`) compared with their archived HenrikDev matches on 2026-10-29:
+
+- rounds: 38 of 38 equal
+- map path: 38 of 38 consistent with the table (8 maps)
+- kills: the replay never credited a player with a kill HenrikDev does not list. 5 matches missed kills: 1, 1, 1, 2 (with 3 unresolved killers) and 17 (with 17 unresolved killers). Missed kills exceeded unresolved killers by at most 1. The highest unresolved share was 9.9 % (17 of 172)
+
+With these rules all 38 pass. Moving 3 kills from one player to another was caught in 37 of 38, and rotating kill credit between players in 38 of 38. The one miss is the match with 17 unresolved killers, whose slack absorbs the move.
+
+What this does and does not establish: a forged replay now has to reproduce the match's round count, map and per-player kill tally, which HenrikDev publishes, so a determined forger with an encoder can still pass. Positions, timings and everything in the full export are not checked against anything. The 13.08/13.09 replays parsed in production were not part of this sample.
 
 ## Threat model
 
@@ -116,7 +137,9 @@ An uploaded `.vrf` is hostile input to a binary decoder. vrfkit forbids `unsafe`
   - 6 uploads / 600 MiB per connection per day (a day-salted SHA-256 of the IP)
   - 60 uploads / 4 GiB globally per day
   - an 8 GiB cap on raw files plus full exports held in R2
-  - 4 uploads per match
+  - 4 upload starts per match per UTC day, so junk uploads cannot lock a match for good
+  - storage nothing will use is given back on every upload start and parser claim: an upload not completed within 2 hours is marked `upload_abandoned` and its reservation released; failures no decoder can fix lose their raw file; decoder failures keep theirs for a retry for at most 30 days and within 2 GiB in total (the newest beyond that lose it, and the page then asks for a re-upload)
+  - an admin reset (`REPLAY_ADMIN_KEY`) for a wrong replay that was accepted
   - `REPLAY_UPLOADS_DISABLED=1` as a kill switch
 - **Workflow injection.** The dispatch carries no inputs. The dispatch token needs only *Actions: write* on this repository, not *Contents*.
 
@@ -124,8 +147,10 @@ Residual risks, stated plainly:
 
 - A container escape (a kernel exploit) would reach the parse VM's Actions runtime token. That token could upload artifacts or caches within the run. The submit job still validates everything it reads.
 - The IP hash is brute-forceable over the IPv4 space. It is kept only per day.
-- Someone holding a replay of a match can upload it before the player does. The replay itself is genuine, and the player cross-check rejects a replay from another match.
-- A forged header can still pass the upload checks and use up a match's attempts until the parser rejects it.
+- Someone holding a replay of a match can upload it before the player does. The replay itself is genuine, and the match cross-check rejects a replay from another match.
+- A forged replay that reproduces the published round count, map and kill tally is accepted and occupies the match until an admin reset. Nothing checks its positions or timings.
+- A forged header can still pass the upload checks and use up a match's attempts for the day until the parser rejects it, and junk uploads can use up the global daily budget. Each upload start needs a Turnstile pass.
+- A file that hangs the decoder holds the parser queue for up to 15 minutes.
 
 ## Why the Function does not re-parse the compact document
 
@@ -168,6 +193,11 @@ Cloudflare Pages:
 - `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET`, from a Turnstile widget for the site's hostname
 - optionally `GITHUB_DISPATCH_TOKEN`: a fine-grained token with only *Actions: read and write* on `araise3/vlravg`. Without it, the daily 04:23 UTC sweep is the only trigger
 - the existing `HENRIK_WORKFLOW_KEY`, which authenticates the parser routes
+- optionally `REPLAY_ADMIN_KEY`: a secret of its own (never given to the workflow) for the reset route. Without it the route answers 503. A reset deletes the match's replay row, raw file, export and compact record, so the match can be uploaded again; it refuses while the parser holds a claim. The compact record may stay in the edge cache for up to an hour.
+
+```bash
+curl -X POST -H "X-Replay-Admin-Key: $REPLAY_ADMIN_KEY" https://vlravg1.pages.dev/api/replays/admin/reset/<match id>
+```
 
 Apply the migrations first, in order (0008 adds `decoder_id`; deploy code that writes it only after it):
 
@@ -185,7 +215,7 @@ Local development uses the `vlravg-replays` entry in `.claude/launch.json` (port
 
 ## Tests
 
-- `tests/replay-import.test.mjs`: routes, gating, quotas, claims, cross-check, export file list and multipart storage, the storage cap, blob hash, and isolation from the trusted tables
+- `tests/replay-import.test.mjs`: routes, gating, quotas (including the per-day match count), claims, the match cross-check (players, rounds, map, kills), export file list and multipart storage, the storage cap and storage sweep, the admin reset, blob hash, and isolation from the trusted tables
 - `tests/replay-import-ui.test.mjs`: row building, browser header and build checks, status labels, the progress steps (queued, parsing by job, failure with supported builds), upload speed, routing
 - `tests/replay-parser-workflow.test.mjs`: artifact separation, untrusted-output validation, static checks of the sandbox and workflow, the pinned 13.09 patch, the vrfkit watcher
 - `tests/replay_compact_test.py`: kill order, pawn joins, bucketing, rounding and delta encoding
