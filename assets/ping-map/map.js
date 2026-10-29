@@ -11,6 +11,7 @@ const OBSERVED_REFERENCES=[
   {name:'Luton',coords:[-.4175,51.8787],pings:{frankfurt:17,paris:13,london:8,warsaw:37,stockholm:34,istanbul:49,madrid:40,riyadh:104}},
   {name:'Jerez',coords:[-6.137,36.685],pings:{frankfurt:42,paris:34,london:41,warsaw:59,stockholm:60,istanbul:71,madrid:19,riyadh:108}},
   {name:'Gothenburg',coords:[11.9746,57.7089],pings:{frankfurt:35,paris:42,london:40,warsaw:30,stockholm:19,istanbul:68,madrid:68,riyadh:119}},
+  {name:'Saint Petersburg',coords:[30.3351,59.9343],pings:{frankfurt:37,paris:44,london:44,warsaw:33,stockholm:23,istanbul:67,madrid:73,riyadh:123}},
 ];
 const PING_SERVERS=[
   {id:'frankfurt',name:'Frankfurt',country:'Germany',coords:[8.6821,50.1109],berlinMs:13},
@@ -42,7 +43,7 @@ const PING_COUNTRIES=[
   ['MNE','Montenegro','Podgorica',19.2594,42.4304],['NLD','Netherlands','Amsterdam',4.9041,52.3676],
   ['MKD','North Macedonia','Skopje',21.4314,41.9981],['NOR','Norway','Oslo',10.7522,59.9139],
   ['POL','Poland','Warsaw',21.0122,52.2297],['PRT','Portugal','Lisbon',-9.1393,38.7223],
-  ['ROU','Romania','Bucharest',26.1025,44.4268],['RUS','Russia','Moscow',37.6173,55.7558],
+  ['ROU','Romania','Bucharest',26.1025,44.4268],['RUS','Russia','Saint Petersburg',30.3351,59.9343],
   ['SMR','San Marino','San Marino',12.4473,43.9367],['SRB','Serbia','Belgrade',20.4489,44.7866],
   ['SVK','Slovakia','Bratislava',17.1077,48.1486],['SVN','Slovenia','Ljubljana',14.5058,46.0569],
   ['ESP','Spain','Jerez',-6.137,36.685],['SWE','Sweden','Gothenburg',11.9746,57.7089],
@@ -190,7 +191,7 @@ function render(){
   const value=document.createElement('strong');value.style.color=pingColor(ping.ms);value.textContent=(ping.observed?'':'~')+ping.ms+' ms';
   const note=document.createElement('small');note.textContent=ping.observed?'Observed '+ping.reference+' reference':'Sample-informed estimate'+' · '+ping.low+'–'+ping.high+' ms';
   readout.append(route,value,note);
-  readout.title='Estimates and 10 ms contours use all six screenshot origins: Berlin, Tbilisi, Helsinki, Luton, Jerez and Gothenburg. Only those cities are measured; routing elsewhere is interpolated and may differ by ISP. Ranges are heuristic, not confidence intervals.';
+  readout.title='Estimates and 10 ms contours use all seven screenshot origins: Berlin, Tbilisi, Helsinki, Luton, Jerez, Gothenburg and Saint Petersburg. Only those cities are measured; routing elsewhere is interpolated and may differ by ISP. Ranges are heuristic, not confidence intervals.';
   positionPins();
 }
 function renderContours(){
