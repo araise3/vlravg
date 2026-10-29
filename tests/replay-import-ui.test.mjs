@@ -108,6 +108,11 @@ test('a failure names the failing step and the reason the pipeline reported', ()
   const steps = ui.replayProgressSteps({ ...base, status: 'failed', error: 'decoder_validate_failed', progress });
   assert.deepEqual(plain(steps).slice(-1), ['decode:failed:Decoded in the sandbox']);
   assert.equal(steps.at(-1).detail, 'Game version 13.09 is not supported by this parser build (it reads 11.06–13.08). It is retried automatically once support is added.');
+  const dropped = ui.replayProgressSteps({ ...base, status: 'failed', error: 'decoder_validate_failed', raw_kept: false, progress });
+  assert.match(dropped.at(-1).detail, /\(it reads 11\.06–13\.08\)\. The file was not kept, so upload it again once support is added\.$/);
+  const kills = ui.replayProgressSteps({ ...base, status: 'rejected', error: 'kills_mismatch', progress });
+  assert.deepEqual(plain(kills).slice(-1), ['store:failed:Checked and stored']);
+  assert.equal(kills.at(-1).detail, 'The replay’s kills per player do not match HenrikDev’s for this match.');
   const rejected = ui.replayProgressSteps({ ...base, status: 'rejected', error: 'players_mismatch', progress });
   assert.equal(rejected.at(-1).key, 'store');
   assert.equal(rejected.at(-1).state, 'failed');
