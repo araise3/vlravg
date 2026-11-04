@@ -29,7 +29,7 @@ function fixture({capture,coverageFailure=false,detailQueryFailure=false}={}){
 }
 const env={HENRIK_WORKFLOW_KEY:'fixture',DETAIL_LIMIT:'0'};
 
-test('zero detail limit avoids detail queries and coverage failure retains committed capture',async()=>{
+test('zero detail limit avoids detail queries and a coverage failure only warns after committed capture',async()=>{
   const f=fixture({coverageFailure:true});
   const report=await f.run(env);
   assert.ok(!f.events.includes('detail-query'));
@@ -37,7 +37,7 @@ test('zero detail limit avoids detail queries and coverage failure retains commi
   assert.equal(f.writes[0].refresh.checked,1);
   assert.equal(report.coverageError,'D1 unavailable');
   assert.equal(f.writes.at(-1).coverageError,'D1 unavailable');
-  assert.equal(f.process.exitCode,1);
+  assert.equal(f.process.exitCode,0);
   assert.equal(report.detailInventory.saved,8);
 });
 

@@ -2,7 +2,7 @@ import {pathToFileURL} from 'node:url';
 import {mkdir,writeFile,appendFile} from 'node:fs/promises';
 import {listPlayers,refreshPlayer,requestJSON} from './refresh-rr-history.mjs';
 import {createRequestScheduler} from './request-scheduler.mjs';
-import {d1Query} from './d1-query.mjs';
+import {d1Query,retryOnD1Overload} from './d1-query.mjs';
 import {randomUUID} from 'node:crypto';
 import {readQuotaAudit,quotaCheckReport} from './workflow-quota-check.mjs';
 import {loadActivity,loadCandidates} from './rr-activity-query.mjs';
@@ -97,8 +97,46 @@ export async function collectMatchFeatures(rows,{origin,fetchImpl,log=console.lo
   return {saved,deferred,failed,budgetDeferred:rows.length-saved-deferred-failed};
 }
 
-export async function corpusReport(env,query=d1Query){
-  const ranks=await query(env,`SELECT json_extract(h.data,'$.season.id') AS season_id,
+// The act/tier census parses every rr_history row. One statement over the whole
+// table took ~7.8 s on a 1 GB database and D1 rejected it as overloaded, while
+// blocking every other query behind it. Slices by PUUID range use the primary
+// key, keep each statement short and leave gaps for site and collector queries.
+// A PUUID falls in exactly one slice, so per-slice distinct players add up.
+const RANK_SUMS=['payouts','players','placements','with_features','gains','losses','reported_start','bonus_known',
+  'bonus_nonzero','afk_penalty_known','rr_penalty_known','map_forgiveness_known','placement_known'];
+export function puuidSliceBounds(slices){
+  if(!Number.isSafeInteger(slices)||slices<1||slices>4096)throw new Error('Invalid PUUID slice count');
+  let width=0;while(16**width<slices)width++;
+  const bounds=[];
+  for(let i=1;i<slices;i++)bounds.push(Math.floor(i*16**width/slices).toString(16).padStart(width,'0'));
+  // Open-ended first and last slices cover any PUUID outside lowercase hex.
+  return Array.from({length:slices},(_,i)=>({from:i?bounds[i-1]:null,to:i<slices-1?bounds[i]:null}));
+}
+export function mergeRankSlices(slices){
+  const groups=new Map();
+  for(const rows of slices)for(const row of rows){
+    const key=JSON.stringify([row.season_id,row.act,row.ending_tier]);
+    const group=groups.get(key);
+    if(!group){groups.set(key,{...row});continue;}
+    for(const field of RANK_SUMS)group[field]=(Number(group[field])||0)+(Number(row[field])||0);
+    if(row.first_game!=null&&(group.first_game==null||row.first_game<group.first_game))group.first_game=row.first_game;
+    if(row.latest_game!=null&&(group.latest_game==null||row.latest_game>group.latest_game))group.latest_game=row.latest_game;
+  }
+  // Match SQLite's ORDER BY act,ending_tier: NULLs first, then ascending.
+  const order=(a,b)=>a===b?0:a==null?-1:b==null?1:a<b?-1:1;
+  return [...groups.values()].sort((a,b)=>order(a.act,b.act)||order(a.ending_tier,b.ending_tier));
+}
+async function rankCensus(env,query,{slices=16,pauseMs=1000,sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms))}={}){
+  const results=[];
+  for(const [index,{from,to}] of puuidSliceBounds(slices).entries()){
+    if(index&&pauseMs)await sleep(pauseMs);
+    const where=[from!=null?'h.puuid>=?1':null,to!=null?`h.puuid<?${from!=null?2:1}`:null].filter(Boolean);
+    const params=[from,to].filter(value=>value!=null);
+    results.push(await query(env,rankSliceSql(where.length?`WHERE ${where.join(' AND ')}`:''),params));
+  }
+  return mergeRankSlices(results);
+}
+const rankSliceSql=where=>`SELECT json_extract(h.data,'$.season.id') AS season_id,
     json_extract(h.data,'$.season.short') AS act,json_extract(h.data,'$.tier.id') AS ending_tier,
     COUNT(*) AS payouts,COUNT(DISTINCT h.puuid) AS players,
     MIN(h.date) AS first_game,MAX(h.date) AS latest_game,
@@ -114,7 +152,11 @@ export async function corpusReport(env,query=d1Query){
     SUM(CASE WHEN json_type(h.data,'$.new_map_incentive_rr_forgiven') IN ('integer','real') THEN 1 ELSE 0 END) AS map_forgiveness_known,
     SUM(CASE WHEN json_type(h.data,'$.is_placement_match') IN ('true','false') THEN 1 ELSE 0 END) AS placement_known
     FROM rr_history h LEFT JOIN rr_match_features f ON f.puuid=h.puuid AND f.match_id=h.match_id
-    GROUP BY season_id,act,ending_tier ORDER BY act,ending_tier`);
+    ${where}
+    GROUP BY season_id,act,ending_tier`;
+
+export async function corpusReport(env,query=retryOnD1Overload(d1Query),census={}){
+  const ranks=await rankCensus(env,query,census);
   const latest=ranks.filter(row=>row.season_id&&row.latest_game).sort((a,b)=>Date.parse(b.latest_game)-Date.parse(a.latest_game))[0];
   const currentRows=latest?ranks.filter(row=>row.season_id===latest.season_id):[];
   const currentAct=latest?{id:latest.season_id,act:latest.act,
@@ -188,7 +230,9 @@ export async function main(env=process.env){
       detailFailed:features.failed,detailBudgetDeferred:features.budgetDeferred});
   }catch(error){report.enrichmentError=error.message;console.error(`Enrichment failed: ${error.message}`);}
   try{Object.assign(report,await corpusReport(env));}
-  catch(error){report.coverageError=error.message;console.error(`Coverage report failed: ${error.message}`);}
+  // Coverage is a monitoring summary computed from evidence already in D1; its
+  // failure loses no RR, so it warns instead of failing the collection run.
+  catch(error){report.coverageError=error.message;console.warn(`::warning::Coverage report failed: ${error.message}`);}
   report.upstreamPools={...fetchImpl.pools};
   report.quotaCheck=quotaCheckReport(quotaBefore,await readQuotaAudit(env,runId));
   if(['other_proxy_activity','possible_external_usage'].includes(report.quotaCheck.status))
@@ -204,7 +248,7 @@ export async function main(env=process.env){
     `\nQuota check: ${report.quotaCheck.status}; ${report.quotaCheck.otherProxyCalls??'unknown'} other proxy calls; ${report.quotaCheck.unexplainedRequests??'unknown'} unexplained quota units. This cannot identify another instance or prove exclusive use.\n`+
     (report.enrichmentSkipped?'\nOptional enrichment skipped because tracked capture is incomplete.\n':'')+
     (report.enrichmentError||report.coverageError?'\nEnrichment or coverage reporting failed; see the job log. Committed RR is retained.\n':''));
-  if(refresh.failures.length||refresh.deferred||report.detailFailed||report.enrichmentError||report.coverageError)process.exitCode=1;
+  if(refresh.failures.length||refresh.deferred||report.detailFailed||report.enrichmentError)process.exitCode=1;
   return report;
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)main().catch(error=>{console.error(error.message);process.exitCode=1;});
