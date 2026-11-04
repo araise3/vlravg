@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {collectRR,matchFeatures,saveFeatures,trackRRAccount} from '../lib/rr-corpus.mjs';
-import {collectPlayers,collectMatchFeatures,corpusReport} from '../.github/scripts/collect-rr-corpus.mjs';
+import {collectPlayers,collectMatchFeatures,corpusReport,puuidSliceBounds} from '../.github/scripts/collect-rr-corpus.mjs';
+import {retryOnD1Overload} from '../.github/scripts/d1-query.mjs';
 import {onRequestGet} from '../functions/api/[[path]].js';
 import {pollingPolicy,selectPollingPlayers,selectDiscoveryCandidates,discoverMatchPlayers,DISCOVERY_BAND_TARGET} from '../lib/rr-activity.mjs';
 import {loadActivity,loadCandidates} from '../.github/scripts/rr-activity-query.mjs';
@@ -218,7 +219,7 @@ test('D1 failed probe survives runs, applies a one-day cooldown and clears after
   assert.equal(pollingPolicy(player,now+24*3600000).due,true);
   assert.equal(pollingPolicy({...player,candidate_observed_at:iso(.5),candidate_played_at:iso(.5)},now).due,true);
   assert.equal(pollingPolicy({...player,checked_at:iso(0)},now).cohort,'dormant');
-  const report=await corpusReport({},query);
+  const report=await corpusReport({},query,{pauseMs:0});
   assert.equal(report.health.stale,0);
 });
 
@@ -236,12 +237,12 @@ test('transient capture failures get one final retry before optional enrichment'
 test('coverage SQL reports staleness using UTC timestamps and returns act sample counts',async t=>{
   const {db}=database(t);
   await collectRR(db,payload([entry()]),{puuid,region:'eu',platform:'pc'});
-  const report=await corpusReport({},async(_env,query,params=[])=>{const s=db.prepare(query);return (await s.bind(...params).all()).results;});
+  const report=await corpusReport({},async(_env,query,params=[])=>{const s=db.prepare(query);return (await s.bind(...params).all()).results;},{pauseMs:0});
   assert.equal(report.health.stale,0);assert.equal(report.ranks[0].payouts,1);
   assert.equal(report.competitiveUpdates.bonus_known,0);
   await collectRR(db,payload([{...entry(),tier_before_update:{id:12},rr_before_update:30,
     rr_performance_bonus:0,afk_penalty:0,rr_penalty:.25,is_placement_match:false}]),{puuid,region:'eu',platform:'pc'});
-  const enriched=await corpusReport({},async(_env,query,params=[])=>{const s=db.prepare(query);return (await s.bind(...params).all()).results;});
+  const enriched=await corpusReport({},async(_env,query,params=[])=>{const s=db.prepare(query);return (await s.bind(...params).all()).results;},{pauseMs:0});
   assert.equal(enriched.competitiveUpdates.reported_start,1);
   assert.equal(enriched.competitiveUpdates.bonus_known,1);
   assert.equal(enriched.competitiveUpdates.bonus_nonzero,0);
@@ -559,4 +560,56 @@ test('activity queries see durable latest RR, count unique candidate games, and 
   assert.equal((await loadCandidates({},query))[0].games_7d,1);
   sql.prepare('INSERT INTO rr_candidate_checks VALUES(?,?,?)').run(m.players[1].puuid,'pc',new Date().toISOString());
   assert.deepEqual(await loadCandidates({},query),[]);
+});
+
+test('PUUID slices are contiguous and open-ended',()=>{
+  const slices=puuidSliceBounds(16);
+  assert.equal(slices.length,16);
+  assert.deepEqual(slices[0],{from:null,to:'1'});
+  assert.deepEqual(slices[15],{from:'f',to:null});
+  for(let i=1;i<slices.length;i++)assert.equal(slices[i].from,slices[i-1].to);
+  assert.deepEqual(puuidSliceBounds(1),[{from:null,to:null}]);
+  assert.equal(puuidSliceBounds(32)[1].to,'10');
+  assert.throws(()=>puuidSliceBounds(0));
+});
+
+test('sliced act census matches one whole-table statement',async t=>{
+  const {db,sql}=database(t);
+  const ids=['0aaaaaaa-1111-4111-8111-111111111111','7bbbbbbb-1111-4111-8111-111111111111',
+    'f0cccccc-1111-4111-8111-111111111111','ffdddddd-1111-4111-8111-111111111111'];
+  for(const [i,id] of ids.entries()){
+    const history=[{...entry(`44444444-4444-4444-8444-00000000000${i}`),date:`2026-10-0${i+1}T00:00:00Z`,tier:{id:12+(i%2)}},
+      {...entry(`55555555-5555-4555-8555-00000000000${i}`),date:`2026-10-0${i+1}T01:00:00Z`,last_change:-15,
+        is_placement_match:i===0,season:{id:'66666666-6666-4666-8666-666666666666',short:'next'}}];
+    await collectRR(db,{data:{account:{puuid:id,name:`P${i}`,tag:'EU'},history}},{puuid:id,region:'eu',platform:'pc'});
+  }
+  // Rows outside lowercase hex still land in the open-ended first or last slice.
+  for(const odd of ['-legacy','ZZ-legacy'])sql.prepare('INSERT INTO rr_history(puuid,match_id,data,date) VALUES(?,?,?,?)')
+    .run(odd,mid,JSON.stringify(entry()),entry().date);
+  const statements=[];
+  const query=async(_env,text,params=[])=>{statements.push(params);return (await db.prepare(text).bind(...params).all()).results;};
+  const whole=await corpusReport({},query,{slices:1,pauseMs:0});
+  statements.length=0;
+  const pauses=[];
+  const sliced=await corpusReport({},query,{slices:16,pauseMs:5,sleep:async ms=>{pauses.push(ms);}});
+  assert.deepEqual(sliced.ranks,whole.ranks);
+  assert.deepEqual(sliced.currentAct,whole.currentAct);
+  assert.deepEqual(sliced.competitiveUpdates,whole.competitiveUpdates);
+  assert.equal(statements.length,17);// 16 census slices plus the health query
+  assert.equal(pauses.length,15);
+  assert.equal(sliced.ranks.reduce((n,row)=>n+row.players,0),10);
+  assert.equal(sliced.ranks.find(row=>row.act==='test'&&row.ending_tier===12).players,4);
+});
+
+test('D1 overload retries wait out the window; other errors fail at once',async()=>{
+  const overload=new Error('D1 query failed (429): [{"code":7429,"message":"D1 DB is overloaded. Too many resources consumed within a 10 second window"}]');
+  const waits=[];let calls=0;
+  const flaky=retryOnD1Overload(async()=>{if(++calls<3)throw overload;return ['ok'];},{delays:[1,2,3],sleep:async ms=>{waits.push(ms);},log:()=>{}});
+  assert.deepEqual(await flaky(),['ok']);assert.deepEqual(waits,[1,2]);
+  calls=0;
+  const broken=retryOnD1Overload(async()=>{calls++;throw new Error('D1 query failed (400): no such table');},{sleep:async()=>{},log:()=>{}});
+  await assert.rejects(broken(),/no such table/);assert.equal(calls,1);
+  calls=0;
+  const saturated=retryOnD1Overload(async()=>{calls++;throw overload;},{delays:[1,1],sleep:async()=>{},log:()=>{}});
+  await assert.rejects(saturated(),/7429/);assert.equal(calls,3);
 });

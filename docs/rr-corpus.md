@@ -150,8 +150,23 @@ The default run budget is 180 minutes, configurable from 10 to 210 minutes for
 manual runs. Five minutes are reserved for reporting; the job timeout is 220
 minutes. The next queued run starts when this one ends. Work not attempted before the deadline
 remains in D1 and is reported as deferred. Capture results are written before optional scouting, detail queries or aggregate
-coverage queries, so later failures cannot erase the capture report. These
-failures remain visible in the job outcome.
+coverage queries, so later failures cannot erase the capture report. Capture,
+scouting and detail failures remain visible in the job outcome. A coverage
+report failure is a job warning, not a failed run: the report only summarizes
+evidence already in D1.
+
+The act/tier census parses every `rr_history` row. As one statement it read
+~733k rows and took ~7.8 s on the 1 GB database (D1 query analytics,
+3–4 November 2026), and D1 rejected it twice as overloaded (`7429`, "too many
+resources consumed within a 10 second window"). Because a D1 database runs one
+query at a time, it also stalled site and collector queries. The census now runs
+in 16 PUUID-range slices with a 1 s pause between them and merges the results.
+Every PUUID falls in exactly one slice, so distinct-player counts add up and
+the merged result equals the single statement (tested). On 4 November one
+slice read ~43k rows in 0.3–1.4 s, varying with concurrent collector load. The
+total work is not reduced, only spread out; raise the slice count if single
+slices approach the window again. Coverage reads retry a D1 overload after
+15, 30 and 60 s.
 Reports identify the latest observed act, its date range, payouts and placements.
 
 With repository variable `RR_REPORT_EXPORT_ENABLED=true`, each run uploads
