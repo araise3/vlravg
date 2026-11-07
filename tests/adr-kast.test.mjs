@@ -170,8 +170,18 @@ test('overview KAST weights by rounds and ignores matches without round data',()
   ]};
   runInNewContext(section('  // Avg ADR', '  renderRankByRankCard();'),context);
   assert.equal(elements.get('sg-adr').textContent,'166.7');
-  assert.equal(elements.get('sg-kast').textContent,'80%');
+  assert.equal(elements.get('sg-kast').textContent,'80.0%');
   assert.match(elements.get('sg-kast-pill').title,/2 of 3 matches/);
+});
+
+test('overview KAST shows one decimal, as tracker\'s profile does',()=>{
+  const elements=new Map(['sg-adr','sg-kast','sg-kast-pill'].map(id=>[id,{}]));
+  // kurd with dream, A6 to 6 Nov 2026: 1605 of 2288 rounds.
+  const context={document:{getElementById:id=>elements.get(id)},trackerFixed1,roundHalfEven,statsPanelMatches:[
+    {myStats:{adr:150,dmg:343200,rounds_played:2288,kastRounds:1605,kastTotalRounds:2288}},
+  ]};
+  runInNewContext(section('  // Avg ADR', '  renderRankByRankCard();'),context);
+  assert.equal(elements.get('sg-kast').textContent,'70.1%');
 });
 
 test('seventy-one Nov 2026 matches reproduce tracker.gg ADR and KAST on every row',()=>{

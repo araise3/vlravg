@@ -4062,8 +4062,10 @@ function processMatch(m){
 //     trade kill (a trade credits only the last teammate the killer took;
 //     same-millisecond kills keep the kill list's order). A kill in the
 //     same millisecond as the death doesn't count.
-//   Tracker's KAST for three 1 Oct 2026 matches fits "any victim, 5 s"
-//   instead, so its method seems to have changed in October.
+//   Tracker computed trades differently for matches up to 27 Oct 2026
+//   (killer died within 5 s, any victim, any cause) and kept those stored
+//   values. We use the current rule everywhere, so act totals spanning that
+//   date run below tracker's (docs/adr-kast.md).
 // Returns null when the payload has no round data (older/compact shapes),
 // so callers fall back to the summary totals.
 const KAST_TRADE_WINDOW_MS=3000;
@@ -5075,11 +5077,12 @@ function renderStats(skipPlaytime){
   const avgAdr=totalAdrRounds>0?trackerFixed1(totalDmg/totalAdrRounds):null;
   document.getElementById('sg-adr').textContent=avgAdr!=null?avgAdr:'—';
 
-  // KAST — KAST rounds ÷ rounds over matches that carry round data.
+  // KAST — KAST rounds ÷ rounds over matches that carry round data, to one
+  // decimal like tracker's profile overview (per-match KAST stays whole).
   const kastGames=statsPanelMatches.filter(m=>m.myStats?.kastRounds!=null&&m.myStats?.kastTotalRounds>0);
   const totalKastRounds=kastGames.reduce((a,m)=>a+m.myStats.kastRounds,0);
   const totalKastDenom=kastGames.reduce((a,m)=>a+m.myStats.kastTotalRounds,0);
-  document.getElementById('sg-kast').textContent=totalKastDenom>0?`${roundHalfEven(totalKastRounds/totalKastDenom*100)}%`:'—';
+  document.getElementById('sg-kast').textContent=totalKastDenom>0?`${(totalKastRounds/totalKastDenom*100).toFixed(1)}%`:'—';
   document.getElementById('sg-kast-pill').title=`Share of rounds with a kill, an assist, survived, or traded (killer died to a teammate within 3 s); ${kastGames.length} of ${statsPanelMatches.length} matches have round data`;
 
   renderRankByRankCard();
