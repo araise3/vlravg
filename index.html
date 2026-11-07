@@ -482,9 +482,12 @@ a.player-name-wrap:focus-visible{outline:2px solid var(--brand);outline-offset:2
 .overview-hero-footer{border-top:1px solid var(--surface-border);padding:16px 0;font-size:12px;color:#a1a1aa;}
 .overview-hero-footer a{color:#c4c4cc;text-decoration:none;white-space:nowrap;}
 .overview-hero-footer a:hover{color:#fff;}
-.overview-basic-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(max-content,1fr) repeat(2,minmax(0,1fr));margin:0;border:1px solid var(--surface-border);border-radius:12px;background:var(--surface);}
+/* 8 stats as two rows of four: one row of eight left ~70px per value and
+   clipped figures like "203.6". */
+.overview-basic-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0;border:1px solid var(--surface-border);border-radius:12px;background:var(--surface);}
 .overview-basic-stats>div{min-width:0;padding:18px 20px;border-right:1px solid var(--surface-border);}
-.overview-basic-stats>div:last-child{border-right:0;}
+.overview-basic-stats>div:nth-child(4n){border-right:0;}
+.overview-basic-stats>div:nth-child(-n+4){border-bottom:1px solid var(--surface-border);}
 .overview-basic-stats dt{color:#a1a1aa;font-size:11px;margin-bottom:8px;}
 .overview-basic-stats dd{margin:0;font-size:25px;line-height:1.1;font-weight:700;font-variant-numeric:tabular-nums;}
 #sg-playtime{white-space:nowrap;}
@@ -563,7 +566,6 @@ a.overview-preview-name:focus-visible{outline:2px solid var(--brand);outline-off
   .overview-basic-stats{grid-template-columns:repeat(2,minmax(0,1fr));}
   .overview-basic-stats>div:nth-child(even){border-right:0;}
   .overview-basic-stats>div:nth-child(-n+6){border-bottom:1px solid var(--surface-border);}
-  .overview-basic-stats>div:last-child{grid-column:1 / -1;}
   .overview-previews{gap:14px;}
   body:not(.has-analysis):not(.detail-view) .wrap{justify-content:flex-start;padding:clamp(72px,15vh,128px) 20px 42px;}
   body:not(.has-analysis):not(.detail-view) .input-section{transform:none;padding:0;}
@@ -1196,7 +1198,8 @@ a.duo-player-name:focus-visible{outline:2px solid var(--brand);outline-offset:3p
         <div id="sg-kd-pill"><dt id="sg-kd-lbl">K/D</dt><dd id="sg-kd">—</dd></div>
         <div id="sg-acs-pill"><dt id="sg-acs-lbl">Avg ACS</dt><dd id="sg-acs">—</dd></div>
         <div id="sg-performance-pill" title="Avg PS across matches with available data"><dt>Avg PS</dt><dd id="sg-performance">—</dd></div>
-        <div id="sg-adr-pill"><dt id="sg-adr-lbl">Avg ADR</dt><dd id="sg-adr">—</dd></div>
+        <div id="sg-adr-pill" title="Damage to enemies per round; friendly fire and self-damage excluded"><dt id="sg-adr-lbl">Avg ADR</dt><dd id="sg-adr">—</dd></div>
+        <div id="sg-kast-pill" title="Share of rounds with a kill, an assist, survived, or traded (killer died to a teammate within 3 s)"><dt>KAST</dt><dd id="sg-kast">—</dd></div>
         <div id="sg-playtime-pill"><dt id="sg-playtime-lbl">Playtime</dt><dd id="sg-playtime">—</dd></div>
         <div><dt>Matches</dt><dd id="overview-games">—</dd></div>
         <div title="Wins divided by wins plus losses; draws excluded"><dt>Win rate</dt><dd id="overview-winrate">—</dd></div>
@@ -3954,7 +3957,7 @@ function processMatch(m){
   const totalRounds=(myR!=null&&opR!=null)?myR+opR:null;
 
   // My stats — v4 player object fields
-  const myStats=me?extractStats(me,totalRounds):null;
+  const myStats=me?extractStats(me,totalRounds,computeRoundStats(m,me.puuid)):null;
 
   // All players with tier + ACS
   const playersOut=players.map(p=>{
@@ -4037,7 +4040,103 @@ function processMatch(m){
   return{mapName,serverName,startedAt,startedAtMs,durationMs:durationMs||myRRDetails?.duration||durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,avgTeamRank,avgEnemyRank,lowRated,ratedCount,myStats,players:playersOut,myTierId,myRankKnown,myTierName,myRR,myRRDetails,myPreRR,myPreTierId,myPostRR,myPostTierId,myRefundedRR,myDerankProtected,myPartyPenalty,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
 }
 
-function extractStats(p,fallbackRounds=null){
+// Per-round stats for one player, from the v4 rounds[] and kills[] arrays.
+// Method taken from the ascend-companion scoreboard, checked against
+// tracker.gg's scoreboards for 7 matches (70 player rows, see
+// docs/adr-kast.md):
+// - damage: only hits on enemies. Henrik's stats.damage.dealt is Riot's raw
+//   total, which also counts friendly fire and self-damage, so ADR from it
+//   came out higher than tracker.gg. Enemy-only ADR, with trackerFixed1's
+//   rounding, matched all 210 rows checked.
+// - KAST: rounds with a kill, an assist, survived, or traded. Each rule
+//   below was needed to reproduce tracker on all 180 rows of eighteen Nov
+//   2026 matches (eight of them scored blind first):
+//   · survived: alive at round end. A death undone by a revive (Sage,
+//     Clove; resolved by computeRealDeaths) doesn't count, nor does a
+//     self-inflicted one (Riot records a spike detonation as the victim
+//     killing themself), and an AFK round (Riot's was_afk) is not
+//     "survived". The self-kill rule was confirmed by a blind test of four
+//     more matches (140 rows in all).
+//   · traded: their killer died to one of their teammates after them, at
+//     most 3 s later, and they were that killer's last victim before the
+//     trade kill (a trade credits only the last teammate the killer took;
+//     same-millisecond kills keep the kill list's order). A kill in the
+//     same millisecond as the death doesn't count.
+//   Tracker's KAST for three 1 Oct 2026 matches fits "any victim, 5 s"
+//   instead, so its method seems to have changed in October.
+// Returns null when the payload has no round data (older/compact shapes),
+// so callers fall back to the summary totals.
+const KAST_TRADE_WINDOW_MS=3000;
+function computeRoundStats(m,puuid){
+  if(!puuid||!Array.isArray(m?.rounds)||!m.rounds.length)return null;
+  const team={};
+  for(const p of m.players||[])if(p?.puuid)team[p.puuid]=String(p.team_id??'').toLowerCase();
+  const myTeam=team[puuid];
+  if(!myTeam)return null;
+  let enemyDamage=0,hasDamage=false;
+  for(const r of m.rounds){
+    for(const s of r?.stats||[]){
+      if(s?.player?.puuid!==puuid||!Array.isArray(s.damage_events))continue;
+      hasDamage=true;
+      for(const d of s.damage_events){
+        const to=d?.player?.puuid??d?.receiver?.puuid??d?.receiver;
+        if(!to||team[to]===myTeam)continue;
+        enemyDamage+=d.damage??0;
+      }
+    }
+  }
+  let kastRounds=null;
+  if(Array.isArray(m.kills)){
+    const byRound=new Map();
+    for(const k of m.kills){
+      if(!Number.isInteger(k?.round))continue;
+      if(!byRound.has(k.round))byRound.set(k.round,[]);
+      byRound.get(k.round).push(k);
+    }
+    kastRounds=0;
+    for(let n=0;n<m.rounds.length;n++){
+      const ks=(byRound.get(n)||[]).slice().sort((a,b)=>(a.time_in_round_in_ms??0)-(b.time_in_round_in_ms??0));
+      let died=false,credited=false;
+      // ks keeps the kill list's order for kills in the same millisecond
+      // (Array.prototype.sort is stable); tracker's trade rule depends on it.
+      for(let i=0;i<ks.length;i++){
+        const k=ks[i];
+        const killer=k.killer?.puuid,victim=k.victim?.puuid,t0=k.time_in_round_in_ms??0;
+        if(killer===puuid&&victim!==puuid)credited=true;
+        if((k.assistants||[]).some(a=>a?.puuid===puuid))credited=true;
+        if(victim===puuid&&killer&&killer!==puuid){
+          died=true;
+          const trade=ks.find(x=>x.victim?.puuid===killer&&(x.time_in_round_in_ms??0)>t0&&(x.time_in_round_in_ms??0)-t0<=KAST_TRADE_WINDOW_MS&&team[x.killer?.puuid]===myTeam);
+          const tTrade=trade?.time_in_round_in_ms??0;
+          // The trade goes to the killer's last victim strictly before the
+          // trade kill: a teammate the killer took later in the list (same
+          // millisecond included) takes it, one killed in the trade's own
+          // millisecond doesn't.
+          const killedAgain=trade&&ks.some((y,j)=>j>i&&y.killer?.puuid===killer&&team[y.victim?.puuid]===myTeam&&(y.time_in_round_in_ms??0)<tTrade);
+          if(trade&&!killedAgain)credited=true;
+        }
+      }
+      // Revived and alive at round end counts as survived.
+      if(died&&!credited&&computeRealDeaths(ks,m.rounds[n],m.players).realDeath[puuid]===undefined)died=false;
+      const afk=(m.rounds[n]?.stats||[]).some(s=>s?.player?.puuid===puuid&&s.was_afk===true);
+      if(credited||(!died&&!afk))kastRounds++;
+    }
+  }
+  return{enemyDamage:hasDamage?enemyDamage:null,kastRounds,rounds:m.rounds.length};
+}
+
+// Display rounding that reproduces tracker.gg's numbers (210 ADR and 180
+// KAST rows, see docs/adr-kast.md):
+// - ADR goes to 2 decimals first, then 1: 135.952 → 135.95 → "135.9"
+//   (the double 135.95 sits just below the half).
+// - A KAST percentage exactly on .5 rounds to even: 15/24 = 62.5% → 62.
+function trackerFixed1(v){return(Math.round(v*100)/100).toFixed(1);}
+function roundHalfEven(v){
+  const f=Math.floor(v);
+  return Math.abs(v-f-0.5)<1e-9?(f%2===0?f:f+1):Math.round(v);
+}
+
+function extractStats(p,fallbackRounds=null,roundStats=null){
   // v4 stats nested under p.stats, v3 flat
   const s=p.stats||p;
   // Use null as sentinel so we can detect missing data vs a genuine 0
@@ -4054,7 +4153,9 @@ function extractStats(p,fallbackRounds=null){
   // live match payload — .made/.damage_made don't exist in that shape and
   // silently left dmg/adr null). Kept as fallbacks in case older cached
   // responses or a future API version use one of those instead.
-  const dmg=s.damage?.dealt??p.damage_made??s.damage?.made??s.damage_made??null;
+  // Enemy-only damage from the round data wins when present (see
+  // computeRoundStats); the summary total includes friendly fire.
+  const dmg=roundStats?.enemyDamage??s.damage?.dealt??p.damage_made??s.damage?.made??s.damage_made??null;
   const hs=p.headshots??s.headshots??s.shots?.head??null;
   const bs=p.bodyshots??s.bodyshots??s.shots?.body??null;
   const ls=p.legshots??s.legshots??s.shots?.leg??null;
@@ -4067,8 +4168,12 @@ function extractStats(p,fallbackRounds=null){
   const kd=d>0?Math.round((k/d)*100)/100:k>0?k:null;
   const adr=rounds_played&&rounds_played>0&&dmg!==null?Math.round(dmg/rounds_played):null;
 
+  const kastRounds=roundStats?.kastRounds??null;
+  const kastTotalRounds=kastRounds!=null&&roundStats.rounds>0?roundStats.rounds:null;
+  const kast=kastTotalRounds?roundHalfEven(kastRounds/kastTotalRounds*100):null;
+
   const performanceScore=Number.isFinite(p.performance?.score)?p.performance.score:null;
-  return{kills:k,deaths:d,assists,score,rounds_played:rounds_played??null,kd,acs,performanceScore,adr,hsPct,dmg};
+  return{kills:k,deaths:d,assists,score,rounds_played:rounds_played??null,kd,acs,performanceScore,adr,hsPct,dmg,kast,kastRounds:kastTotalRounds?kastRounds:null,kastTotalRounds};
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -4960,8 +5065,15 @@ function renderStats(skipPlaytime){
   const adrGames=statsPanelMatches.filter(m=>m.myStats?.adr!=null&&m.myStats?.rounds_played>0);
   const totalDmg=adrGames.reduce((a,m)=>a+m.myStats.dmg,0);
   const totalAdrRounds=adrGames.reduce((a,m)=>a+m.myStats.rounds_played,0);
-  const avgAdr=totalAdrRounds>0?(totalDmg/totalAdrRounds).toFixed(1):null;
+  const avgAdr=totalAdrRounds>0?trackerFixed1(totalDmg/totalAdrRounds):null;
   document.getElementById('sg-adr').textContent=avgAdr!=null?avgAdr:'—';
+
+  // KAST — KAST rounds ÷ rounds over matches that carry round data.
+  const kastGames=statsPanelMatches.filter(m=>m.myStats?.kastRounds!=null&&m.myStats?.kastTotalRounds>0);
+  const totalKastRounds=kastGames.reduce((a,m)=>a+m.myStats.kastRounds,0);
+  const totalKastDenom=kastGames.reduce((a,m)=>a+m.myStats.kastTotalRounds,0);
+  document.getElementById('sg-kast').textContent=totalKastDenom>0?`${roundHalfEven(totalKastRounds/totalKastDenom*100)}%`:'—';
+  document.getElementById('sg-kast-pill').title=`Share of rounds with a kill, an assist, survived, or traded (killer died to a teammate within 3 s); ${kastGames.length} of ${statsPanelMatches.length} matches have round data`;
 
   renderRankByRankCard();
   renderServers(statMatches);
