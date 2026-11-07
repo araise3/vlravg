@@ -174,12 +174,14 @@ test('overview KAST weights by rounds and ignores matches without round data',()
   assert.match(elements.get('sg-kast-pill').title,/2 of 3 matches/);
 });
 
-test('thirty-three Nov 2026 matches reproduce tracker.gg ADR and KAST on every row',()=>{
+test('seventy-one Nov 2026 matches reproduce tracker.gg ADR and KAST on every row',()=>{
   const {matches}=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/tracker-adr-kast-2026-11.json.gz',import.meta.url))).toString('utf8'));
-  assert.equal(matches.length,33);
+  assert.equal(matches.length,71);
   assert.equal(matches.filter(m=>m.blind===1).length,4);
   assert.equal(matches.filter(m=>m.blind===2).length,4);
   assert.equal(matches.filter(m=>m.blind===3).length,15);
+  assert.equal(matches.filter(m=>m.blind===4).length,18);
+  assert.equal(matches.filter(m=>m.blind===5).length,20);
   const off=[];
   let rawDiffers=0;
   for(const m of matches){

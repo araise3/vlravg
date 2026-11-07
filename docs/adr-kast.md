@@ -15,8 +15,8 @@ the KAST rules were then adjusted until they reproduced tracker.gg.
 - **Rounding (`trackerFixed1`):** tracker rounds ADR to 2 decimals, then to 1. That
   explains the rows that looked 0.1 off: 135.952 → 135.95 → 135.9 (the double 135.95 sits
   just below the half), 170.955 → 170.95 → 170.9, and 146.545 → 146.55 → 146.6. With it,
-  all 360 rows checked (33 November and 3 October matches) match exactly; a single rounding
-  to 1 decimal misses 3.
+  all 740 rows checked (71 November and 3 October matches) match exactly; on the first 360
+  rows, a single rounding to 1 decimal misses 3.
 - The raw total misses tracker on 16 of the 100 November rows. Example: Agent X on match
   `0fe28182` was 165.5 from the raw total, is 160.7 now, and tracker shows 160.7.
 - Over 199 archived Sxllow matches, the act average went from 139.1 to 138.8.
@@ -152,6 +152,39 @@ unreliable, so KAST now uses it too.
 With these changes, all 330 rows of the 33 November matches match for both ADR and KAST,
 23 of those matches scored blind first.
 
+### Blind test 4
+
+18 matches from 1 to 6 Nov 2026 (180 rows), new to the fixture, taken from the HenrikDev
+history of four players seen in earlier fixture matches (LFT Granit, november, a d a p t,
+kasingpa) and read from tracker's match pages in the in-app browser. All seven current maps
+appear, including three Corrode matches. The set has 6 spike explosion deaths (3 of them
+with assisters) and 10 other self-kills. Each match was scored with the code as committed
+in `7d63ab4` before tracker was opened.
+
+- **ADR 180/180.**
+- **KAST 180/180.**
+
+No rule changed.
+
+### Blind test 5
+
+20 more matches from 5 to 7 Nov 2026 (200 rows), from the histories of five other players
+in blind-test-4 lobbies (Enver, hinami, kurt, andik, kz1x), read the same way and scored
+with the same code before tracker was opened. All seven maps appear. The set has 7 spike
+explosion deaths (3 with assisters) and 10 other self-kills. Tracker briefly served a
+Cloudflare "Just a moment..." check, which cleared on its own; later pages were read with
+longer pauses.
+
+- **ADR 200/200.**
+- **KAST 200/200.**
+
+One player on `65d0736c` appears as paiNNN 666 in HenrikDev and as mld8nk on tracker (a
+name change). They were paired as the only unmatched row on each side, and both values
+match.
+
+No rule changed. All 710 rows of the 71 November matches now match, 61 of those matches
+scored blind first.
+
 ## Older matches
 
 Three matches from 1 Oct 2026 (Sxllow archive) fit a different rule: any victim, 5 s
@@ -163,7 +196,7 @@ the KAST it had already stored for older matches (an inference). `2fb88e2b`, pla
 
 ## Tests
 
-`tests/adr-kast.test.mjs` covers each rule and pins all 33 matches
+`tests/adr-kast.test.mjs` covers each rule and pins all 71 matches
 (`tests/fixtures/tracker-adr-kast-2026-11.json.gz`: HenrikDev payloads trimmed to the fields
 used, in their original kill order, plus tracker's ADR and KAST per player; blind-test
-matches carry `blind: 1`, `2` or `3`). Every row must match.
+matches carry `blind: 1` to `5`). Every row must match.
