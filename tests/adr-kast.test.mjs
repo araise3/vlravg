@@ -63,14 +63,14 @@ test('KAST credits kill, assist, survival and a trade within 3 s',()=>{
     kill(4,2000,'e1','me'),kill(4,5001,'mate','e1'),
     // r5 died, killer later died to his own team (not a trade)
     kill(5,2000,'e1','me'),kill(5,3000,'e2','e1'),
-    // r6 killed by self (spike detonation): not a death for KAST
-    kill(6,2000,'me','me'),
+    // r6 killed self by falling: a death, and no kill credit
+    {...kill(6,2000,'me','me'),weapon:{type:'Fall'}},
   ]};
   const rs=computeRoundStats(m,'me');
   assert.equal(rs.rounds,7);
-  assert.equal(rs.kastRounds,5);
+  assert.equal(rs.kastRounds,4);
   const stats=extractStats({stats:{kills:1,deaths:6}},7,rs);
-  assert.equal(stats.kast,71);
+  assert.equal(stats.kast,57);
   assert.equal(stats.kastTotalRounds,7);
 });
 
@@ -106,10 +106,29 @@ test('a kill in the same millisecond as the death is not a trade',()=>{
   assert.equal(computeRoundStats(m,'me').kastRounds,0);
 });
 
-test('an AFK round does not count as survived, but a kill in it still does',()=>{
-  const afkRound=()=>({stats:[{player:{puuid:'me'},was_afk:true,damage_events:[]}]});
-  const m={players:roster,rounds:[afkRound(),afkRound()],kills:[kill(1,1000,'me','e1')]};
+test('a spike explosion is not a death, and an assist on a spike self-kill earns nothing',()=>{
+  const bomb=(round,t,victim,assistants=[])=>({...kill(round,t,victim,victim,assistants),weapon:{type:'Bomb'}});
+  const m={players:roster,rounds:[round(),round()],kills:[
+    // r0 (560e631e r14, Ria): the spike kills me at detonation; tracker counts the round
+    bomb(0,67154,'me'),
+    // r1 (4415ea0e r10, axl): my only credit is an "assist" on an enemy's spike death
+    kill(1,60000,'e1','me'),bomb(1,68418,'e1',['me']),
+  ]};
   assert.equal(computeRoundStats(m,'me').kastRounds,1);
+});
+
+test('a player absent from the round does not survive it; Riot\'s was_afk alone decides nothing',()=>{
+  // e707c572 (Yan): was_afk is set on r9, where Yan is in every snapshot,
+  // and missing on r10, where Yan is in none. Tracker drops r10, counts r9.
+  const at=(alive)=>alive.map(puuid=>({player:{puuid}}));
+  const statsRow=was_afk=>({stats:[{player:{puuid:'me'},was_afk,damage_events:[]}]});
+  const m={players:roster,rounds:[statsRow(true),statsRow(false),statsRow(false)],kills:[
+    {...kill(0,4621,'mate','e1'),player_locations:at(['me','mate','e1','e2'])},
+    {...kill(1,19133,'mate','e1'),player_locations:at(['mate','e1','e2'])},
+    // r2: absent, but a kill still counts
+    {...kill(2,5000,'me','e1'),player_locations:at(['mate','e1','e2'])},
+  ]};
+  assert.equal(computeRoundStats(m,'me').kastRounds,2);
 });
 
 test('a player revived and alive at round end counts as survived',()=>{
@@ -155,11 +174,12 @@ test('overview KAST weights by rounds and ignores matches without round data',()
   assert.match(elements.get('sg-kast-pill').title,/2 of 3 matches/);
 });
 
-test('eighteen Nov 2026 matches reproduce tracker.gg ADR and KAST on every row',()=>{
+test('thirty-three Nov 2026 matches reproduce tracker.gg ADR and KAST on every row',()=>{
   const {matches}=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/tracker-adr-kast-2026-11.json.gz',import.meta.url))).toString('utf8'));
-  assert.equal(matches.length,18);
+  assert.equal(matches.length,33);
   assert.equal(matches.filter(m=>m.blind===1).length,4);
   assert.equal(matches.filter(m=>m.blind===2).length,4);
+  assert.equal(matches.filter(m=>m.blind===3).length,15);
   const off=[];
   let rawDiffers=0;
   for(const m of matches){

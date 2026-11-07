@@ -15,7 +15,7 @@ the KAST rules were then adjusted until they reproduced tracker.gg.
 - **Rounding (`trackerFixed1`):** tracker rounds ADR to 2 decimals, then to 1. That
   explains the rows that looked 0.1 off: 135.952 → 135.95 → 135.9 (the double 135.95 sits
   just below the half), 170.955 → 170.95 → 170.9, and 146.545 → 146.55 → 146.6. With it,
-  all 210 rows checked (18 November and 3 October matches) match exactly; a single rounding
+  all 360 rows checked (33 November and 3 October matches) match exactly; a single rounding
   to 1 decimal misses 3.
 - The raw total misses tracker on 16 of the 100 November rows. Example: Agent X on match
   `0fe28182` was 165.5 from the raw total, is 160.7 now, and tracker shows 160.7.
@@ -26,11 +26,14 @@ the KAST rules were then adjusted until they reproduced tracker.gg.
 A round counts when the player:
 
 - **K**illed someone (not themself), or
-- **A**ssisted, or
-- **S**urvived: alive at round end. A death undone by a revive (Sage, Clove) doesn't count;
-  revives are resolved by `computeRealDeaths`, the same positional check the clutch stats
-  use. A self-inflicted death doesn't count either: Riot records a spike detonation as the
-  victim killing themself. A round Riot flags `was_afk` for the player is not survived.
+- **A**ssisted, except on a self-kill (an enemy's own spike death lists assisters), or
+- **S**urvived: present in the round and alive at its end.
+  - A death undone by a revive (Sage, Clove) doesn't count; revives are resolved by
+    `computeRealDeaths`, the same positional check the clutch stats use.
+  - A spike explosion (kill weapon type `Bomb`) isn't a death. A fall (`Fall`) or a failed
+    Clove revive ("Not Dead Yet") is.
+  - Presence comes from `presentCount`: the player is in the round's earliest position
+    snapshot, or died before it. Riot's `was_afk` is not used; it lags a round.
 - **T**raded: their killer died to one of their teammates after their death, no more than
   3 s later, and they were the killer's last victim before that trade kill. A trade credits
   only the last teammate the killer took. Kills in the same millisecond: a victim listed later
@@ -63,8 +66,9 @@ Each added rule fixed its rows without breaking another. The evidence for each:
   2.978 s trade (Haven, round 1) but not this 2.875 s one, and no cut-off in milliseconds or
   whole seconds fits both. A tracker screenshot of round 20 shows the same kill feed as
   HenrikDev.
-- **AFK:** 2 rows. Yan (Lotus `e707c572`, round 9) and Zino (Haven `4422e750`, round 4) only
-  "survived" those rounds, and `was_afk` is true for both.
+- **AFK:** 2 rows. Yan (Lotus `e707c572`) and Zino (Haven `4422e750`) each had one round
+  too many. The fix at this stage used `was_afk`; blind test 3 replaced it with presence,
+  which drops a different round for each of them (see there).
 - **Revive:** 1 row. bissyboy4511 (Sunset `c0790deb`, round 8) was killed at 2.5 s, then
   appears alive in kill snapshots at 24.4, 29.0 and 30.7 s; their team had a Sage.
 - **Strictly after:** 1 row. WASHEDMANNY42 (Sunset `977db87f`, round 15) was killed by yuno,
@@ -88,9 +92,8 @@ Four matches from 6 Nov 2026 (`fa0d31ff`, `11962da8`, `560e631e`, `1c56b889`; 40
   - JuliONline 63% vs 62%: exactly 15/24 = 62.5%, so tracker rounds half to even (or down;
     one row can't tell those apart).
   - Ria 62% vs 65%: in Summit round 14 the spike detonated on her, recorded as a self-kill.
-    Tracker counts the round, so a self-inflicted death isn't a KAST death. The 14 matches
-    hold 5 self-kill deaths and no team kills, so "only an enemy kill is a death" fits
-    equally; the narrower rule is implemented.
+    Tracker counts the round. The fix at this stage was "a self-kill isn't a death"; blind
+    test 3 narrowed it to spike explosions only.
 
 After those three fixes, all 140 November rows matched for both ADR and KAST, and the
 October ADR rows still matched.
@@ -112,19 +115,55 @@ Four matches from 5 and 6 Nov 2026 (`cdcacc5a`, `b18f7e9e`, `6e2a5fec`, `ee3c15c
 The fix: the trade goes to the killer's last victim strictly before the trade kill, in
 kill-list order. It also covers the earlier "strictly after the death" case (no victim comes
 before a trade in the death's own millisecond). With it, all 180 rows of the 18 November
-matches match for both ADR and KAST.
+matches matched for both ADR and KAST.
+
+### Blind test 3
+
+15 matches from 31 Oct to 5 Nov 2026 (150 rows), read directly from tracker's match pages in
+the in-app browser (match IDs from WASHEDMANNY42's and kurd with dream's HenrikDev
+history). Seven more matches from 31 Oct returned "Network Error" on tracker (tracker has no
+data for them) and were skipped.
+
+- **ADR 150/150.**
+- **KAST 146/150.**
+  - starboy kipy (`3912425a`), 30% vs 26%: they left the match. Round 23 has no `was_afk`
+    flag, but they appear in none of its 7 position snapshots.
+  - axl (`4415ea0e`), 79% vs 74%: their only credit in round 10 was an assist on an enemy's
+    spike death (the enemy is recorded as killing themself with `Bomb`).
+  - anemoia (`925f7b4e`), 42% vs 46%, and adore (`2fb88e2b`), 69% vs 62%: the self-kill rule
+    from blind test 1 was too broad. adore's death in round 1 is a self-kill by `Fall`, which
+    tracker counts as a death. Only `Bomb` deaths aren't deaths.
+
+Testing each rule on its own across all 330 rows:
+
+| Survived rule | Rows off |
+| --- | --- |
+| `was_afk` (as before) | 1 |
+| `was_afk` or `received_penalty` | 5 |
+| `was_afk` or absent from the first snapshot | 5 |
+| **absent from the first snapshot only** | **0** |
+
+The AFK flag lags a round. Yan is flagged `was_afk` in round 9 but is in all 7 snapshots,
+and isn't flagged in round 10, where they're in none of 8 snapshots and have no loadout.
+Zino (rounds 4 and 5) and starboy kipy (rounds 9 and 23) show the same shift. Tracker
+counts by presence. The clutch code's `presentCount` already noted that `was_afk` is
+unreliable, so KAST now uses it too.
+
+With these changes, all 330 rows of the 33 November matches match for both ADR and KAST,
+23 of those matches scored blind first.
 
 ## Older matches
 
 Three matches from 1 Oct 2026 (Sxllow archive) fit a different rule: any victim, 5 s
 window (0 of 30 rows off; 3 s leaves 9 off). On the November matches 5 s leaves 36 rows off.
 One rule cannot fit both, so tracker most likely changed its method during October and kept
-the KAST it had already stored for older matches (an inference). The current rules follow
-the November matches.
+the KAST it had already stored for older matches (an inference). `2fb88e2b`, played
+31 Oct 2026 at 21:37 UTC, already fits the current rules, so the change came between 1 and
+31 October. The current rules follow the newer matches.
 
 ## Tests
 
-`tests/adr-kast.test.mjs` covers each rule and pins all eighteen November matches
+`tests/adr-kast.test.mjs` covers each rule and pins all 33 matches
 (`tests/fixtures/tracker-adr-kast-2026-11.json.gz`: HenrikDev payloads trimmed to the fields
 used, in their original kill order, plus tracker's ADR and KAST per player; blind-test
-matches carry `blind: 1` or `blind: 2`). Every row must match.
+matches carry `blind: 1`, `2` or `3`). Every row must match.
