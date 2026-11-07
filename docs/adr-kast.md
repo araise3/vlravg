@@ -43,7 +43,8 @@ A round counts when the player:
 
 KAST = counted rounds ÷ rounds in the match, as a percentage where exactly .5 rounds to
 even (`roundHalfEven`: 15/24 = 62.5% → 62, as tracker shows). The overview weights by
-rounds across matches and says on hover how many matches had round data.
+rounds across matches, shows one decimal as tracker's profile does (70.1%), and says on hover
+how many matches had round data.
 
 ## How the rules were found
 
@@ -121,8 +122,8 @@ matches matched for both ADR and KAST.
 
 15 matches from 31 Oct to 5 Nov 2026 (150 rows), read directly from tracker's match pages in
 the in-app browser (match IDs from WASHEDMANNY42's and kurd with dream's HenrikDev
-history). Seven more matches from 31 Oct returned "Network Error" on tracker (tracker has no
-data for them) and were skipped.
+history). Seven more matches from 31 Oct returned "Network Error" on tracker and were skipped.
+That error is tracker's rate limit, not missing data (the pages load after a pause).
 
 - **ADR 150/150.**
 - **KAST 146/150.**
@@ -190,9 +191,119 @@ scored blind first.
 Three matches from 1 Oct 2026 (Sxllow archive) fit a different rule: any victim, 5 s
 window (0 of 30 rows off; 3 s leaves 9 off). On the November matches 5 s leaves 36 rows off.
 One rule cannot fit both, so tracker most likely changed its method during October and kept
-the KAST it had already stored for older matches (an inference). `2fb88e2b`, played
-31 Oct 2026 at 21:37 UTC, already fits the current rules, so the change came between 1 and
-31 October. The current rules follow the newer matches.
+the KAST it had already stored for older matches (an inference). The current rules follow
+the newer matches.
+
+### When the method changed
+
+kurd with dream's A6 matches (14 Oct to 6 Nov 2026) narrow it down. Their tracker match
+pages, compared with the current rules and with the older rule (any victim, 5 s, everything
+else unchanged):
+
+| Match | Played (UTC) | Rounds | Current | Older | Tracker |
+| --- | --- | --- | --- | --- | --- |
+| `d56da7da` | 14 Oct 09:57 | 24 | 62 | 71 | **71** |
+| `8589b0a3` | 18 Oct 10:51 | 23 | 57 | 61 | **61** |
+| `6f4776aa` | 20 Oct 13:01 | 28 | 71 | 75 | **75** |
+| `26a5da5b` | 21 Oct 16:51 | 21 | 67 | 71 | **71** |
+| `99061710` | 25 Oct 12:19 | 28 | 68 | 75 | **75** |
+| `901fd16d` | 25 Oct 13:01 | 21 | 57 | 62 | **62** |
+| `d20c86e6` | 27 Oct 12:44 | 22 | 59 | 68 | **68** |
+| `3a973c86` | 27 Oct 19:37 | 21 | **81** | 86 | 81 |
+| `22015d55` | 27 Oct 20:16 | 22 | **73** | 77 | 73 |
+| `b32d1a12` | 28 Oct 17:14 | 21 | **71** | 81 | 71 |
+| `cfcea04f` | 30 Oct 15:51 | 26 | **65** | 69 | 65 |
+
+Tracker has not said that it changed its method, and a web search found no announcement.
+The rules above were fitted to kurd's row only, so the other nine players in those lobbies
+were used as an independent check. Predictions for every row under both rules were written
+before tracker was read (SHA-256 `e9ce7e7a…`, 7 Nov 03:46 UTC). Then 13 full lobbies were
+read: 10 played before the switch and 3 after (two more returned tracker's rate-limit
+error). kurd's rows aren't counted:
+
+| | Rows | Rules disagree | Tracker = older | Tracker = current | Neither |
+| --- | --- | --- | --- | --- | --- |
+| Up to 27 Oct 13:53 | 81 | 43 | **43** | 0 | 0 |
+| From 27 Oct 18:57 | 36 | 15 | 0 | **15** | 0 |
+
+The cut is sharp: `5ebc77ab` (27 Oct 13:53) follows the older rule on all 4 rows where the
+rules disagree, and `75ab7604` (27 Oct 18:57) follows the current rule on all 3.
+
+#### Blind test on other accounts
+
+The date split was then tested on six accounts from blind-test-5 lobbies that never shared a
+lobby with kurd (Bonnie blew, SNGLAAAAAAAAAAAW, rzegnam, vex, Harold Finch, therewasatime).
+Predictions were written before tracker was read (SHA-256 `f5916a7e…`, 7 Nov 03:57 UTC).
+12 lobbies were read (120 rows). Seven more (July, August and late October) hit tracker's
+rate limit and weren't read. One was skipped because both rules agree on every row.
+
+- Up to 27 Oct 16:30 (7 lobbies): tracker matches the older rule on all 29 rows where the
+  rules disagree.
+- From 27 Oct 17:27 (5 lobbies): tracker matches the current rule on all 19.
+- One row fits neither rule: bissyboy4511 on `b0711939` (14:40), 61 against 56, one round.
+  In that round their killer (mYdra, Sova) killed themself with an ability 4.0 s later.
+  Counting a killer's self-kill within 5 s as a trade fixes this row and keeps all 160
+  older-era rows read so far. It is one row, so it stays a hypothesis and isn't in the code.
+  The current rule doesn't do this: on the 710 pinned rows it would break axl
+  (`4415ea0e`).
+
+So the switch falls between matches starting 27 Oct 16:30 and 17:27 UTC.
+
+#### What it isn't
+
+- **Not a game patch.** Every match from 24 Oct to 27 Oct 20:16 reports the same build,
+  `release-13.08-shipping-22-5760300`. Patch 13.09 appears from 28 Oct.
+- **Not a server difference.** London and Frankfurt matches fall on both sides.
+- **Not account- or lobby-specific.** It holds across kurd's lobbies and six unrelated
+  accounts.
+
+#### What it is: two versions of tracker's trade code
+
+Tracker's match page loads `api.tracker.gg/api/v2/valorant/standard/matches/<id>`. Each
+player's summary there holds `kast`, `traded` ("Trades Victim"), `survived` and
+`tradesAvenger` ("Trades Avenger"). The field set is identical before and after the cut,
+but the values show two different implementations:
+
+- **`tradesAvenger` is `null` for every player** in matches before the cut (`bd2ea657`,
+  14 Oct; `b0711939`, 27 Oct 14:40; `87bc21c4`, 27 Oct 16:30). It is filled in for every
+  player in `415bb489` (27 Oct 17:27). The stat didn't exist when the older matches were
+  processed.
+- **`traded` counts follow the older rule before the cut and the current rule after.**
+  Counted from the HenrikDev kill lists:
+
+  | Match | Players | `traded` = older rule* | `traded` = current rule | `tradesAvenger` = current rule |
+  | --- | --- | --- | --- | --- |
+  | `bd2ea657` (14 Oct) | 10 | **10** | 0 | (null) |
+  | `b0711939` (27 Oct 14:40) | 10 | **10** | 1 | (null) |
+  | `87bc21c4` (27 Oct 16:30) | 10 | **10** | 1 | (null) |
+  | `415bb489` (27 Oct 17:27) | 10 | 5 | **10** | **10** |
+
+  \* With the killer's own death counted (next point); without it, `b0711939` is 8 of 10.
+
+- **The older code also counted the killer's own death.** In `b0711939` round 12, mYdra
+  killed bissyboy4511 (40.08 s) and Yirø (41.12 s), then killed themself with an ability
+  (44.09 s). Tracker's `traded` is one higher than the teammate-only rule for exactly those
+  two players. bissyboy4511's KAST (61, where the teammate-only rule gives 56) is the same
+  round. So in the older code a death counted as traded when the killer died within 5 s,
+  however they died. That version fits all 30 `traded` counts and all 160 older-era KAST
+  rows read so far.
+
+So tracker shipped new trade detection, with the new Trades Avenger stat, and kept the
+values it had already computed for earlier matches. Matches starting up to 27 Oct 16:30
+UTC carry the old values, and matches from 17:27 the new ones. By end time (16:30 + 40 min,
+17:27 + 35 min), the deploy fell between about 17:10 and 18:02 UTC on Tuesday 27 Oct. That
+assumes tracker processes a match when it ends, which is an inference. Tracker hasn't
+announced the change. The rules are still read from tracker's output, not its code.
+
+Tracker's profile overview appears to add up these stored per-match values. It shows 71.2% KAST over kurd's 106 A6
+matches. Scoring every match with the current rules gives 1605 of 2288 rounds (70.1%).
+Scoring matches up to 27 Oct 16:30 with the older rule instead gives 1630 of 2288 (71.2%),
+which is tracker's figure. vlravg uses the current rules for every match, so for acts that
+started before 27 Oct its overview runs below tracker's.
+
+**Decision (7 Nov 2026):** keep the current rule for all matches. vlravg doesn't reproduce
+tracker's pre-27 Oct values. Those come from trade logic tracker has since replaced, and one
+rule for every match keeps vlravg's numbers consistent.
 
 ## Tests
 
