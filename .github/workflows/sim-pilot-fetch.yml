@@ -1,0 +1,37 @@
+name: ML simulation pilot fetch
+
+# Research for ascend-companion-re (docs/ml-sim-pilot.md): fetches the current-act history of the
+# players in D1 sim_pilot_players through the site's /api/stored-matches proxy (public key, same
+# quota gate as live visitors, paced to 40/min). Runs chain hourly until every player is done;
+# a run with nothing left exits in seconds. Delete this workflow once the pilot is complete.
+on:
+  schedule:
+    - cron: '7 * * * *'
+  workflow_dispatch:
+    inputs:
+      runtime_minutes:
+        description: 'Run budget (5–345 minutes)'
+        default: '330'
+
+concurrency:
+  group: sim-pilot-fetch
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Fetch pilot players' current-act histories
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_D1_DATABASE_ID: ${{ secrets.CF_D1_DATABASE_ID }}
+          SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg1.pages.dev' }}
+          RUNTIME_MINUTES: ${{ inputs.runtime_minutes || '330' }}
+        run: node .github/scripts/sim-pilot-fetch.mjs
