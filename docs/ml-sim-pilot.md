@@ -28,5 +28,30 @@ started, from the player's own earlier games.
   tracker's act totals add up its stored per-match values. On 4 archive matches from September
   and October that gave 40 of 40 KAST rows equal to tracker's match pages.
 
+## Gate: identical inputs before training
+
+The user's rule (14 Nov 2026): the pilot trains only when every input the predictor uses is
+present for every player of every match and built exactly as the live app gets it.
+ascend-companion-re's `tools/ml_pilot/gate.mjs` checks this. A parity check rebuilt the user's
+own stats at 8 live lobbies from HenrikDev data and matched all 85 values the app had stored
+from tracker and Riot (games, K/D, ACS, ADR, KAST, HS%, games on the agent, tier, RR, last 12
+results, last game start), with tracker's 2-decimal rounding.
+
+That needs three more queues for the 1,000 matches (13–31 Oct) with the fewest downloads:
+
+- `sim_pilot_rr` (7,255 players): `/api/stored-mmr-history/{region}/{puuid}?page=N`, a route
+  added for this, fixed at 100 per page like stored-matches. Tier and RR after every game
+  since 1 Aug 2026, for each player's rank as it stood before a match.
+- `sim_pilot_prev` (4,478 players with fewer than 12 act games before a match): their last 20
+  games before the act, for results and Ascend's Riot fallback (last 20 games of any act).
+- `sim_pilot_kast` (62,872 matches): each earlier game's full match through
+  `/api/match-detail`, reduced in the job to every player's KAST rounds and enemy damage with
+  `computeRoundStats` from `index.html` at commit f2dd31f (the workflow pins it), older trade
+  rule before 27 Oct 17:00 UTC. That code gives 40 of 40 on the tracker rows above. KAST can't
+  be skipped: without it the predictor's leave-one-out log loss rose from 0.645 to 0.661.
+
+The queues run in that order after the histories, about 80k requests (about 2.5 days at the
+gate's 20–25/min).
+
 The simulation and training run locally in ascend-companion-re. Once the pilot is evaluated,
-delete the workflow and, if not needed, the `sim_pilot_players` table.
+delete the workflow and, if not needed, the `sim_pilot_*` tables.
