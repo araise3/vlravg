@@ -2,15 +2,16 @@ name: ML simulation pilot fetch
 
 # Research for ascend-companion-re (docs/ml-sim-pilot.md): fetches the current-act history of the
 # players in D1 sim_pilot_players through the site's /api/stored-matches proxy (public key, same
-# quota gate as live visitors, paced to 40/min). Runs chain hourly until every player is done;
-# a run with nothing left exits in seconds. Delete this workflow once the pilot is complete.
+# quota gate as live visitors, paced to 40/min). Each run starts the next one while players remain
+# and it made progress (GitHub drops many scheduled triggers); the hourly schedule is the backup.
+# A run with nothing left exits in seconds. Delete this workflow once the pilot is complete.
 on:
   schedule:
     - cron: '7 * * * *'
   workflow_dispatch:
     inputs:
       runtime_minutes:
-        description: 'Run budget (5–345 minutes)'
+        description: 'Run budget (1–345 minutes)'
         default: '330'
 
 concurrency:
@@ -18,6 +19,7 @@ concurrency:
   cancel-in-progress: false
 permissions:
   contents: read
+  actions: write # start the next run
 jobs:
   fetch:
     runs-on: ubuntu-latest
@@ -28,6 +30,7 @@ jobs:
         with:
           node-version: '24'
       - name: Fetch pilot players' current-act histories
+        id: fetch
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
@@ -35,3 +38,8 @@ jobs:
           SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg1.pages.dev' }}
           RUNTIME_MINUTES: ${{ inputs.runtime_minutes || '330' }}
         run: node .github/scripts/sim-pilot-fetch.mjs
+      - name: Start the next run while players remain
+        if: ${{ always() && steps.fetch.outputs.remaining != '' && steps.fetch.outputs.remaining != '0' && steps.fetch.outputs.progressed != '0' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run sim-pilot-fetch.yml --ref "$GITHUB_REF_NAME" -f runtime_minutes=330
