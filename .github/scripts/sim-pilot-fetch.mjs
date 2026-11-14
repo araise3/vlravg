@@ -26,6 +26,7 @@ import {d1Query} from './d1-query.mjs';
 
 export const MAX_PAGES=10;     // 1,000 matches: more than anyone plays in an act
 export const MAX_ATTEMPTS=3;
+export const NOT_FOUND_CONFIRM=2; // a 404 counts only when a later run gets it again
 export const WORKERS=2;        // a request takes 1-2 s, so one worker alone can't keep the pace
 const RR_SINCE=Date.parse('2026-08-01T00:00:00Z'); // the pilot's matches start 13 Oct 2026
 const PREV_GAMES=20;           // Ascend's Riot fallback looks at the last 20 games
@@ -168,8 +169,12 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
       if(!item)return;
       const {Q,row}=item;
       try{
-        const h=await Q.fetch(row);
+        let h=await Q.fetch(row);
         if(h.budget)return;
+        // HenrikDev sometimes answers 404 for an account it has data for (one pilot player got 404
+        // at night and 41 stored matches the next afternoon), so a 404 only closes an item when a
+        // later run gets it again; the first one is a retry.
+        if(h.status===404&&row.attempts+1<NOT_FOUND_CONFIRM)h={retry:true};
         if(h.retry){
           const attempts=row.attempts+1,close=attempts>=MAX_ATTEMPTS;
           await q(close?`UPDATE ${Q.table} SET attempts=?1,status=0,fetched_at=?2 WHERE ${Q.id}=?3`:`UPDATE ${Q.table} SET attempts=?1 WHERE ${Q.id}=?3`,

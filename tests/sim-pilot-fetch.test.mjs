@@ -55,8 +55,21 @@ test('history: saves complete act histories, stops at the previous act, and repo
   const p1=db.sim_pilot_players.get('p1');
   assert.equal(p1.status,200);assert.equal(p1.n,130);assert.equal(unzip(p1.data).length,130);
   assert.equal(db.sim_pilot_players.get('p2').n,2);
-  assert.equal(db.sim_pilot_players.get('p3').status,404,'unknown account is closed as 404');
-  assert.equal(r.remaining,0);assert.equal(r.progressed,3);assert.equal(r.fatal,false);
+  assert.equal(db.sim_pilot_players.get('p3').status,null,'a first 404 stays open');
+  assert.equal(db.sim_pilot_players.get('p3').attempts,1);
+  assert.equal(r.remaining,1);assert.equal(r.progressed,3);assert.equal(r.fatal,false);
+  const r2=await run({env,fetchImpl,d1,...clock(),log:quiet});
+  assert.equal(db.sim_pilot_players.get('p3').status,404,'a 404 in a later run closes it');
+  assert.equal(r2.remaining,0);
+});
+
+test('a 404 that later turns into data is fetched, not closed (HenrikDev answered 404 once, then 41 matches)',async()=>{
+  const {d1,db}=fakeD1({sim_pilot_players:[['p1','eu']]});
+  const fetchImpl=fakeFetch({[`${H}p1:1`]:[{status:404,body:{error:'not found'}},{status:200,body:pageOf(['x','y'],0)}]});
+  await run({env,fetchImpl,d1,...clock(),log:quiet});
+  assert.equal(db.sim_pilot_players.get('p1').status,null);
+  await run({env,fetchImpl,d1,...clock(),log:quiet});
+  assert.equal(db.sim_pilot_players.get('p1').status,200);assert.equal(db.sim_pilot_players.get('p1').n,2);
 });
 
 test('a connection reset on D1 or upstream is retried instead of crashing the run',async()=>{
