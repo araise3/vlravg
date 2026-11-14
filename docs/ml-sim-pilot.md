@@ -13,8 +13,16 @@ started, from the player's own earlier games.
   behind the same atomic quota gate as live visitors, paced to 40 requests a minute (the key
   allows 60), up to 4 pages of 100. Each player row gets the HTTP status, the match count and a
   gzip+base64 list of compact matches (agent, team, K/D/A, score, damage, shots, rounds, tier;
-  no names or tags). Runs chain hourly (GitHub's job limit is 6 h) and log only counts, since
-  the repository's Action logs are public.
+  no names or tags). Runs log only counts, since the repository's Action logs are public.
+- **Unattended runs:** the first night's second run died on one `ECONNRESET` from the D1 API,
+  and GitHub dropped the hourly triggers for six hours. Now every D1 call and page request
+  retries network errors, 5xx and 429; a player is saved only when every page came back (one
+  had been stored with page 1 only), otherwise the row stays open and counts an attempt, closed
+  with status 0 after 3; the script never throws. Each run starts the next one itself while
+  players remain and it made progress (GitHub's job limit is 6 h); the hourly schedule is the
+  backup. Two workers share one 40/min pacer; the site's quota gate (live visitors, the RR
+  collector borrowing public slots) holds it nearer 20–25/min. `tests/sim-pilot-fetch.test.mjs`
+  covers resets, 429s, failed pages, a dead D1 and the run budget.
 - **KAST and ADR:** taken from `computeRoundStats` (docs/adr-kast.md) for matches in the
   archive, with tracker's older trade rule for matches before 27 Oct 2026 17:00 UTC, since
   tracker's act totals add up its stored per-match values. On 4 archive matches from September
