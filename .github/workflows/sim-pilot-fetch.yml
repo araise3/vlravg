@@ -1,10 +1,11 @@
 name: ML simulation pilot fetch
 
-# Research for ascend-companion-re (docs/ml-sim-pilot.md): fetches the current-act history of the
-# players in D1 sim_pilot_players through the site's /api/stored-matches proxy (public key, same
-# quota gate as live visitors, paced to 40/min). Each run starts the next one while players remain
-# and it made progress (GitHub drops many scheduled triggers); the hourly schedule is the backup.
-# A run with nothing left exits in seconds. Delete this workflow once the pilot is complete.
+# Research for ascend-companion-re (docs/ml-sim-pilot.md): works through the D1 queues
+# sim_pilot_players (act histories), sim_pilot_rr (RR histories), sim_pilot_prev (games before the
+# act) and sim_pilot_kast (full matches reduced to KAST) through the site's own proxy (public key,
+# same quota gate as live visitors, paced to 40/min). Each run starts the next one while items
+# remain and it made progress (GitHub drops many scheduled triggers); the hourly schedule is the
+# backup. A run with nothing left exits in seconds. Delete this workflow once the pilot is complete.
 on:
   schedule:
     - cron: '7 * * * *'
@@ -26,10 +27,14 @@ jobs:
     timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the KAST rules are read from a pinned commit
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Fetch pilot players' current-act histories
+      - name: Pin the tracker KAST rules (index.html at f2dd31f, docs/adr-kast.md)
+        run: git show f2dd31f:index.html > "$RUNNER_TEMP/kast-index.html"
+      - name: Work through the pilot queues
         id: fetch
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
@@ -37,8 +42,9 @@ jobs:
           CF_D1_DATABASE_ID: ${{ secrets.CF_D1_DATABASE_ID }}
           SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg1.pages.dev' }}
           RUNTIME_MINUTES: ${{ inputs.runtime_minutes || '330' }}
+          SIM_KAST_HTML: ${{ runner.temp }}/kast-index.html
         run: node .github/scripts/sim-pilot-fetch.mjs
-      - name: Start the next run while players remain
+      - name: Start the next run while items remain
         if: ${{ always() && steps.fetch.outputs.remaining != '' && steps.fetch.outputs.remaining != '0' && steps.fetch.outputs.progressed != '0' }}
         env:
           GH_TOKEN: ${{ github.token }}

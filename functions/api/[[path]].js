@@ -774,6 +774,15 @@ const ROUTES = [
     storedMatches: true,
   },
   {
+    // Stored RR history (tier and RR after each game), for the ML simulation pilot
+    // (docs/ml-sim-pilot.md): a player's rank as it stood before a past match. Page fixed at 100,
+    // like stored-matches, so callers cannot turn it into an unbounded upstream query.
+    match: /^\/stored-mmr-history\/([^/]+)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,
+    upstream: (m) => `/valorant/v1/by-puuid/stored-mmr-history/${m[1]}/${m[2]}`,
+    cacheTtl: 3600,
+    storedMmr: true,
+  },
+  {
     // A stored record is only a summary. The existing stats UI needs the
     // full match payload, fetched only for archived IDs absent from v4.
     match: /^\/match-detail\/([^/]+)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i,
@@ -981,6 +990,13 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
       return json({ error: "Invalid stored match page" }, 400);
     }
     url.search = `?mode=competitive&size=100&page=${page}`;
+  } else if (route.storedMmr) {
+    const pageText = url.searchParams.get('page') || '1';
+    const page = Number(pageText);
+    if (!/^\d+$/.test(pageText) || !Number.isInteger(page) || page < 1 || page > 100) {
+      return json({ error: "Invalid stored RR page" }, 400);
+    }
+    url.search = `?page=${page}&size=100`;
   } else if (route.accountByPuuid) {
     match[1] = match[1].toLowerCase();
     url.pathname = PREFIX + '/account-by-puuid/' + match[1];
