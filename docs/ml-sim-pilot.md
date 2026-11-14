@@ -35,7 +35,12 @@ present for every player of every match and built exactly as the live app gets i
 ascend-companion-re's `tools/ml_pilot/gate.mjs` checks this. A parity check rebuilt the user's
 own stats at 8 live lobbies from HenrikDev data and matched all 85 values the app had stored
 from tracker and Riot (games, K/D, ACS, ADR, KAST, HS%, games on the agent, tier, RR, last 12
-results, last game start), with tracker's 2-decimal rounding.
+results, last game start), with tracker's 2-decimal rounding. One lobby matched only after
+modelling an app bug: it reused a player's tracker answer for an hour across lobbies when their
+agent didn't change. The app now looks every lobby up fresh (fixed 14 Nov 2026 17:05 UTC), and
+the simulation builds every player's stats as of the lobby itself, as the fixed app does. The
+fetched data needs no change: it holds every game, and the cut-off is applied when the stats
+are rebuilt.
 
 That needs three more queues for the 1,000 matches (13–31 Oct) with the fewest downloads:
 
