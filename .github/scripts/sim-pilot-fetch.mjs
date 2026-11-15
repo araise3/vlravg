@@ -1,6 +1,8 @@
 // ML simulation pilot for ascend-companion-re (offline research, not part of the site). Works
-// through four D1 queues, in order, all via this site's own proxy (the public HenrikDev key behind
+// through five D1 queues, in order, all via this site's own proxy (the public HenrikDev key behind
 // the same atomic quota gate as live visitors):
+//   live     sim_live_rr        recent archived matches' players' live RR window
+//                                (/api/mmr-history-by-puuid), queued by enqueueLive at each run's start
 //   history  sim_pilot_players  each player's current-act competitive games (/api/stored-matches)
 //   rr       sim_pilot_rr       each player's RR history: tier and RR after every game since August
 //                                (/api/stored-mmr-history), for their rank as it stood before a match
@@ -18,7 +20,7 @@
 //   MAX_ATTEMPTS so one broken item can't block the pilot;
 // - the script never throws: it reports `remaining` and `progressed` to $GITHUB_OUTPUT so the
 //   workflow can start the next run itself (GitHub drops many scheduled triggers).
-import {gzipSync} from 'node:zlib';
+import {gzipSync,gunzipSync} from 'node:zlib';
 import {appendFileSync,readFileSync,existsSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {pathToFileURL} from 'node:url';
@@ -39,6 +41,51 @@ export function compact(m){
   return{m:m.meta?.id,t:m.meta?.started_at,s:m.meta?.season?.short??null,ag:s.character?.id?.toLowerCase()??null,tm:me==='red'?1:0,k:s.kills,d:s.deaths,a:s.assists,sc:s.score,
     dm:s.damage?.made??null,dr:s.damage?.received??null,hs:s.shots?.head??0,bs:s.shots?.body??0,ls:s.shots?.leg??0,
     rw:m.teams?.[me]??null,rl:m.teams?.[ot]??null,tier:s.tier??null};
+}
+
+export function liveEntry(h){
+  return{m:h.match_id,t:h.date,s:h.season?.short??null,q:h.queue_id??null,tier:h.tier?.id??null,rr:h.rr??null,ch:h.last_change??null,
+    tb:h.tier_before_update?.id??null,rb:h.rr_before_update??null};
+}
+
+// Live collector (docs/ml-sim-pilot.md): queues the players of every competitive PC match that
+// reached match_archive and started within LIVE_WINDOW_H, one sim_live_rr row per (player, match).
+// Walks match_archive by rowid from a stored cursor (visitors also archive old games, so rowid is
+// not start order; old ones are skipped). Never throws: a failure only delays queueing to the next run.
+export const LIVE_WINDOW_H=36;
+export async function enqueueLive({d1,now=Date.now,log=console.log}={}){
+  const st={scanned:0,matches:0,players:0};
+  try{
+    await d1(`CREATE TABLE IF NOT EXISTS sim_live_rr (id TEXT PRIMARY KEY, region TEXT NOT NULL, puuid TEXT NOT NULL, match_id TEXT NOT NULL, started_at TEXT, status INTEGER, n INTEGER, data TEXT, attempts INTEGER, fetched_at TEXT)`);
+    await d1(`CREATE TABLE IF NOT EXISTS sim_live_matches (match_id TEXT PRIMARY KEY, region TEXT, started_at TEXT, season TEXT, players INTEGER, queued_at TEXT)`);
+    await d1(`CREATE TABLE IF NOT EXISTS sim_live_state (id INTEGER PRIMARY KEY CHECK (id=1), cursor INTEGER NOT NULL)`);
+    const cutoff=new Date(now()-LIVE_WINDOW_H*3600000).toISOString();
+    let cursor=(await d1(`SELECT cursor FROM sim_live_state WHERE id=1`))[0]?.cursor;
+    cursor??=(await d1(`SELECT COALESCE((SELECT MIN(rowid) FROM match_archive WHERE started_at>=?1)-1,(SELECT MAX(rowid) FROM match_archive),0) AS c`,[cutoff]))[0]?.c??0;
+    for(;;){
+      const rows=await d1(`SELECT rowid AS r,match_id AS m,started_at AS t FROM match_archive WHERE rowid>?1 ORDER BY rowid LIMIT 500`,[cursor]);
+      if(!rows.length)break;
+      st.scanned+=rows.length;
+      const fresh=[...new Set(rows.filter(x=>x.t&&x.t>=cutoff).map(x=>x.m))];
+      const known=fresh.length?new Set((await d1(`SELECT match_id AS m FROM sim_live_matches WHERE match_id IN (${fresh.map((_,i)=>`?${i+1}`).join(',')})`,fresh)).map(x=>x.m)):new Set();
+      for(const id of fresh.filter(m=>!known.has(m))){
+        const h=(await d1(`SELECT hex(payload) AS h FROM match_archive WHERE match_id=?1 LIMIT 1`,[id]))[0]?.h;
+        let m=null;try{m=JSON.parse(gunzipSync(Buffer.from(h,'hex')));}catch{}
+        const md=m?.metadata,ok=md?.queue?.id==='competitive'&&md?.platform==='pc'&&md?.region&&m?.players?.length===10;
+        await d1(`INSERT OR IGNORE INTO sim_live_matches (match_id,region,started_at,season,players,queued_at) VALUES (?1,?2,?3,?4,?5,?6)`,
+          [id,ok?md.region:null,md?.started_at??null,md?.season?.short??null,ok?10:0,new Date(now()).toISOString()]);
+        if(!ok)continue;
+        const ps=m.players.map(p=>String(p.puuid).toLowerCase());
+        await d1(`INSERT OR IGNORE INTO sim_live_rr (id,region,puuid,match_id,started_at) VALUES ${ps.map((_,i)=>`(?${i*5+1},?${i*5+2},?${i*5+3},?${i*5+4},?${i*5+5})`).join(',')}`,
+          ps.flatMap(u=>[`${u}:${id}`,md.region,u,id,md.started_at]));
+        st.matches++;st.players+=ps.length;
+      }
+      cursor=rows.at(-1).r;
+      await d1(`INSERT INTO sim_live_state (id,cursor) VALUES (1,?1) ON CONFLICT(id) DO UPDATE SET cursor=excluded.cursor`,[cursor]);
+    }
+  }catch(error){log(`Live queueing stopped early: ${String(error?.message??error).slice(0,200)}`);}
+  log(`Live: scanned ${st.scanned} archive rows, queued ${st.matches} matches (${st.players} players).`);
+  return st;
 }
 
 // Tracker-exact KAST (docs/adr-kast.md): computeRoundStats from index.html as pinned by the
@@ -121,6 +168,20 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
     return{status:200};
   }
   const queues=[
+    // Live RR (time-critical, so first): a recent match's players' last ~20 ranked games while the
+    // match is still in that window. The match's own entry carries the rank before it
+    // (tier_before_update, rr_before_update): what Ascend's roster showed in that lobby. The
+    // route also merges the window into rr_history, as for any visitor.
+    {name:'live',table:'sim_live_rr',id:'id',async fetch(row){
+      const [puuid,matchId]=row.id.split(':');
+      const r=await get(`mmr-history-by-puuid/${row.region}/pc/${puuid}`,b=>Array.isArray(b?.data?.history));
+      if(r.status===-1)return{budget:true};
+      if(r.status===404)return{status:404,data:[]};
+      if(r.status!==200)return{retry:true};
+      const hist=r.body.data.history;
+      if(!hist.some(h=>h?.match_id===matchId))return{retry:true}; // not listed yet; a later run tries again
+      return{status:200,data:hist.filter(h=>Date.parse(h?.date)>=RR_SINCE).map(liveEntry)};
+    }},
     {name:'history',table:'sim_pilot_players',id:'puuid',async fetch(row){
       const ms=[];let past=false;
       const r=await pages(`stored-matches/${row.region}/${row.puuid}`,list=>{for(const m of list){const a=m.meta?.season?.short??null;if(a===ACT)ms.push(compact(m));else if(a)past=true;}},()=>past);
@@ -205,6 +266,8 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
 }
 
 if(import.meta.url===pathToFileURL(process.argv[1]).href){
+  const env=process.env;
+  if(!env.SIM_QUEUES||env.SIM_QUEUES.split(',').includes('live'))await enqueueLive({d1:(sql,params)=>d1Query(env,sql,params)});
   const r=await run().catch(error=>{console.log(`Run failed: ${error?.message??error}`);return{remaining:null,progressed:0,fatal:true};});
   if(process.env.GITHUB_OUTPUT)appendFileSync(process.env.GITHUB_OUTPUT,`remaining=${r.remaining??''}\nprogressed=${r.progressed}\n`);
 }

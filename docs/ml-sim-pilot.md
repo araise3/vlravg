@@ -58,5 +58,24 @@ That needs three more queues for the 1,000 matches (13–31 Oct) with the fewest
 The queues run in that order after the histories, about 80k requests (about 2.5 days at the
 gate's 20–25/min).
 
+## Live RR collector (15 Nov 2026)
+
+The 1,000-match pilot can't pass the gate: HenrikDev's stored RR history skips stretches of games,
+so only 32 matches had every player's rank from their previous game (35 with this site's own
+`rr_history`), and stored match histories miss 3,593 act games that the RR history shows. Riot's
+RR feed only returns a player's ~20 latest ranked games, so a past match's ranks are only
+reachable while it is recent.
+
+So each run of the workflow first queues the players of every competitive PC match that reached
+`match_archive` and started within the last 36 hours (`enqueueLive`: walks the archive by rowid
+from a cursor in `sim_live_state`, remembers each match in `sim_live_matches`), then fetches each
+player's live window through `/api/mmr-history-by-puuid` before the other queues (`sim_live_rr`,
+one row per player and match). The match's own entry carries `tier_before_update` and
+`rr_before_update`: the rank Ascend's roster showed in that lobby. In `rr_history` those fields
+equal the previous game's rank after it in 56,672 of 57,222 consecutive pairs; the rest have days
+to weeks between them, i.e. games missing. A window that doesn't list the match yet is retried in
+a later run (3 tries). About 10 requests a match; the archive gets 25–45 matches a day lately.
+The route also merges each window into `rr_history`, as for any visitor.
+
 The simulation and training run locally in ascend-companion-re. Once the pilot is evaluated,
 delete the workflow and, if not needed, the `sim_pilot_*` tables.
