@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {gunzipSync} from 'node:zlib';
 import {execFileSync} from 'node:child_process';
-import {run,loadKast,MAX_ATTEMPTS} from '../.github/scripts/sim-pilot-fetch.mjs';
+import {gzipSync} from 'node:zlib';
+import {run,loadKast,MAX_ATTEMPTS,enqueueLive,LIVE_WINDOW_H} from '../.github/scripts/sim-pilot-fetch.mjs';
 
 // In-memory queue tables with just the statements the script sends.
-const TABLES={sim_pilot_players:'puuid',sim_pilot_rr:'puuid',sim_pilot_prev:'puuid',sim_pilot_kast:'match_id'};
+const TABLES={sim_live_rr:'id',sim_pilot_players:'puuid',sim_pilot_rr:'puuid',sim_pilot_prev:'puuid',sim_pilot_kast:'match_id'};
 function fakeD1(seed,{failFirst=0,down=false}={}){
   const db=Object.fromEntries(Object.keys(TABLES).map(t=>[t,new Map()]));
   for(const [t,rows] of Object.entries(seed))for(const [id,region] of rows)db[t].set(id,{id,region,status:null,n:null,data:null,attempts:null});
@@ -13,7 +14,7 @@ function fakeD1(seed,{failFirst=0,down=false}={}){
   const d1=async(sql,params=[])=>{
     calls++;
     if(down||calls<=failFirst)throw new TypeError('fetch failed',{cause:Object.assign(new Error('read ECONNRESET'),{code:'ECONNRESET'})});
-    const table=sql.match(/(?:FROM|UPDATE) (sim_pilot_\w+)/)?.[1],rows=db[table];
+    const table=sql.match(/(?:FROM|UPDATE) (sim_(?:pilot|live)_\w+)/)?.[1],rows=db[table];
     if(!rows)throw new Error(`unexpected SQL ${sql}`);
     if(sql.startsWith('SELECT SUM(status IS NULL)'))return[{left:[...rows.values()].filter(r=>r.status===null).length}];
     if(sql.startsWith('SELECT'))return[...rows.values()].filter(r=>r.status===null)
@@ -176,4 +177,59 @@ test('loadKast reproduces tracker on a pinned fixture match (current and older t
   assert.equal(ks(before,'me'),1,'older rule: traded within 5 s');
   assert.equal(before.p.length,10);assert.ok(after.p.every(x=>Number.isInteger(x[1])));
   assert.equal(kastOf({metadata:{started_at:'2026-11-05T00:00:00Z'},players,rounds:[],kills:[]}),null,'no rounds: no KAST');
+});
+
+const rrEntry=(m,date,tb,rb,tier,rr,ch)=>({match_id:m,date,season:{short:'e11a6'},queue_id:'competitive',tier:{id:tier},rr,last_change:ch,tier_before_update:{id:tb},rr_before_update:rb});
+test("live: saves the RR window of a recent match's player with the rank before each game; a window without the match retries",async()=>{
+  const {d1,db}=fakeD1({sim_live_rr:[['u1:m1','eu'],['u2:m1','na']]});
+  const fetchImpl=fakeFetch({
+    'mmr-history-by-puuid/eu/pc/u1':[{status:200,body:{data:{history:[rrEntry('m1','2026-11-13T20:00:00Z',20,85,21,3,18),rrEntry('m0','2026-11-13T19:20:00Z',20,70,20,85,15)]}}}],
+    'mmr-history-by-puuid/na/pc/u2':[{status:200,body:{data:{history:[rrEntry('m0','2026-11-13T19:20:00Z',20,70,20,85,15)]}}}],
+  });
+  await run({env,fetchImpl,d1,...clock(),log:quiet,kastOf:null});
+  const u1=db.sim_live_rr.get('u1:m1');
+  assert.equal(u1.status,200);
+  assert.deepEqual(unzip(u1.data)[0],{m:'m1',t:'2026-11-13T20:00:00Z',s:'e11a6',q:'competitive',tier:21,rr:3,ch:18,tb:20,rb:85});
+  assert.equal(db.sim_live_rr.get('u2:m1').status,null);assert.equal(db.sim_live_rr.get('u2:m1').attempts,1);
+});
+
+// enqueueLive against an in-memory archive.
+function archiveD1(archive){
+  const live=new Map(),matches=new Map();let cursor=null;const sqls=[];
+  const d1=async(sql,p=[])=>{
+    sqls.push(sql);
+    if(sql.startsWith('CREATE'))return[];
+    if(sql.startsWith('SELECT cursor'))return cursor==null?[]:[{cursor}];
+    if(sql.startsWith('SELECT COALESCE')){const rec=archive.filter(a=>a.t>=p[0]).map(a=>a.r);return[{c:rec.length?Math.min(...rec)-1:Math.max(0,...archive.map(a=>a.r))}];}
+    if(sql.startsWith('SELECT rowid'))return archive.filter(a=>a.r>p[0]).sort((a,b)=>a.r-b.r).slice(0,500).map(a=>({r:a.r,m:a.m,t:a.t}));
+    if(sql.startsWith('SELECT match_id AS m FROM sim_live_matches'))return p.filter(m=>matches.has(m)).map(m=>({m}));
+    if(sql.startsWith('SELECT hex'))return[{h:gzipSync(JSON.stringify(archive.find(a=>a.m===p[0]).payload)).toString('hex')}];
+    if(sql.startsWith('INSERT OR IGNORE INTO sim_live_matches')){matches.has(p[0])||matches.set(p[0],p);return[];}
+    if(sql.startsWith('INSERT OR IGNORE INTO sim_live_rr')){for(let i=0;i<p.length;i+=5)live.has(p[i])||live.set(p[i],{region:p[i+1],status:null});return[];}
+    if(sql.startsWith('INSERT INTO sim_live_state')){cursor=p[0];return[];}
+    throw new Error(`unexpected SQL ${sql}`);
+  };
+  return{d1,live,matches,get cursor(){return cursor;},sqls};
+}
+const payload=(id,{queue='competitive',platform='pc',n=10}={})=>({metadata:{match_id:id,started_at:'x',queue:{id:queue},platform,region:'eu',season:{short:'e11a6'}},players:Array.from({length:n},(_,i)=>({puuid:`P${id}-${i}`}))});
+test('live queueing: recent competitive PC matches once, by rowid cursor; old, other modes and console skipped',async()=>{
+  const now=Date.parse('2026-11-15T12:00:00Z'),ago=h=>new Date(now-h*3600000).toISOString();
+  const archive=[
+    {r:1,m:'old',t:ago(LIVE_WINDOW_H+5),payload:payload('old')},
+    {r:2,m:'a',t:ago(3),payload:payload('a')},{r:3,m:'a',t:ago(3),payload:payload('a')}, // two archive rows, one match
+    {r:4,m:'dm',t:ago(2),payload:payload('dm',{queue:'deathmatch'})},
+    {r:5,m:'con',t:ago(2),payload:payload('con',{platform:'console'})},
+    {r:6,m:'backfill',t:ago(400),payload:payload('backfill')}, // a visitor archived an old game
+  ];
+  const f=archiveD1(archive);
+  const s=await enqueueLive({d1:f.d1,now:()=>now,log:quiet});
+  assert.equal(s.matches,1);assert.equal(f.live.size,10);assert.ok(f.live.has('pa-0:a'));assert.equal(f.live.get('pa-0:a').region,'eu');
+  assert.equal(f.cursor,6);assert.equal(f.matches.size,3,'skipped matches are remembered too');
+  archive.push({r:7,m:'b',t:ago(1),payload:payload('b')});
+  const s2=await enqueueLive({d1:f.d1,now:()=>now,log:quiet});
+  assert.equal(s2.scanned,1,'the next run starts after the cursor');assert.equal(s2.matches,1);assert.equal(f.live.size,20);
+});
+test('live queueing never throws',async()=>{
+  const s=await enqueueLive({d1:async()=>{throw new Error('D1 down');},log:quiet});
+  assert.deepEqual(s,{scanned:0,matches:0,players:0});
 });

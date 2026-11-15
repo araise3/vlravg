@@ -1,11 +1,13 @@
 name: ML simulation pilot fetch
 
-# Research for ascend-companion-re (docs/ml-sim-pilot.md): works through the D1 queues
-# sim_pilot_players (act histories), sim_pilot_rr (RR histories), sim_pilot_prev (games before the
+# Research for ascend-companion-re (docs/ml-sim-pilot.md): first queues the players of matches
+# archived in the last 36 h (sim_live_rr: their live RR window, while it still holds the match),
+# then works through the D1 queues sim_live_rr, sim_pilot_players (act histories), sim_pilot_rr (RR histories), sim_pilot_prev (games before the
 # act) and sim_pilot_kast (full matches reduced to KAST) through the site's own proxy (public key,
 # same quota gate as live visitors, paced to 40/min). Each run starts the next one while items
 # remain and it made progress (GitHub drops many scheduled triggers); the hourly schedule is the
-# backup. A run with nothing left exits in seconds. Delete this workflow once the pilot is complete.
+# backup, so each new match's RR is fetched within hours. A run with nothing left exits in seconds.
+# Delete this workflow once the pilot is complete.
 on:
   schedule:
     - cron: '7 * * * *'
