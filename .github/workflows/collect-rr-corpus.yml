@@ -5,6 +5,9 @@ on:
   # runs back to back. GitHub delayed or dropped many four-hourly triggers,
   # leaving only 3-4 runs a day; the 6-8 hour polling intervals need more.
   # A newer queued trigger replaces an older queued one (shown as cancelled).
+  # Hourly triggers were still dropped for 4-5 hours at a time (15-16 November
+  # 2026), so a run that made progress with work left starts the next run
+  # itself (shouldChainRun in the script); the schedule is the backup.
   schedule:
     - cron: '37 * * * *'
   workflow_dispatch:
@@ -24,6 +27,7 @@ concurrency:
   cancel-in-progress: false
 permissions:
   contents: read
+  actions: write # start the next run
 jobs:
   collect:
     runs-on: ubuntu-latest
@@ -34,6 +38,7 @@ jobs:
         with:
           node-version: '24'
       - name: Capture active accounts, scout recent opponents, and fill match evidence
+        id: collect
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
@@ -50,3 +55,11 @@ jobs:
           name: rr-corpus-coverage
           path: .local/rr-corpus/collection-report.json
           retention-days: 90
+      # Runs even when collection reported failures (a few 429-exhausted
+      # accounts must not stop collection). The new run waits in the
+      # concurrency group until this one ends; it uses the default inputs.
+      - name: Start the next run while work remains
+        if: ${{ always() && steps.collect.outputs.chain == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run collect-rr-corpus.yml --ref "$GITHUB_REF_NAME"

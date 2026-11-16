@@ -188,6 +188,18 @@ export async function corpusReport(env,query=retryOnD1Overload(d1Query),census={
     note:'Rank buckets use ending tier for collection monitoring. Model evaluation reconstructs starting rank and excludes ambiguous rows.'};
 }
 
+// GitHub drops many scheduled triggers (on 15-16 November 2026 the collector sat
+// idle 4-5 hours between runs), so a run starts the next one itself. It chains
+// only after real progress and when work remains (the budget deferred some) or
+// it worked for 30+ minutes; short runs leave the next start to the hourly
+// trigger, so an idle corpus never loops through startup and census queries.
+export const CHAIN_MIN_ELAPSED_MS=30*60000;
+export function shouldChainRun(report,{elapsedMs}){
+  const progress=(report.refresh?.checked||0)+(report.scouting?.checked||0)+(report.details||0);
+  const deferred=(report.refresh?.deferred||0)>0||(report.detailBudgetDeferred||0)>0;
+  return progress>0&&(deferred||elapsedMs>=CHAIN_MIN_ELAPSED_MS);
+}
+
 export async function main(env=process.env){
   if(!env.HENRIK_WORKFLOW_KEY)throw new Error('Missing required secret: HENRIK_WORKFLOW_KEY');
   const origin=new URL(env.SITE_ORIGIN||'https://vlravg1.pages.dev').origin;
@@ -195,6 +207,7 @@ export async function main(env=process.env){
   if(!Number.isSafeInteger(limit)||limit<0||limit>5000)throw new Error('Invalid DETAIL_LIMIT');
   const runtime=Number(env.RUNTIME_MINUTES||180);
   if(!Number.isSafeInteger(runtime)||runtime<10||runtime>210)throw new Error('RUNTIME_MINUTES must be between 10 and 210');
+  const started=Date.now();
   const deadline=Date.now()+(runtime-5)*60000; // Reserve time for the report; the next queued run starts afterwards.
   const tracked=await loadActivity(env,await listPlayers(env));
   const players=selectPollingPlayers(tracked);
@@ -237,6 +250,8 @@ export async function main(env=process.env){
   report.quotaCheck=quotaCheckReport(quotaBefore,await readQuotaAudit(env,runId));
   if(['other_proxy_activity','possible_external_usage'].includes(report.quotaCheck.status))
     console.warn(`::warning::Workflow key may be shared: ${report.quotaCheck.otherProxyCalls} other proxy calls; ${report.quotaCheck.unexplainedRequests} unexplained quota units.`);
+  report.chainNext=shouldChainRun(report,{elapsedMs:Date.now()-started});
+  if(env.GITHUB_OUTPUT)await appendFile(env.GITHUB_OUTPUT,`chain=${report.chainNext}\n`);
   await writeFile('.local/rr-corpus/collection-report.json',JSON.stringify(report,null,2));
   console.log(JSON.stringify(report));
   if(env.GITHUB_STEP_SUMMARY)await appendFile(env.GITHUB_STEP_SUMMARY,
