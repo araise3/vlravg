@@ -51,6 +51,11 @@ CREATE TABLE IF NOT EXISTS rr_history (
   PRIMARY KEY (puuid, match_id)
 );
 CREATE INDEX IF NOT EXISTS idx_rr_history_puuid_date ON rr_history(puuid, date);
+-- Collector startup reads the latest act and its first observed game. Without
+-- these, both parse every row's JSON and D1 rejects the statement as
+-- overloaded (7429). The expression must match rr-activity-query.mjs exactly.
+CREATE INDEX IF NOT EXISTS rr_history_date ON rr_history(date);
+CREATE INDEX IF NOT EXISTS rr_history_season_date ON rr_history(LOWER(json_extract(data,'$.season.id')),date);
 
 -- Shared match archive. Only trusted HenrikDev match payloads are stored;
 -- gzip keeps kill feeds small enough for D1's per-row limit. Re-run schema.sql

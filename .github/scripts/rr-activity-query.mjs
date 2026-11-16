@@ -1,7 +1,12 @@
-import {d1Query} from './d1-query.mjs';
+import {d1Query,retryOnD1Overload} from './d1-query.mjs';
+// Startup reads are read-only, so a D1 overload waits out the window instead
+// of failing the run before any RR is captured.
+const readQuery=retryOnD1Overload(d1Query);
 // Limit games queries to the last week using date indexes. All-time latest
-// timestamps seek each player's existing (puuid,date) index.
-export async function loadActivity(env,players,query=d1Query){
+// timestamps seek each player's existing (puuid,date) index. latest_season and
+// season_start rely on rr_history_date and rr_history_season_date (schema.sql);
+// keep their season expression identical to the index or SQLite rescans JSON.
+export async function loadActivity(env,players,query=readQuery){
   const rows=await query(env,`WITH latest_season AS (
     SELECT LOWER(json_extract(data,'$.season.id')) AS id FROM rr_history
     WHERE COALESCE(json_extract(data,'$.season.id'),'')<>'' ORDER BY date DESC LIMIT 1
@@ -28,7 +33,7 @@ export async function loadActivity(env,players,query=d1Query){
   return players.map(p=>({...p,...byId.get(`${p.puuid}:${p.platform}`)}));
 }
 
-export async function loadCandidates(env,query=d1Query){
+export async function loadCandidates(env,query=readQuery){
   return query(env,`WITH games AS (
     SELECT puuid,platform,COUNT(*) AS games_7d,MAX(played_at) AS last_played_at
     FROM rr_candidate_games WHERE played_at>=strftime('%Y-%m-%dT%H:%M:%fZ','now','-7 days') GROUP BY puuid,platform
