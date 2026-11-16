@@ -113,8 +113,9 @@ window is a warning, not a count of lost games; season changes can also cause it
 Collection succeeds only after the D1 writes commit; storage failures produce
 503s and failed accounts make the workflow fail visibly.
 
-Apply `migrations/0005_rr_corpus.sql` and `migrations/0006_rr_activity.sql` to
-the existing APP_DB before deploying.
+Apply `migrations/0005_rr_corpus.sql`, `migrations/0006_rr_activity.sql` and
+`migrations/0010_rr_history_activity_indexes.sql` to the existing APP_DB
+before deploying.
 No secrets or bindings are added. New tables:
 
 - `rr_collection`: check time and overlap health per account/platform.
@@ -167,6 +168,22 @@ slice read ~43k rows in 0.3–1.4 s, varying with concurrent collector load. The
 total work is not reduced, only spread out; raise the slice count if single
 slices approach the window again. Coverage reads retry a D1 overload after
 15, 30 and 60 s.
+
+Between 5 and 12 November 2026, 17 of 40 collector runs failed about 12 s
+after starting, before polling, with the same `7429`. D1 query analytics put
+the cause in the startup activity query (`loadActivity`). In the 20:19 UTC run
+on 12 November it took 7.3 s and read 1.58M rows. In the 11:44 UTC run it took
+10.6 s across two executions. Site queries in those windows totalled under
+0.5 s. Its `latest_season` CTE (`ORDER BY date`) and `season_start` CTE (first
+game of that act) each parsed every row's JSON, because `rr_history` was only
+indexed by `(puuid, date)`. Measured alone, they took 3.3 s and 2.2 s.
+`migrations/0010_rr_history_activity_indexes.sql` adds `rr_history(date)` and
+an expression index on the query's exact season expression plus date. The
+unchanged query then walks the date index and does a covering seek for the act
+start, which a query-plan test pins. Startup reads also retry an overload after
+15, 30 and 60 s, like coverage reads. Keep the season expression in
+`rr-activity-query.mjs` identical to the index, or SQLite falls back to the
+JSON scan.
 Reports identify the latest observed act, its date range, payouts and placements.
 
 With repository variable `RR_REPORT_EXPORT_ENABLED=true`, each run uploads

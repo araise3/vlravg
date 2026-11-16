@@ -136,6 +136,19 @@ test('a new season reassesses inactive players once, without turning searches in
   assert.equal(pollingPolicy(rows[0],now).cohort,'season-assessment');
 });
 
+test('collector activity query finds the latest act through indexes, not a JSON scan',async t=>{
+  // D1 rejected the startup query (7429) while latest_season and season_start
+  // parsed every rr_history row; the plan must stay on rr_history indexes.
+  const {sql}=database(t);let text;
+  await loadActivity({},[],async(_env,query)=>{text=query;return [];});
+  const plan=sql.prepare(`EXPLAIN QUERY PLAN ${text}`).all().map(row=>row.detail);
+  const shown=plan.join('\n');
+  assert.ok(plan.some(line=>/rr_history.* USING INDEX rr_history_date\b/.test(line)),shown);
+  assert.ok(plan.some(line=>/USING COVERING INDEX rr_history_season_date \(<expr>=\?\)/.test(line)),shown);
+  const scans=plan.filter(line=>/^SCAN (rr_history|h)\b/.test(line));
+  assert.ok(scans.every(line=>/ USING (COVERING )?INDEX /.test(line)),shown);
+});
+
 test('new-act Unrated placement rosters still supply trusted competitive discovery',async t=>{
   const {db,sql}=database(t),other='55555555-5555-4555-8555-555555555555';
   const stamp=new Date().toISOString();
