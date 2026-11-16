@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
+import {shouldChainRun,CHAIN_MIN_ELAPSED_MS} from '../.github/scripts/collect-rr-corpus.mjs';
 
 // Exercise orchestration without real credentials, network calls or report files.
 const source=readFileSync(new URL('../.github/scripts/collect-rr-corpus.mjs',import.meta.url),'utf8');
@@ -9,7 +10,7 @@ const mainSource=source.slice(source.indexOf('export async function main('),sour
   .replace('export ','')+'\nmain';
 const player={puuid:'11111111-1111-4111-8111-111111111111',region:'eu',platform:'pc'};
 function fixture({capture,coverageFailure=false,detailQueryFailure=false}={}){
-  const writes=[],events=[],process={exitCode:0};
+  const writes=[],events=[],outputs=[],process={exitCode:0};
   const context={process,Date,URL,JSON,Number,console:{log(){},error(){},warn(){}},randomUUID:()=> 'test-run',
     readQuotaAudit:async()=>({available:true,calls:0}),quotaCheckReport:()=>({status:'insufficient_evidence'}),
     listPlayers:async()=>[player],loadActivity:async(_env,players)=>players,
@@ -23,9 +24,10 @@ function fixture({capture,coverageFailure=false,detailQueryFailure=false}={}){
     },
     collectMatchFeatures:async()=>({saved:0,deferred:0,failed:0,budgetDeferred:0}),
     corpusReport:async()=>{events.push('coverage');if(coverageFailure)throw new Error('D1 unavailable');return {health:{stale:0,possible_gaps:0}};},
-    mkdir:async()=>{},writeFile:async(_path,json)=>{events.push('write');writes.push(JSON.parse(json));},appendFile:async()=>{},
+    mkdir:async()=>{},writeFile:async(_path,json)=>{events.push('write');writes.push(JSON.parse(json));},
+    appendFile:async(path,text)=>{if(path==='github-output')outputs.push(text);},shouldChainRun,
   };
-  return {run:runInNewContext(mainSource,context),writes,events,process};
+  return {run:runInNewContext(mainSource,context),writes,events,outputs,process};
 }
 const env={HENRIK_WORKFLOW_KEY:'fixture',DETAIL_LIMIT:'0'};
 
@@ -64,4 +66,27 @@ test('invalid budgets fail before credentials can be used for network access',as
   const f=fixture();
   await assert.rejects(f.run({...env,RUNTIME_MINUTES:'240'}),/RUNTIME_MINUTES/);
   assert.equal(f.events.length,0);
+});
+
+test('a run chains the next one only after progress with work left or a long run',()=>{
+  const done={refresh:{checked:3,deferred:0},scouting:{checked:0},details:0,detailBudgetDeferred:0};
+  assert.equal(shouldChainRun(done,{elapsedMs:60000}),false,'a short run that finished leaves the next start to the schedule');
+  assert.equal(shouldChainRun(done,{elapsedMs:CHAIN_MIN_ELAPSED_MS}),true);
+  assert.equal(shouldChainRun({...done,refresh:{checked:3,deferred:40}},{elapsedMs:60000}),true,'budget-deferred capture continues');
+  assert.equal(shouldChainRun({...done,detailBudgetDeferred:5},{elapsedMs:60000}),true,'budget-deferred details continue');
+  assert.equal(shouldChainRun({refresh:{checked:0,deferred:3000},details:0},{elapsedMs:3*3600000}),false,
+    'a run without progress (all 429s) never loops; the hourly trigger retries');
+  assert.equal(shouldChainRun({refresh:{checked:0,deferred:0},scouting:{checked:0},details:7,detailBudgetDeferred:0},{elapsedMs:CHAIN_MIN_ELAPSED_MS}),true);
+});
+
+test('collection failures still report the chain decision to the workflow',async()=>{
+  const f=fixture({capture:{players:2,checked:1,failures:[{puuid:player.puuid,retryable:true}],deferred:1}});
+  const report=await f.run({...env,GITHUB_OUTPUT:'github-output'});
+  assert.equal(f.process.exitCode,1);
+  assert.equal(report.chainNext,true);
+  assert.deepEqual(f.outputs,['chain=true\n']);
+  assert.equal(f.writes.at(-1).chainNext,true);
+  const idle=fixture();
+  await idle.run({...env,GITHUB_OUTPUT:'github-output'});
+  assert.deepEqual(idle.outputs,['chain=false\n']);
 });

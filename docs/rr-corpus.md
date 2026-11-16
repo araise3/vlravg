@@ -32,6 +32,21 @@ a 429 pauses queued client requests too, preventing workers from repeatedly
 racing for the same slot. Manual and scheduled collector runs share one workflow lock. No name refresh
 or historical backfill workflows run alongside collection. GitHub scheduling is best-effort; hourly triggers make a dropped trigger cost minutes instead of hours.
 
+Hourly triggers alone were not enough. Between 14 and 16 November 2026, GitHub
+dropped several in a row, leaving the collector idle for 4.6–5 hours between
+some runs. Runs then started with 3,000–4,000 accounts due, more than one
+175-minute budget could capture. A run therefore starts the next one itself
+(`gh workflow run`, after its report). The new run waits in the concurrency
+group and uses the default inputs. `shouldChainRun` chains only after
+progress: committed RR, scouted accounts or saved match features. It also
+needs either work deferred by the run budget or at least 30 minutes of
+running. A run that captured nothing, for example because every call was
+rate-limited, never chains. A short run that finished its work doesn't either:
+continuous tiny runs would repeat the startup and census queries against D1.
+The hourly schedule restarts both. The decision is recorded as `chainNext` in
+the collection report. Chaining also follows runs that exit with failures, so
+a few rate-limited accounts don't stop collection.
+
 Polling uses actual ranked-game dates, never the date someone searched an account.
 Henrik keeps about 20 payouts, so every interval must end before a player can
 finish 20 more games:
