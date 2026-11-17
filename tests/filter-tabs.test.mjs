@@ -77,3 +77,12 @@ test('the site uses no dot separators in visible text, labels or status lines',a
     });
   }
 });
+
+test('tab triggers fill the list height so the highlight sits evenly, 3px from top and bottom',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const tabs=readFileSync(new URL('../src/components/ui/tabs.jsx',import.meta.url),'utf8');
+  // A 1px-shorter trigger centred on a half pixel; the indicator's integer
+  // offsetTop then rounded it down, leaving 4px above and 3px below.
+  assert.doesNotMatch(tabs,/h-\[calc\(100%-1px\)\]/);
+  assert.match(tabs,/"inline-flex h-full flex-1 items-center justify-center/);
+});
