@@ -1,0 +1,469 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* shadcn/ui zinc theme. The site is dark-only (it always was), so the dark
+   palette lives on :root. --rank is the player's rank colour, set at runtime.
+   Card and border use the pre-React page's surfaces (legacy/index.html):
+   #141416 cards with a solid #2a2a2e border on the near-black page. */
+:root {
+  --radius: 0.625rem;
+  --background: oklch(0.141 0.005 285.823);
+  --foreground: oklch(0.985 0 0);
+  --card: #141416;
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.21 0.006 285.885);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.92 0.004 286.32);
+  --primary-foreground: oklch(0.21 0.006 285.885);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.274 0.006 286.033);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: oklch(0.274 0.006 286.033);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: #2a2a2e;
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.552 0.016 285.938);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --win: #4ade80;
+  --loss: #f87171;
+  --draw: #facc15;
+  /* Chart marks (not text): validated with the dataviz palette checker on the
+     #141416 card surface, dark mode. Win/loss/draw pass every gate; their
+     deutan distance (6.9) is in the floor band, so every chart that uses them
+     also encodes the outcome by position or a label. Blue/red (one series,
+     team vs enemy) pass outright. Text keeps --win/--loss above. */
+  --series-1: #3987e5;
+  --chart-win: #1baf7a;
+  --chart-loss: #e34948;
+  --chart-draw: #c98500;
+  --chart-save: #71717a;
+  --chart-grid: #26262a;
+  --chart-axis: #3a3a40;
+  --chart-ink: #c4c4cc;
+  --chart-muted: #8b8b94;
+  --brand: #60a5fa;
+  --rank: #3b82f6;
+  --rank-rgb: 59 130 246;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-win: var(--win);
+  --color-loss: var(--loss);
+  --color-draw: var(--draw);
+  --color-rank: var(--rank);
+  --color-brand: var(--brand);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    /* Pages with and without a scrollbar keep the same content width. */
+    scrollbar-gutter: stable;
+    scrollbar-color: oklch(1 0 0 / 14%) transparent;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "tnum" 1;
+    min-height: 100dvh;
+  }
+  a {
+    text-underline-offset: 3px;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .text-positive {
+    color: var(--win);
+  }
+  .text-negative {
+    color: var(--loss);
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  .shake {
+    animation: shake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  }
+}
+
+@keyframes shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-6px); }
+  40%, 60% { transform: translateX(6px); }
+}
+
+/* Search bar shake and search progress, as on the pre-React page. */
+@keyframes shake-bar {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+@keyframes search-progress {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+
+@keyframes indeterminate {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+
+/* ── Hand-built SVG charts ─────────────────────────────── */
+/* One chart system (dataviz method): hairline solid grid one step off the
+   surface, muted axis text, 2px lines, >=8px markers with a 2px surface ring,
+   area fills as a ~10% wash, and marks in the validated --series/--chart
+   colours. Text never takes a series colour. */
+.chart-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  font-family: var(--font-sans);
+}
+.chart-svg text {
+  fill: var(--chart-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.chart-svg .grid,
+.chart-svg .x-grid { stroke: var(--chart-grid); stroke-width: 1; shape-rendering: crispEdges; }
+.chart-svg .zero,
+.chart-svg .baseline { stroke: var(--chart-axis); stroke-width: 1; shape-rendering: crispEdges; }
+.chart-svg .axis-label { font-size: 11px; fill: var(--chart-muted); }
+.chart-svg .ink { fill: var(--chart-ink); }
+.chart-svg .ink-strong { fill: var(--foreground); font-weight: 600; }
+/* A surface-coloured halo keeps direct labels legible where they cross a line. */
+.chart-svg .ink-strong, .chart-svg .series-label, .chart-svg .even-label, .chart-svg .value { paint-order: stroke; stroke: var(--card); stroke-width: 4px; stroke-linejoin: round; }
+.chart-svg .value { fill: var(--foreground); font-weight: 600; }
+.chart-svg :focus { outline: none; }
+.chart-svg :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.chart-svg .hover-line { stroke: var(--chart-ink); stroke-opacity: .5; stroke-width: 1; pointer-events: none; }
+.chart-svg .hit { fill: transparent; }
+
+/* Outcome bars (score margin): 4px rounded data end, square baseline. */
+.chart-svg .bar { transition: opacity .15s; }
+.chart-svg .bar.win, .chart-svg .bar-foot.win { fill: var(--chart-win); }
+.chart-svg .bar.loss, .chart-svg .bar-foot.loss { fill: var(--chart-loss); }
+.chart-svg .bar.draw, .chart-svg .bar-foot.draw { fill: var(--chart-draw); }
+.chart-svg.has-active .bar:not(.active), .chart-svg.has-active .bar-foot:not(.active) { opacity: .45; }
+
+/* RR trend */
+.rr-trend-svg .line { fill: none; stroke: var(--series-1); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.rr-trend-svg .area { fill: var(--series-1); fill-opacity: .1; stroke: none; }
+.rr-trend-svg .result-point { stroke: var(--card); stroke-width: 2; }
+.rr-trend-svg .result-point.win { fill: var(--chart-win); }
+.rr-trend-svg .result-point.loss { fill: var(--chart-loss); }
+.rr-trend-svg .result-point.draw { fill: var(--chart-draw); }
+.rr-trend-svg .end-point, .rr-trend-svg .cursor-point { fill: var(--series-1); stroke: var(--card); stroke-width: 2; }
+.rr-trend-svg .duo-band { fill: rgb(255 255 255 / .035); }
+.rr-trend-svg .duo-band-label { fill: var(--chart-ink); font-size: 10px; font-weight: 600; text-anchor: middle; }
+.rr-trend-svg .rank-tick { fill: var(--chart-ink); font-weight: 600; }
+.rr-trend-svg [hidden] { display: none; }
+
+/* Overview mini RR trend */
+
+/* RR payout by starting rank */
+.rr-movement-svg .rank-band { cursor: zoom-in; }
+.rr-movement-svg.zoomed .rank-band { cursor: zoom-out; }
+.rr-movement-svg .rank-band:hover { fill: rgb(255 255 255 / .05); }
+.rr-movement-svg .rank-band-label { font-size: 11px; font-weight: 600; fill: var(--chart-ink); }
+.rr-movement-svg .tick-label { font-size: 11px; }
+.rr-movement-svg .trend-point { opacity: .55; stroke: var(--card); stroke-width: 1; }
+.rr-movement-svg .trend-point.positive { fill: var(--chart-win); }
+.rr-movement-svg .trend-point.negative { fill: var(--chart-loss); }
+.rr-movement-svg .payout-trend { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.rr-movement-svg .payout-trend.positive { stroke: var(--chart-win); }
+.rr-movement-svg .payout-trend.negative { stroke: var(--chart-loss); }
+.rr-movement-svg .series-label { fill: var(--chart-ink); font-size: 11px; font-weight: 600; }
+.rr-movement-svg .even-line { stroke: var(--foreground); stroke-opacity: .6; stroke-width: 1; stroke-dasharray: 4 3; }
+.rr-movement-svg .even-label { font-size: 11px; font-weight: 600; fill: var(--foreground); }
+.rr-movement-svg .even-hit-area { fill: transparent; }
+.rr-movement-svg .estimate-hit-area { fill: transparent; }
+.rr-movement-svg .active-point { stroke: var(--card); stroke-width: 2; }
+.rr-movement-svg .active-point.positive { fill: var(--chart-win); }
+.rr-movement-svg .active-point.negative { fill: var(--chart-loss); }
+
+/* Lobby team ranks (dot plot): blue = your team, red = enemy. */
+.lobby-teams-svg .row-hit { fill: transparent; }
+.lobby-teams-svg .row:hover .row-hit,
+.lobby-teams-svg .row:focus-visible .row-hit { fill: rgb(255 255 255 / .04); }
+.lobby-teams-svg .label { fill: var(--foreground); font-weight: 600; font-size: 13px; }
+.lobby-teams-svg .count { font-size: 11px; }
+.lobby-teams-svg .gap { stroke: var(--chart-axis); stroke-width: 2; stroke-linecap: round; }
+.lobby-teams-svg .dot { stroke: var(--card); stroke-width: 2; }
+.lobby-teams-svg .dot.team { fill: var(--series-1); }
+.lobby-teams-svg .dot.enemy { fill: var(--chart-loss); }
+.lobby-teams-svg .diff { fill: var(--chart-ink); font-size: 12px; font-weight: 500; }
+.lobby-teams-svg .tick { font-size: 11px; }
+
+/* Chart frame: the plot sits on its own inset panel inside the card, so the
+   chart reads as one object instead of floating between text blocks. It
+   redefines --card so mark rings and label halos match the frame surface. */
+.chart-frame { --card: #0f0f11; position: relative; padding: 14px 14px 10px; border: 1px solid #232327; border-radius: 10px; background: #0f0f11; }
+@media (max-width: 600px) { .chart-frame { padding: 10px 8px 6px; } }
+
+/* Stat strip: key figures in one row divided by hairlines (no boxed tiles). */
+/* No margin here: these rules are unlayered and would override the card's
+   spacing utilities (that zeroed the gap above the chart once). */
+.stat-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); }
+.stat-strip > div { min-width: 0; padding: 2px 18px; border-left: 1px solid #26262a; }
+.stat-strip > div:first-child { padding-left: 0; border-left: 0; }
+.stat-strip dt { font-size: 12px; color: var(--muted-foreground); margin-bottom: 4px; white-space: nowrap; }
+.stat-strip dd { margin: 0; font-size: 22px; line-height: 1.15; font-weight: 650; letter-spacing: -.02em; white-space: nowrap; }
+@media (max-width: 600px) {
+  .stat-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 14px; }
+  .stat-strip > div { padding: 0 0 0 14px; }
+  .stat-strip > div:nth-child(odd) { padding-left: 0; border-left: 0; }
+  .stat-strip dd { font-size: 20px; }
+}
+
+/* Chart tooltip: value first, label second. */
+.chart-tooltip { position: absolute; z-index: 20; pointer-events: none; min-width: 150px; max-width: 260px; padding: 8px 10px; border: 1px solid #34343a; border-radius: 8px; background: #1c1c20; box-shadow: 0 8px 24px rgb(0 0 0 / .45); font-size: 12px; line-height: 1.45; color: var(--chart-ink); }
+.chart-tooltip .tt-value { color: var(--foreground); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.chart-tooltip .tt-row { display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
+.chart-tooltip .tt-key { width: 12px; height: 2px; border-radius: 1px; flex-shrink: 0; }
+.chart-tooltip .tt-muted { color: var(--chart-muted); font-size: 11px; }
+
+/* EU ping map (assets/ping-map/map.css is shared with legacy/): match the
+   shadcn surfaces here only. The extra .map-panel class outranks map.css. */
+#server-ping-map.map-panel {
+  border-color: var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--card);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+#server-ping-map.map-panel .map-server-heading strong { color: var(--foreground); }
+#server-ping-map.map-panel .map-server-heading span,
+#server-ping-map.map-panel .map-location-selects label,
+#server-ping-map.map-panel .map-readout small { color: var(--muted-foreground); }
+#server-ping-map.map-panel .map-footer {
+  border-top-color: var(--border);
+  background: var(--card);
+  padding: 16px 24px;
+}
+#server-ping-map.map-panel .map-location-selects label { font-size: 12px; font-weight: 500; }
+#server-ping-map.map-panel .map-location-selects select {
+  height: 36px;
+  border-color: var(--input);
+  border-radius: var(--radius-md);
+  background: oklch(1 0 0 / 4.5%);
+  color: var(--foreground);
+  font-size: 14px;
+  transition: border-color .15s, box-shadow .15s;
+}
+#server-ping-map.map-panel .map-location-selects select:focus-visible {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent);
+}
+#server-ping-map.map-panel .map-controls {
+  border-color: var(--border);
+  border-radius: var(--radius-md);
+  background: var(--popover);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+#server-ping-map.map-panel .map-controls button { border-right-color: var(--border); color: var(--muted-foreground); }
+#server-ping-map.map-panel .map-controls button:hover { background: var(--accent); color: var(--accent-foreground); }
+#server-ping-map.map-panel #tooltip {
+  border-color: var(--border);
+  border-radius: var(--radius-md);
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3);
+}
+#server-ping-map.map-panel #tooltip span { color: var(--muted-foreground); }
+#server-ping-map.map-panel .legend { color: var(--muted-foreground); font-size: 11px; }
+@media (max-width: 700px) {
+  #server-ping-map.map-panel .map-footer { padding: 12px 16px; }
+  #server-ping-map.map-panel .map-location-selects select { font-size: 16px; }
+}
+
+/* ── Pre-React layout, restored (legacy/index.html) ───────────
+   Unlayered on purpose: these rules outrank Tailwind's utility layer, so the
+   shadcn components keep their behaviour but take the old look. Values are
+   copied from the legacy stylesheet. */
+
+/* Tables: uppercase header strip, column lines, tinted best cell. */
+[data-slot="card"]:has(table.rank-table) { gap: 0; padding: 0; overflow: hidden; background: #111113; border-color: #29292d; border-radius: 8px; }
+[data-slot="card"]:has(table.rank-table) > [data-slot="card-header"] { padding: 16px 18px; border-bottom: 1px solid #29292d; }
+[data-slot="card"]:has(table.rank-table) > [data-slot="card-content"] { padding: 14px 18px; border-top: 1px solid #29292d; }
+.rank-table { width: 100%; border-collapse: separate; border-spacing: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.rank-table tr { border: 0; }
+.rank-table th, .rank-table td { height: 52px; padding: 11px 18px; border-bottom: 1px solid #262629; white-space: nowrap; vertical-align: middle; line-height: 1.4; }
+.rank-table tr > * + * { border-left: 1px solid #29292d; }
+.rank-table td { font-size: 13px; font-weight: 500; color: #d4d4da; }
+.rank-table thead th { height: 44px; padding: 0; font-size: 10px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: #a9a9b2; background: #171719; border-bottom-color: #323236; }
+.rank-table th:first-child { text-align: left; }
+.rank-table tbody th:first-child { position: sticky; left: 0; z-index: 1; background: #111113; color: #e4e4e7; font-weight: 600; box-shadow: 1px 0 #29292d; }
+.rank-table thead th:first-child { position: sticky; left: 0; z-index: 3; box-shadow: 1px 0 #29292d; }
+.rank-table tbody tr:last-child > * { border-bottom: 0; }
+.rank-table tbody tr:hover, .rank-table tbody tr:hover > *, .rank-table tbody tr:focus-within > * { background: #1b1b1f; }
+.rank-table .table-sort-btn { display: flex; align-items: center; justify-content: flex-end; gap: 6px; width: 100%; min-height: 44px; padding: 10px 16px; font: inherit; letter-spacing: inherit; text-transform: inherit; white-space: nowrap; transition: background-color .15s, color .15s; }
+.rank-table th:first-child .table-sort-btn { justify-content: flex-start; }
+.rank-table .table-sort-btn:hover { background: #222226; color: #fff; }
+.rank-table .table-sort-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: -3px; }
+/* The sort arrow shows on hover and stays on the sorted column. */
+.rank-table .sort-icon { width: 12px; height: 12px; flex-shrink: 0; opacity: 0; color: var(--brand); transition: opacity .15s; }
+.rank-table .table-sort-btn:hover .sort-icon { opacity: .55; }
+.rank-table th[aria-sort="ascending"], .rank-table th[aria-sort="descending"] { color: #e4e4e7; box-shadow: inset 0 -2px 0 var(--brand); }
+.rank-table thead th:first-child[aria-sort="ascending"], .rank-table thead th:first-child[aria-sort="descending"] { box-shadow: 1px 0 #29292d, inset 0 -2px 0 var(--brand); }
+.rank-table th[aria-sort="ascending"] .sort-icon, .rank-table th[aria-sort="descending"] .sort-icon { opacity: 1; }
+.rank-table td.text-positive { color: #72e6a0; }
+.rank-table td.text-negative { color: #ff9999; }
+.rank-table td.table-best { background: rgb(96 165 250 / .15); font-weight: 700; }
+.rank-table.text-left th, .rank-table.text-left td { text-align: left; }
+.rank-table.text-left thead th { padding: 10px 18px; }
+@media (max-width: 600px) { .rank-table th, .rank-table td { padding-left: 14px; padding-right: 14px; } }
+
+/* Match History */
+.mh-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: #222; border: 1px solid #222; border-radius: 12px; overflow: hidden; }
+.mh-summary-item { display: flex; flex-direction: column; gap: 7px; padding: 20px 22px; background: #121214; }
+.mh-summary-value { font-size: 26px; font-weight: 750; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.mh-summary-label { font-size: 10px; color: #a1a1aa; letter-spacing: .09em; text-transform: uppercase; }
+.mh-summary-item.mvp-match .mh-summary-value { color: #f2cf80; }
+.mh-summary-item.mvp-team .mh-summary-value { color: #cbd5e1; }
+.mh-list-heading { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; color: #a1a1aa; }
+.mh-list-heading > span:first-child { font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: #e4e4e7; }
+.match-day-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 20px; padding: 12px 0; border-bottom: 1px solid #222; }
+.match-day-header.first { margin-top: 0; }
+.match-day-heading { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
+.match-day-title { font-size: 13px; font-weight: 750; color: #e4e4e7; white-space: nowrap; }
+.match-day-count { font-size: 10px; color: #a1a1aa; white-space: nowrap; }
+.match-day-stats { display: flex; align-items: center; }
+.match-day-stat { display: flex; align-items: baseline; gap: 7px; padding: 0 12px; border-left: 1px solid #303030; }
+.match-day-stat:first-child { border-left: 0; }
+.match-day-stat:last-child { padding-right: 0; }
+.match-day-stat-label { font-size: 10px; color: #a1a1aa; white-space: nowrap; }
+.match-day-stat-value { font-size: 11px; font-weight: 650; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.match-day-coverage { color: #a1a1aa; font-size: 10px; font-weight: 400; }
+.match-card { --result-color: #fbbf24; background: #141416; border: 1px solid #2a2a2e; border-radius: 12px; overflow: hidden; transition: border-color .15s, opacity .15s; }
+.match-card.win { --result-color: #4ade80; }
+.match-card.loss { --result-color: #fb7185; }
+.match-card:hover { border-color: #52525b; }
+.match-card[data-state="open"] { border-color: #52647c; }
+.match-row { display: grid; grid-template-columns: 210px minmax(0, 1fr); width: 100%; text-align: left; cursor: pointer; }
+.match-row:focus-visible { outline: 2px solid var(--brand); outline-offset: -3px; border-radius: 11px; }
+.mc-map-panel { position: relative; isolation: isolate; display: flex; flex-direction: column; justify-content: flex-end; min-height: 158px; padding: 18px; overflow: hidden; background: radial-gradient(ellipse at top right, #344657, #1d242d 60%, #141416); border-left: 3px solid var(--result-color); }
+.mc-map-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; opacity: .85; }
+.mc-map-panel::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(9,9,11,.08), rgba(9,9,11,.3) 30%, rgba(9,9,11,.92)); }
+.match-map { font-size: 23px; font-weight: 750; letter-spacing: -.035em; line-height: 1.2; overflow-wrap: anywhere; color: #fff; }
+.mc-map-meta { display: flex; flex-direction: column; gap: 5px; color: #d4d4d8; font-size: 10px; margin-top: 7px; min-width: 0; }
+.mc-map-meta-row { display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+.mc-map-panel.has-player-rank .mc-map-meta-row:last-child { padding-right: 68px; }
+.mc-player-rank-icon { position: absolute; right: 10px; bottom: 10px; z-index: 1; display: flex; width: 64px; height: 64px; align-items: center; justify-content: center; pointer-events: none; }
+.mc-body { display: flex; flex-direction: column; justify-content: space-between; gap: 18px; padding: 18px 20px; min-width: 0; }
+.mc-topline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.mc-result { display: flex; align-items: center; gap: 13px; }
+.m-result-tag { color: var(--result-color); font-size: 10px; font-weight: 750; text-transform: uppercase; letter-spacing: .1em; }
+.match-score { display: flex; align-items: baseline; gap: 7px; font-size: 25px; font-weight: 750; letter-spacing: -.04em; font-variant-numeric: tabular-nums; line-height: 1; }
+.match-score .mc-score-divider { font-size: 16px; color: #71717a; font-weight: 400; }
+.match-score .mc-score-opponent { color: #a1a1aa; }
+.mc-accolade { display: inline-flex; align-items: center; gap: 5px; margin-left: 2px; padding-left: 12px; border-left: 1px solid #3f3f46; font-size: 10px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.mc-accolade svg { width: 13px; height: 13px; flex-shrink: 0; }
+.mc-accolade.mvp-match { color: #f2cf80; }
+.mc-accolade.mvp-team { color: #cbd5e1; }
+.mc-expand-icon { display: flex; align-items: center; gap: 5px; margin-left: auto; color: #a1a1aa; font-size: 10px; }
+.mc-expand-icon svg { width: 15px; height: 15px; transition: transform .2s; }
+.match-card[data-state="open"] .mc-expand-icon svg { transform: rotate(180deg); }
+.mc-performance { display: grid; grid-template-columns: 1.1fr .65fr 1fr 1.5fr 1fr; gap: 12px; align-items: start; }
+.mc-performance-stat { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.mc-performance-lbl { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: #a1a1aa; }
+.mc-performance-val { display: flex; align-items: center; gap: 5px; font-size: 16px; font-weight: 700; line-height: 1.3; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mc-performance-val .mc-deaths { color: #a1a1aa; }
+.mc-kda-separator { font-size: 11px; color: #71717a; font-weight: 400; }
+.mc-rr-stat { align-items: flex-end; }
+.mc-rr-stat .match-rr-change { font-size: 17px; }
+.match-rr-change { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.match-rr-change.gain { color: #4ade80; }
+.match-rr-change.loss { color: #f87171; }
+.match-rr-change.shielded { padding: 0 5px; border-radius: 6px; background: rgba(37,99,235,.1); box-shadow: 0 0 0 1px #60a5fa, 0 0 0 2px rgba(96,165,250,.12); }
+.match-rr-change.shielded svg { width: 13px; height: 13px; flex-shrink: 0; color: #60a5fa; }
+.match-card-details { padding: 18px 12px; border-top: 1px solid #222; background: #101012; }
+@media (prefers-reduced-motion: reduce) { .match-card, .mc-expand-icon svg { transition: none; } }
+@media (max-width: 760px) {
+  .match-row { grid-template-columns: 170px minmax(0, 1fr); }
+  .mc-body { padding: 16px; } .mc-topline { gap: 8px; } .mc-expand-label { display: none; }
+  .match-day-stat { flex-direction: column; gap: 3px; }
+}
+@media (max-width: 600px) {
+  .mh-summary-item { padding: 16px 12px; } .mh-summary-value { font-size: 23px; } .mh-summary-label { font-size: 10px; letter-spacing: .03em; }
+  .mh-list-heading { flex-direction: column; gap: 5px; }
+  .match-row { grid-template-columns: minmax(0, 1fr); }
+  .mc-map-panel { min-height: 110px; padding: 16px; } .mc-map-image { object-position: center 45%; }
+  .mc-map-panel::after { background: linear-gradient(90deg, rgba(9,9,11,.82), rgba(9,9,11,.12)); }
+  .mc-body { padding: 15px; gap: 20px; } .mc-performance { gap: 8px; grid-template-columns: 1.1fr .6fr 1fr 1.4fr .85fr; }
+  .mc-performance-val { font-size: 14px; } .mc-rr-stat .match-rr-change { font-size: 15px; }
+  .match-day-header { flex-wrap: wrap; gap: 10px; } .match-day-heading { width: 100%; }
+  .match-day-stats { width: 100%; justify-content: space-between; } .match-day-stat { padding: 0 10px; } .match-day-stat:first-child { padding-left: 0; }
+  .match-card-details { padding: 15px 6px; }
+}
+@media (max-width: 520px) {
+  .mc-performance { grid-template-columns: 1fr 1fr; gap: 16px; }
+  .mc-performance-stat:nth-child(even) { align-items: flex-end; }
+  .mc-performance-stat:last-child { grid-column: 1 / -1; }
+  .mc-performance-val { font-size: 16px; } .mc-rr-stat .match-rr-change { font-size: 17px; }
+}
+
+/* ── Phone layout (below 640px; see src/app/MobileShell.jsx) ──────────
+   Cards use 16px side padding instead of 24px so content gets the width.
+   Unlayered, so it outranks the cards' px-* utilities; an explicit px-0
+   (full-bleed lists) is left alone. */
+@media (max-width: 639px) {
+  [data-slot="card-header"]:not(.px-0),
+  [data-slot="card-content"]:not(.px-0),
+  [data-slot="card-footer"]:not(.px-0) { padding-inline: 16px; }
+  /* Compact SVG charts use a narrow viewBox; larger type keeps labels legible
+     once it is scaled down to the phone's width. */
+  .chart-svg.compact text { font-size: 13px; }
+  .chart-svg.compact .rank-band-label { font-size: 12px; }
+  .chart-svg.compact .series-label, .chart-svg.compact .even-label { font-size: 13px; }
+  /* Tap highlights stay off; the app draws its own pressed states. */
+  .match-card.mobile, [data-slot="mobile-tab-bar"] a, [data-slot="mobile-tab-bar"] button { -webkit-tap-highlight-color: transparent; }
+  .match-card.mobile .match-card-details { padding: 14px 10px; }
+}

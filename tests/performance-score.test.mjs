@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
+import {overviewStatValues} from '../src/engine/core.mjs';
 
-const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const html=readFileSync(new URL('../src/engine/core.mjs',import.meta.url),'utf8');
 const section=(from,to)=>html.slice(html.indexOf(from),html.indexOf(to,html.indexOf(from)));
 const extractStats=runInNewContext(section('function extractStats(', '// ─────────────────')+'\nextractStats');
 const buckets=runInNewContext(section('function buildKdRankBuckets(', '/* ── RR GAINS')+'\nbuildKdRankBuckets');
@@ -32,19 +33,15 @@ test('group averages include genuine zero scores and exclude unavailable or inva
 });
 
 test('overview averages reported match scores independently of round counts and clears stale data',()=>{
-  const elements=new Map(['sg-performance','sg-performance-pill'].map(id=>[id,{}]));
-  const context={document:{getElementById:id=>elements.get(id)},statsPanelMatches:[
+  const stats=overviewStatValues([
     {myStats:{performanceScore:100,rounds_played:10}},
     {myStats:{performanceScore:300,rounds_played:30}},
     {myStats:{performanceScore:null,rounds_played:20}},
     {myStats:{performanceScore:0}},
-  ]};
-  const source=section('  // Performance Score is already', '  // Avg ADR');
-  runInNewContext(source,context);
-  assert.equal(elements.get('sg-performance').textContent,'133.3');
-  assert.match(elements.get('sg-performance-pill').title,/3 of 4/);
-  runInNewContext(source,{...context,statsPanelMatches:[{myStats:{acs:200}}]});
-  assert.equal(elements.get('sg-performance').textContent,'—');
+  ]);
+  assert.equal(stats.performance,'133.3');
+  assert.match(stats.performanceTitle,/3 of 4/);
+  assert.equal(overviewStatValues([{myStats:{acs:200}}]).performance,'—');
 });
 
 test('fresh scores enrich archive-first matches by PUUID without losing stats or duplicating matches',()=>{

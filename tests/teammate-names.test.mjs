@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 
-const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const html=readFileSync(new URL('../src/engine/core.mjs',import.meta.url),'utf8');
 const source=html.slice(html.indexOf('let teammateNameState='),html.indexOf('\nfunction buildTeammates('));
 const id='11111111-1111-4111-8111-111111111111';
 function setup(apiGet){
@@ -84,6 +84,11 @@ test('lookup collects duos across all loaded matches independently of UI filters
 });
 
 test('duo rendering and filter rebuilds cannot initiate name refreshes',()=>{
-  const build=html.slice(html.indexOf('function buildTeammates('),html.indexOf('\nfunction renderEncounters('));
+  const build=html.slice(html.indexOf('function buildTeammates('),html.indexOf('\n// This is a transparent screening heuristic'));
+  assert.ok(build.length>0&&build.length<5000);
   assert.doesNotMatch(build,/refreshTeammateNames|apiGet|fetch\(/);
+  // The React views that show duos only read engine state.
+  for(const view of ['../src/app/pages/Duos.jsx','../src/app/pages/Overview.jsx']){
+    assert.doesNotMatch(readFileSync(new URL(view,import.meta.url),'utf8'),/refreshTeammateNames|apiGet|fetch\(/);
+  }
 });

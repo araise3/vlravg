@@ -1,0 +1,105 @@
+import {useEffect,useRef,useState} from 'react';
+import {Upload} from 'lucide-react';
+import {loadMatchMapMetadata,replayMatchRows,replayRowView,syncReplayImport,toggleReplaySteps,uploadReplay} from '@/engine/core.mjs';
+import {useEngine,useNow} from '@/app/hooks.js';
+import {EmptyState,PageHeading} from '@/app/shared.jsx';
+import {cn} from '@/lib/utils';
+import {Button} from '@/components/ui/button';
+import {Card} from '@/components/ui/card';
+
+const TONES={parsed:'text-positive',busy:'text-sky-300',bad:'text-negative'};
+const STEP_DOT={done:'bg-win',active:'bg-sky-400 animate-pulse',failed:'bg-loss',skipped:'bg-muted-foreground',pending:'bg-muted'};
+
+function replayDuration(ms){
+  if(!(ms>=0))return '';
+  const sec=Math.round(ms/1000);
+  return sec<60?`${sec} s`:sec<3600?`${Math.floor(sec/60)} min ${sec%60} s`:`${Math.floor(sec/3600)} h ${Math.floor(sec%3600/60)} min`;
+}
+
+function ReplaySteps({steps}){
+  const running=steps.some(step=>step.since&&step.state==='active');
+  const now=useNow(running);
+  return (
+    <ol className="space-y-1.5 text-sm" aria-label="Replay processing steps">
+      {steps.map(step=>(
+        <li key={step.key} className="flex gap-2.5">
+          <span className={cn('mt-1.5 size-2 shrink-0 rounded-full',STEP_DOT[step.state])} aria-hidden="true"/>
+          <span className="min-w-0">
+            <span className={cn('font-medium',step.state==='pending'&&'text-muted-foreground',step.state==='failed'&&'text-negative')}>{step.label}</span>
+            <span className="ml-2 text-muted-foreground">
+              {step.detail}
+              {step.since&&step.state==='active'&&<>{step.detail?' · ':''}{replayDuration(now-Date.parse(step.since))}</>}
+              {step.link&&<>{(step.detail||step.since)?' · ':''}<a href={step.link.href} target="_blank" rel="noopener noreferrer" className="underline">{step.link.text}</a></>}
+            </span>
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function ReplayRow({row,art}){
+  useEngine();
+  const view=replayRowView(row.matchId);
+  const inputRef=useRef(null),turnstileRef=useRef(null);
+  return (
+    <li>
+      <Card className="relative gap-3 overflow-hidden p-4">
+        {art&&<img src={art} alt="" loading="lazy" decoding="async" className="absolute inset-y-0 right-0 h-full w-1/2 object-cover opacity-20 [mask-image:linear-gradient(to_left,black,transparent)]" onError={event=>event.currentTarget.remove()}/>}
+        <div className="relative flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-baseline gap-2">
+              <strong>{row.map}</strong>
+              <span className={cn('font-semibold tabular',row.result==='win'?'text-positive':row.result==='loss'?'text-negative':'text-draw')}>{row.score}</span>
+              <span className="text-sm text-muted-foreground">{row.date}</span>
+            </div>
+            <span className="block truncate font-mono text-xs text-muted-foreground">{row.matchId}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span role="status" className={cn('text-sm font-medium',TONES[view.tone]||'text-muted-foreground')}>{view.label}</span>
+            {view.foldable&&<Button variant="ghost" size="sm" aria-expanded={!view.folded} onClick={()=>toggleReplaySteps(row.matchId)}>{view.folded?'Details':'Hide details'}</Button>}
+            {view.canUpload&&(
+              <Button variant="outline" size="sm" aria-label={`Upload replay for ${row.map} ${row.date}`} onClick={()=>inputRef.current?.click()}>
+                <Upload aria-hidden="true"/>Upload .vrf
+              </Button>
+            )}
+            <input ref={inputRef} type="file" accept=".vrf" hidden onChange={event=>{
+              const file=event.target.files?.[0];event.target.value='';
+              if(file)uploadReplay(row.matchId,file,turnstileRef.current);
+            }}/>
+          </div>
+        </div>
+        {view.detail&&<p className="relative text-sm text-negative">{view.detail}</p>}
+        {view.steps.length>0&&!view.folded&&<div className="relative"><ReplaySteps steps={view.steps}/></div>}
+        <div ref={turnstileRef}/>
+      </Card>
+    </li>
+  );
+}
+
+export function ReplaysPage({active}){
+  const s=useEngine();
+  const [maps,setMaps]=useState(null);
+  const ready=s.analysisState==='ready';
+  const hasMatches=ready&&s.allMatches.length>0;
+  const rows=hasMatches?replayMatchRows(s.allMatches):[];
+  const ids=rows.map(row=>row.matchId).join(',');
+  useEffect(()=>{if(active&&hasMatches)syncReplayImport();},[active,hasMatches,ids]);
+  useEffect(()=>{if(active&&hasMatches&&!maps)loadMatchMapMetadata().then(setMaps);},[active,hasMatches,maps]);
+  return (
+    <main aria-labelledby="replays-title" className="space-y-6">
+      <PageHeading id="replays-title" title="Replay import">Upload the VALORANT replay (.vrf) of a loaded match. It is parsed offline in a sandbox into a compact timeline of rounds, kills and positions every 250 ms. Uploaded replays are user-supplied and kept apart from HenrikDev match data.</PageHeading>
+      {hasMatches?(
+        <>
+          {s.replayConfig&&!s.replayConfig.enabled&&<p role="status" aria-live="polite" className="text-sm text-muted-foreground">Replay uploads are not available right now.</p>}
+          <ul className="space-y-2" aria-label="Loaded matches and their replays">
+            {rows.map(row=><ReplayRow key={row.matchId} row={row} art={maps?.get(row.map.toLowerCase())}/>)}
+          </ul>
+          <p className="text-xs text-muted-foreground">Replays are saved in <code className="rounded bg-muted px-1 py-0.5">%LOCALAPPDATA%\VALORANT\Saved\Demos</code> and named by match ID. A file is accepted only for the match it was recorded in, and the parsed replay must contain every player HenrikDev lists for that match.</p>
+        </>
+      ):s.analysisState!=='error'&&(
+        <EmptyState>{s.analysisState==='loading'?'Loading this player’s matches…':ready?'No matches found for this season. Try another act.':'Search for a player above to upload replays for their matches.'}</EmptyState>
+      )}
+    </main>
+  );
+}

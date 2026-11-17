@@ -47,7 +47,7 @@ test('stored routes fix archive page size and fetch full detail by match ID',asy
 });
 
 test('archive recovery fetches full details only for missing matches in the selected season',async()=>{
-  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  const html=readFileSync(new URL('../src/engine/core.mjs',import.meta.url),'utf8');
   const start=html.indexOf('async function recoverStoredSeasonMatches(');
   const end=html.indexOf('\nasync function loadAll(',start);
   assert.ok(start>0&&end>start);
@@ -76,7 +76,7 @@ test('archive recovery fetches full details only for missing matches in the sele
 });
 
 test('unavailable old match details do not prevent later archived games from loading',async()=>{
-  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  const html=readFileSync(new URL('../src/engine/core.mjs',import.meta.url),'utf8');
   const start=html.indexOf('async function recoverStoredSeasonMatches(');
   const end=html.indexOf('\nasync function loadAll(',start);
   const ids=['missing-1','missing-2','missing-3','available'];
@@ -98,7 +98,7 @@ test('unavailable old match details do not prevent later archived games from loa
 });
 
 test('archive recovery fetches transferred matches from their recorded region',async()=>{
-  const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  const html=readFileSync(new URL('../src/engine/core.mjs',import.meta.url),'utf8');
   const start=html.indexOf('async function recoverStoredSeasonMatches(');
   const end=html.indexOf('\nasync function loadAll(',start);
   const urls=[];

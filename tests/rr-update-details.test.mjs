@@ -1,20 +1,22 @@
-import test from 'node:test';
+import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
+import {closeRenderer,renderHtml} from './helpers/react-render.mjs';
 
-const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+after(closeRenderer);
+
+const html=readFileSync(new URL('../src/engine/core.mjs',import.meta.url),'utf8');
 function extract(name){
   const start=html.indexOf(`function ${name}(`);
   const end=html.indexOf('\n}',start)+2;
   assert.ok(start>0&&end>start,name);
   return html.slice(start,end);
 }
-const api=runInNewContext(['parseRRDetails','reportedRRStart','isRREligible','rrReportedStats','buildRRDetailsHtml'].map(extract).join('\n')+
-  '\n({parseRRDetails,reportedRRStart,isRREligible,rrReportedStats,buildRRDetailsHtml})',{
-  matchHtml:v=>String(v).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;'),
-  avgLabelShort:t=>'Tier '+t,rrSigned:(n,d)=>(n<0?'−':'+')+Math.abs(n).toFixed(d),
-});
+const api=runInNewContext(['parseRRDetails','reportedRRStart','isRREligible','rrReportedStats'].map(extract).join('\n')+
+  '\n({parseRRDetails,reportedRRStart,isRREligible,rrReportedStats})');
+// The match card's "Your RR details" panel, rendered by React.
+const details=m=>renderHtml('/src/app/pages/Matches.jsx','RRDetails',{m});
 const match=d=>({myRR:20,myTierId:18,partySize:1,myRRDetails:api.parseRRDetails(d)});
 
 test('unavailable fields stay null while reported zero and false are preserved',()=>{
@@ -37,18 +39,18 @@ test('bonus totals use the eligible covered set, including real zeros',()=>{
   const s=api.rrReportedStats([match({rr_performance_bonus:5}),match({rr_performance_bonus:0}),match({}),match({rr_performance_bonus:9,is_placement_match:true})]);
   assert.deepEqual({...s},{total:3,covered:2,bonusMatches:1,bonusTotal:5});
 });
-test('details preserve fractional penalty, escape strings, and explain missing coverage',()=>{
-  const output=api.buildRRDetailsHtml(match({rr_performance_bonus:5,rr_penalty:.25,queue_id:'<img src=x>',is_placement_match:false}));
+test('details preserve fractional penalty, escape strings, and explain missing coverage',async()=>{
+  const output=await details(match({rr_performance_bonus:5,rr_penalty:.25,queue_id:'<img src=x>',is_placement_match:false}));
   assert.match(output,/Performance bonus/);assert.match(output,/0.25/);
   assert.ok(!output.includes('<img'));assert.match(output,/Placement match/);
-  assert.match(api.buildRRDetailsHtml(match({})),/unavailable/);
-  assert.equal(api.buildRRDetailsHtml({}), '');
+  assert.match(await details(match({})),/unavailable/);
+  assert.equal(await details({}), '');
 });
 
-test('stable API unknown movement sentinel is not displayed as a rank event',()=>{
+test('stable API unknown movement sentinel is not displayed as a rank event',async()=>{
   const m=match({competitive_movement:'MOVEMENT_UNKNOWN'});
   assert.equal(m.myRRDetails.movement,null);
-  assert.ok(!api.buildRRDetailsHtml(m).includes('Competitive movement'));
+  assert.ok(!(await details(m)).includes('Competitive movement'));
 });
 
 test('history ingestion prefers exact starts across gaps, promotions and act transitions',()=>{

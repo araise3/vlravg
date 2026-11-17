@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 
-const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const html=readFileSync(new URL('../src/engine/core.mjs',import.meta.url),'utf8');
 const extract=(start,end)=>{
   const from=html.indexOf(start),to=html.indexOf(end,from);
   assert.ok(from>=0&&to>from);
   return html.slice(from,to);
 };
 const {ratedTeamRank,buildKdRankBuckets,decidedWinRate}=runInNewContext(
-  extract('function decidedWinRate(', '\nfunction renderOverviewPreviews(')+
+  extract('function decidedWinRate(', '\n// Win rates show one decimal')+
   extract('function ratedTeamRank(', '\nfunction processMatch(')+
   extract('function buildKdRankBuckets(', '\n/* ── RR GAINS')+
   '\n({ratedTeamRank,buildKdRankBuckets,decidedWinRate})');
