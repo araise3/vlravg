@@ -80,11 +80,18 @@ The route also merges each window into `rr_history`, as for any visitor.
 Once all 10 windows of a collected match are saved, the next run's `enqueueLiveFollowups` queues
 its players' act histories (`sim_live_players`, act = the match's season; a player fetched before
 a newer collected match started is queued again). Saving a history queues the last 20 games before
-the act (`sim_live_prev`) when one of their collected lobbies had fewer than 12 act games, and a
-full-match KAST download (the existing `sim_pilot_kast` queue) for every earlier act game that is
-neither archived nor already queued. A match whose window was closed after 3 tries is dropped
-(`followed = 0`) and costs no further downloads. Late in an act that is several hundred KAST
-downloads per match, so the queue stays the bottleneck.
+the act (`sim_live_prev`) when one of their collected lobbies had fewer than 12 act games. KAST is
+needed for every earlier act game that isn't archived or already done. The stored list has no
+rounds, so the job walks the player's full-match list (`/api/history-by-puuid`, 10 competitive
+matches with rounds and kills per request, newest first) until it has seen every wanted game or
+passed the oldest one, and saves those games' KAST rows straight into `sim_pilot_kast`. Games the
+list doesn't hold (it misses some stored games) or doesn't reach, and any page that fails, fall
+back to the single-match queue (`/api/match-detail`). The act history itself still comes from the
+stored list, since that is the record the parity check matched. About 90 earlier games then cost
+roughly 9 requests instead of 90. On 17 Nov 2026, 6 matches from 3 players' first pages gave the
+same KAST rows from the page as from `/api/match-detail` (identical players, rounds and kills).
+A match whose window was closed after 3 tries is dropped (`followed = 0`) and costs no further
+downloads.
 
 The simulation and training run locally in ascend-companion-re. Once the pilot is evaluated,
 delete the workflow and, if not needed, the `sim_pilot_*` tables.

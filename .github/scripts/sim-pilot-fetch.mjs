@@ -4,7 +4,9 @@
 //   live     sim_live_rr        recent archived matches' players' live RR window
 //                                (/api/mmr-history-by-puuid), queued by enqueueLive at each run's start
 //   livehist sim_live_players   collected matches' players' act history once all 10 ranks are in
-//                                (enqueueLiveFollowups); saving one queues liveprev and KAST rows
+//                                (enqueueLiveFollowups); saving one queues liveprev and fills KAST
+//                                from /api/history-by-puuid (10 full matches a request), queueing
+//                                only the games that list misses for the single-match kast queue
 //   liveprev sim_live_prev      their last 20 games before the act, when a lobby had < 12 act games
 //   history  sim_pilot_players  each player's current-act competitive games (/api/stored-matches)
 //   rr       sim_pilot_rr       each player's RR history: tier and RR after every game since August
@@ -31,6 +33,7 @@ import {d1Query} from './d1-query.mjs';
 
 export const MAX_PAGES=10;     // 1,000 matches: more than anyone plays in an act
 export const MAX_ATTEMPTS=3;
+export const MAX_FULL_OFFSET=990; // /api/history-by-puuid: 100 pages of 10 at most per player
 export const NOT_FOUND_CONFIRM=2; // a 404 counts only when a later run gets it again
 export const WORKERS=2;        // a request takes 1-2 s, so one worker alone can't keep the pace
 const RR_SINCE=Date.parse('2026-08-01T00:00:00Z'); // the pilot's matches start 13 Oct 2026
@@ -144,7 +147,7 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
   const ACT=env.SIM_ACT||'e11a6';
   const GAP_MS=Math.max(1000,Number(env.SIM_GAP_MS)||1500); // 40/min leaves the live site 20/min
   const deadline=now()+Math.min(345,Math.max(1,Number(env.RUNTIME_MINUTES)||330))*60000;
-  const st={requests:0,rateLimited:0,saved:0,retryLater:0,closed:0,d1Retries:0,prevQueued:0,kastQueued:0,byQueue:{}};
+  const st={requests:0,rateLimited:0,saved:0,retryLater:0,closed:0,d1Retries:0,prevQueued:0,kastQueued:0,fullPages:0,kastFromPages:0,byQueue:{}};
   const left=()=>deadline-now();
   const pause=ms=>sleep(Math.max(0,Math.min(ms,left())));
   if(!kastOf){const f=env.SIM_KAST_HTML;kastOf=f&&existsSync(f)?loadKast(readFileSync(f,'utf8')):null;}
@@ -198,19 +201,56 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
   }
   // After a collected match's player history is saved: the pre-act tail when any of their collected
   // matches has fewer than 12 earlier act games, and KAST for every earlier act game that neither
-  // the archive (KAST computed locally) nor the KAST queue already has.
+  // the archive (KAST computed locally) nor the KAST table already has. KAST comes from the
+  // player's full-match list (pagesKast: 10 matches with rounds per request); only games that
+  // list doesn't reach or doesn't hold (it misses some stored games) are queued for
+  // /api/match-detail one by one. The stored list stays the source of the act history itself,
+  // since that is the record the gate's parity check matched.
   async function liveFollowups(puuid,region,act,ms){
     const games=await q(`SELECT r.match_id AS m,r.started_at AS t FROM sim_live_rr r JOIN sim_live_matches x ON x.match_id=r.match_id WHERE r.puuid=?1 AND x.followed=1 AND x.season=?2`,[puuid,act]);
     const before=t=>ms.filter(e=>Date.parse(e.t)<Date.parse(t)-60000);
     if(games.some(g=>before(g.t).length<12)){await q(`INSERT OR IGNORE INTO sim_live_prev (id,region) VALUES (?1,?2)`,[`${puuid}:${act}`,region]);st.prevQueued++;}
-    const need=[...new Set(games.flatMap(g=>before(g.t).map(e=>e.m)))];
+    const need=[...new Set(games.flatMap(g=>before(g.t).map(e=>e.m)))],missing=[];
     for(let i=0;i<need.length;i+=45){
       const ids=need.slice(i,i+45),ph=ids.map((_,k)=>`?${k+1}`).join(',');
       const have=new Set([...await q(`SELECT DISTINCT match_id AS m FROM match_archive WHERE match_id IN (${ph})`,ids),
-        ...await q(`SELECT match_id AS m FROM sim_pilot_kast WHERE match_id IN (${ph})`,ids)].map(x=>x.m));
-      const add=ids.filter(m=>!have.has(m));
-      if(add.length){await q(`INSERT OR IGNORE INTO sim_pilot_kast (match_id,region) VALUES ${add.map((_,k)=>`(?${2*k+1},?${2*k+2})`).join(',')}`,add.flatMap(m=>[m,region]));st.kastQueued+=add.length;}
+        ...await q(`SELECT match_id AS m FROM sim_pilot_kast WHERE match_id IN (${ph}) AND status IS NOT NULL`,ids)].map(x=>x.m));
+      missing.push(...ids.filter(m=>!have.has(m)));
     }
+    const got=kastOf&&missing.length?await pagesKast(region,puuid,missing,ms):{done:new Set()};
+    if(got.budget)return{budget:true};
+    const add=missing.filter(m=>!got.done.has(m));
+    for(let i=0;i<add.length;i+=45){
+      const ids=add.slice(i,i+45);
+      await q(`INSERT OR IGNORE INTO sim_pilot_kast (match_id,region) VALUES ${ids.map((_,k)=>`(?${2*k+1},?${2*k+2})`).join(',')}`,ids.flatMap(m=>[m,region]));
+    }
+    st.kastQueued+=add.length;
+    return{};
+  }
+  // Walks /api/history-by-puuid (competitive, 10 full matches per page, newest first) until every
+  // wanted match is seen or the list is older than the oldest one; saves each wanted match's KAST
+  // row straight into sim_pilot_kast (a row already queued is filled; a finished one is left).
+  // A failed page only ends the walk: what it didn't cover falls back to the single-match queue.
+  async function pagesKast(region,puuid,wanted,ms){
+    const want=new Set(wanted),done=new Set(),time=new Map(ms.map(e=>[e.m,Date.parse(e.t)]));
+    const oldest=Math.min(...wanted.map(m=>time.get(m)??Infinity));
+    for(let start=0;start<=MAX_FULL_OFFSET&&done.size<want.size;start+=10){
+      const r=await get(`history-by-puuid/${region}/pc/${puuid}?start=${start}`,listOk);
+      if(r.status===-1)return{budget:true,done};
+      if(r.status!==200)break;
+      const list=r.body.data;st.fullPages++;
+      for(const m of list){
+        const id=m?.metadata?.match_id;
+        if(!want.has(id)||done.has(id))continue;
+        const k=kastOf(m);if(!k)continue; // incomplete payload: leave it to match-detail
+        await q(`INSERT INTO sim_pilot_kast (match_id,region,status,n,data,fetched_at) VALUES (?1,?2,200,1,?3,?4) ON CONFLICT(match_id) DO UPDATE SET status=200,n=1,data=excluded.data,fetched_at=excluded.fetched_at WHERE sim_pilot_kast.status IS NULL`,
+          [id,region,gzipSync(JSON.stringify(k)).toString('base64'),new Date(now()).toISOString()]);
+        done.add(id);st.kastFromPages++;
+      }
+      const last=Date.parse(list.at(-1)?.metadata?.started_at);
+      if(list.length<10||!(last>=oldest))break;
+    }
+    return{done};
   }
   const actHistory=async(region,puuid,act)=>{const ms=[];let past=false;
     const r=await pages(`stored-matches/${region}/${puuid}`,list=>{for(const m of list){const a=m.meta?.season?.short??null;if(a===act)ms.push(compact(m));else if(a)past=true;}},()=>past);
@@ -236,7 +276,7 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
     // Collected matches' players (enqueueLiveFollowups): act history as of now, then follow-ups.
     {name:'livehist',table:'sim_live_players',id:'puuid',cols:'act',async fetch(row){
       const act=row.act||ACT,h=await actHistory(row.region,row.puuid,act);
-      if(h.status===200)await liveFollowups(row.puuid,row.region,act,h.data);
+      if(h.status===200&&(await liveFollowups(row.puuid,row.region,act,h.data)).budget)return{budget:true};
       return h;
     }},
     {name:'liveprev',table:'sim_live_prev',id:'id',async fetch(row){
@@ -311,7 +351,7 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
   await Promise.all(Array.from({length:WORKERS},worker));
   let remaining=null;
   try{remaining=0;for(const Q of queues)remaining+=(await q(`SELECT SUM(status IS NULL) AS left FROM ${Q.table}`))[0]?.left??0;}catch{remaining=null;}
-  log(`Run done: saved ${st.saved} (${Object.entries(st.byQueue).map(([k,v])=>`${k} ${v}`).join(', ')||'none'}), requests ${st.requests}, 429s ${st.rateLimited}, retry later ${st.retryLater}, closed after ${MAX_ATTEMPTS} tries ${st.closed}, D1 retries ${st.d1Retries}, follow-ups queued: prev ${st.prevQueued}, KAST ${st.kastQueued}; remaining ${remaining??'unknown'}.${fatal?' Stopped early: D1 unreachable.':''}${kastOf?'':' KAST rules not loaded.'}`);
+  log(`Run done: saved ${st.saved} (${Object.entries(st.byQueue).map(([k,v])=>`${k} ${v}`).join(', ')||'none'}), requests ${st.requests}, 429s ${st.rateLimited}, retry later ${st.retryLater}, closed after ${MAX_ATTEMPTS} tries ${st.closed}, D1 retries ${st.d1Retries}, follow-ups queued: prev ${st.prevQueued}, KAST ${st.kastQueued}; KAST from ${st.fullPages} full-match pages ${st.kastFromPages}; remaining ${remaining??'unknown'}.${fatal?' Stopped early: D1 unreachable.':''}${kastOf?'':' KAST rules not loaded.'}`);
   if(remaining===0)log('All pilot queues are done.');
   // Retries count as progress: each one raises a row's attempts, so chaining always ends.
   return{...st,remaining,progressed:st.saved+st.closed+st.retryLater,fatal:!!fatal};
