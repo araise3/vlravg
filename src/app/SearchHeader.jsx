@@ -46,12 +46,12 @@ function ProLibraryPanel({onPick}){
   const count=s.proLibraryState==='loading'?'Loading':s.proLibraryState==='error'?'Unavailable'
     :query.trim()?`${results.length} result${results.length===1?'':'s'}`:`${results.length} accounts`;
   return (
-    <Command shouldFilter={false} label="Pro player library" className="bg-transparent">
+    <Command shouldFilter={false} label="Pro player library" className="min-h-0 flex-1 bg-transparent">
       <div className="flex items-center justify-between gap-3 px-2 pt-1.5 pb-1 text-xs text-muted-foreground">
         <span className="font-medium">Pro player library</span><span className="tabular-nums">{count}</span>
       </div>
       <CommandInput placeholder="Search pro name or PUUID" value={query} onValueChange={setQuery} autoFocus className="max-sm:text-base"/>
-      <CommandList className="max-h-[min(56vh,520px)] scrollbar-thin">
+      <CommandList className="max-h-[min(56vh,520px)] min-h-0 flex-1 scrollbar-thin">
         {s.proLibraryState==='loading'&&<div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground"><Spinner/>Loading pro players…</div>}
         {s.proLibraryState==='error'&&<div className="py-6 text-center text-sm text-muted-foreground">The pro library could not be loaded.</div>}
         {s.proLibraryState==='ready'&&<CommandEmpty>No pro players match that search.</CommandEmpty>}
@@ -237,8 +237,10 @@ export function SearchHeader(){
           </ButtonGroup>
         </form>
       </PopoverAnchor>
-      <PopoverContent align="start" sideOffset={8} onOpenAutoFocus={event=>event.preventDefault()}
-        className="w-[var(--radix-popover-trigger-width)] p-1.5">
+      {/* The list shrinks to the space Radix measures on the side it opens
+          (12px from the window edge), so it never runs off screen. */}
+      <PopoverContent align="start" sideOffset={8} collisionPadding={12} onOpenAutoFocus={event=>event.preventDefault()}
+        className="flex max-h-[var(--radix-popover-content-available-height)] w-[var(--radix-popover-trigger-width)] flex-col p-1.5">
         <ProLibraryPanel onPick={row=>{setProOpen(false);analyzeProAccount(row);}}/>
       </PopoverContent>
     </Popover>
