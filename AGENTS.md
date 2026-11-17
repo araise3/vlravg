@@ -58,7 +58,7 @@ The installed `workerd` lags the calendar. If wrangler rejects the date, use the
 
 Real accounts without a local API: `npm run dev:live` (launch config `vlravg-vite-live`) forwards `/api` to the deployed site, through the same public quota gate as any visitor.
 
-UI fixtures without the live API: `npm run dev`, then `http://localhost:5173/?fixture=demo` (or `worst`, `draws`, `malformed`, `one`, `empty`, `loading`, `error`, or a match count) — see [src/dev/fixtures.mjs](src/dev/fixtures.mjs). `python scripts/serve-ui-stress.py` still serves the legacy page with the old fixtures ([docs/ui-stress-report.md](docs/ui-stress-report.md)).
+UI fixtures without the live API: `npm run dev`, then `http://localhost:5173/?fixture=demo` (or `worst`, `draws`, `malformed`, `one`, `climb`, `empty`, `loading`, `error`, or a match count) — see [src/dev/fixtures.mjs](src/dev/fixtures.mjs). `python scripts/serve-ui-stress.py` still serves the legacy page with the old fixtures ([docs/ui-stress-report.md](docs/ui-stress-report.md)).
 
 ## Deployment
 

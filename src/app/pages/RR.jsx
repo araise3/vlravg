@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useId,useState} from 'react';
 import {
   avgLabel,avgLabelShort,buildRRScoreRows,computeRRStats,rrDuoInfo,rrMovementRows,rrMovementXAxis,
   rrPayoutEstimates,rrPayoutEvenPoint,rrPayoutSegments,rrPositionFromElo,rrRankRows,rrReportedStats,rrSigned,rrTrendScopedMatches,
@@ -14,9 +14,56 @@ import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs';
 const toneOf=tone=>tone==='rank-positive'?'text-positive':tone==='rank-negative'?'text-negative':'';
 
 /* ── RR trend ─────────────────────────────────────────────── */
-export function RRTrendChart({matches,range,PUUID,PLAYER,TAG}){
+// Rank bands from the recorded tiers. Below Immortal every division spans 100
+// RR. Immortal+ RR is one continuous leaderboard number, so the Immortal 2/3 and
+// Radiant floors sit between the highest game recorded below that tier and the
+// lowest game recorded at or above it (a visual guide; tooltips use each
+// match's own recorded tier). A tier never recorded gets no band.
+export function rrTrendRankBands(points,min,max){
+  const high=points.filter(p=>p.value>=2100&&p.match.myPostTierId>=24&&p.match.myPostTierId<=27);
+  const baseTier=high.length?Math.min(...high.map(p=>p.match.myPostTierId)):24;
+  const floors=[];
+  for(let tier=baseTier+1;tier<=27;tier++){
+    if(!high.some(p=>p.match.myPostTierId===tier))continue;
+    const above=high.filter(p=>p.match.myPostTierId>=tier).map(p=>p.value);
+    const lowest=Math.min(...above);
+    const below=high.filter(p=>p.match.myPostTierId<tier&&p.value<lowest).map(p=>p.value);
+    const floor=below.length?(Math.max(...below)+lowest)/2:lowest;
+    if(floor>(floors.at(-1)?.value??2100))floors.push({tier,value:floor});
+  }
+  const tierAt=value=>{
+    if(value<2100)return rrPositionFromElo(value).tier;
+    return floors.reduce((tier,floor)=>value>=floor.value?floor.tier:tier,baseTier);
+  };
+  const edges=new Set([min,max]);
+  for(let value=Math.ceil(min/100)*100;value<max&&value<=2100;value+=100)edges.add(value);
+  floors.forEach(floor=>{if(floor.value>min&&floor.value<max)edges.add(floor.value);});
+  const sorted=[...edges].sort((a,b)=>a-b),bands=[];
+  for(let i=0;i<sorted.length-1;i++){
+    const start=sorted[i],end=sorted[i+1],tier=tierAt((start+end)/2),previous=bands.at(-1);
+    if(previous?.tier===tier)previous.end=end;
+    else bands.push({start,end,tier});
+  }
+  return bands;
+}
+
+// Evenly spaced match indices for the date axis, one label per day at most.
+export function rrTrendDateTicks(points,plotWidth,minGap,dateLabel){
+  if(points.length<2)return[{i:0,label:dateLabel(points[0].match),anchor:'middle'}];
+  const count=Math.max(2,Math.min(points.length,Math.floor(plotWidth/minGap)+1));
+  const ticks=[];
+  for(let k=0;k<count;k++){
+    const i=Math.round(k*(points.length-1)/(count-1)),label=dateLabel(points[i].match);
+    if(ticks.at(-1)?.label===label)continue;
+    ticks.push({i,label});
+  }
+  return ticks.map((tick,k)=>({...tick,anchor:k===0?'start':tick.i===points.length-1?'end':'middle'}));
+}
+
+export function RRTrendChart({matches,range}){
   const [ref,measured]=useElementWidth();
   const [active,setActive]=useState(null);
+  const fillId=`rr-trend-fill-${useId().replace(/[^\w-]/g,'')}`;
   const compact=useIsMobile();
   const showDuos=range!=='all';
   const scoped=rrTrendScopedMatches(matches);
@@ -40,52 +87,51 @@ export function RRTrendChart({matches,range,PUUID,PLAYER,TAG}){
   const duoNet=ordered.reduce((sum,m,i)=>sum+(duoInfos[i]?m.myRR:0),0);
   const running=ordered.reduce((sum,m)=>sum+m.myRR,0);
   const points=ordered.map(m=>({match:m,value:m.myPostRR}));
-  // Rank labels on the left axis, dates along the bottom.
-  const left=compact?58:70,right=compact?10:16,top=14,bottom=190,height=214;
-  const width=Math.max(left+right+2,measured||872);
   const values=points.map(p=>p.value);
   const low=Math.min(...values),high=Math.max(...values);
   // The axis spans the ranks played, padded to the nearest 50 RR.
   const min=Math.max(0,Math.floor((low-15)/50)*50),max=Math.max(min+50,Math.ceil((high+15)/50)*50);
-  const x=i=>points.length===1?left+(width-left-right)/2:left+i*(width-left-right)/(points.length-1);
+  // Rank bands on the left, an Immortal+ RR scale on the right, dates below.
+  const height=compact?240:290,top=22,bottom=height-26;
   const y=value=>bottom-(value-min)/(max-min)*(bottom-top);
-  const spacing=points.length>1?(width-left-right)/(points.length-1):width-left-right;
-  const radiantChartFloor=2100+300; // Visual guide only; the tooltip uses each match's recorded tier.
-  const immortalPoints=points.filter(p=>p.value>=2100&&p.value<radiantChartFloor&&p.match.myPostTierId>=24&&p.match.myPostTierId<27).sort((a,b)=>a.value-b.value);
-  const tierAt=value=>{
-    if(value<2100)return rrPositionFromElo(value).tier;
-    if(value>=radiantChartFloor)return 27;
-    if(!immortalPoints.length)return 24;
-    return immortalPoints.reduce((best,p)=>Math.abs(p.value-value)<Math.abs(best.value-value)?p:best).match.myPostTierId;
-  };
-  const boundaries=new Set([min,max]);
-  for(let value=Math.ceil(min/100)*100;value<max&&value<=2100;value+=100)boundaries.add(value);
-  if(radiantChartFloor>min&&radiantChartFloor<max)boundaries.add(radiantChartFloor);
-  immortalPoints.slice(1).forEach((p,index)=>{
-    const previous=immortalPoints[index];
-    if(p.match.myPostTierId!==previous.match.myPostTierId){
-      const boundary=(p.value+previous.value)/2;
-      if(boundary>min&&boundary<max)boundaries.add(boundary);
-    }
-  });
-  const edges=[...boundaries].sort((a,b)=>a-b);
-  const bands=[];
-  for(let i=0;i<edges.length-1;i++){
-    const start=edges[i],end=edges[i+1],tier=tierAt((start+end)/2),previous=bands.at(-1);
-    if(previous?.tier===tier)previous.end=end;
-    else bands.push({start,end,tier});
-  }
-  // Rank boundaries are the reference lines; each band is labelled on the axis.
-  const rankLines=edges.filter(value=>value>min&&value<max);
+  const rrStep=max>2100?[25,50,100,200,250,500,1000].find(step=>step*(bottom-top)/(max-min)>=(compact?30:36))??1000:null;
+  const rrTicks=[];
+  if(rrStep)for(let value=2100+Math.max(0,Math.ceil((min-2100)/rrStep))*rrStep;value<=max;value+=rrStep)if(value>=min)rrTicks.push(value);
+  const left=compact?58:72,right=rrTicks.length?(compact?32:44):(compact?10:16);
+  const width=Math.max(left+right+2,measured||872),plotWidth=width-left-right;
+  const x=i=>points.length===1?left+plotWidth/2:left+i*plotWidth/(points.length-1);
+  const spacing=points.length>1?plotWidth/(points.length-1):plotWidth;
+  const bands=rrTrendRankBands(points,min,max);
+  const rankLines=bands.slice(1).map(band=>band.start);
   const line=points.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
   const dateLabel=m=>Number.isFinite(m.startedAtMs)?new Date(m.startedAtMs).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'Date unavailable';
   const matchLabel=m=>[m.mapName??m.map,Number.isInteger(m.myR)&&Number.isInteger(m.opR)?`${m.myR}–${m.opR}`:null].filter(Boolean).join(', ');
-  const dateTicks=(points.length>1?[0,...(width>=520&&points.length>2?[Math.round((points.length-1)/2)]:[]),points.length-1]:[0])
-    .map(i=>({i,label:dateLabel(points[i].match),anchor:i===0?'start':i===points.length-1?'end':'middle'}));
+  const dateTicks=rrTrendDateTicks(points,plotWidth,compact?76:104,dateLabel);
+  const resultClass=m=>m.won===true?'win':m.won===false?'loss':'draw';
   const last=points.length-1,end=points[last],endRank=rrPositionFromElo(end.value,end.match.myPostTierId);
-  // The end label sits above the line's recent peak so it never covers it.
-  const tail=points.slice(Math.max(0,Math.floor(points.length*.85)));
-  const endLabelY=Math.max(top+10,Math.min(...tail.map(p=>y(p.value)))-10);
+  // The end label takes the first spot (above, left of, then below the end
+  // point) whose box the line does not cross.
+  const lineYAt=px=>{
+    if(points.length===1||px<=left)return y(points[0].value);
+    const at=Math.min(points.length-1.000001,(px-left)/spacing),i=Math.floor(at);
+    return y(points[i].value)+(y(points[i+1].value)-y(points[i].value))*(at-i);
+  };
+  const endText=`${avgLabelShort(endRank.tier)}, ${endRank.rr} RR`,endTextWidth=endText.length*6.6;
+  const endY=y(end.value);
+  const endLabel=[
+    {x:x(last),y:endY-12},{x:x(last)-10,y:endY+4},{x:x(last),y:endY+20},
+  ].map(spot=>({...spot,y:Math.max(top+2,Math.min(bottom-4,spot.y))})).find(spot=>{
+    const x0=Math.max(left,spot.x-endTextWidth),boxTop=spot.y-13,boxBottom=spot.y+4;
+    for(let px=x0;px<=spot.x;px+=2){const ly=lineYAt(px);if(ly>=boxTop&&ly<=boxBottom)return false;}
+    return true;
+  })??{x:x(last),y:endY-12};
+  // The range's peak gets its own label when it is clearly above the end and
+  // far enough left of the end label not to collide with it.
+  const peakIndex=values.lastIndexOf(high);
+  const peak=peakIndex!==last&&high-end.value>=20&&x(last)-x(peakIndex)>(compact?130:160)
+    ?{i:peakIndex,rank:rrPositionFromElo(high,points[peakIndex].match.myPostTierId)}:null;
+  // One dot per match while they stay apart; dense ranges show the line alone.
+  const showDots=spacing>=8;
   const tip=active!=null?(()=>{
     const {match,value}=points[active],rank=rrPositionFromElo(value,match.myPostTierId);
     const duo=duoInfos[active],run=duoRunAt[active];
@@ -94,7 +140,7 @@ export function RRTrendChart({matches,range,PUUID,PLAYER,TAG}){
   const pointerMove=event=>{
     const bounds=event.currentTarget.getBoundingClientRect();
     const plotX=(event.clientX-bounds.left)*width/bounds.width;
-    if(plotX<left||plotX>width-right){setActive(null);return;}
+    if(plotX<left-spacing/2||plotX>width-right+spacing/2){setActive(null);return;}
     setActive(points.length===1?0:Math.max(0,Math.min(points.length-1,Math.round((plotX-left)/spacing))));
   };
   return (
@@ -102,9 +148,19 @@ export function RRTrendChart({matches,range,PUUID,PLAYER,TAG}){
       <svg className="chart-svg rr-trend-svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}
         aria-label={`Rank and RR trend across ${points.length} matches, net ${rrSigned(running,0)} RR${duoCount?`; ${duoCount} duo games net ${rrSigned(duoNet,0)} RR`:''}`}
         onPointerMove={pointerMove} onPointerDown={pointerMove} onPointerLeave={()=>setActive(null)} style={{touchAction:'pan-y'}}>
+        <defs>
+          <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="var(--series-1)" stopOpacity=".22"/>
+            <stop offset="1" stopColor="var(--series-1)" stopOpacity="0"/>
+          </linearGradient>
+        </defs>
+        {/* Every other rank band carries a faint wash so each rank reads as a range. */}
+        {bands.map(({start,end},index)=>(bands.length-1-index)%2===1&&(
+          <rect key={`wash-${start}`} className="rank-band" x={left} y={y(end)} width={plotWidth} height={y(start)-y(end)} aria-hidden="true"/>
+        ))}
         {bands.map(({start,end,tier})=>{
           const bandTop=y(end),bandHeight=y(start)-bandTop;
-          if(bandHeight<14)return null;
+          if(bandHeight<15)return null;
           const mid=bandTop+bandHeight/2;
           return (
             <g key={start} aria-hidden="true">
@@ -113,7 +169,14 @@ export function RRTrendChart({matches,range,PUUID,PLAYER,TAG}){
             </g>
           );
         })}
-        {rankLines.map(value=><line key={value} className="grid" x1={left} y1={y(value)} x2={width-right} y2={y(value)}/>)}
+        {rrTicks.map(value=>(
+          <g key={`rr-${value}`} aria-hidden="true">
+            <line className="grid minor" x1={left} y1={y(value)} x2={width-right} y2={y(value)}/>
+            <text x={width-right+6} y={y(value)+4} className="rr-tick">{value-2100}</text>
+          </g>
+        ))}
+        {rrTicks.length>0&&<text x={width-right+6} y={top-9} className="rr-tick unit" aria-hidden="true">RR</text>}
+        {rankLines.map(value=><line key={value} className="grid rank-line" x1={left} y1={y(value)} x2={width-right} y2={y(value)}/>)}
         <line className="baseline" x1={left} y1={bottom} x2={width-right} y2={bottom}/>
         {dateTicks.map(({i,label,anchor})=><text key={i} x={x(i)} y={bottom+17} textAnchor={anchor} aria-hidden="true">{label}</text>)}
         {duoRuns.map(run=>{
@@ -122,15 +185,21 @@ export function RRTrendChart({matches,range,PUUID,PLAYER,TAG}){
           if(run.count<3||bandWidth<35)return null;
           return <rect key={run.start} className="duo-band" x={start} y={top} width={bandWidth} height={bottom-top} aria-hidden="true"/>;
         })}
-        {points.length>1&&<path className="area" d={`${line} L${x(points.length-1).toFixed(1)},${bottom} L${x(0).toFixed(1)},${bottom} Z`}/>}
+        {points.length>1&&<path d={`${line} L${x(points.length-1).toFixed(1)},${bottom} L${x(0).toFixed(1)},${bottom} Z`} fill={`url(#${fillId})`} aria-hidden="true"/>}
         {points.length>1&&<path className="line" d={line}/>}
-        {showDuos&&points.map(({match,value},i)=>(
-          <circle key={i} className={`result-point ${match.won===true?'win':match.won===false?'loss':'draw'}`} cx={x(i)} cy={y(value)} r={Math.max(3,Math.min(4,spacing/3))} aria-hidden="true"/>
+        {showDots&&points.map(({match,value},i)=>(
+          <circle key={i} className={`result-point ${resultClass(match)}`} cx={x(i)} cy={y(value)} r={Math.max(3,Math.min(4,spacing/3))} aria-hidden="true"/>
         ))}
+        {peak&&!tip&&(
+          <g aria-hidden="true">
+            <circle className="peak-point" cx={x(peak.i)} cy={y(high)} r={3.5}/>
+            <text x={x(peak.i)} y={Math.max(top+2,y(high)-10)} textAnchor="middle" className="peak-label">Peak {avgLabelShort(peak.rank.tier)}, {peak.rank.rr} RR</text>
+          </g>
+        )}
         {!tip&&(
           <g aria-hidden="true">
             <circle className="end-point" cx={x(last)} cy={y(end.value)} r={4.5}/>
-            <text x={x(last)} y={endLabelY} textAnchor="end" className="ink-strong">{avgLabelShort(endRank.tier)}, {endRank.rr} RR</text>
+            <text x={points.length===1?x(last):endLabel.x} y={endLabel.y} textAnchor={points.length===1?'middle':'end'} className="ink-strong">{endText}</text>
           </g>
         )}
         {duoRuns.map(run=>{
@@ -149,7 +218,7 @@ export function RRTrendChart({matches,range,PUUID,PLAYER,TAG}){
         {tip&&(
           <g aria-hidden="true">
             <line className="hover-line" x1={tip.xx} y1={top} x2={tip.xx} y2={bottom}/>
-            <circle className="cursor-point" cx={tip.xx} cy={tip.yy} r={5}/>
+            <circle className={`cursor-point ${resultClass(tip.match)}`} cx={tip.xx} cy={tip.yy} r={5}/>
           </g>
         )}
         {points.map(({match,value},i)=>{
@@ -165,8 +234,8 @@ export function RRTrendChart({matches,range,PUUID,PLAYER,TAG}){
       </svg>
       {tip&&(
         <ChartTooltip x={tip.xx} y={Math.max(0,tip.yy-40)} width={width}>
-          <div className="tt-value">{rrSigned(tip.match.myRR,0)} RR</div>
-          <div className="tt-row"><span className="tt-key" style={{background:tip.match.won===true?'var(--chart-win)':tip.match.won===false?'var(--chart-loss)':'var(--chart-draw)'}}/>
+          <div className={cn('tt-value',toneClass(tip.match.myRR,0))}>{rrSigned(tip.match.myRR,0)} RR</div>
+          <div className="tt-row"><span className="tt-key" style={{background:`var(--chart-${resultClass(tip.match)})`}}/>
             {tip.match.won===true?'Win':tip.match.won===false?'Loss':'Draw'}{matchLabel(tip.match)?` on ${matchLabel(tip.match)}`:''}</div>
           <div className="tt-row"><RankIcon tier={tip.rank.tier} size={14}/>{avgLabel(tip.rank.tier)}, {tip.rank.rr} RR after</div>
           {tip.duo&&<div className="tt-muted">{tip.duo.label}{tip.run?`, ${rrSigned(tip.run.net,0)} RR across ${tip.run.count} games`:''}</div>}
@@ -199,7 +268,9 @@ function RRBonusNote({matches}){
   const reported=rrReportedStats(matches);
   return (
     <p className="-mt-3 text-xs text-muted-foreground" aria-live="polite">
-      {reported.covered
+      {reported.covered&&!reported.bonusMatches
+        ?<>No performance bonus in this range. Bonus data for {reported.covered} of {reported.total} eligible games.</>
+        :reported.covered
         ?<>Performance bonus <strong className="font-medium text-foreground">{rrSigned(reported.bonusTotal,0)} RR</strong> across <strong className="font-medium text-foreground">{reported.bonusMatches}</strong> games. Bonus data for {reported.covered} of {reported.total} eligible games.</>
         :'Performance bonus data unavailable for this range.'}
     </p>
