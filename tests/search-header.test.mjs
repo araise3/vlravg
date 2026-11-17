@@ -49,3 +49,16 @@ test('the pro player list shrinks to the space beside the search instead of runn
   assert.match(source,/<Command shouldFilter=\{false\} label="Pro player library" className="min-h-0 flex-1/);
   assert.match(source,/<CommandList className="max-h-\[min\(56vh,520px\)\] min-h-0 flex-1/);
 });
+
+test('focus border and glow animate together, so a click shows one outline, not two in a row',async()=>{
+  const {readdirSync,readFileSync}=await import('node:fs');
+  const dir=new URL('../src/components/ui/',import.meta.url);
+  for(const file of readdirSync(dir)){
+    const source=readFileSync(new URL(file,dir),'utf8');
+    // Controls whose border changes on focus must transition border-color with the ring.
+    if(!/focus-visible:border-ring|:focus-visible\]:border-ring/.test(source))continue;
+    assert.doesNotMatch(source,/transition-\[color,box-shadow\]/,`${file} snaps its border before the ring fades in`);
+  }
+  const group=readFileSync(new URL('input-group.jsx',dir),'utf8');
+  assert.match(group,/transition-\[color,border-color,box-shadow\]/);
+});
