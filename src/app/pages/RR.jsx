@@ -8,7 +8,7 @@ import {RANK_ICONS} from '@/engine/rank-icons.mjs';
 import {useElementWidth,useEngine,useIsMobile} from '@/app/hooks.js';
 import {ChartFrame,ChartTooltip,EmptyState,PageHeading,PlacementToggle,RankIcon,SortableTable,StatStrip,toneClass} from '@/app/shared.jsx';
 import {cn} from '@/lib/utils';
-import {Card,CardContent,CardDescription,CardHeader,CardTitle} from '@/components/ui/card';
+import {Card,CardContent,CardHeader,CardTitle} from '@/components/ui/card';
 import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs';
 
 const toneOf=tone=>tone==='rank-positive'?'text-positive':tone==='rank-negative'?'text-negative':'';
@@ -574,7 +574,6 @@ export function RRPage(){
               <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
                 <div className="space-y-1.5">
                   <CardTitle><h2 id="rr-trend-title">RR trend</h2></CardTitle>
-                  <CardDescription>Your total RR after each match{range==='all'?' this act':`, last ${range} matches`}.</CardDescription>
                 </div>
                   <Tabs value={range} onValueChange={setRRTrendRange}>
                     <TabsList aria-label="RR trend match range">
@@ -598,7 +597,6 @@ export function RRPage(){
             <Card>
               <CardHeader>
                 <CardTitle><h2 id="rr-score-title">RR by result</h2></CardTitle>
-                <CardDescription>Average RR lost per loss and gained per win for each exact scoreline, closest first; brackets count the games. Regulation and overtime stay separate. Excludes placements, unrated ranks and full 5-stacks.</CardDescription>
               </CardHeader>
               <CardContent><ChartFrame><RRResultChart matches={matches}/></ChartFrame></CardContent>
             </Card>

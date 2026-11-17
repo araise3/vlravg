@@ -10,7 +10,7 @@ import {useMapArt} from '@/app/pages/Matches.jsx';
 import {cn} from '@/lib/utils';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
-import {Card,CardAction,CardContent,CardDescription,CardFooter,CardHeader,CardTitle} from '@/components/ui/card';
+import {Card,CardAction,CardContent,CardDescription,CardHeader,CardTitle} from '@/components/ui/card';
 import {Progress} from '@/components/ui/progress';
 import {Skeleton} from '@/components/ui/skeleton';
 import {Table,TableBody,TableCell,TableHead,TableHeader,TableRow} from '@/components/ui/table';
@@ -128,7 +128,6 @@ export function ActStatsCard({s}){
     <Card className="gap-4" aria-labelledby="overview-stats-title">
       <CardHeader>
         <CardTitle><h2 id="overview-stats-title">Act stats</h2></CardTitle>
-        <CardDescription>All {s.allMatches.length} {s.allMatches.length===1?'match':'matches'} this act</CardDescription>
       </CardHeader>
       <CardContent>
         <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-4" aria-label="Basic statistics for all matches in this act">
@@ -152,7 +151,6 @@ export function RRTrendCard({s}){
     <Card aria-labelledby="overview-rr-title">
       <CardHeader>
         <CardTitle><h2 id="overview-rr-title">RR trend</h2></CardTitle>
-        <CardDescription>Total RR after each match{range==='all'?' this act':`, last ${range}`}</CardDescription>
         <CardAction>
           <Tabs value={range} onValueChange={setRRTrendRange}>
             <TabsList aria-label="Overview RR trend range">
@@ -172,12 +170,11 @@ export function RRTrendCard({s}){
 
 const RESULT={win:['Win','var(--chart-win)'],loss:['Loss','var(--chart-loss)'],draw:['Draw','var(--chart-draw)']};
 
-export function RecentMatchesCard({matches,total,maps,className}){
+export function RecentMatchesCard({matches,maps,className}){
   return (
     <Card className={cn('gap-4',className)} aria-labelledby="overview-matches-title">
       <CardHeader>
         <CardTitle><h2 id="overview-matches-title">Recent matches</h2></CardTitle>
-        <CardDescription>Latest {matches.length} of {total}</CardDescription>
         <CardAction><ViewLink page="matches">All matches</ViewLink></CardAction>
       </CardHeader>
       <CardContent className="px-0">
@@ -238,7 +235,6 @@ export function TeammatesCard({teammates}){
     <Card className="gap-4" aria-labelledby="overview-duos-title">
       <CardHeader>
         <CardTitle><h2 id="overview-duos-title">Top teammates</h2></CardTitle>
-        <CardDescription>Most matches together this act</CardDescription>
         <CardAction><ViewLink page="duos">Duos</ViewLink></CardAction>
       </CardHeader>
       <CardContent>
@@ -355,7 +351,7 @@ export function OverviewPage(){
       <ClutchCard matches={s.allMatches}/>
       <TeammatesCard teammates={s.allTeammates}/>
       <RRTrendCard s={s}/>
-      <RecentMatchesCard matches={latest} total={s.allMatches.length} maps={maps}/>
+      <RecentMatchesCard matches={latest} maps={maps}/>
     </div>
   );
 }
