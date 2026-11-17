@@ -3,6 +3,9 @@
 // the same atomic quota gate as live visitors):
 //   live     sim_live_rr        recent archived matches' players' live RR window
 //                                (/api/mmr-history-by-puuid), queued by enqueueLive at each run's start
+//   livehist sim_live_players   collected matches' players' act history once all 10 ranks are in
+//                                (enqueueLiveFollowups); saving one queues liveprev and KAST rows
+//   liveprev sim_live_prev      their last 20 games before the act, when a lobby had < 12 act games
 //   history  sim_pilot_players  each player's current-act competitive games (/api/stored-matches)
 //   rr       sim_pilot_rr       each player's RR history: tier and RR after every game since August
 //                                (/api/stored-mmr-history), for their rank as it stood before a match
@@ -57,7 +60,7 @@ export async function enqueueLive({d1,now=Date.now,log=console.log}={}){
   const st={scanned:0,matches:0,players:0};
   try{
     await d1(`CREATE TABLE IF NOT EXISTS sim_live_rr (id TEXT PRIMARY KEY, region TEXT NOT NULL, puuid TEXT NOT NULL, match_id TEXT NOT NULL, started_at TEXT, status INTEGER, n INTEGER, data TEXT, attempts INTEGER, fetched_at TEXT)`);
-    await d1(`CREATE TABLE IF NOT EXISTS sim_live_matches (match_id TEXT PRIMARY KEY, region TEXT, started_at TEXT, season TEXT, players INTEGER, queued_at TEXT)`);
+    await d1(`CREATE TABLE IF NOT EXISTS sim_live_matches (match_id TEXT PRIMARY KEY, region TEXT, started_at TEXT, season TEXT, players INTEGER, queued_at TEXT, followed INTEGER)`);
     await d1(`CREATE TABLE IF NOT EXISTS sim_live_state (id INTEGER PRIMARY KEY CHECK (id=1), cursor INTEGER NOT NULL)`);
     const cutoff=new Date(now()-LIVE_WINDOW_H*3600000).toISOString();
     let cursor=(await d1(`SELECT cursor FROM sim_live_state WHERE id=1`))[0]?.cursor;
@@ -88,6 +91,32 @@ export async function enqueueLive({d1,now=Date.now,log=console.log}={}){
   return st;
 }
 
+// Follow-ups for collected matches whose 10 RR windows are all saved (rank secured; a match with a
+// window closed after 3 tries is dropped, followed=0): each player gets a fresh act history in
+// sim_live_players (act = the match's season). A player already fetched before a newer collected
+// match started is queued again, since games played in between count for that lobby. Saving a
+// history then queues the pre-act tail and the KAST downloads (liveFollowups in run()), so full
+// matches are only downloaded for matches that can pass the gate's rank condition.
+export async function enqueueLiveFollowups({d1,log=console.log}={}){
+  const st={matches:0,dropped:0,players:0};
+  try{
+    await d1(`CREATE TABLE IF NOT EXISTS sim_live_players (puuid TEXT PRIMARY KEY, region TEXT NOT NULL, act TEXT, need_after TEXT, status INTEGER, n INTEGER, data TEXT, attempts INTEGER, fetched_at TEXT)`);
+    await d1(`CREATE TABLE IF NOT EXISTS sim_live_prev (id TEXT PRIMARY KEY, region TEXT NOT NULL, status INTEGER, n INTEGER, data TEXT, attempts INTEGER, fetched_at TEXT)`);
+    // sim_live_matches predates the followed column (CREATE TABLE IF NOT EXISTS won't add it).
+    if(!(await d1(`PRAGMA table_info(sim_live_matches)`)).some(c=>c?.name==='followed'))
+      await d1(`ALTER TABLE sim_live_matches ADD COLUMN followed INTEGER`);
+    const rows=await d1(`SELECT x.match_id AS m,x.season AS s,x.started_at AS t,SUM(r.status=200) AS ok,SUM(r.status IS NULL) AS open FROM sim_live_matches x JOIN sim_live_rr r ON r.match_id=x.match_id WHERE x.players=10 AND x.followed IS NULL GROUP BY x.match_id`);
+    for(const x of rows){
+      if(Number(x.ok)===10){
+        await d1(`INSERT INTO sim_live_players (puuid,region,act,need_after) SELECT puuid,region,?2,?3 FROM sim_live_rr WHERE match_id=?1 ON CONFLICT(puuid) DO UPDATE SET act=excluded.act,need_after=MAX(COALESCE(sim_live_players.need_after,''),excluded.need_after),status=CASE WHEN sim_live_players.fetched_at<excluded.need_after THEN NULL ELSE sim_live_players.status END,attempts=CASE WHEN sim_live_players.fetched_at<excluded.need_after THEN NULL ELSE sim_live_players.attempts END`,[x.m,x.s,x.t]);
+        await d1(`UPDATE sim_live_matches SET followed=1 WHERE match_id=?1`,[x.m]);st.matches++;st.players+=10;
+      }else if(Number(x.open)===0){await d1(`UPDATE sim_live_matches SET followed=0 WHERE match_id=?1`,[x.m]);st.dropped++;}
+    }
+  }catch(error){log(`Live follow-ups stopped early: ${String(error?.message??error).slice(0,200)}`);}
+  log(`Live follow-ups: ${st.matches} matches with all 10 ranks (${st.players} player histories queued), ${st.dropped} dropped.`);
+  return st;
+}
+
 // Tracker-exact KAST (docs/adr-kast.md): computeRoundStats from index.html as pinned by the
 // workflow (SIM_KAST_HTML, commit f2dd31f), plus the older trade rule for earlier matches.
 export function loadKast(html){
@@ -115,7 +144,7 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
   const ACT=env.SIM_ACT||'e11a6';
   const GAP_MS=Math.max(1000,Number(env.SIM_GAP_MS)||1500); // 40/min leaves the live site 20/min
   const deadline=now()+Math.min(345,Math.max(1,Number(env.RUNTIME_MINUTES)||330))*60000;
-  const st={requests:0,rateLimited:0,saved:0,retryLater:0,closed:0,d1Retries:0,byQueue:{}};
+  const st={requests:0,rateLimited:0,saved:0,retryLater:0,closed:0,d1Retries:0,prevQueued:0,kastQueued:0,byQueue:{}};
   const left=()=>deadline-now();
   const pause=ms=>sleep(Math.max(0,Math.min(ms,left())));
   if(!kastOf){const f=env.SIM_KAST_HTML;kastOf=f&&existsSync(f)?loadKast(readFileSync(f,'utf8')):null;}
@@ -167,6 +196,28 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
     }
     return{status:200};
   }
+  // After a collected match's player history is saved: the pre-act tail when any of their collected
+  // matches has fewer than 12 earlier act games, and KAST for every earlier act game that neither
+  // the archive (KAST computed locally) nor the KAST queue already has.
+  async function liveFollowups(puuid,region,act,ms){
+    const games=await q(`SELECT r.match_id AS m,r.started_at AS t FROM sim_live_rr r JOIN sim_live_matches x ON x.match_id=r.match_id WHERE r.puuid=?1 AND x.followed=1 AND x.season=?2`,[puuid,act]);
+    const before=t=>ms.filter(e=>Date.parse(e.t)<Date.parse(t)-60000);
+    if(games.some(g=>before(g.t).length<12)){await q(`INSERT OR IGNORE INTO sim_live_prev (id,region) VALUES (?1,?2)`,[`${puuid}:${act}`,region]);st.prevQueued++;}
+    const need=[...new Set(games.flatMap(g=>before(g.t).map(e=>e.m)))];
+    for(let i=0;i<need.length;i+=45){
+      const ids=need.slice(i,i+45),ph=ids.map((_,k)=>`?${k+1}`).join(',');
+      const have=new Set([...await q(`SELECT DISTINCT match_id AS m FROM match_archive WHERE match_id IN (${ph})`,ids),
+        ...await q(`SELECT match_id AS m FROM sim_pilot_kast WHERE match_id IN (${ph})`,ids)].map(x=>x.m));
+      const add=ids.filter(m=>!have.has(m));
+      if(add.length){await q(`INSERT OR IGNORE INTO sim_pilot_kast (match_id,region) VALUES ${add.map((_,k)=>`(?${2*k+1},?${2*k+2})`).join(',')}`,add.flatMap(m=>[m,region]));st.kastQueued+=add.length;}
+    }
+  }
+  const actHistory=async(region,puuid,act)=>{const ms=[];let past=false;
+    const r=await pages(`stored-matches/${region}/${puuid}`,list=>{for(const m of list){const a=m.meta?.season?.short??null;if(a===act)ms.push(compact(m));else if(a)past=true;}},()=>past);
+    return r.status?{...r,data:ms}:r;};
+  const preAct=async(region,puuid,act)=>{const ms=[];
+    const r=await pages(`stored-matches/${region}/${puuid}`,list=>{for(const m of list){const a=m.meta?.season?.short??null;if(a&&a!==act&&ms.length<PREV_GAMES)ms.push(compact(m));}},()=>ms.length>=PREV_GAMES);
+    return r.status?{...r,data:ms}:r;};
   const queues=[
     // Live RR (time-critical, so first): a recent match's players' last ~20 ranked games while the
     // match is still in that window. The match's own entry carries the rank before it
@@ -182,22 +233,23 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
       if(!hist.some(h=>h?.match_id===matchId))return{retry:true}; // not listed yet; a later run tries again
       return{status:200,data:hist.filter(h=>Date.parse(h?.date)>=RR_SINCE).map(liveEntry)};
     }},
-    {name:'history',table:'sim_pilot_players',id:'puuid',async fetch(row){
-      const ms=[];let past=false;
-      const r=await pages(`stored-matches/${row.region}/${row.puuid}`,list=>{for(const m of list){const a=m.meta?.season?.short??null;if(a===ACT)ms.push(compact(m));else if(a)past=true;}},()=>past);
-      return r.status?{...r,data:ms}:r;
+    // Collected matches' players (enqueueLiveFollowups): act history as of now, then follow-ups.
+    {name:'livehist',table:'sim_live_players',id:'puuid',cols:'act',async fetch(row){
+      const act=row.act||ACT,h=await actHistory(row.region,row.puuid,act);
+      if(h.status===200)await liveFollowups(row.puuid,row.region,act,h.data);
+      return h;
     }},
+    {name:'liveprev',table:'sim_live_prev',id:'id',async fetch(row){
+      const [puuid,act]=row.id.split(':');return preAct(row.region,puuid,act);
+    }},
+    {name:'history',table:'sim_pilot_players',id:'puuid',fetch:row=>actHistory(row.region,row.puuid,ACT)},
     {name:'rr',table:'sim_pilot_rr',id:'puuid',async fetch(row){
       const es=[];let old=false;
       const r=await pages(`stored-mmr-history/${row.region}/${row.puuid}`,list=>{for(const e of list){const t=Date.parse(e.date);if(!Number.isFinite(t))continue;if(t<RR_SINCE){old=true;continue;}
         es.push({m:e.match_id,t:e.date,s:e.season?.short??null,tier:e.tier?.id??null,rr:e.ranking_in_tier??null,ch:e.last_mmr_change??null});}},()=>old);
       return r.status?{...r,data:es}:r;
     }},
-    {name:'prev',table:'sim_pilot_prev',id:'puuid',async fetch(row){
-      const ms=[];
-      const r=await pages(`stored-matches/${row.region}/${row.puuid}`,list=>{for(const m of list){const a=m.meta?.season?.short??null;if(a&&a!==ACT&&ms.length<PREV_GAMES)ms.push(compact(m));}},()=>ms.length>=PREV_GAMES);
-      return r.status?{...r,data:ms}:r;
-    }},
+    {name:'prev',table:'sim_pilot_prev',id:'puuid',fetch:row=>preAct(row.region,row.puuid,ACT)},
     {name:'kast',table:'sim_pilot_kast',id:'match_id',async fetch(row){
       const r=await get(`match-detail/${row.region}/${row.match_id}`,b=>b?.data&&typeof b.data==='object');
       if(r.status===-1)return{budget:true};
@@ -215,7 +267,7 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
       if(queue.length)return queue.shift();
       if(qi>=queues.length||left()<=0||fatal)return null;
       const Q=queues[qi];
-      loading??=q(`SELECT ${Q.id} AS id,region,COALESCE(attempts,0) AS attempts FROM ${Q.table} WHERE status IS NULL ORDER BY COALESCE(attempts,0),${Q.id} LIMIT 60`)
+      loading??=q(`SELECT ${Q.id} AS id,region,COALESCE(attempts,0) AS attempts${Q.cols?`,${Q.cols}`:''} FROM ${Q.table} WHERE status IS NULL ORDER BY COALESCE(attempts,0),${Q.id} LIMIT 60`)
         .then(rows=>{rows=rows.filter(r=>!claimed.has(`${Q.name}:${r.id}`));rows.forEach(r=>claimed.add(`${Q.name}:${r.id}`));
           if(rows.length)queue.push(...rows.map(r=>({Q,row:{...r,[Q.id]:r.id}})));else qi++;})
         .catch(error=>{fatal=error;})
@@ -259,7 +311,7 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
   await Promise.all(Array.from({length:WORKERS},worker));
   let remaining=null;
   try{remaining=0;for(const Q of queues)remaining+=(await q(`SELECT SUM(status IS NULL) AS left FROM ${Q.table}`))[0]?.left??0;}catch{remaining=null;}
-  log(`Run done: saved ${st.saved} (${Object.entries(st.byQueue).map(([k,v])=>`${k} ${v}`).join(', ')||'none'}), requests ${st.requests}, 429s ${st.rateLimited}, retry later ${st.retryLater}, closed after ${MAX_ATTEMPTS} tries ${st.closed}, D1 retries ${st.d1Retries}; remaining ${remaining??'unknown'}.${fatal?' Stopped early: D1 unreachable.':''}${kastOf?'':' KAST rules not loaded.'}`);
+  log(`Run done: saved ${st.saved} (${Object.entries(st.byQueue).map(([k,v])=>`${k} ${v}`).join(', ')||'none'}), requests ${st.requests}, 429s ${st.rateLimited}, retry later ${st.retryLater}, closed after ${MAX_ATTEMPTS} tries ${st.closed}, D1 retries ${st.d1Retries}, follow-ups queued: prev ${st.prevQueued}, KAST ${st.kastQueued}; remaining ${remaining??'unknown'}.${fatal?' Stopped early: D1 unreachable.':''}${kastOf?'':' KAST rules not loaded.'}`);
   if(remaining===0)log('All pilot queues are done.');
   // Retries count as progress: each one raises a row's attempts, so chaining always ends.
   return{...st,remaining,progressed:st.saved+st.closed+st.retryLater,fatal:!!fatal};
@@ -267,7 +319,10 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
 
 if(import.meta.url===pathToFileURL(process.argv[1]).href){
   const env=process.env;
-  if(!env.SIM_QUEUES||env.SIM_QUEUES.split(',').includes('live'))await enqueueLive({d1:(sql,params)=>d1Query(env,sql,params)});
+  if(!env.SIM_QUEUES||env.SIM_QUEUES.split(',').includes('live')){
+    const d1=(sql,params)=>d1Query(env,sql,params);
+    await enqueueLive({d1});await enqueueLiveFollowups({d1});
+  }
   const r=await run().catch(error=>{console.log(`Run failed: ${error?.message??error}`);return{remaining:null,progressed:0,fatal:true};});
   if(process.env.GITHUB_OUTPUT)appendFileSync(process.env.GITHUB_OUTPUT,`remaining=${r.remaining??''}\nprogressed=${r.progressed}\n`);
 }

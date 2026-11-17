@@ -77,5 +77,14 @@ to weeks between them, i.e. games missing. A window that doesn't list the match 
 a later run (3 tries). About 10 requests a match; the archive gets 25–45 matches a day lately.
 The route also merges each window into `rr_history`, as for any visitor.
 
+Once all 10 windows of a collected match are saved, the next run's `enqueueLiveFollowups` queues
+its players' act histories (`sim_live_players`, act = the match's season; a player fetched before
+a newer collected match started is queued again). Saving a history queues the last 20 games before
+the act (`sim_live_prev`) when one of their collected lobbies had fewer than 12 act games, and a
+full-match KAST download (the existing `sim_pilot_kast` queue) for every earlier act game that is
+neither archived nor already queued. A match whose window was closed after 3 tries is dropped
+(`followed = 0`) and costs no further downloads. Late in an act that is several hundred KAST
+downloads per match, so the queue stays the bottleneck.
+
 The simulation and training run locally in ascend-companion-re. Once the pilot is evaluated,
 delete the workflow and, if not needed, the `sim_pilot_*` tables.
