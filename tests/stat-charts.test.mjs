@@ -12,7 +12,7 @@ const margins=html.slice(html.indexOf('function scoreMarginDistribution('),html.
 const distribution=runInNewContext(margins+'\nscoreMarginDistribution');
 const stats=html.slice(html.indexOf('function rrBucketStats('),html.indexOf('// ── Column renderer'));
 const table=html.slice(html.indexOf('function buildRRScoreRows('),html.indexOf('/* ── CLUTCHES'));
-const winRateHelpers=html.slice(html.indexOf('function winRateLabel('),html.indexOf('\n// Which side of each shared match'));
+const winRateHelpers=html.slice(html.indexOf('function winRateLabel('),html.indexOf('\n/* ── PLAYTIME'));
 const {winRateLabel,winRateTone}=runInNewContext(winRateHelpers+'\n({winRateLabel,winRateTone})');
 const scoreRows=runInNewContext(stats+'\n'+table+'\nbuildRRScoreRows');
 test('score margins use actual scores without requiring ranks or RR, with draws and exact unusual margins',()=>{
@@ -215,27 +215,78 @@ test('party aggregation attaches your stats only to your same-team party teammat
   assert.equal(rows[0].myPerformanceSum,250);assert.equal(rows[0].myPerformanceCount,1);
 });
 
-test('duo table switches its K/D, ACS and PS columns between the teammate and you',async()=>{
-  const allTeammates=[{key:'friend',name:'Friend',tag:'EU',games:3,wins:2,decided:3,kills:30,deaths:20,rankSum:0,rankCount:0,
-    acsSum:600,acsCount:3,performanceSum:0,performanceCount:0,rrTotal:12,rrCount:3,
-    myKills:24,myDeaths:30,myAcsSum:540,myAcsCount:3,myPerformanceSum:750,myPerformanceCount:3}];
-  const cells=async view=>{
-    const markup=await renderHtml('/src/app/pages/Duos.jsx','TeammatesTable',{s:{duoStatsView:view,allTeammates}});
-    const body=markup.slice(markup.indexOf('<tbody'));
-    return [...body.matchAll(/<td([^>]*)>(.*?)<\/td>/g)].map(([,attrs,text])=>({attrs,text}));
-  };
-  // Default view: the teammate's figures, one value per cell, yours in the tooltip.
-  let row=await cells('teammate');
-  assert.equal(row[2].text,'1.50');
-  assert.match(row[2].attrs,/text-positive/);
-  assert.match(row[2].attrs,/title="Teammate: 1\.50 \(30 kills \/ 20 deaths\), you: 0\.80 \(24 kills \/ 30 deaths\)/);
-  assert.equal(row[3].text,'200');assert.match(row[3].attrs,/title="Teammate: 200, you: 180/);
-  assert.equal(row[4].text,'—');assert.match(row[4].attrs,/title="Teammate: —, you: 250\. /);
-  // You view: your figures from the same matches drive the cells.
-  row=await cells('you');
-  assert.equal(row[2].text,'0.80');assert.match(row[2].attrs,/text-negative/);
-  assert.equal(row[3].text,'180');
-  assert.equal(row[4].text,'250');
-  // Win rate and Total RR are shared results and do not change.
-  assert.equal(row[6].text,'+12');
+const duoMate=(key,extra={})=>({key,name:key,tag:'EU',games:3,wins:2,decided:3,kills:30,deaths:20,rankSum:0,rankCount:0,
+  acsSum:600,acsCount:3,performanceSum:0,performanceCount:0,rrTotal:12,rrCount:3,
+  myKills:24,myDeaths:30,myAcsSum:540,myAcsCount:3,myPerformanceSum:750,myPerformanceCount:3,...extra});
+const flat=html=>html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+
+test('duo chemistry: your act baseline is computed like the per-teammate figures',async()=>{
+  const {duoBaseline,duoRows}=await load('/src/app/pages/Duos.jsx');
+  const matches=[{myStats:{kills:20,deaths:10,acs:250,performanceScore:300}},{myStats:{kills:10,deaths:20,acs:150}},{}];
+  assert.deepEqual(duoBaseline(matches),{kd:1,acs:200,ps:300});
+  const [row]=duoRows([duoMate('Friend')],{acs:200});
+  assert.equal(row.myAcs,180);assert.equal(row.myKd,0.8);
+});
+
+test('duo chemistry: the matchup mirrors your figures against the teammate\'s on one scale, with your act-average deltas',async()=>{
+  const {duoRows}=await load('/src/app/pages/Duos.jsx');
+  const base={kd:1,acs:200,ps:300};
+  const [t]=duoRows([duoMate('Friend')],base);
+  const html=await renderHtml('/src/app/pages/Duos.jsx','DuoMatchup',{t,base,scales:{kd:2,acs:250,ps:400}});
+  const text=flat(html);
+  assert.match(text,/Friend #EU 3 matches together Avg lobby — Win rate 66\.7% 2W 1L Total RR \+12 /);
+  // Rows read: your value, your delta vs your act average, stat, their value.
+  assert.match(text,/0\.80 −0\.20 vs avg K\/D 1\.50 180 −20 vs avg ACS 200 250 −50 vs avg PS — /);
+  const rows=[...html.matchAll(/data-slot="tape-row">(.*?)(?=<div class="grid[^"]*" role="row" data-slot="tape-row"|<\/div><p)/g)].map(m=>m[1]);
+  assert.equal(rows.length,3);
+  // Bars share the passed scale: your K/D 0.80 of 2 is 40%, theirs 1.50 is 75%; the trailing side is faded.
+  assert.match(rows[0],/opacity-45" style="width:40%/);
+  assert.match(rows[0],/bg-foreground\/70" style="width:75%/);
+  assert.match(rows[0],/font-semibold text-foreground" role="cell">1\.50/);
+  const source=readFileSync(new URL('../src/app/pages/Duos.jsx',import.meta.url),'utf8');
+  assert.doesNotMatch(source,/duoStatsView|setDuoStatsView|TabsTrigger/);
+});
+
+test('duo chemistry: partners by matches together with your K/D, the first selected, all in a scroll box on desktop, no sort control',async()=>{
+  const {DUO_PREVIEW}=await load('/src/app/pages/Duos.jsx');
+  assert.equal(DUO_PREVIEW,8);
+  const teammates=Array.from({length:10},(_,i)=>duoMate('m'+i,{games:20-i,rrCount:i===0?0:3}));
+  const matches=[{myStats:{kills:1,deaths:1,acs:170,performanceScore:250}}];
+  const html=await renderHtml('/src/app/pages/Duos.jsx','DuoChemistry',{teammates,matches});
+  // Desktop lists every partner in a scroll box sized to the matchup; no "Show all".
+  assert.equal((html.match(/aria-pressed=/g)||[]).length,10);
+  assert.match(html,/sm:\[contain:size\][^"]*" data-slot="duo-partner-list"/);
+  // Header and rows share one scroll box and one column template, so they stay aligned.
+  assert.match(html,/sm:overflow-y-auto[^"]*" data-slot="duo-partner-scroll"><div class="grid grid-cols-\[minmax\(0,1fr\)_3\.5rem_3rem_2\.75rem\] gap-x-2 px-3[^"]*sm:sticky/);
+  assert.match(html,/<button type="button" aria-pressed="true"[^>]*class="grid grid-cols-\[minmax\(0,1fr\)_3\.5rem_3rem_2\.75rem\] gap-x-2 px-3/);
+  assert.match(html,/aria-pressed="true"[^>]*aria-label="m0#EU: 20 matches, 66\.7% win rate, no RR, your K\/D 0\.80"/);
+  assert.equal((html.match(/data-slot="duo-matchup"/g)||[]).length,1);
+  assert.match(flat(html),/Teammate Win rate RR K\/D m0 #EU 20 matches 66\.7% — 0\.80 /);
+  assert.doesNotMatch(html,/Show all/);
+  // No sort control: partners are listed by matches together.
+  assert.doesNotMatch(html,/<select|duo-sort/);
+});
+
+test('variable-width lobby cells are left-aligned flex rows so the rank sits level with the other cells',async()=>{
+  const html=await renderHtml('/src/app/shared.jsx','LobbyValue',{sum:22,count:1});
+  assert.match(html,/^<span class="flex items-center gap-2 whitespace-nowrap"/);
+  for(const file of ['Duos.jsx','Servers.jsx']){
+    const source=readFileSync(new URL('../src/app/pages/'+file,import.meta.url),'utf8');
+    assert.match(source,/label:'Avg Lobby',wide:true,align:'left'/,file);
+  }
+  assert.match(readFileSync(new URL('../src/index.css',import.meta.url),'utf8'),/\.rank-table th\.col-left, \.rank-table td\.col-left \{ text-align: left; \}/);
+});
+
+test('long tables page ten rows at a time after sorting every row',async()=>{
+  const columns=[{label:'Player'},{label:'Encounters'}];
+  const rows=Array.from({length:23},(_,i)=>({key:'p'+i,cells:['P'+i,i]}));
+  const values=rows.map((row,i)=>['P'+i,i]);
+  const html=await renderHtml('/src/app/shared.jsx','SortableTable',{id:'paged-test',caption:'test',columns,rows,values,pageSize:10,noun:'players'});
+  assert.equal((html.match(/<tr/g)||[]).length,11);
+  const text=html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+  assert.match(text,/1–10 of 23 players 1 \/ 3/);
+  assert.match(html,/disabled="" aria-label="Previous page"/);
+  assert.doesNotMatch(html,/disabled="" aria-label="Next page"/);
+  const short=await renderHtml('/src/app/shared.jsx','SortableTable',{id:'short-test',caption:'test',columns,rows:rows.slice(0,5),values:values.slice(0,5),pageSize:10});
+  assert.doesNotMatch(short,/table-pager/);
 });

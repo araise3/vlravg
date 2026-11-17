@@ -3369,13 +3369,6 @@ function decidedWinRate(wins,decided){return decided>0?wins/decided*100:null;}
 function winRateLabel(rate){return rate==null?'—':rate.toFixed(1)+'%';}
 function winRateTone(rate){const shown=rate==null?null:Math.round(rate*10)/10;return shown==null||shown===50?'':shown>50?'rank-positive':'rank-negative';}
 
-// Which side of each shared match the K/D, ACS and PS columns show.
-let duoStatsView='teammate';
-function setDuoStatsView(value){
-  duoStatsView=value==='you'?'you':'teammate';
-  emit();
-}
-
 /* ── PLAYTIME ────────────────────────────────────────────── */
 // Total playtime. Always counts every match, including post-reset placement
 // games — time spent playing placements is real playtime either way.
@@ -3958,7 +3951,7 @@ function getSnapshot(){
     overviewStats,serverData,serverSummary,serverPartySize,serverFilteredMatchCount,
     lobbyRankData,partySizeData,lobbyRankPartySize,lobbyRankFilteredMatchCount,
     partySizeAvailability:{...partySizeAvailability},
-    allTeammates,allEncounters,duoStatsView,
+    allTeammates,allEncounters,
     rrTrendRange,rrMovementZoomTier,
     nameHistoryRows,nameHistoryState,nameHistoryBackfill,nameBackfillBusy,nameBackfillError,
     nameBackfillStopRequested,nameBackfillStopped,nameBackfillPages,
@@ -3973,7 +3966,7 @@ export {
   // actions
   setSearchText,submitSearch,runAnalysis,requestSeasonDropdown,selectSeasonOption,
   analyzeProAccount,proSearchResults,navigateToPage,pageHref,
-  toggleIncludeReset,setServerPartySize,setLobbyRankPartySize,setDuoStatsView,
+  toggleIncludeReset,setServerPartySize,setLobbyRankPartySize,
   setRRTrendRange,setRRMovementZoomTier,loadMoreMatches,loadOlderNames,loadNameHistory,
   syncReplayImport,uploadReplay,toggleReplaySteps,replayRowView,replayMatchRows,
   // presentation helpers

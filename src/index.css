@@ -366,6 +366,8 @@
 .rank-table td.text-positive { color: #72e6a0; }
 .rank-table td.text-negative { color: #ff9999; }
 .rank-table td.table-best { background: rgb(96 165 250 / .15); font-weight: 700; }
+.rank-table th.col-left, .rank-table td.col-left { text-align: left; }
+.rank-table th.col-left .table-sort-btn { justify-content: flex-start; }
 .rank-table.text-left th, .rank-table.text-left td { text-align: left; }
 .rank-table.text-left thead th { padding: 10px 18px; }
 @media (max-width: 600px) { .rank-table th, .rank-table td { padding-left: 14px; padding-right: 14px; } }
