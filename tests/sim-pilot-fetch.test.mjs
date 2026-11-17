@@ -16,7 +16,8 @@ function fakeD1(seed,{failFirst=0,down=false,collected={},archive=[]}={}){
     if(down||calls<=failFirst)throw new TypeError('fetch failed',{cause:Object.assign(new Error('read ECONNRESET'),{code:'ECONNRESET'})});
     if(sql.includes('JOIN sim_live_matches'))return collected[params[0]]??[];
     if(sql.includes('FROM match_archive WHERE match_id IN'))return params.filter(m=>archive.includes(m)).map(m=>({m}));
-    if(sql.startsWith('SELECT match_id AS m FROM sim_pilot_kast'))return params.filter(m=>db.sim_pilot_kast.has(m)).map(m=>({m}));
+    if(sql.startsWith('SELECT match_id AS m FROM sim_pilot_kast'))return params.filter(m=>db.sim_pilot_kast.has(m)&&(!sql.includes('status IS NOT NULL')||db.sim_pilot_kast.get(m).status!==null)).map(m=>({m}));
+    if(sql.startsWith('INSERT INTO sim_pilot_kast')){const [id,region,data]=params,row=db.sim_pilot_kast.get(id);if(!row)db.sim_pilot_kast.set(id,{id,region,status:200,n:1,data,attempts:null});else if(row.status===null)Object.assign(row,{status:200,n:1,data});return[];}
     if(sql.startsWith('INSERT OR IGNORE INTO sim_pilot_kast')){for(let i=0;i<params.length;i+=2)db.sim_pilot_kast.has(params[i])||db.sim_pilot_kast.set(params[i],{id:params[i],region:params[i+1],status:null,n:null,data:null,attempts:null});return[];}
     if(sql.startsWith('INSERT OR IGNORE INTO sim_live_prev')){db.sim_live_prev.has(params[0])||db.sim_live_prev.set(params[0],{id:params[0],region:params[1],status:null,n:null,data:null,attempts:null});return[];}
     const table=sql.match(/(?:FROM|UPDATE) (sim_(?:pilot|live)_\w+)/)?.[1],rows=db[table];
@@ -38,7 +39,7 @@ const pageOf=(items,after)=>({status:200,data:items.map(i=>typeof i==='string'?m
 function fakeFetch(script){
   const seen=new Map();
   return async url=>{
-    const u=new URL(url),key=`${u.pathname.replace('/api/','')}${u.searchParams.get('page')?`:${u.searchParams.get('page')}`:''}`;
+    const u=new URL(url),key=`${u.pathname.replace('/api/','')}${u.searchParams.get('page')?`:${u.searchParams.get('page')}`:''}${u.searchParams.has('start')?`@${u.searchParams.get('start')}`:''}`;
     const list=script[key]??[{status:404,body:{error:'not found'}}],i=seen.get(key)??0;seen.set(key,i+1);
     const r=list[Math.min(i,list.length-1)];
     if(r==='reset')throw new TypeError('fetch failed',{cause:Object.assign(new Error('read ECONNRESET'),{code:'ECONNRESET'})});
@@ -249,7 +250,7 @@ test('live follow-ups: a collected match player\u2019s history queues the pre-ac
   assert.equal(db.sim_live_players.get('u1').status,200);
   assert.deepEqual([...db.sim_pilot_kast.keys()].sort(),['k-new','k-queued'],'only the earlier game that is neither archived nor queued');
   assert.ok(db.sim_live_prev.has('u1:e11a6'),'3 earlier act games: the pre-act tail is queued');
-  assert.equal(r.kastQueued,1);assert.equal(r.prevQueued,1);
+  assert.equal(r.kastQueued,2,'a row already queued but not fetched is still wanted');assert.equal(r.prevQueued,1);
 });
 
 test('live follow-ups: only matches with all 10 ranks queue histories; a match with a closed window is dropped',async()=>{
@@ -269,4 +270,36 @@ test('live follow-ups: the followed column is added only when missing',async()=>
   const d1=async sql=>{sqls.push(sql);if(sql.startsWith('PRAGMA'))return[{name:'match_id'},{name:'followed'}];return[];};
   await enqueueLiveFollowups({d1,log:quiet});
   assert.ok(!sqls.some(q=>q.startsWith('ALTER')));
+});
+
+test('live follow-ups: KAST comes from 10-match full pages; games the list misses fall back to the single-match queue',async()=>{
+  const at=(id,t)=>({...match(id),meta:{id,started_at:t,season:{short:'e11a6'}}});
+  const full=(id,t)=>({metadata:{match_id:id,started_at:t},players:[],rounds:[{}],kills:[]});
+  const kastOf=m=>m.metadata?.match_id==='broken'?null:{t:m.metadata.started_at,R:1,old:0,p:[]};
+  const earlier=['g1','g2','g3','gap','broken','queued'].map((id,i)=>at(id,`2026-11-15T${String(18-i).padStart(2,'0')}:00:00Z`));
+  const {d1,db}=fakeD1({sim_live_players:[['u1','eu',{act:'e11a6'}]],sim_pilot_kast:[['queued','eu']]},{collected:{u1:[{m:'live1',t:'2026-11-15T20:00:00Z'}]}});
+  const F='history-by-puuid/eu/pc/u1@';
+  const page0=[full('newer','2026-11-15T21:00:00Z'),full('live1','2026-11-15T20:00:00Z'),full('g1','2026-11-15T18:00:00Z'),full('g2','2026-11-15T17:00:00Z'),full('g3','2026-11-15T16:00:00Z'),
+    full('broken','2026-11-15T14:00:00Z'),full('queued','2026-11-15T13:00:00Z'),full('x1','2026-11-15T12:00:00Z'),full('x2','2026-11-15T11:00:00Z'),full('x3','2026-11-15T10:00:00Z')];
+  const fetchImpl=fakeFetch({[`${H}u1:1`]:[{status:200,body:pageOf(earlier,0)}],[`${F}0`]:[{status:200,body:{status:200,data:page0}}],
+    [`${F}10`]:[{status:200,body:{status:200,data:[full('old','2026-11-14T10:00:00Z')]}}]});
+  const r=await run({env:{...env,SIM_QUEUES:'livehist'},fetchImpl,d1,...clock(),log:quiet,kastOf});
+  for(const id of ['g1','g2','g3','queued'])assert.equal(db.sim_pilot_kast.get(id)?.status,200,`${id} saved from the page`);
+  assert.deepEqual(unzip(db.sim_pilot_kast.get('g1').data),{t:'2026-11-15T18:00:00Z',R:1,old:0,p:[]});
+  for(const id of ['gap','broken'])assert.equal(db.sim_pilot_kast.get(id)?.status,null,`${id} queued for match-detail`);
+  assert.ok(!db.sim_pilot_kast.has('x1'),'games not wanted are not stored');
+  assert.equal(r.kastFromPages,4);assert.equal(r.kastQueued,2);
+  assert.equal(r.fullPages,1,'the walk stops once the page is older than the oldest wanted game');
+  assert.equal(db.sim_live_players.get('u1').status,200);
+});
+
+test('live follow-ups: a failed full page only ends the walk; everything left is queued singly',async()=>{
+  const at=(id,t)=>({...match(id),meta:{id,started_at:t,season:{short:'e11a6'}}});
+  const {d1,db}=fakeD1({sim_live_players:[['u1','eu',{act:'e11a6'}]]},{collected:{u1:[{m:'live1',t:'2026-11-15T20:00:00Z'}]}});
+  const fetchImpl=fakeFetch({[`${H}u1:1`]:[{status:200,body:pageOf([at('g1','2026-11-15T18:00:00Z'),at('g2','2026-11-15T17:00:00Z')],0)}],
+    ['history-by-puuid/eu/pc/u1@0']:[{status:404,body:{error:'not found'}}]});
+  const r=await run({env:{...env,SIM_QUEUES:'livehist'},fetchImpl,d1,...clock(),log:quiet,kastOf:()=>({p:[]})});
+  assert.deepEqual([...db.sim_pilot_kast.keys()].sort(),['g1','g2']);
+  assert.ok([...db.sim_pilot_kast.values()].every(x=>x.status===null));
+  assert.equal(r.kastQueued,2);assert.equal(db.sim_live_players.get('u1').status,200);
 });
