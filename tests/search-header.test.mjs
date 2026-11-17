@@ -39,3 +39,13 @@ test('a loaded account slides its rank, region and Tracker.gg link into the sear
   assert.match(badges,/aria-label=\{`Region: /);
   assert.match(badges,/aria-label=\{`Open \$\{info\.riotId\} on Tracker\.gg`\}/);
 });
+
+test('the pro player list shrinks to the space beside the search instead of running off screen',async()=>{
+  const source=(await import('node:fs')).readFileSync(new URL('../src/app/SearchHeader.jsx',import.meta.url),'utf8');
+  const content=source.slice(source.indexOf('<PopoverContent align="start"'),source.indexOf('<ProLibraryPanel onPick'));
+  assert.match(content,/collisionPadding=\{12\}/);
+  assert.match(content,/flex max-h-\[var\(--radix-popover-content-available-height\)\][^"]*flex-col/);
+  // The list, not the search box above it, gives up height.
+  assert.match(source,/<Command shouldFilter=\{false\} label="Pro player library" className="min-h-0 flex-1/);
+  assert.match(source,/<CommandList className="max-h-\[min\(56vh,520px\)\] min-h-0 flex-1/);
+});
