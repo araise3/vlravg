@@ -15,25 +15,33 @@ const state=(parties,matches=[])=>({
   statMatches:parties.flatMap(([size,avgRank,count])=>Array.from({length:count},()=>({partySize:size,avgRank}))),
 });
 
-test('the lobby rank card lists the average lobby rank for every party size played, with no corner badges',async()=>{
-  const single=await renderHtml(PAGE,'KpiCards',{s:state([[2,18.5,12]]),recent:[]});
+test('the lobby rank card has the teammates card header and lists the average lobby rank for every party size played',async()=>{
+  const single=await renderHtml(PAGE,'KpiCards',{s:state([[2,18.5,12]])});
   const duo=tierRR(18.5);
-  assert.ok(text(single).includes(`Avg lobby rank (12 rated lobbies) Diamond 1 50 RR Duo 12 lobbies ${avgLabel(duo.tier)} ${avgLabelShort(duo.tier)} ${duo.rr} RR 12 lobbies `),text(single));
-  assert.doesNotMatch(single,/data-slot="card-action"|data-slot="badge"/);
-  const mixed=text(await renderHtml(PAGE,'KpiCards',{s:state([[1,14.5,3],[2,18.5,9]]),recent:[]}));
-  const row=(label,v,n)=>{const r=tierRR(v);return `${label} ${n} lobbies ${avgLabel(r.tier)} ${avgLabelShort(r.tier)} ${r.rr} RR ${n} lobbies`;};
+  assert.ok(text(single).includes(`Avg lobby rank Lobby Rank Diamond 1 (50 RR) Duo 12 lobbies ${avgLabel(duo.tier)} (${duo.rr} RR) ${avgLabelShort(duo.tier)} (${duo.rr} RR) 12 lobbies `),text(single));
+  const lobbyCard=single.slice(0,single.indexOf('overview-duos-title'));
+  assert.doesNotMatch(lobbyCard,/data-slot="badge"/);
+  // Same header shape as Top teammates: an h2 title and a link to the full page.
+  assert.match(lobbyCard,/<h2 id="overview-lobby-title">Avg lobby rank<\/h2>/);
+  assert.match(lobbyCard,/data-slot="card-action"[\s\S]*Lobby Rank/);
+  const mixed=text(await renderHtml(PAGE,'KpiCards',{s:state([[1,14.5,3],[2,18.5,9]])}));
+  const row=(label,v,n)=>{const r=tierRR(v);return `${label} ${n} lobbies ${avgLabel(r.tier)} (${r.rr} RR) ${avgLabelShort(r.tier)} (${r.rr} RR) ${n} lobbies`;};
   assert.ok(mixed.includes(row('Solo',14.5,3)+' '+row('Duo',18.5,9)),mixed);
   assert.equal(avgLabel(18),'Diamond 1');
 });
 
-test('net RR sums every recorded change while per-game averages use eligible matches only',async()=>{
+test('the recent RR card sums every recorded change while per-game averages use eligible matches only',async()=>{
   const at=i=>Date.UTC(2026,9,1,12)+i*3600000;
   const m=(i,rr,extra={})=>({matchId:'m'+i,startedAtMs:at(i),won:rr>0,myRR:rr,myPostRR:1500+i*5,myTierId:15,partySize:1,...extra});
-  const recent=[m(1,20),m(2,-15),m(3,24),m(4,-10,{partySize:5})];
-  const html=text(await renderHtml(PAGE,'KpiCards',{s:state([[1,15,4]]),recent}));
-  assert.match(html,/Net RR \(last 4\) \+19 /);
-  assert.match(html,/Per win 2 wins \+22\.0 2 wins Per loss 1 loss −15\.0 1 loss W–L 66\.7% win rate 2–1 66\.7% win rate/);
-  assert.match(html,/3 of 4 eligible\. Averages skip placements and 5-stacks\./);
+  const matches=[m(1,20),m(2,-15),m(3,24),m(4,-10,{partySize:5}),{matchId:'m5',startedAtMs:at(5),won:true,myRR:null}];
+  const html=await renderHtml(PAGE,'RecentRRCard',{matches});
+  const t=text(html);
+  assert.match(t,/RR trend, last 5 matches \+19 RR /);
+  assert.match(t,/Avg gain \+22\.0 2 wins Avg loss −15\.0 1 loss RR gained \+44 RR lost −25 /);
+  assert.match(t,/4 of 5 matches have a recorded RR change\. Averages skip placements and 5-stacks\./);
+  // One result dot per recorded change, none for the starting point.
+  assert.equal([...html.matchAll(/class="result-point (win|loss|draw)"/g)].length,4);
+  assert.doesNotMatch(html,/role="tablist"/);
 });
 
 test('act stats keep all eight figures in one grid',async()=>{
@@ -75,25 +83,35 @@ test('overview is built from shadcn cards with no scrolling lists',()=>{
   assert.doesNotMatch(source,/overflow-y-auto|Most-played lobbies/);
 });
 
-test('an all-draw window says there are no wins or losses to average, not no eligible matches',async()=>{
-  const recent=[1,2].map(i=>({matchId:'d'+i,startedAtMs:i,won:null,myRR:0,myPostRR:1500,myTierId:15,partySize:1}));
-  const html=text(await renderHtml(PAGE,'KpiCards',{s:state([[1,15,2]]),recent}));
-  assert.match(html,/2 of 2 eligible/);
-  assert.match(html,/No RR-eligible wins or losses/);
-  assert.doesNotMatch(html,/Per win/);
+test('an all-draw window shows no averages, and a window without RR says so',async()=>{
+  const draws=[1,2].map(i=>({matchId:'d'+i,startedAtMs:i,won:null,myRR:0,myPostRR:1500,myTierId:15,partySize:1}));
+  const t=text(await renderHtml(PAGE,'RecentRRCard',{matches:draws}));
+  assert.match(t,/\+0 RR /);
+  assert.match(t,/Avg gain — 0 wins Avg loss — 0 losses RR gained \+0 RR lost −0/);
+  const none=text(await renderHtml(PAGE,'RecentRRCard',{matches:[{matchId:'x',won:true,myRR:null}]}));
+  assert.match(none,/No recorded RR changes in these matches/);
+  assert.doesNotMatch(none,/ RR trend, last 1 match [+−]/);
 });
 
-test('top teammates sit side by side without avatars, one column per teammate',async()=>{
-  const mate=(name,games,kills,deaths)=>({key:name,name,tag:'EUW',games,kills,deaths});
-  const html=await renderHtml(PAGE,'TeammatesCard',{teammates:[mate('Orange',18,40,35),mate('Unfair',14,30,30),mate('Sevire',8,20,25),mate('Extra',2,1,1)]});
+test('top teammates sit beside the lobby rank card as rows with matches, win rate and RR',async()=>{
+  const mate=(name,games,wins,decided,rrTotal,rrCount)=>({key:name,name,tag:'EUW',games,wins,decided,rrTotal,rrCount,kills:1,deaths:1});
+  const teammates=[mate('Orange',18,10,16,42,15),mate('Unfair',14,5,14,-30,14),mate('Sevire',8,4,8,0,0),mate('Fourth',4,2,4,8,4),mate('Extra',2,1,2,1,2)];
+  const html=await renderHtml(PAGE,'TeammatesCard',{teammates});
   assert.doesNotMatch(html,/data-slot="avatar"/);
-  assert.match(html,/sm:grid-cols-3/);
   const t=text(html);
-  assert.match(t,/Orange #EUW 1\.14 K\/D 18 matches together/);
-  assert.match(t,/Sevire #EUW 0\.80 K\/D 8 matches together/);
+  assert.match(t,/Top teammates Duos Teammate Matches Win rate RR Orange #EUW 18 62\.5% \+42 Unfair #EUW 14 35\.7% −30 Sevire #EUW 8 50\.0% — Fourth #EUW 4 50\.0% \+8 $/);
   assert.doesNotMatch(t,/Extra/);
-  assert.match(await renderHtml(PAGE,'TeammatesCard',{teammates:[mate('Solo',3,3,3)]}),/grid-cols-1 gap-px/);
-  assert.equal(await renderHtml(PAGE,'TeammatesCard',{teammates:[]}),'');
+  assert.match(text(await renderHtml(PAGE,'TeammatesCard',{teammates:[]})),/No party teammates this act/);
+  const kpis=await renderHtml(PAGE,'KpiCards',{s:{...state([[2,18.5,3]]),allTeammates:teammates}});
+  assert.ok(kpis.indexOf('overview-lobby-title')<kpis.indexOf('overview-duos-title'));
+  assert.doesNotMatch(text(kpis),/Net RR/);
+});
+
+test('the overview no longer carries the full RR trend chart',()=>{
+  const source=readFileSync(new URL('../src/app/pages/Overview.jsx',import.meta.url),'utf8');
+  assert.doesNotMatch(source,/RRTrendChart|setRRTrendRange|<Tabs/);
+  const order=['<KpiCards s={s}/>','<ActStatsCard s={s}/>','<ClutchCard matches={s.allMatches}/>','<RecentRRCard matches={recent}/>','<RecentMatchesCard'].map(tag=>source.indexOf(tag));
+  assert.ok(order.every((at,i)=>at>0&&(!i||at>order[i-1])),String(order));
 });
 
 test('rank icons keep their aspect ratio and use the sharp PNG from 32px',async()=>{
