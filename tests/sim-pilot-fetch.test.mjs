@@ -3,22 +3,27 @@ import assert from 'node:assert/strict';
 import {gunzipSync} from 'node:zlib';
 import {execFileSync} from 'node:child_process';
 import {gzipSync} from 'node:zlib';
-import {run,loadKast,MAX_ATTEMPTS,enqueueLive,LIVE_WINDOW_H} from '../.github/scripts/sim-pilot-fetch.mjs';
+import {run,loadKast,MAX_ATTEMPTS,enqueueLive,enqueueLiveFollowups,LIVE_WINDOW_H} from '../.github/scripts/sim-pilot-fetch.mjs';
 
 // In-memory queue tables with just the statements the script sends.
-const TABLES={sim_live_rr:'id',sim_pilot_players:'puuid',sim_pilot_rr:'puuid',sim_pilot_prev:'puuid',sim_pilot_kast:'match_id'};
-function fakeD1(seed,{failFirst=0,down=false}={}){
+const TABLES={sim_live_rr:'id',sim_live_players:'puuid',sim_live_prev:'id',sim_pilot_players:'puuid',sim_pilot_rr:'puuid',sim_pilot_prev:'puuid',sim_pilot_kast:'match_id'};
+function fakeD1(seed,{failFirst=0,down=false,collected={},archive=[]}={}){
   const db=Object.fromEntries(Object.keys(TABLES).map(t=>[t,new Map()]));
-  for(const [t,rows] of Object.entries(seed))for(const [id,region] of rows)db[t].set(id,{id,region,status:null,n:null,data:null,attempts:null});
+  for(const [t,rows] of Object.entries(seed))for(const [id,region,extra] of rows)db[t].set(id,{id,region,status:null,n:null,data:null,attempts:null,...extra});
   let calls=0;
   const d1=async(sql,params=[])=>{
     calls++;
     if(down||calls<=failFirst)throw new TypeError('fetch failed',{cause:Object.assign(new Error('read ECONNRESET'),{code:'ECONNRESET'})});
+    if(sql.includes('JOIN sim_live_matches'))return collected[params[0]]??[];
+    if(sql.includes('FROM match_archive WHERE match_id IN'))return params.filter(m=>archive.includes(m)).map(m=>({m}));
+    if(sql.startsWith('SELECT match_id AS m FROM sim_pilot_kast'))return params.filter(m=>db.sim_pilot_kast.has(m)).map(m=>({m}));
+    if(sql.startsWith('INSERT OR IGNORE INTO sim_pilot_kast')){for(let i=0;i<params.length;i+=2)db.sim_pilot_kast.has(params[i])||db.sim_pilot_kast.set(params[i],{id:params[i],region:params[i+1],status:null,n:null,data:null,attempts:null});return[];}
+    if(sql.startsWith('INSERT OR IGNORE INTO sim_live_prev')){db.sim_live_prev.has(params[0])||db.sim_live_prev.set(params[0],{id:params[0],region:params[1],status:null,n:null,data:null,attempts:null});return[];}
     const table=sql.match(/(?:FROM|UPDATE) (sim_(?:pilot|live)_\w+)/)?.[1],rows=db[table];
     if(!rows)throw new Error(`unexpected SQL ${sql}`);
     if(sql.startsWith('SELECT SUM(status IS NULL)'))return[{left:[...rows.values()].filter(r=>r.status===null).length}];
     if(sql.startsWith('SELECT'))return[...rows.values()].filter(r=>r.status===null)
-      .sort((a,b)=>(a.attempts??0)-(b.attempts??0)||a.id.localeCompare(b.id)).slice(0,60).map(r=>({id:r.id,region:r.region,attempts:r.attempts??0}));
+      .sort((a,b)=>(a.attempts??0)-(b.attempts??0)||a.id.localeCompare(b.id)).slice(0,60).map(r=>({id:r.id,region:r.region,attempts:r.attempts??0,...(r.act?{act:r.act}:{})}));
     if(sql.includes('SET status=?1')){Object.assign(rows.get(params[4]),{status:params[0],n:params[1],data:params[2]});return[];}
     if(sql.includes('SET attempts=?1,status=0')){Object.assign(rows.get(params[2]),{attempts:params[0],status:0});return[];}
     if(sql.includes('SET attempts=?1')){rows.get(params[2]).attempts=params[0];return[];}
@@ -232,4 +237,36 @@ test('live queueing: recent competitive PC matches once, by rowid cursor; old, o
 test('live queueing never throws',async()=>{
   const s=await enqueueLive({d1:async()=>{throw new Error('D1 down');},log:quiet});
   assert.deepEqual(s,{scanned:0,matches:0,players:0});
+});
+
+test('live follow-ups: a collected match player\u2019s history queues the pre-act tail and KAST for earlier games not archived or queued',async()=>{
+  const at=(id,t)=>({...match(id),meta:{id,started_at:t,season:{short:'e11a6'}}});
+  const {d1,db}=fakeD1({sim_live_players:[['u1','eu',{act:'e11a6'}]],sim_pilot_kast:[['k-queued','eu']]},
+    {collected:{u1:[{m:'live1',t:'2026-11-15T20:00:00Z'}]},archive:['k-archived']});
+  const fetchImpl=fakeFetch({[`${H}u1:1`]:[{status:200,body:pageOf([at('later','2026-11-15T21:00:00Z'),at('k-new','2026-11-15T18:00:00Z'),at('k-archived','2026-11-15T17:00:00Z'),at('k-queued','2026-11-15T16:00:00Z')],0)}],
+    [`${H}u1`]:[{status:200,body:pageOf([],0)}]});
+  const r=await run({env:{...env,SIM_QUEUES:'livehist,liveprev'},fetchImpl,d1,...clock(),log:quiet,kastOf:null});
+  assert.equal(db.sim_live_players.get('u1').status,200);
+  assert.deepEqual([...db.sim_pilot_kast.keys()].sort(),['k-new','k-queued'],'only the earlier game that is neither archived nor queued');
+  assert.ok(db.sim_live_prev.has('u1:e11a6'),'3 earlier act games: the pre-act tail is queued');
+  assert.equal(r.kastQueued,1);assert.equal(r.prevQueued,1);
+});
+
+test('live follow-ups: only matches with all 10 ranks queue histories; a match with a closed window is dropped',async()=>{
+  const sqls=[],done={},rows=[{m:'full',s:'e11a6',t:'T1',ok:10,open:0},{m:'waiting',s:'e11a6',t:'T2',ok:8,open:2},{m:'lost',s:'e11a6',t:'T3',ok:9,open:0}];
+  const d1=async(sql,p=[])=>{sqls.push([sql,p]);if(sql.startsWith('SELECT x.match_id'))return rows;if(sql.startsWith('UPDATE sim_live_matches'))done[p[0]]=Number(sql.match(/followed=(\d)/)[1]);return[];};
+  const st=await enqueueLiveFollowups({d1,log:quiet});
+  assert.deepEqual(st,{matches:1,dropped:1,players:10});
+  assert.deepEqual(done,{full:1,lost:0});
+  const ins=sqls.filter(([q])=>q.startsWith('INSERT INTO sim_live_players'));
+  assert.equal(ins.length,1);assert.deepEqual(ins[0][1],['full','e11a6','T1']);
+  assert.match(ins[0][0],/fetched_at<excluded.need_after THEN NULL/,'a history fetched before a newer collected match is fetched again');
+  assert.equal(sqls.filter(([q])=>q.startsWith('ALTER TABLE sim_live_matches ADD COLUMN followed')).length,1,'an older table gains the followed column');
+});
+
+test('live follow-ups: the followed column is added only when missing',async()=>{
+  const sqls=[];
+  const d1=async sql=>{sqls.push(sql);if(sql.startsWith('PRAGMA'))return[{name:'match_id'},{name:'followed'}];return[];};
+  await enqueueLiveFollowups({d1,log:quiet});
+  assert.ok(!sqls.some(q=>q.startsWith('ALTER')));
 });
