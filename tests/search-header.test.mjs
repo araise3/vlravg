@@ -63,12 +63,12 @@ test('focus border and glow animate together, so a click shows one outline, not 
   assert.match(group,/transition-\[color,border-color,box-shadow\]/);
 });
 
-test('text boxes use a slim 2px focus ring around the 1px border',async()=>{
+test('text boxes use a slim 1px focus ring around the 1px border',async()=>{
   const {readFileSync}=await import('node:fs');
   const read=file=>readFileSync(new URL('../src/components/ui/'+file,import.meta.url),'utf8');
-  assert.match(read('input-group.jsx'),/has-\[\[data-slot=input-group-control\]:focus-visible\]:ring-2 /);
+  assert.match(read('input-group.jsx'),/has-\[\[data-slot=input-group-control\]:focus-visible\]:ring-1 /);
   for(const file of ['input.jsx','textarea.jsx']){
-    assert.match(read(file),/focus-visible:ring-2 /,file);
+    assert.match(read(file),/focus-visible:ring-1 /,file);
     assert.doesNotMatch(read(file),/focus-visible:ring-\[3px\]/,file);
   }
 });

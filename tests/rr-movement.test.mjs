@@ -122,7 +122,7 @@ test('chart draws the even line with its explanation, and hides it when zoomed t
   const svg=await renderHtml('/src/app/pages/RR.jsx','RRMovementChart',{matches,zoomTier:null});
   assert.match(svg,/class="even-line"/);
   assert.match(svg,/Estimated even point/);
-  assert.match(svg,/Wins and losses pay about the same from a starting rank of [^<]* · 676 RR/);
+  assert.match(svg,/Wins and losses pay about the same from a starting rank of [^<]*, 676 RR/);
   const evenTier=fixture.games.reduce((a,b)=>Math.abs(b[0]-2776)<Math.abs(a[0]-2776)?b:a)[2];
   assert.match(await renderHtml('/src/app/pages/RR.jsx','RRMovementChart',{matches,zoomTier:evenTier}),/class="even-line"/);
   assert.doesNotMatch(await renderHtml('/src/app/pages/RR.jsx','RRMovementChart',{matches,zoomTier:25}),/class="even-line"/);

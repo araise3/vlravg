@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import {analyzeProAccount,proSearchResults,rColor,rName,setSearchText,submitSearch} from '@/engine/core.mjs';
 import {useEngine,useSignal} from '@/app/hooks.js';
-import {PageLink,RankIcon} from '@/app/shared.jsx';
+import {PageLink,RankIcon,Sep} from '@/app/shared.jsx';
 import {ActPicker,StatusBar} from '@/app/SearchHeader.jsx';
 import {cn} from '@/lib/utils';
 import {Badge} from '@/components/ui/badge';
@@ -158,7 +158,7 @@ export function MobileTopBar(){
               <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs leading-tight text-muted-foreground tabular-nums">
                 {rank&&<span className="truncate font-medium" style={{color:rColor(rank.tier)}}>{rank.name}</span>}
                 {rank?.rr!=null&&<span className="shrink-0">{rank.rr} RR</span>}
-                {info?.region&&<><span aria-hidden="true">·</span><span className="shrink-0">{info.region.toUpperCase()}</span></>}
+                {info?.region&&<><Sep/><span className="shrink-0">{info.region.toUpperCase()}</span></>}
                 {!rank&&!info&&<span className="truncate">{loading?'Fetching account and matches':'Riot ID, PUUID or pro player'}</span>}
               </span>
             </span>

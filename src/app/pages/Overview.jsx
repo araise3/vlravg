@@ -100,14 +100,14 @@ export function KpiCards({s,recent}){
   ]:[];
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" role="group" aria-label="Key figures this act" data-slot="kpi-cards">
-      <KpiCard label={`Avg lobby rank · ${rated.length} rated ${rated.length===1?'lobby':'lobbies'}`} labelId="kpi-lobby-label"
+      <KpiCard label={`Avg lobby rank (${rated.length} rated ${rated.length===1?'lobby':'lobbies'})`} labelId="kpi-lobby-label"
         value={<>{rank?avgLabel(rank.tier):avgLabel(o.overall)}{rank&&<span className="text-base font-normal text-muted-foreground">{rank.rr} RR</span>}</>}
         icon={rank&&<RankIcon tier={rank.tier} size={34}/>} rows={partyRows} empty="No rated lobbies yet"/>
-      <KpiCard label={`Net RR · last ${recent.length}`} labelId="kpi-rr-label"
+      <KpiCard label={`Net RR (last ${recent.length})`} labelId="kpi-rr-label"
         value={<>{net!=null?rrSigned(net,0):'—'}<Trend className="size-5 opacity-70" aria-hidden="true"/></>}
         valueClassName={net>0?'text-positive':net<0?'text-negative':null}
         rows={rrRows} empty={rr.n?'No RR-eligible wins or losses':'No RR-eligible matches in this window'}
-        note={`${rr.n} of ${recent.length} eligible · averages skip placements and 5-stacks`}/>
+        note={`${rr.n} of ${recent.length} eligible. Averages skip placements and 5-stacks.`}/>
     </div>
   );
 }

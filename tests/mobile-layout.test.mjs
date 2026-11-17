@@ -90,7 +90,7 @@ test('the phone match card keeps result, score, RR change, stats and the roster 
   const html=await renderHtml('/src/app/pages/Matches.jsx','MobileMatchCard',{m,s,maps:null,open:false,onOpenChange(){}});
   assert.match(html,/class="match-card mobile win"/);
   const t=text(html);
-  assert.match(t,/^Win 13 : 7 \+24 Abyss · \d\d:\d\d · 35 min · Frankfurt 18 \/ 12 \/ 8 240 ACS 230 PS (.+)$/);
+  assert.match(t,/^Win 13 : 7 \+24 Abyss \d\d:\d\d 35 min Frankfurt 18 \/ 12 \/ 8 240 ACS 230 PS (.+)$/);
   assert.equal(t.match(/PS (.+)$/)[1],avgLabelShort(tierRR(18.5).tier));
   assert.match(html,/aria-label="Win on Abyss, 13–7\. 18 \/ 12 \/ 8 KDA, 240 ACS, 230 Performance Score\. Show RR details and roster"/);
 });

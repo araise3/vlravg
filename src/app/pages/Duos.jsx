@@ -87,9 +87,9 @@ export function TeammatesTable({s}){
       t.games,<LobbyValue sum={t.rankSum} count={t.rankCount}/>,
       v.kd.toFixed(2),round(v.acs),round(v.ps),winRateLabel(t.wr),t.rrCount?rrSigned(t.rrTotal,0):'—',
     ],cellProps:[null,null,null,
-      {className:toneClass(v.kd),title:`Teammate: ${t.kd.toFixed(2)} (${t.kills} kills / ${t.deaths} deaths) · You: ${t.myKd.toFixed(2)} (${t.myKills} kills / ${t.myDeaths} deaths)`},
-      {title:`Teammate: ${round(t.acs)} · You: ${round(t.myAcs)}`},
-      {title:`Teammate: ${round(t.performanceScore)} · You: ${round(t.myPerformanceScore)} · ${t.performanceCount} of ${t.games} shared matches have teammate Performance Score data, ${t.myPerformanceCount} have yours`},
+      {className:toneClass(v.kd),title:`Teammate: ${t.kd.toFixed(2)} (${t.kills} kills / ${t.deaths} deaths), you: ${t.myKd.toFixed(2)} (${t.myKills} kills / ${t.myDeaths} deaths)`},
+      {title:`Teammate: ${round(t.acs)}, you: ${round(t.myAcs)}`},
+      {title:`Teammate: ${round(t.performanceScore)}, you: ${round(t.myPerformanceScore)}. ${t.performanceCount} of ${t.games} shared matches have teammate Performance Score data, ${t.myPerformanceCount} have yours`},
       {className:toneOf(winRateTone(t.wr)),title:'Wins divided by wins plus losses; draws excluded'},
       {className:rrTone(t.rrCount,t.rrTotal),title:`${t.rrCount} of ${t.games} shared matches have recorded RR change`},
     ]};
