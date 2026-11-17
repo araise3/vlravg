@@ -156,6 +156,35 @@ test('distribution renders counts with accessible exact scores independently of 
   assert.equal(await chart([]),'');
 });
 
+test('every score-margin bar shows its count on top and the chart has no hover tooltip',async()=>{
+  const svg=await renderHtml('/src/app/pages/RR.jsx','ScoreMarginChart',{matches:[{myR:13,opR:11},{myR:13,opR:11},{myR:13,opR:5},{myR:11,opR:13},{myR:13,opR:13}]});
+  const bars=[...svg.matchAll(/<rect[^>]*class="bar (win|loss|draw)"[^>]*>/g)].length;
+  const values=[...svg.matchAll(/<text[^>]*class="value"[^>]*>(\d+)<\/text>/g)].map(m=>Number(m[1]));
+  assert.equal(values.length,bars);
+  assert.deepEqual(values.sort((a,b)=>a-b),[1,1,1,2]);
+  assert.doesNotMatch(svg,/chart-tooltip|has-active|class="hit"/);
+});
+
+test('RR by result is a diverging bar chart: losses left, wins right, values and counts at the bar ends',async()=>{
+  const m=(myR,opR,rr)=>({myR,opR,won:myR>opR,myRR:rr,myTierId:15,partySize:1,isPlacement:false});
+  const matches=[m(13,11,20),m(13,11,22),m(11,13,-18),m(14,12,24),m(13,3,30)];
+  const html=await renderHtml('/src/app/pages/RR.jsx','RRResultChart',{matches});
+  assert.match(html,/data-slot="rr-result-chart"/);
+  const rows=[...html.matchAll(/<li aria-label="([^"]+)"/g)].map(r=>r[1]);
+  assert.deepEqual(rows,[
+    '13–11: 2 wins averaging +21.0 RR, 1 loss averaging −18.0 RR',
+    '14–12 (overtime): 1 win averaging +24.0 RR, no losses',
+    '13–3: 1 win averaging +30.0 RR, no losses',
+  ]);
+  // One shared scale: the largest average (30) fills its side.
+  assert.match(html,/width:calc\(\(100% - 4\.75rem\) \* 1\.0000\);background:var\(--chart-win\)/);
+  assert.match(html,/width:calc\(\(100% - 4\.75rem\) \* 0\.6000\);background:var\(--chart-loss\)/);
+  assert.match(html,/>\+21\.0<\/span> <span class="text-muted-foreground">\(2\)<\/span>/);
+  assert.match(html,/OT<\/span>/);
+  assert.doesNotMatch(html,/<table/);
+  assert.match(await renderHtml('/src/app/pages/RR.jsx','RRResultChart',{matches:[]}),/No wins or losses with both a recorded score and eligible RR yet/);
+});
+
 test('the app shell loads one module entry and no inline application script',()=>{
   const shell=readFileSync(new URL('../index.html',import.meta.url),'utf8');
   assert.match(shell,/<script type="module" src="\/src\/main\.jsx"><\/script>/);
