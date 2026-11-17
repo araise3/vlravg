@@ -5,7 +5,7 @@ import { runInNewContext } from 'node:vm';
 import { replayHeader } from '../lib/replay-import.mjs';
 
 // Pure helpers from the Replay import block, run in isolation.
-const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const html = readFileSync(new URL('../src/engine/core.mjs', import.meta.url), 'utf8');
 const start = html.indexOf('const REPLAY_MAGIC=');
 const end = html.indexOf('async function loadReplayConfig(', start);
 assert.ok(start > 0 && end > start);
@@ -130,7 +130,7 @@ test('upload speed is measured over the last few seconds', () => {
 
 test('the page is routed like the other detail pages', () => {
   assert.match(readFileSync(new URL('../_redirects', import.meta.url), 'utf8'), /^\/replays \/index\.html 200$/m);
-  assert.match(html, /<a href="\/replays" data-page="replays">Replays<\/a>/);
+  assert.match(readFileSync(new URL('../src/app/App.jsx', import.meta.url), 'utf8'), /\['replays','Replays'\]/);
   assert.match(html, /path==='\/replays'\?'replays'/);
   assert.match(html, /replays:'replays'\}/);
 });

@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {gunzipSync} from 'node:zlib';
+import {overviewStatValues} from '../src/engine/core.mjs';
 
-const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const html=readFileSync(new URL('../src/engine/core.mjs',import.meta.url),'utf8');
 const section=(from,to)=>html.slice(html.indexOf(from),html.indexOf(to,html.indexOf(from)));
 const ctx={};
 const realDeaths=html.slice(html.indexOf('const POST_ROUND_PHASE_MS'),html.indexOf('\n}\n',html.indexOf('function computeRealDeaths('))+3);
@@ -162,26 +163,22 @@ test('display rounding follows tracker: ADR via 2 decimals, KAST .5 to even',()=
 });
 
 test('overview KAST weights by rounds and ignores matches without round data',()=>{
-  const elements=new Map(['sg-adr','sg-kast','sg-kast-pill'].map(id=>[id,{}]));
-  const context={document:{getElementById:id=>elements.get(id)},trackerFixed1,roundHalfEven,statsPanelMatches:[
+  const stats=overviewStatValues([
     {myStats:{adr:100,dmg:1000,rounds_played:10,kastRounds:5,kastTotalRounds:10}},
     {myStats:{adr:200,dmg:6000,rounds_played:30,kastRounds:27,kastTotalRounds:30}},
     {myStats:{adr:150,dmg:3000,rounds_played:20,kastRounds:null,kastTotalRounds:null}},
-  ]};
-  runInNewContext(section('  // Avg ADR', '  renderRankByRankCard();'),context);
-  assert.equal(elements.get('sg-adr').textContent,'166.7');
-  assert.equal(elements.get('sg-kast').textContent,'80.0%');
-  assert.match(elements.get('sg-kast-pill').title,/2 of 3 matches/);
+  ]);
+  assert.equal(stats.adr,'166.7');
+  assert.equal(stats.kast,'80.0%');
+  assert.match(stats.kastTitle,/2 of 3 matches/);
 });
 
-test('overview KAST shows one decimal, as tracker\'s profile does',()=>{
-  const elements=new Map(['sg-adr','sg-kast','sg-kast-pill'].map(id=>[id,{}]));
+test("overview KAST shows one decimal, as tracker's profile does",()=>{
   // kurd with dream, A6 to 6 Nov 2026: 1605 of 2288 rounds.
-  const context={document:{getElementById:id=>elements.get(id)},trackerFixed1,roundHalfEven,statsPanelMatches:[
+  const stats=overviewStatValues([
     {myStats:{adr:150,dmg:343200,rounds_played:2288,kastRounds:1605,kastTotalRounds:2288}},
-  ]};
-  runInNewContext(section('  // Avg ADR', '  renderRankByRankCard();'),context);
-  assert.equal(elements.get('sg-kast').textContent,'70.1%');
+  ]);
+  assert.equal(stats.kast,'70.1%');
 });
 
 test('seventy-one Nov 2026 matches reproduce tracker.gg ADR and KAST on every row',()=>{

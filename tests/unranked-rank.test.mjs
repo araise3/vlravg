@@ -1,24 +1,27 @@
-import test from 'node:test';
+import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,existsSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
+import {RANK_ICONS} from '../src/engine/rank-icons.mjs';
+import {closeRenderer,renderHtml} from './helpers/react-render.mjs';
 
-const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+after(closeRenderer);
+const html=readFileSync(new URL('../src/engine/core.mjs',import.meta.url),'utf8');
 function extract(start,end){const from=html.indexOf(start),to=html.indexOf(end,from);assert.ok(from>=0&&to>from);return html.slice(from,to);}
-const icons=runInNewContext(extract('const RANK_ICONS=','\n/*')+'\n({rankIcon,RANK_ICONS})');
-const ranks=runInNewContext(extract('function matchCardPlayerRank(', '\nfunction buildMatchCard(')+
+const ranks=runInNewContext(extract('function matchCardPlayerRank(', '\nfunction dayHeaderLabel(')+
   '\nmatchCardPlayerRank',{rrPositionFromElo:(elo,tier)=>({tier,rr:elo})});
+const rankIcon=(tier,size)=>renderHtml('/src/app/shared.jsx','RankIcon',{tier,size});
 
-test('all Unranked tier aliases use the official embedded small icon and existing large asset',()=>{
-  const bytes=Buffer.from(icons.RANK_ICONS[0].split(',')[1],'base64');
+test('all Unranked tier aliases use the official embedded small icon and existing large asset',async()=>{
+  const bytes=Buffer.from(RANK_ICONS[0].split(',')[1],'base64');
   assert.equal(bytes.readUInt32BE(16),128);assert.equal(bytes.readUInt32BE(20),128);
   assert.ok(existsSync(new URL('../assets/ranks/0.png',import.meta.url)));
   for(const tier of [0,1,2,'0','1','2']){
-    assert.match(icons.rankIcon(tier,16),/data:image\/png;base64/);
-    assert.match(icons.rankIcon(tier,64),/src="\/assets\/ranks\/0.png"/);
+    assert.match(await rankIcon(tier,16),/data:image\/png;base64/);
+    assert.match(await rankIcon(tier,64),/src="\/assets\/ranks\/0.png"/);
   }
-  assert.equal(icons.rankIcon(null),'');assert.equal(icons.rankIcon(undefined),'');
-  assert.match(icons.rankIcon(12,64),/\/assets\/ranks\/12.png/);
+  assert.equal(await rankIcon(null),'');assert.equal(await rankIcon(undefined),'');
+  assert.match(await rankIcon(12,64),/\/assets\/ranks\/12.png/);
 });
 
 test('confirmed Unranked match ranks show no inferred RR, including the placement that reveals a rank',()=>{

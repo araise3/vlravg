@@ -1,56 +1,49 @@
-import test from 'node:test';
+import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
+import { closeRenderer,load,renderHtml,settle } from './helpers/react-render.mjs';
 
-const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+after(closeRenderer);
+const html=readFileSync(new URL('../src/engine/core.mjs',import.meta.url),'utf8');
 const start=html.indexOf('function nameHistoryActAt(');
-const end=html.indexOf('function updateDetailPages(',start);
+const end=html.indexOf('/* ── REPLAY IMPORT',start);
 assert.ok(start>0&&end>start);
 
-class Element {
-  constructor(tag){this.tag=tag;this.children=[];this.attributes={};this.text='';this.className='';this.classList={add:name=>{this.className+=' '+name;}};}
-  set textContent(value){this.text=String(value);this.children=[];}
-  get textContent(){return this.text+this.children.map(child=>child.textContent).join('');}
-  append(...children){this.children.push(...children);}
-  appendChild(child){this.append(child);}
-  replaceChildren(...children){this.children=children;this.text='';}
-  set innerHTML(value){this.replaceChildren();if(value.includes('<tbody>'))this.appendChild(new Element('tbody'));}
-  querySelector(tag){return this.children.find(child=>child.tag===tag)||this.children.map(child=>child.querySelector(tag)).find(Boolean)||null;}
-  setAttribute(name,value){this.attributes[name]=value;}
-  addEventListener(name,callback){this['on'+name]=callback;}
-}
-const findAll=(root,className)=>[root,...root.children.flatMap(child=>findAll(child,className))]
-  .filter(node=>node.className.split(' ').includes(className));
-
-test('name history table shows dates and acts, marks the current identity, and sorts newest first',()=>{
-  const elements=new Map();
-  const document={createElement:tag=>new Element(tag),getElementById:id=>{
-    if(!elements.has(id))elements.set(id,new Element('div'));
-    return elements.get(id);
-  }};
-  const context={document,Intl,Date,
+test('act labels map observation dates onto the act timeline, spanning several acts',()=>{
+  const {nameHistoryActRange}=runInNewContext(html.slice(start,end)+'\n({nameHistoryActRange})',{
     HARDCODED_ACT_META:{a:{start:Date.parse('2021-01-01')},b:{start:Date.parse('2021-03-01')},c:{start:Date.parse('2021-05-01')},d:{start:Date.parse('2021-07-01')}},
-    nameHistoryState:'ready',nameHistoryBackfill:{available:true},
-    nameBackfillBusy:false,nameBackfillError:false,nameBackfillStopRequested:false,nameBackfillStopped:false,nameBackfillPages:0,
-    nameHistoryRows:[
-      {name:'Old',tag:'EU',first_seen:'2021-01-10',last_seen:'2021-03-10',ended_at:'2021-03-11'},
-      {name:'Current',tag:'NOW',first_seen:'2021-07-10',last_seen:'2021-07-10',ended_at:null},
-    ],
-  };
-  const render=runInNewContext(html.slice(start,end)+'\nrenderNameHistory',context);
-  render();
-  const root=elements.get('name-history-table');
-  const table=findAll(root,'name-history-table')[0];
-  const list=table.querySelector('tbody');
-  assert.equal(list.children.length,2);
-  assert.ok(list.children.every(row=>row.children.length===4),'each row has Riot ID, first date, last date, and act');
-  assert.match(list.children[0].textContent,/Current#NOW/);
-  assert.equal(findAll(list.children[0],'name-history-current').length,1);
-  assert.match(list.children[0].textContent,/10 Jul 2021.*E2A1/);
-  assert.equal((list.children[0].textContent.match(/10 Jul 2021/g)||[]).length,2,'first and last observations each have a date column');
-  assert.match(list.children[1].textContent,/10 Jan 2021.*10 Mar 2021.*E1A1 — A2/);
-  assert.equal(findAll(list.children[0],'name-history-date').length,2);
-  assert.equal(findAll(root,'name-history-table-scroll').length,1);
-  assert.equal(context.nameHistoryRows[0].name,'Old','rendering must not reorder stored history');
+  });
+  assert.equal(nameHistoryActRange('2021-07-10','2021-07-10').label,'E2A1');
+  assert.equal(nameHistoryActRange('2021-01-10','2021-03-10').label,'E1A1 — A2');
+  assert.equal(nameHistoryActRange('2020-01-01','2021-03-10').label,'—');
+  assert.equal(nameHistoryActRange(null,'2021-03-10').title,'Episode and act unavailable');
+});
+
+test('name history table shows dates and acts, marks the current identity, and sorts newest first',async()=>{
+  const engine=await load('/src/engine/core.mjs');
+  const names=[
+    {name:'Old',tag:'EU',first_seen:'2021-01-10',last_seen:'2021-03-10',ended_at:'2021-03-11'},
+    {name:'Current',tag:'NOW',first_seen:'2021-07-10',last_seen:'2021-07-10',ended_at:null},
+  ];
+  engine.loadFixtureAnalysis({player:'Current',tag:'NOW',puuid:'me',season:'act',current:null,raw:[],names,
+    rr:{change:{},pre:{},post:{},preTier:{},postTier:{},protected:{},details:{}}});
+  await settle();
+  const page=await renderHtml('/src/app/pages/Names.jsx','NamesPage');
+  const body=page.slice(page.indexOf('<tbody'),page.indexOf('</tbody>'));
+  const rows=body.split('<tr').slice(1);
+  assert.equal(rows.length,2);
+  for(const row of rows){
+    assert.equal((row.match(/<t[hd][\s>]/g)||[]).length,4,'each row has Riot ID, first date, last date, and act');
+    assert.equal((row.match(/<time /g)||[]).length,2,'first and last observations each have a date');
+  }
+  assert.match(rows[0],/Current<\/strong><span[^>]*>#NOW/);
+  assert.match(rows[0],/>Current<\/span>/,'the current identity is marked');
+  assert.doesNotMatch(rows[1],/>Current<\/span>/);
+  assert.equal((rows[0].match(/10 Jul 2021/g)||[]).length,2);
+  assert.match(rows[1],/10 Jan 2021.*10 Mar 2021/);
+  const act=engine.nameHistoryActRange(names[1].first_seen,names[1].last_seen);
+  assert.ok(rows[1].includes(`>${engine.nameHistoryActRange(names[0].first_seen,names[0].last_seen).label}</td>`));
+  assert.ok(rows[0].includes(`>${act.label}</td>`));
+  assert.equal(names[0].name,'Old','rendering must not reorder stored history');
 });

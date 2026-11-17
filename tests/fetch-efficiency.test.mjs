@@ -6,7 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { onRequestGet } from '../functions/api/[[path]].js';
 
-const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const html=readFileSync(new URL('../src/engine/core.mjs',import.meta.url),'utf8');
 const extract=(a,b)=>{
   const start=html.indexOf(a),end=html.indexOf(b,start);
   assert.ok(start>=0&&end>start);
@@ -172,8 +172,9 @@ function analysisClient({count=200,archiveWait=null,rrWait=null,storedFailure=fa
   const state={rows:makeRows(count),region:'eu',storedFailure};
   const scans=new Map();
   const key=()=>state.region+':pc:'+season;
-  const seasonSelect={options:[{value:''},{value:season}],value:season};
   const context={
+    seasonOptions:[{value:season,label:'',games:0,countKind:null}],seasonValue:season,searchText:'Example#123',
+    trackerHref:'',errorMessage:null,analysisState:'loading',emit(){},
     console,AbortController,Date,Set,Map,Promise,API_BASE:'/api',BATCH:10,PLAYER:'Example',TAG:'123',REGION:'eu',PLATFORM:'pc',
     TARGET_SEASON:season,PUUID:puuid,_analysisGen:0,_analysisController:null,PUUID_RE:/^[0-9a-f-]{36}$/,
     allMatches:[],headerRevealPending:true,_rrChangeByMatchId:{},_refundedRRByMatchId:{},_derankProtectedByMatchId:{},
@@ -189,7 +190,6 @@ function analysisClient({count=200,archiveWait=null,rrWait=null,storedFailure=fa
     createRequestPool:()=>({}),
     processMatch:row=>({id:row.metadata.match_id,startedAtMs:Date.parse(row.metadata.started_at),myRR:context._rrChangeByMatchId[row.metadata.match_id]??null}),
     renderAll:()=>renders.push(context.allMatches.map(row=>({...row}))),
-    document:{getElementById:id=>id==='m-season'?seasonSelect:id==='m-nametag'?{value:'Example#123'}:{setAttribute(){}}},
     readServerMatchArchive:async(_id,_act,_gen,_relevant,opts)=>{
       if(archiveWait){opts.onPage([state.rows[0]]);await archiveWait.promise;}
       const saved=[...(backend.archives.get(key())||[])];

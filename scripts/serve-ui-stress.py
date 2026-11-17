@@ -1,4 +1,6 @@
-"""Local-only break-ui preview. Production index.html is never modified.
+"""Local-only break-ui preview of the pre-React frontend (legacy/index.html).
+
+The React app has its own fixture mode: npm run dev, then /?fixture=worst.
 
 Run: python scripts/serve-ui-stress.py
 Open: http://127.0.0.1:8767/stress-test?data=worst
@@ -22,7 +24,7 @@ class Handler(SimpleHTTPRequestHandler):
         if path == '/stress-test':
             content = (ROOT / 'scripts/ui-stress-shell.html').read_bytes()
         elif path == '/' or path.startswith('/player/') or path in ['/matches', '/duos', '/rr', '/servers', '/lobbyrank', '/names']:
-            content = (ROOT / 'index.html').read_text(encoding='utf-8')
+            content = (ROOT / 'legacy/index.html').read_text(encoding='utf-8')
             fixture = (ROOT / 'scripts/ui-stress-fixtures.js').read_text(encoding='utf-8')
             marker = 'applyPage();\nloadPlayerFromRoute();'
             if marker not in content:

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 
-const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const html=readFileSync(new URL('../src/engine/core.mjs',import.meta.url),'utf8');
 const start=html.indexOf('function computeEncounters(');
 const end=html.indexOf('\nfunction buildTeammates(',start);
 assert.ok(start>=0&&end>start);

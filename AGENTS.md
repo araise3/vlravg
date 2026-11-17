@@ -4,7 +4,7 @@ This file provides guidance to Codex when working with code in this repository. 
 
 ## What this is
 
-vlravg is a Valorant stats site: average lobby rank, RR gains/losses and trends, duos and encounters, servers and a ping map, clutches, match history and name history. Data comes from the HenrikDev API. It is a static `index.html` plus one Cloudflare Pages Function, backed by a D1 database, deployed on Cloudflare Pages.
+vlravg is a Valorant stats site: average lobby rank, RR gains/losses and trends, duos and encounters, servers and a ping map, clutches, match history and name history. Data comes from the HenrikDev API. It is a React + shadcn/ui single-page app built with Vite, plus one Cloudflare Pages Function, backed by a D1 database, deployed on Cloudflare Pages.
 
 The repo also holds two long-running research workstreams that are not part of the shipped site:
 
@@ -19,46 +19,50 @@ migration evidence and as the stats site's project.
 
 ## Repo layout
 
-- [index.html](index.html): the entire frontend, about 6,500 lines. It has an inline `<style>` (to ~line 850), body markup, then one inline `<script>` (~line 1151 on). There is no framework, bundler or modules: plain globals and direct DOM manipulation. Charts are hand-built SVG; there is no Chart.js.
+- Frontend ([docs/react-frontend.md](docs/react-frontend.md)): [index.html](index.html) is only the Vite shell. [src/engine/core.mjs](src/engine/core.mjs) is the DOM-free engine: account lookup, `loadAll`, `processMatch`, every statistic, and the UI state React reads (`subscribe`/`getSnapshot`, actions such as `runAnalysis`). It is the pre-React script moved over largely verbatim. [src/app/](src/app/) holds the React pages and charts (hand-built SVG in JSX; there is no Chart.js), and [src/components/ui/](src/components/ui/) the shadcn components (JSX, `components.json`; `npx shadcn@latest add <name>`). Rank badges are in [src/engine/rank-icons.mjs](src/engine/rank-icons.mjs). Styling is Tailwind v4 with the shadcn zinc theme in [src/index.css](src/index.css); the player's rank colour is `--rank`. Phones (below 640px, `useIsMobile()`) get their own layout from [src/app/MobileShell.jsx](src/app/MobileShell.jsx): app bar, search sheet, bottom tab bar, card lists instead of tables ([docs/mobile-layout.md](docs/mobile-layout.md)).
+- [legacy/index.html](legacy/index.html): the pre-React single-file frontend, kept as a backup and served at `/legacy/`. Git tag `legacy-vanilla-frontend` marks the last commit before the React move. Don't develop features there.
 - [functions/api/[[path]].js](functions/api/[[path]].js): the API proxy, rate limiter and persistence layer (see Architecture).
 - [functions/api/replays/](functions/api/replays/) and [lib/replay-import.mjs](lib/replay-import.mjs): public `.vrf` upload to R2 (`REPLAY_BUCKET`) behind Turnstile and daily budgets, plus the parser callback routes. See [docs/replay-import.md](docs/replay-import.md).
 - [functions/riot-probe/](functions/riot-probe/) and [riot-probe.html](riot-probe.html): an isolated Riot-client experiment. It is disabled unless `RIOT_PROBE_ENABLED` and its keys are set. See [docs/cloudflare-riot-probe.md](docs/cloudflare-riot-probe.md).
 - [lib/](lib/): server-side modules imported by the Function and the workflow scripts. They cover upstream pacing, the workflow auth and quota audit, the RR corpus and activity policy, name history/backfill, match coverage, replay import and the compact replay validator, and the Riot probe.
 - [schema.sql](schema.sql) and [migrations/](migrations/): the D1 schema (database `vlravg-calib`, bound as `APP_DB`).
 - [.github/workflows/](.github/workflows/) and [.github/scripts/](.github/scripts/): `collect-rr-corpus.yml`, an RR corpus collector triggered hourly that runs back to back, and `parse-replays.yml`, which parses uploaded replays with vrfkit in a sandboxed container (fetch → parse without secrets → submit) and stores the full vrfkit export plus a compact timeline; `vrfkit-watch.yml` opens an issue when upstream vrfkit releases support for new game builds.
-- [_redirects](_redirects): page routes (`/duos`, `/lobbyrank`, `/servers`, `/rr`, `/matches`, `/names`, `/replays`, `/player/*`) all serve `index.html`.
+- [_redirects](_redirects): page routes (`/duos`, `/lobbyrank`, `/servers`, `/rr`, `/matches`, `/names`, `/replays`, `/player/*`) all serve `index.html`. The build copies it, `assets/`, `legacy/`, `pro-players.json`, `favicon.svg` and the standalone HTML pages into `dist/` (see `vite.config.mjs`); Vite's own output goes to `dist/_app/` so `/assets/` keeps its URLs.
 - [assets/ping-map/](assets/ping-map/): the EU ping map (D3, lazy-loaded by `loadServerPingMap()`); its data sources are in `SOURCES.md`. [assets/ranks/](assets/ranks/) holds the 256px rank icons.
 - [pro-players.json](pro-players.json): the static pro-player search index ([docs/pro-player-library.md](docs/pro-player-library.md)). [showcase.html](showcase.html) is a standalone product film.
 - [tests/](tests/): Node and Python tests. [scripts/](scripts/): replay tooling, RR analysis, UI stress harness and exporters. [docs/](docs/): feature notes and research reports.
 - [artifacts/](artifacts/): screenshots and analysis outputs that back docs.
 
-Local-only, gitignored: `.local/` (research evidence, replay exports, REA ledgers), `.tools/`, `.venv-replay/`, `.dev.vars`, `.wrangler/`, `hidden-mmr-research/`, `CLAUDE.md`, `HANDOFF.md` (stale; describes the long-removed hidden-MMR card).
+Local-only, gitignored: `node_modules/`, `dist/`, `.local/` (research evidence, replay exports, REA ledgers), `.tools/`, `.venv-replay/`, `.dev.vars`, `.wrangler/`, `hidden-mmr-research/`, `CLAUDE.md`, `HANDOFF.md` (stale; describes the long-removed hidden-MMR card).
 
 ## Commands
 
-Tests (no package.json; Node 24 built-ins):
+Install, build and test (Node 24; `npm install` first):
 
 ```bash
-node --test --test-isolation=none tests/*.test.mjs tests/*.test.cjs
+npm run build
+npm test
 ```
 
-Python tests use the replay venv, one file at a time (e.g. `.venv-replay/Scripts/python.exe tests/rendered_los_validation_test.py`; also `tests/*_test.py` and `scripts/test-*.py`).
+`npm test` is `node --test --test-isolation=none tests/*.test.mjs tests/*.test.cjs`. Python tests use the replay venv, one file at a time (e.g. `.venv-replay/Scripts/python.exe tests/rendered_los_validation_test.py`; also `tests/*_test.py` and `scripts/test-*.py`).
 
-Many Node tests slice functions out of `index.html` by literal text markers and run them in `vm` (e.g. `function rrBucketStats(` … `// ── Column renderer`). Renaming or removing such comments and function headers breaks tests. Grep `tests/` before touching them.
+Many Node tests slice functions out of `src/engine/core.mjs` by literal text markers and run them in `vm` (e.g. `function rrBucketStats(` … `// ── Column renderer`). So core.mjs declarations stay un-exported (one `export {}` list at the end), and renaming or removing such comments and function headers breaks tests. Grep `tests/` before touching them. Component tests render the real JSX to static HTML through Vite's SSR loader ([tests/helpers/react-render.mjs](tests/helpers/react-render.mjs)); logic tests import core.mjs directly.
 
-Local dev server (`.claude/launch.json` entry `vlravg`):
+Local dev (`.claude/launch.json`): `vlravg-vite` runs `npm run dev` (Vite with HMR on 5173, forwarding `/api` to 8788). `vlravg-api` serves the built `dist/` plus the Functions with a local D1:
 
 ```bash
-npx wrangler pages dev . --compatibility-date=2026-07-13 --port=8788
+npx wrangler pages dev dist --compatibility-date=2026-07-13 --port=8788 --d1=APP_DB
 ```
 
-The installed `workerd` lags the calendar. If wrangler rejects the date, use the "newest date supported" from its error. `.dev.vars` supplies `HENRIK_KEY`. Without an `APP_DB` D1 binding, every upstream cache miss returns 503: the quota gate needs D1 and fails closed. A local D1 is required to exercise live fetching.
+The installed `workerd` lags the calendar. If wrangler rejects the date, use the "newest date supported" from its error. `.dev.vars` supplies `HENRIK_KEY`. Without an `APP_DB` D1 binding, every upstream cache miss returns 503: the quota gate needs D1 and fails closed. A local D1 with `schema.sql` applied is required to exercise live fetching; D1-only routes 503 against an empty local database.
 
-UI stress harness: `python scripts/serve-ui-stress.py` (localhost, synthetic fixtures, no live API; see [docs/ui-stress-report.md](docs/ui-stress-report.md)).
+Real accounts without a local API: `npm run dev:live` (launch config `vlravg-vite-live`) forwards `/api` to the deployed site, through the same public quota gate as any visitor.
+
+UI fixtures without the live API: `npm run dev`, then `http://localhost:5173/?fixture=demo` (or `worst`, `draws`, `malformed`, `one`, `empty`, `loading`, `error`, or a match count) — see [src/dev/fixtures.mjs](src/dev/fixtures.mjs). `python scripts/serve-ui-stress.py` still serves the legacy page with the old fixtures ([docs/ui-stress-report.md](docs/ui-stress-report.md)).
 
 ## Deployment
 
-Cloudflare Pages is connected to the `araise3/vlravg` GitHub repo (default origin `vlravg1.pages.dev`). There is no `wrangler.toml`; bindings live in the dashboard:
+Cloudflare Pages is connected to the `araise3/vlravg` GitHub repo (default origin `vlravg1.pages.dev`). The Pages build settings must be build command `npm run build` and output directory `dist` (root directory stays the repo root, so `functions/` is still found). There is no `wrangler.toml`; bindings live in the dashboard:
 
 - `HENRIK_KEY` (secret): the public site's HenrikDev key.
 - `HENRIK_WORKFLOW_KEY` (secret): a separate key for the workflow. It must also be set in GitHub Actions ([docs/workflow-api-key.md](docs/workflow-api-key.md)).
@@ -81,19 +85,19 @@ Invariants to preserve:
 
 Persistence highlights: `mergeRRHistory` accumulates every `mmr-history` entry ever seen per PUUID, beyond upstream's ~20-game window. `match_archive` stores gzip match payloads per player and act. Account lookups enrol players into `rr_players` for the corpus. `foldCalibration`/`calib-model` are leftovers of the removed hidden-MMR card; nothing in the client reads them.
 
-### Frontend flow (`index.html`)
+### Frontend flow (`src/engine/core.mjs` → `src/app`)
 
-`runAnalysis()` resets state and calls `loadAll()`. That resolves the account, starts the saved-archive read, `mmr-history` and rank in parallel, then paginates live history (`BATCH=10`, upstream caps pages at 10) and recovers stored-season matches. Each raw match goes through `processMatch()`. `publishMatches()` re-renders progressively via `renderAll()` and the `render*` family. `apiGet()` retries network/5xx errors with backoff and sleeps for `retryAfterMs` on a 429. Requests per search go through a 2-slot `createRequestPool`. State is top-level globals (`PLAYER, TAG, REGION, PLATFORM, TARGET_SEASON, PUUID`, `allMatches`, the `_rr*ByMatchId` maps, …); grep to find readers and writers. Pages (`applyPage`) share one loaded dataset.
+`runAnalysis()` resets state and calls `loadAll()`. That resolves the account, starts the saved-archive read, `mmr-history` and rank in parallel, then paginates live history (`BATCH=10`, upstream caps pages at 10) and recovers stored-season matches. Each raw match goes through `processMatch()`. `publishMatches()` recomputes progressively via `renderAll()`/`renderStats()`, which now compute data (lobby, party, server, teammate tables) instead of writing DOM. Every state change calls `emit()`; React reads one snapshot per change through `useEngine()` (`useSyncExternalStore`). `apiGet()` retries network/5xx errors with backoff and sleeps for `retryAfterMs` on a 429. Requests per search go through a 2-slot `createRequestPool`. Engine state is module-level `let`s (`PLAYER, TAG, REGION, PLATFORM, TARGET_SEASON, PUUID`, `allMatches`, the `_rr*ByMatchId` maps, `seasonOptions`, `searchText`, …); grep to find readers and writers. Pages (`applyPage`, `navigateToPage`) share one loaded dataset and all stay mounted.
 
 Domain rules worth knowing:
 
 - **RR eligibility** (`isRREligible`): RR present, tier ≥3, not a placement (reported `is_placement_match` first, act-opening heuristic second), party size <5. Payout is Riot's `last_change`; reported bonus/penalty/forgiveness fields are shown verbatim, never re-added ([docs/rr-update-details.md](docs/rr-update-details.md)). Win rate everywhere is wins / (wins + losses).
 - **Overview RR** uses up to the last 20 matches (`overviewRecentMatches`). The RR page has all-time/50/30/20 ranges.
 - **Lobby rank** needs `MIN_RATED=7` rated players. Immortal+ RR uses a continuous axis rooted at 2100.
-- **Rank Shield**: `was_derank_protected` gives a blue shield on the match card's RR chip (`.match-rr-change.shielded`). There is no aggregate note.
-- **MVP**: shown only for the searched player on their collapsed match card, as a quiet `.mc-accolade` (trophy plus "Match MVP"/"Team MVP" text, no badge). Louder treatments were tried and rejected.
+- **Rank Shield**: `was_derank_protected` gives a blue shield icon on the match card's RR change (`MatchCard` in `src/app/pages/Matches.jsx`). There is no aggregate note.
+- **MVP**: shown only for the searched player on their collapsed match card, as a quiet accolade (trophy plus "Match MVP"/"Team MVP" text, no badge). Louder treatments were tried and rejected.
 - **Clutch detection** (`computeRealDeaths`/`detectClutch`/`classifyClutchOutcome`): its timing constants (`POST_ROUND_PHASE_MS`, `CLOVE_REVIVE_*_BOUNDARY_MS`, `MAX_CLOVE_SELF_REVIVE_WINDOW_MS`, …) are empirically derived and documented inline. Don't change them without equivalent evidence.
-- `RANK_ICONS` (~line 1152) holds embedded data URIs on very long lines. Grep; don't read it directly.
+- `RANK_ICONS` (`src/engine/rank-icons.mjs`, and `legacy/index.html` ~line 1248) holds embedded data URIs on very long lines. Grep; don't read it directly.
 
 ## Research workstreams
 

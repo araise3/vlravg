@@ -1,11 +1,14 @@
-import test from 'node:test';
+import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
+import { closeRenderer,renderHtml } from './helpers/react-render.mjs';
 
-const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+after(closeRenderer);
+
+const html=readFileSync(new URL('../src/engine/core.mjs',import.meta.url),'utf8');
 const start=html.indexOf('function isRREligible(');
-const end=html.indexOf('\nfunction renderRRMovement(',start);
+const end=html.indexOf('\nfunction setRRMovementZoomTier(',start);
 assert.ok(start>0&&end>start);
 const {rrPayoutEstimates:estimates,rrPayoutSegments:segments,rrMovementXAxis:axis,rrMovementRows}=runInNewContext(
   html.slice(start,end)+'\n({rrPayoutEstimates,rrPayoutSegments,rrMovementXAxis,rrMovementRows})',{avgLabelShort:()=>''});
@@ -60,28 +63,69 @@ test('zoom uses displayed RR from zero and keeps higher Immortal RR',()=>{
   assert.equal(axis([{m:{myPreRR:2250,myPreTierId:24,myTierId:24}}],24).max,200);
 });
 
-test('full chart labels Immortal RR beyond the shaded 300-RR band',()=>{
-  const element=()=>({
-    children:[],attrs:{},textContent:'',
-    setAttribute(name,value){this.attrs[name]=value;},
-    appendChild(child){this.children.push(child);},
-    replaceChildren(){this.children=[];},
-    addEventListener(){},
-  });
-  const elements=new Map();
-  const document={
-    getElementById(id){if(!elements.has(id))elements.set(id,element());return elements.get(id);},
-    createElementNS:element,
-  };
-  const renderEnd=html.indexOf('\nlet rrTrendMatches=',end);
-  const render=runInNewContext(html.slice(start,renderEnd)+'\nrenderRRMovement',{
-    document,rrMovementZoomTier:null,avgLabel:()=>'',avgLabelShort:()=>'',
-  });
-  render([120,180,220,280,350,420,460].map(rr=>({
+test('full chart labels Immortal RR beyond the shaded 300-RR band',async()=>{
+  const matches=[120,180,220,280,350,420,460].map(rr=>({
     myPreRR:2100+rr,myPreTierId:rr<200?25:26,myTierId:26,
     myRR:18,partySize:1,won:true,
-  })));
-  const svg=elements.get('rr-movement-chart').children[0];
-  const labels=svg.children.filter(node=>node.attrs.class==='tick-label'&&node.attrs.y==='302');
-  assert.deepEqual(labels.map(node=>node.textContent),['100','150','200','250','300','350','400','450']);
+  }));
+  const svg=await renderHtml('/src/app/pages/RR.jsx','RRMovementChart',{matches,zoomTier:null});
+  const labels=[...svg.matchAll(/<text[^>]*y="302"[^>]*class="tick-label"[^>]*>([^<]*)<\/text>/g)].map(match=>match[1]);
+  assert.deepEqual(labels,['100','150','200','250','300','350','400','450']);
+});
+
+test('zooming a rank keeps only that rank and labels its RR from zero',async()=>{
+  const matches=[[24,30],[24,60],[24,80],[25,150]].map(([tier,rr])=>({
+    myPreRR:2100+rr,myPreTierId:tier,myTierId:tier,myRR:18,partySize:1,won:true,
+  }));
+  const svg=await renderHtml('/src/app/pages/RR.jsx','RRMovementChart',{matches,zoomTier:24});
+  assert.match(svg,/class="chart-svg rr-movement-svg[^"]*zoomed/);
+  assert.match(svg,/3 covered matches/);
+  assert.match(svg,/Starting RR/);
+});
+
+const {rrPayoutEvenPoint:evenPoint}=runInNewContext(html.slice(start,end)+'\n({rrPayoutEvenPoint})',{avgLabelShort:()=>''});
+const fixture=JSON.parse(readFileSync(new URL('./fixtures/rr-even-point-player.json',import.meta.url),'utf8'));
+const fixtureRows=fixture.games.map(([pre,net,tier])=>({net,penalty:0,m:{myPreRR:pre,myPreTierId:tier,won:net>0?true:net<0?false:null}}));
+const sloped=(n=12,{penalty=0}={})=>Array.from({length:n},(_,i)=>{const pre=2200+i*50;
+  return [{net:30-i*2.5,penalty,m:{myPreRR:pre,won:true}},{net:-(8+i*2.5),penalty,m:{myPreRR:pre+5,won:false}}];}).flat();
+
+test('even point: a real act where wins shrink and losses grow with rank crosses where both pay about 18 RR',()=>{
+  const even=evenPoint(fixtureRows);
+  assert.ok(even);
+  assert.equal(Math.round(even.position),2776);
+  assert.ok(Math.abs(even.payout-18)<1,'about 18 RR either way at the crossing');
+  assert.ok(even.winSlope<0&&even.lossSlope>0);
+  assert.ok(even.t<=-3);
+  const near=fixtureRows.filter(r=>Math.abs(r.m.myPreRR-even.position)<=40&&r.net!==0);
+  const avg=a=>a.reduce((s,v)=>s+v,0)/a.length;
+  assert.ok(Math.abs(avg(near.filter(r=>r.net>0).map(r=>r.net))-avg(near.filter(r=>r.net<0).map(r=>-r.net)))<1,'games near the line pay evenly');
+});
+
+test('even point: none for flat payouts, a crossing outside the observed ranks, or too few games',()=>{
+  const flat=Array.from({length:20},(_,i)=>({net:i%2?18+(i%3):-(18+(i%4)),penalty:0,m:{myPreRR:2200+i*10,won:!!(i%2)}}));
+  assert.equal(evenPoint(flat),null);
+  const outside=Array.from({length:12},(_,i)=>[{net:30-i*.5,penalty:0,m:{myPreRR:2200+i*20,won:true}},{net:-(8+i*.5),penalty:0,m:{myPreRR:2205+i*20,won:false}}]).flat();
+  assert.equal(evenPoint(outside),null,'lines would only meet far above the highest starting rank');
+  assert.equal(evenPoint(sloped(7)),null,'7 wins and 7 losses are not enough');
+  assert.ok(evenPoint(sloped(8)));
+});
+
+test('even point leaves party-penalized games out',()=>{
+  assert.equal(evenPoint(sloped(12,{penalty:.25})),null);
+  const clean=evenPoint(sloped(12));
+  const mixed=evenPoint([...sloped(12),{net:2,penalty:.5,m:{myPreRR:2300,won:true}}]);
+  assert.equal(mixed.position,clean.position);
+});
+
+test('chart draws the even line with its explanation, and hides it when zoomed to another rank',async()=>{
+  const matches=fixture.games.map(([pre,net,tier])=>({myPreRR:pre,myPreTierId:tier,myTierId:tier,myRR:net,partySize:1,won:net>0?true:net<0?false:null}));
+  const svg=await renderHtml('/src/app/pages/RR.jsx','RRMovementChart',{matches,zoomTier:null});
+  assert.match(svg,/class="even-line"/);
+  assert.match(svg,/Estimated even point/);
+  assert.match(svg,/Wins and losses pay about the same from a starting rank of [^<]* · 676 RR/);
+  const evenTier=fixture.games.reduce((a,b)=>Math.abs(b[0]-2776)<Math.abs(a[0]-2776)?b:a)[2];
+  assert.match(await renderHtml('/src/app/pages/RR.jsx','RRMovementChart',{matches,zoomTier:evenTier}),/class="even-line"/);
+  assert.doesNotMatch(await renderHtml('/src/app/pages/RR.jsx','RRMovementChart',{matches,zoomTier:25}),/class="even-line"/);
+  const flat=matches.map(m=>({...m,myRR:m.won?18:-18}));
+  assert.doesNotMatch(await renderHtml('/src/app/pages/RR.jsx','RRMovementChart',{matches:flat,zoomTier:null}),/even-line|Estimated even point/);
 });

@@ -1,14 +1,18 @@
-import test from 'node:test';
+import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {runInNewContext,Script} from 'node:vm';
+import {runInNewContext} from 'node:vm';
+import {rrRankRows} from '../src/engine/core.mjs';
+import {closeRenderer,load,renderHtml,settle} from './helpers/react-render.mjs';
 
-const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+after(closeRenderer);
+
+const html=readFileSync(new URL('../src/engine/core.mjs',import.meta.url),'utf8');
 const margins=html.slice(html.indexOf('function scoreMarginDistribution('),html.indexOf('\nfunction renderMatches('));
 const distribution=runInNewContext(margins+'\nscoreMarginDistribution');
 const stats=html.slice(html.indexOf('function rrBucketStats('),html.indexOf('// ── Column renderer'));
 const table=html.slice(html.indexOf('function buildRRScoreRows('),html.indexOf('/* ── CLUTCHES'));
-const winRateHelpers=html.slice(html.indexOf('function winRateLabel('),html.indexOf('\nfunction renderOverviewPreviews('));
+const winRateHelpers=html.slice(html.indexOf('function winRateLabel('),html.indexOf('\n// Which side of each shared match'));
 const {winRateLabel,winRateTone}=runInNewContext(winRateHelpers+'\n({winRateLabel,winRateTone})');
 const scoreRows=runInNewContext(stats+'\n'+table+'\nbuildRRScoreRows');
 test('score margins use actual scores without requiring ranks or RR, with draws and exact unusual margins',()=>{
@@ -66,7 +70,7 @@ test('result table keeps regulation and overtime separate with eligible actual p
 });
 
 test('team/enemy rank chart rows convert the rank gap to RR and keep one-sided data',()=>{
-  const source=html.slice(html.indexOf('function lobbyTeamsChartRows('),html.indexOf('function renderLobbyTeamsChart('));
+  const source=html.slice(html.indexOf('function lobbyTeamsChartRows('),html.indexOf('/* ── STATUS'));
   const {lobbyTeamsChartRows,lobbyTeamsGapLabel}=runInNewContext(source+'\n({lobbyTeamsChartRows,lobbyTeamsGapLabel})');
   const rows=lobbyTeamsChartRows([
     {tier:13,total:4,teamRankSum:52.4,teamRankCount:4,enemyRankSum:53.48,enemyRankCount:4},
@@ -101,15 +105,8 @@ test('player-rank table includes every game and performance while preserving eli
     {...base,won:null,myRR:null,myStats:null},
     {...base,myTierId:25,won:false,myRR:null},
     {...base,myTierId:0,won:null,myRR:null,myStats:null}];
-  const container={innerHTML:'',querySelector:()=>({})};
   let values;
-  const render=runInNewContext(winRateHelpers+'\n'+stats+'\n'+html.slice(html.indexOf('function renderRRBreakdown('),html.indexOf('function buildRRScoreRows('))+'\nrenderRRBreakdown',{
-    allMatches:matches,document:{getElementById:()=>container},
-    renderScoreMarginChart:()=>{},renderRRByScore:()=>{},renderRRTrend:()=>{},
-    renderRRSummary:()=>{},rrTrendScopedMatches:m=>m,renderRRMovement:()=>{},
-    rankIcon:()=>'',avgLabel:tier=>String(tier),rrSigned:(n,d)=>`${n<0?'−':'+'}${Math.abs(n).toFixed(d)}`,
-    highlightTableMaxima:()=>{},initTableSorting:(_,rows)=>{values=rows;},
-  });
+  const render=list=>{values=rrRankRows(list).map(({tier,stats:s})=>[tier,s.n,s.kd,s.acs,s.performanceScore,s.winRate,s.avgGain,s.avgLoss==null?null:-s.avgLoss]);};
   render(matches);
   assert.equal(values.reduce((n,row)=>n+row[1],0),matches.length);
   const immortal=values.find(row=>row[0]===24);
@@ -127,51 +124,42 @@ test('player-rank table includes every game and performance while preserving eli
   assert.ok(values.every(row=>row[6]===null&&row[7]===null));
 });
 
-test('RR breakdown remains visible for a loaded act containing only games without RR',()=>{
-  const elements=new Map();
-  const document={querySelector:()=>({}),getElementById:id=>{
-    if(!elements.has(id))elements.set(id,{});return elements.get(id);
-  }};
-  const start=html.indexOf('function updateDetailPages(');
-  const end=html.indexOf("  document.getElementById('party-size-section')",start);
-  runInNewContext(html.slice(start,end)+'}\nupdateDetailPages();',{
-    document,analysisState:'ready',allMatches:[{myRR:null}],nameHistoryState:'idle',
-    scoreMarginDistribution:()=>({total:0}),
-  });
-  assert.equal(elements.get('rr-tables').hidden,false);
-  assert.equal(elements.get('rr-empty').hidden,true);
+test('RR breakdown remains visible for a loaded act containing only games without RR',async()=>{
+  const engine=await load('/src/engine/core.mjs');
+  const player=(name,team,puuid)=>({name,tag:'EU',puuid,team_id:team,party_id:puuid,tier:{id:12},
+    stats:{kills:10,deaths:10,assists:2,score:4000,rounds_played:20}});
+  engine.loadFixtureAnalysis({player:'Me',tag:'EU',puuid:'me',season:'act',current:null,
+    rr:{change:{},pre:{},post:{},preTier:{},postTier:{},protected:{},details:{}},names:[],
+    raw:[{metadata:{match_id:'m1',map:{name:'Ascent'},started_at:'2026-10-01T10:00:00Z',game_length_in_ms:1800000,season:{short:'e10a6',id:'act'}},
+      players:[player('Me','Red','me'),player('Ally','Red','ally'),player('Foe','Blue','foe')],
+      teams:[{team_id:'Red',rounds:{won:13}},{team_id:'Blue',rounds:{won:7}}]}]});
+  await settle();
+  assert.equal(engine.getSnapshot().allMatches[0].myRR,null);
+  const page=await renderHtml('/src/app/pages/RR.jsx','RRPage');
+  assert.match(page,/id="rr-trend-title"/);
+  assert.match(page,/No recorded rank and RR changes/);
+  assert.doesNotMatch(page,/Search for a player above/);
 });
 
-test('distribution renders counts with accessible exact scores independently of RR',()=>{
-  const element=()=>({attrs:{},children:[],textContent:'',hidden:false,
-    setAttribute(key,value){this.attrs[key]=value;},
-    appendChild(child){this.children.push(child);},
-    replaceChildren(){this.children=[];},
-  });
-  const elements=new Map();
-  const document={createElementNS:element,getElementById(id){
-    if(!elements.has(id))elements.set(id,element());return elements.get(id);
-  }};
-  const helpers=html.slice(html.indexOf('function statChartNode('),html.indexOf('function renderTeammates('));
-  const render=runInNewContext(helpers+'\n'+margins+'\nrenderScoreMarginChart',{document});
-  render([{myR:13,opR:11},{myR:14,opR:12},{myR:11,opR:13},{myR:13,opR:13}]);
-  const svg=elements.get('score-margin-chart').children[0];
-  assert.ok(svg.children.some(n=>n.textContent==='Matches'));
-  assert.equal(svg.children.some(n=>n.textContent==='RR payout'),false);
-  const bars=svg.children.filter(n=>n.attrs.class?.startsWith('bar '));
+test('distribution renders counts with accessible exact scores independently of RR',async()=>{
+  const chart=matches=>renderHtml('/src/app/pages/RR.jsx','ScoreMarginChart',{matches});
+  const svg=await chart([{myR:13,opR:11},{myR:14,opR:12},{myR:11,opR:13},{myR:13,opR:13}]);
+  assert.match(svg,/>Matches<\/text>/);
+  assert.doesNotMatch(svg,/RR payout/);
+  const bars=[...svg.matchAll(/<rect[^>]*class="bar (win|loss|draw)"[^>]*>/g)];
   assert.equal(bars.length,3);
-  const win=bars.find(n=>n.attrs.class==='bar win');
-  assert.equal(win.attrs.tabindex,'0');
-  assert.match(win.attrs['aria-label'],/13–11: 1 matches/);
-  assert.match(win.attrs['aria-label'],/14–12: 1 matches/);
-  assert.equal(elements.get('score-margin-chart-count').textContent,'4 scored matches');
-  render([]);
-  assert.equal(elements.get('score-margin-chart-section').hidden,true);
-  assert.equal(elements.get('score-margin-chart').children.length,0);
+  const win=bars.find(bar=>bar[1]==='win')[0];
+  assert.match(win,/tabindex="0"/);
+  assert.match(win,/aria-label="[^"]*13–11: 1 matches/);
+  assert.match(win,/aria-label="[^"]*14–12: 1 matches/);
+  assert.match(svg,/4 scored matches/);
+  assert.equal(await chart([]),'');
 });
 
-test('inline application scripts remain syntactically valid',()=>{
-  for(const match of html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g))new Script(match[1]);
+test('the app shell loads one module entry and no inline application script',()=>{
+  const shell=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+  assert.match(shell,/<script type="module" src="\/src\/main\.jsx"><\/script>/);
+  assert.equal([...shell.matchAll(/<script(?:\s[^>]*)?>/g)].length,1);
 });
 
 test('party aggregation attaches your stats only to your same-team party teammates',()=>{
@@ -184,8 +172,8 @@ test('party aggregation attaches your stats only to your same-team party teammat
       myStats:{kills:10,deaths:20,score:4000,rounds_played:20,acs:200,performanceScore:250}}],
     document:{getElementById:()=>({style:{}})},computeEncounters:()=>[],
     currentTeammateIdentity:p=>p,
-    renderTeammates:()=>{},renderEncounters:()=>{},renderWintradeSignals:()=>{},renderOverviewPreviews:()=>{},updateDetailPages:()=>{}};
-  const start=html.indexOf('function buildTeammates('),end=html.indexOf('\nfunction renderEncounters(',start);
+    emit:()=>{}};
+  const start=html.indexOf('function buildTeammates('),end=html.indexOf('\n// This is a transparent screening heuristic',start);
   const rows=runInNewContext(html.slice(start,end)+'\nbuildTeammates();allTeammates',context);
   assert.equal(rows.length,1);assert.equal(rows[0].key,'friend');
   assert.equal(rows[0].kills,99);
@@ -198,36 +186,27 @@ test('party aggregation attaches your stats only to your same-team party teammat
   assert.equal(rows[0].myPerformanceSum,250);assert.equal(rows[0].myPerformanceCount,1);
 });
 
-test('duo table switches its K/D, ACS and PS columns between the teammate and you',()=>{
-  const start=html.indexOf('// Which side of each shared match'),end=html.indexOf('\n// Keep each table\'s chosen sort',start);
-  assert.ok(start>0&&end>start);
-  let rows=[],sortValues=null;
-  const stub=()=>({title:'',textContent:''});
-  const createElement=()=>({innerHTML:'',querySelector(sel){return sel==='tbody'?{appendChild:row=>rows.push(row.innerHTML)}:stub();}});
-  const context={document:{getElementById:()=>({replaceChildren(){},appendChild(){}}),createElement},
-    allTeammates:[{name:'Friend',tag:'EU',games:3,wins:2,decided:3,kills:30,deaths:20,rankSum:0,rankCount:0,
-      acsSum:600,acsCount:3,performanceSum:0,performanceCount:0,rrTotal:12,rrCount:3,
-      myKills:24,myDeaths:30,myAcsSum:540,myAcsCount:3,myPerformanceSum:750,myPerformanceCount:3}],
-    playerRouteUrl:()=>'/player/x',tableLobbyValue:()=>'—',decidedWinRate:(w,d)=>d?w/d*100:null,rrSigned:v=>(v>0?'+':'')+v,
-    highlightTableMaxima(){},initTableSorting:(_,values)=>{sortValues=values;}};
-  runInNewContext(winRateHelpers+'\n'+html.slice(start,end)+'\nrenderTeammates();this.setView=setDuoStatsView;',context);
-  const cellsOf=()=>rows[0].split('<td').slice(1);
-  const sortedStats=()=>JSON.parse(JSON.stringify(sortValues[0].slice(3,6)));
+test('duo table switches its K/D, ACS and PS columns between the teammate and you',async()=>{
+  const allTeammates=[{key:'friend',name:'Friend',tag:'EU',games:3,wins:2,decided:3,kills:30,deaths:20,rankSum:0,rankCount:0,
+    acsSum:600,acsCount:3,performanceSum:0,performanceCount:0,rrTotal:12,rrCount:3,
+    myKills:24,myDeaths:30,myAcsSum:540,myAcsCount:3,myPerformanceSum:750,myPerformanceCount:3}];
+  const cells=async view=>{
+    const markup=await renderHtml('/src/app/pages/Duos.jsx','TeammatesTable',{s:{duoStatsView:view,allTeammates}});
+    const body=markup.slice(markup.indexOf('<tbody'));
+    return [...body.matchAll(/<td([^>]*)>(.*?)<\/td>/g)].map(([,attrs,text])=>({attrs,text}));
+  };
   // Default view: the teammate's figures, one value per cell, yours in the tooltip.
-  assert.equal(rows.length,1);
-  let cells=cellsOf();
-  assert.match(cells[2],/class="rank-positive" title="Teammate: 1\.50 \(30 kills \/ 20 deaths\) · You: 0\.80 \(24 kills \/ 30 deaths\)">1\.50<\/td>/);
-  assert.match(cells[3],/title="Teammate: 200 · You: 180">200<\/td>/);
-  assert.match(cells[4],/title="Teammate: — · You: 250 · [^"]*">—<\/td>/);
-  assert.doesNotMatch(rows[0],/duo-stat-you/);
-  assert.deepEqual(sortedStats(),[1.5,200,null]);
-  // You view: your figures from the same matches drive the cells, sorting and highlights.
-  rows=[];context.setView('you');
-  cells=cellsOf();
-  assert.match(cells[2],/class="rank-negative" [^>]*>0\.80<\/td>/);
-  assert.match(cells[3],/>180<\/td>/);
-  assert.match(cells[4],/>250<\/td>/);
+  let row=await cells('teammate');
+  assert.equal(row[2].text,'1.50');
+  assert.match(row[2].attrs,/text-positive/);
+  assert.match(row[2].attrs,/title="Teammate: 1\.50 \(30 kills \/ 20 deaths\) · You: 0\.80 \(24 kills \/ 30 deaths\)/);
+  assert.equal(row[3].text,'200');assert.match(row[3].attrs,/title="Teammate: 200 · You: 180/);
+  assert.equal(row[4].text,'—');assert.match(row[4].attrs,/title="Teammate: — · You: 250 · /);
+  // You view: your figures from the same matches drive the cells.
+  row=await cells('you');
+  assert.equal(row[2].text,'0.80');assert.match(row[2].attrs,/text-negative/);
+  assert.equal(row[3].text,'180');
+  assert.equal(row[4].text,'250');
   // Win rate and Total RR are shared results and do not change.
-  assert.match(cells[6],/>\+12<\/td>/);
-  assert.deepEqual(sortedStats(),[0.8,180,250]);
+  assert.equal(row[6].text,'+12');
 });

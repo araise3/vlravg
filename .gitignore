@@ -36,3 +36,5 @@ __pycache__/
 /scripts/summarize-replays.py
 /scripts/test-reaction-time.py
 /scripts/test-review-exit-candidates.py
+dist/
+node_modules/

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 
-const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const html=readFileSync(new URL('../src/engine/core.mjs',import.meta.url),'utf8');
 const start=html.indexOf("let activePage='overview'");
 const end=html.indexOf('// Name history has dates',start);
 assert.ok(start>0&&end>start);
@@ -11,7 +11,7 @@ const source=html.slice(start,end)+'\n({loadOlderNames,getState:()=>({pages:name
 const puuid='11111111-1111-4111-8111-111111111111';
 
 function client(apiGet){
-  const context={PUUID:puuid,_analysisGen:1,_analysisController:null,API_BASE:'/api',apiGet,sleep:async()=>{},renderNameHistory(){},
+  const context={PUUID:puuid,_analysisGen:1,_analysisController:null,API_BASE:'/api',apiGet,sleep:async()=>{},renderNameHistory(){},emit(){},
     document:{getElementById(){return{addEventListener(){}}}}};
   const ui=runInNewContext(source,context);
   runInNewContext('nameHistoryBackfill={available:true,complete:false,limited:false,next_start:0}',context);
