@@ -1,11 +1,11 @@
-import {ArrowUpRight,Minus,TrendingDown,TrendingUp} from 'lucide-react';
+import {useState} from 'react';
+import {ArrowUpRight} from 'lucide-react';
 import {
   avgLabel,avgLabelShort,clutchTotals,computeRRStats,decidedWinRate,overviewRecentMatches,PARTY_LABELS,
-  playerRouteUrl,rrSigned,setRRTrendRange,tierRR,winRateLabel,
+  playerRouteUrl,rrSigned,tierRR,winRateLabel,winRateTone,
 } from '@/engine/core.mjs';
-import {useEngine,useIsMobile} from '@/app/hooks.js';
-import {ChartFrame,PageHeading,PageLink,PartyIcon,PlacementToggle,RankIcon,toneClass} from '@/app/shared.jsx';
-import {RRTrendChart} from '@/app/pages/RR.jsx';
+import {useElementWidth,useEngine,useIsMobile} from '@/app/hooks.js';
+import {ChartTooltip,PageHeading,PageLink,PartyIcon,PlacementToggle,RankIcon,toneClass} from '@/app/shared.jsx';
 import {useMapArt} from '@/app/pages/Matches.jsx';
 import {cn} from '@/lib/utils';
 import {Badge} from '@/components/ui/badge';
@@ -14,11 +14,12 @@ import {Card,CardAction,CardContent,CardDescription,CardHeader,CardTitle} from '
 import {Progress} from '@/components/ui/progress';
 import {Skeleton} from '@/components/ui/skeleton';
 import {Table,TableBody,TableCell,TableHead,TableHeader,TableRow} from '@/components/ui/table';
-import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs';
 
-// Dashboard layout from shadcn's blocks: two KPI cards (lobby rank, recent RR),
-// the act's 4×2 stat grid, clutch stats, top teammates, the RR trend chart
-// card, then recent matches. Cards link to the page with the full detail.
+// Dashboard layout from shadcn's blocks: lobby rank beside top teammates, the
+// act's 4×2 stat grid, clutch stats, the last-20 RR card, then recent matches.
+// Cards link to the page with the full detail.
+
+const toneOf=tone=>tone==='rank-positive'?'text-positive':tone==='rank-negative'?'text-negative':'';
 
 function ViewLink({page,children}){
   return (
@@ -28,16 +29,18 @@ function ViewLink({page,children}){
   );
 }
 
-// One KPI card: label, headline value, then a hairline-divided list of rows
-// (label, value, note). No corner badges; supporting figures live in rows.
-function KpiCard({label,labelId,value,valueClassName,icon,rows,note,empty}){
+// One KPI card with the same header as Top teammates (title, link to the full
+// page), then the headline value and a hairline-divided list of rows (label,
+// value, note). Supporting figures live in rows, not badges.
+function KpiCard({title,titleId,action,value,valueClassName,icon,rows,note,empty}){
   return (
-    <Card className="gap-4 py-5" aria-labelledby={labelId}>
-      <CardHeader className="gap-1.5 px-5">
-        <CardDescription id={labelId}>{label}</CardDescription>
-        <CardTitle className={cn('flex min-w-0 items-center gap-2.5 text-2xl font-semibold whitespace-nowrap tabular-nums sm:text-3xl',valueClassName)}>{icon}{value}</CardTitle>
+    <Card className="gap-4 py-5" aria-labelledby={titleId}>
+      <CardHeader className="px-5">
+        <CardTitle><h2 id={titleId}>{title}</h2></CardTitle>
+        {action&&<CardAction>{action}</CardAction>}
       </CardHeader>
       <CardContent className="flex flex-1 flex-col gap-3 px-5">
+        <div className={cn('flex min-w-0 items-center gap-2.5 text-2xl leading-none font-semibold whitespace-nowrap tabular-nums sm:text-3xl',valueClassName)}>{icon}{value}</div>
         {rows.length
           ?<dl className="divide-y rounded-lg border">
             {rows.map(row=>(
@@ -72,42 +75,27 @@ function partyLobbyRanks(rated){
 }
 
 // Average lobby rank, broken down by party size (one row per size played),
-// and net RR over the recent window with its per-win/per-loss split.
-export function KpiCards({s,recent}){
+// beside the top party teammates.
+export function KpiCards({s}){
   const o=s.overviewStats;
   const rated=s.statMatches.filter(m=>m.avgRank!=null);
   const parties=partyLobbyRanks(rated);
   const rank=o.overallRR;
   const partyName=size=>PARTY_LABELS[size]||size+'-Stack';
   const lobbies=n=>`${n} ${n===1?'lobby':'lobbies'}`;
-  const rr=computeRRStats(recent);
-  const withRR=recent.filter(m=>Number.isFinite(m.myRR));
-  const net=withRR.length?withRR.reduce((sum,m)=>sum+m.myRR,0):null;
-  const Trend=net==null||net===0?Minus:net>0?TrendingUp:TrendingDown;
   const partyRows=parties.map(({size,count,rank:r})=>({
     key:size,
     label:<><PartyIcon size={size}/>{partyName(size)}</>,
-    value:<><RankIcon tier={r.tier} size={18}/><span className="truncate max-sm:hidden">{avgLabel(r.tier)}</span><span className="truncate sm:hidden">{avgLabelShort(r.tier)}</span><span className="shrink-0 font-normal text-muted-foreground">{r.rr} RR</span></>,
+    value:<><RankIcon tier={r.tier} size={18}/><span className="truncate max-sm:hidden">{avgLabel(r.tier)} ({r.rr} RR)</span><span className="truncate sm:hidden">{avgLabelShort(r.tier)} ({r.rr} RR)</span></>,
     note:lobbies(count),
     title:`${partyName(size)}: ${avgLabel(r.tier)}, ${r.rr} RR across ${lobbies(count)}`,
   }));
-  const record=`${rr.wins}–${rr.losses}${rr.draws?`–${rr.draws}`:''}`;
-  // Only wins and losses have a payout split; an all-draw window says so instead.
-  const rrRows=rr.wins+rr.losses?[
-    {key:'win',label:'Per win',value:rr.avgGain==null?'—':rrSigned(rr.avgGain,1),className:rr.avgGain!=null&&'text-positive',note:`${rr.wins} ${rr.wins===1?'win':'wins'}`},
-    {key:'loss',label:'Per loss',value:rr.avgLoss==null?'—':rrSigned(-rr.avgLoss,1),className:rr.avgLoss!=null&&'text-negative',note:`${rr.losses} ${rr.losses===1?'loss':'losses'}`},
-    {key:'record',label:rr.draws?'W–L–D':'W–L',value:record,note:`${winRateLabel(rr.winRate)} win rate`,title:'Wins divided by wins plus losses; draws excluded'},
-  ]:[];
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" role="group" aria-label="Key figures this act" data-slot="kpi-cards">
-      <KpiCard label={`Avg lobby rank (${rated.length} rated ${rated.length===1?'lobby':'lobbies'})`} labelId="kpi-lobby-label"
-        value={<>{rank?avgLabel(rank.tier):avgLabel(o.overall)}{rank&&<span className="text-base font-normal text-muted-foreground">{rank.rr} RR</span>}</>}
+      <KpiCard title="Avg lobby rank" titleId="overview-lobby-title" action={<ViewLink page="lobby-rank">Lobby Rank</ViewLink>}
+        value={<span className="truncate">{rank?`${avgLabel(rank.tier)} (${rank.rr} RR)`:avgLabel(o.overall)}</span>}
         icon={rank&&<RankIcon tier={rank.tier} size={34}/>} rows={partyRows} empty="No rated lobbies yet"/>
-      <KpiCard label={`Net RR (last ${recent.length})`} labelId="kpi-rr-label"
-        value={<>{net!=null?rrSigned(net,0):'—'}<Trend className="size-5 opacity-70" aria-hidden="true"/></>}
-        valueClassName={net>0?'text-positive':net<0?'text-negative':null}
-        rows={rrRows} empty={rr.n?'No RR-eligible wins or losses':'No RR-eligible matches in this window'}
-        note={`${rr.n} of ${recent.length} eligible. Averages skip placements and 5-stacks.`}/>
+      <TeammatesCard teammates={s.allTeammates||[]}/>
     </div>
   );
 }
@@ -145,29 +133,96 @@ export function ActStatsCard({s}){
   );
 }
 
-export function RRTrendCard({s}){
-  const range=s.rrTrendRange;
+// The recent window as a cumulative RR line, one dot per match coloured by
+// result, then the per-win/per-loss averages and the RR gained and lost. The
+// RR page keeps the full rank-axis chart and the longer ranges.
+const RESULT_LABEL={win:'Win',loss:'Loss',draw:'Draw'};
+const resultOf=m=>m.won===true?'win':m.won===false?'loss':'draw';
+
+export function RecentRRCard({matches}){
+  const [ref,measured]=useElementWidth();
+  const [active,setActive]=useState(null);
+  const ordered=matches.filter(m=>Number.isFinite(m.myRR)).sort((a,b)=>(a.startedAtMs||0)-(b.startedAtMs||0));
+  const rr=computeRRStats(matches);
+  const gained=ordered.reduce((sum,m)=>sum+Math.max(0,m.myRR),0);
+  const lost=ordered.reduce((sum,m)=>sum+Math.min(0,m.myRR),0);
+  const net=ordered.length?gained+lost:null;
+  // The line starts at 0 before the oldest match and steps once per match.
+  let running=0;
+  const points=[{match:null,value:0},...ordered.map(m=>({match:m,value:running+=m.myRR}))];
+  const width=Math.max(120,measured||640),height=112,left=6,right=6,top=10,bottom=height-10;
+  const values=points.map(p=>p.value);
+  const low=Math.min(...values),span=Math.max(1,Math.max(...values)-low);
+  const spacing=(width-left-right)/Math.max(1,points.length-1);
+  const x=i=>left+i*spacing;
+  const y=value=>bottom-(value-low)/span*(bottom-top);
+  const line=points.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
+  const pointerMove=event=>{
+    const bounds=event.currentTarget.getBoundingClientRect();
+    const plotX=(event.clientX-bounds.left)*width/bounds.width;
+    setActive(Math.max(1,Math.min(points.length-1,Math.round((plotX-left)/spacing))));
+  };
+  const tip=active!=null?points[active]?.match&&points[active]:null;
+  const date=m=>Number.isFinite(m.startedAtMs)?new Date(m.startedAtMs).toLocaleDateString(undefined,{month:'short',day:'numeric'}):null;
+  const figures=[
+    ['Avg gain',rr.avgGain==null?'—':rrSigned(rr.avgGain,1),rr.avgGain!=null&&'text-positive',`${rr.wins} ${rr.wins===1?'win':'wins'}`],
+    ['Avg loss',rr.avgLoss==null?'—':rrSigned(-rr.avgLoss,1),rr.avgLoss!=null&&'text-negative',`${rr.losses} ${rr.losses===1?'loss':'losses'}`],
+    ['RR gained',rrSigned(gained,0),gained>0&&'text-positive'],
+    ['RR lost',`−${Math.abs(lost).toFixed(0)}`,lost<0&&'text-negative'],
+  ];
   return (
-    <Card aria-labelledby="overview-rr-title">
+    <Card className="gap-4" aria-labelledby="overview-rr-title">
       <CardHeader>
-        <CardTitle><h2 id="overview-rr-title">RR trend</h2></CardTitle>
-        <CardAction>
-          <Tabs value={range} onValueChange={setRRTrendRange}>
-            <TabsList aria-label="Overview RR trend range">
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="30" aria-label="30 most recent matches">30</TabsTrigger>
-              <TabsTrigger value="20" aria-label="20 most recent matches">20</TabsTrigger>
-            </TabsList>
-          </Tabs>
-        </CardAction>
+        <CardTitle><h2 id="overview-rr-title">RR trend, last {matches.length} {matches.length===1?'match':'matches'}</h2></CardTitle>
+        {net!=null&&(
+          <CardAction className={cn('text-lg leading-none font-semibold tabular-nums',toneClass(net,0))}
+            title={`Net RR across the ${ordered.length} of ${matches.length} matches with a recorded change`}>{rrSigned(net,0)} RR</CardAction>
+        )}
       </CardHeader>
-      <CardContent>
-        <ChartFrame><RRTrendChart matches={s.allMatches} range={range}/></ChartFrame>
+      <CardContent className="flex flex-col gap-4">
+        {ordered.length
+          ?<div ref={ref} className="relative" data-slot="recent-rr-line">
+            <svg className="chart-svg rr-trend-svg block w-full" width={width} height={height} viewBox={`0 0 ${width} ${height}`}
+              role="img" aria-label={`Cumulative RR across ${ordered.length} matches, net ${rrSigned(net,0)} RR`}
+              onPointerMove={pointerMove} onPointerDown={pointerMove} onPointerLeave={()=>setActive(null)} style={{touchAction:'pan-y'}}>
+              <defs>
+                <linearGradient id="recent-rr-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stopColor="var(--series-1)" stopOpacity=".2"/>
+                  <stop offset="1" stopColor="var(--series-1)" stopOpacity="0"/>
+                </linearGradient>
+              </defs>
+              <path d={`${line} L${x(points.length-1).toFixed(1)},${bottom} L${x(0).toFixed(1)},${bottom} Z`} fill="url(#recent-rr-fill)"/>
+              <path className="line" d={line}/>
+              {tip&&<line className="hover-line" x1={x(active)} y1={top} x2={x(active)} y2={bottom}/>}
+              {points.map(({match,value},i)=>match&&(
+                <circle key={match.matchId??i} className={`result-point ${resultOf(match)}`} cx={x(i)} cy={y(value)} r={i===active?5:Math.max(3,Math.min(4,spacing/3))}/>
+              ))}
+            </svg>
+            {tip&&(
+              <ChartTooltip x={x(active)} y={Math.max(0,y(tip.value)-40)} width={width}>
+                <div className="tt-value">{rrSigned(tip.match.myRR,0)} RR</div>
+                <div className="tt-row"><span className="tt-key" style={{background:`var(--chart-${resultOf(tip.match)})`}}/>
+                  {RESULT_LABEL[resultOf(tip.match)]}{tip.match.mapName?` on ${tip.match.mapName}`:''}{Number.isInteger(tip.match.myR)&&Number.isInteger(tip.match.opR)?`, ${tip.match.myR}–${tip.match.opR}`:''}</div>
+                <div className="tt-muted">{rrSigned(tip.value,0)} RR so far, match {active} of {ordered.length}{date(tip.match)?`, ${date(tip.match)}`:''}</div>
+              </ChartTooltip>
+            )}
+          </div>
+          :<p className="rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">No recorded RR changes in these matches</p>}
+        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-4" aria-label="RR over the recent matches">
+          {figures.map(([label,value,className,note])=>(
+            <div key={label} className="min-w-0 bg-card px-4 py-3 max-sm:px-3.5">
+              <dt className="text-xs text-muted-foreground">{label}</dt>
+              <dd className="mt-1.5 flex items-baseline gap-2 text-xl leading-none font-semibold whitespace-nowrap tabular-nums">
+                <span className={className||undefined}>{value}</span>{note&&<span className="text-xs font-normal text-muted-foreground">{note}</span>}
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <p className="text-xs text-muted-foreground">{ordered.length<matches.length?`${ordered.length} of ${matches.length} matches have a recorded RR change. `:''}Averages skip placements and 5-stacks.</p>
       </CardContent>
     </Card>
   );
 }
-
 const RESULT={win:['Win','var(--chart-win)'],loss:['Loss','var(--chart-loss)'],draw:['Draw','var(--chart-draw)']};
 
 export function RecentMatchesCard({matches,maps,className}){
@@ -224,37 +279,49 @@ export function RecentMatchesCard({matches,maps,className}){
   );
 }
 
-// Up to three teammates side by side in the act-stats grid style, so the card
-// is as full with one teammate row as the stats card is with eight figures.
-const TEAMMATE_COLS={2:'sm:grid-cols-2',3:'sm:grid-cols-3'};
-
+// The top party teammates, one row each, beside the lobby rank card.
 export function TeammatesCard({teammates}){
-  if(!teammates.length)return null;
-  const top=teammates.slice(0,3);
+  const top=teammates.slice(0,4);
+  const head='px-3 py-2 font-normal';
   return (
-    <Card className="gap-4" aria-labelledby="overview-duos-title">
-      <CardHeader>
+    <Card className="gap-4 py-5" aria-labelledby="overview-duos-title">
+      <CardHeader className="px-5">
         <CardTitle><h2 id="overview-duos-title">Top teammates</h2></CardTitle>
         <CardAction><ViewLink page="duos">Duos</ViewLink></CardAction>
       </CardHeader>
-      <CardContent>
-        <ul className={cn('grid grid-cols-1 gap-px overflow-hidden rounded-lg border bg-border',TEAMMATE_COLS[top.length])}>
-          {top.map(t=>{
-            const kd=t.deaths>0?t.kills/t.deaths:t.kills;
-            return (
-              <li key={t.key} className="min-w-0 bg-card px-4 py-3.5">
-                <a href={playerRouteUrl(t.name,t.tag)} title={t.name+'#'+t.tag} className="block truncate text-sm font-medium hover:underline">
-                  {t.name}<span className="font-normal text-muted-foreground"> #{t.tag}</span>
-                </a>
-                <div className="mt-2 flex items-baseline gap-1.5 tabular-nums" title={`Teammate K/D: ${t.kills} kills / ${t.deaths} deaths`}>
-                  <span className={cn('text-2xl leading-none font-semibold',toneClass(kd))}>{kd.toFixed(2)}</span>
-                  <span className="text-xs text-muted-foreground">K/D</span>
-                </div>
-                <div className="mt-1.5 text-xs text-muted-foreground tabular-nums">{t.games} {t.games===1?'match':'matches'} together</div>
-              </li>
-            );
-          })}
-        </ul>
+      <CardContent className="px-5">
+        {top.length
+          ?<div className="overflow-hidden rounded-lg border">
+            <table className="w-full text-sm tabular-nums">
+              <thead>
+                <tr className="border-b text-xs text-muted-foreground">
+                  <th scope="col" className={cn(head,'text-left')}>Teammate</th>
+                  <th scope="col" className={cn(head,'text-right')}>Matches</th>
+                  <th scope="col" className={cn(head,'text-right whitespace-nowrap')} title="Wins divided by wins plus losses; draws excluded">Win rate</th>
+                  <th scope="col" className={cn(head,'text-right')} title="Your net RR change in matches with this teammate">RR</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {top.map(t=>{
+                  const wr=decidedWinRate(t.wins,t.decided);
+                  return (
+                    <tr key={t.key}>
+                      <td className="w-full max-w-0 px-3 py-2">
+                        <a href={playerRouteUrl(t.name,t.tag)} title={t.name+'#'+t.tag} className="block truncate font-medium hover:underline">
+                          {t.name}<span className="font-normal text-muted-foreground"> #{t.tag}</span>
+                        </a>
+                      </td>
+                      <td className="px-3 py-2 text-right text-muted-foreground">{t.games}</td>
+                      <td className={cn('px-3 py-2 text-right',toneOf(winRateTone(wr)))}>{winRateLabel(wr)}</td>
+                      <td className={cn('px-3 py-2 text-right font-medium',t.rrCount?toneClass(t.rrTotal,0):'text-muted-foreground')}
+                        title={`${t.rrCount} of ${t.games} shared matches have a recorded RR change`}>{t.rrCount?rrSigned(t.rrTotal,0):'—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          :<p className="rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">No party teammates this act</p>}
       </CardContent>
     </Card>
   );
@@ -346,11 +413,10 @@ export function OverviewPage(){
     <div className="flex flex-col gap-4">
       <PageHeading id="overview-title" title="Overview"/>
       <PlacementToggle/>
-      <KpiCards s={s} recent={recent}/>
+      <KpiCards s={s}/>
       <ActStatsCard s={s}/>
       <ClutchCard matches={s.allMatches}/>
-      <TeammatesCard teammates={s.allTeammates}/>
-      <RRTrendCard s={s}/>
+      <RecentRRCard matches={recent}/>
       <RecentMatchesCard matches={latest} maps={maps}/>
     </div>
   );

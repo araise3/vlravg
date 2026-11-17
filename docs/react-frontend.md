@@ -94,16 +94,16 @@ pickers, and every toggle.
 
 `src/app/pages/Overview.jsx` follows shadcn's dashboard blocks, top to bottom:
 
-- Two KPI cards, reworked on request (17 Nov 2026): a headline value, then a
-  hairline-divided list of rows; no corner badges. Average lobby rank (with
-  its RR beside it) lists one row per party size played: party icon and
-  label, that size's average lobby rank with icon and RR, and its lobby
-  count. Net RR over the last 20 matches lists RR per win, RR per loss and
-  the W–L(–D) record with win rate, then "N of M eligible". Net sums every
-  recorded RR change; the per-win and per-loss averages use RR-eligible
-  matches only. An all-draw window says there are no wins or losses to
-  average. Phones show the short rank label and put each row's note under
-  its label.
+- Lobby rank beside top teammates (`KpiCards`). Both cards share one header
+  shape: an h2 title and an outline link to the full page (Lobby Rank,
+  Duos). Average lobby rank (with its RR beside it) then lists one row per
+  party size played: party icon and label, that size's average lobby rank
+  with icon and RR in brackets, and its lobby count; no badges or footnote. Phones show the short rank label and put each
+  row's note under its label. Top teammates took the slot of the former
+  "Net RR (last 20)" card on request (17 Nov 2026): up to four party
+  teammates as table rows (name, matches together, win rate, your net RR
+  with them), with a link to Duos. A solo player gets a dashed empty note
+  so the row keeps both cards.
 - Act stats: the eight act figures (K/D, ACS, PS, ADR, KAST, playtime,
   matches with W/L/D, win rate) as one 4×2 hairline grid, 2×4 on phones.
 - Clutch stats: 1v1–1v5 win rate with a `Progress` bar and counts (five
@@ -111,18 +111,23 @@ pickers, and every toggle.
   won/lost/saved split as one segmented bar. The tiles have the pre-React
   colours again (`CLUTCH_COLORS`: 1v1 green `#22c55e`, teal, blue, indigo,
   1v5 purple `#a855f7`, white text); a tile with no situations stays neutral.
-- Top teammates: up to three side by side in the same hairline grid (name,
-  K/D, matches together), stacked on phones. No avatars.
-- RR trend: the RR page's `RRTrendChart` in a card, with All/30/20 tabs that
-  share the RR page's range.
+- RR trend, last 20 matches (`RecentRRCard`), replacing the full trend chart
+  on request (17 Nov 2026), in the style of compact tracker cards: net RR in
+  the header, a cumulative RR line from 0 with one dot per match coloured by
+  result (hover for the match), then avg gain, avg loss, RR gained and RR
+  lost. Net and the gained/lost totals sum every recorded RR change in the
+  window; the averages use RR-eligible matches only (no placements or
+  5-stacks), as the footnote says. No range tabs; the RR page keeps the
+  rank-axis chart and the longer ranges.
 - Recent matches: full-width `Table` of the latest 8 with map art. Card
   actions link to the full pages.
 
 `RankIcon` keeps each icon's aspect ratio (`object-contain`; the embedded
 Immortal 3 icon is 40×37) and switches to the 256px PNG from 32px up.
 
-Removed: the "Most-played lobbies" preview, the scrolling recent-match list
-and the small RR sparkline.
+Removed: the "Most-played lobbies" preview, the scrolling recent-match list,
+the "Net RR (last 20)" KPI card and the full RR trend chart (both folded
+into the last-20 RR card).
 
 ## Charts (17 Nov 2026)
 

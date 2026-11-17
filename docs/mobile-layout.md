@@ -55,8 +55,9 @@ only the chrome around them and the way some data is drawn differ.
   trophy and RR change on one line, map/time/length/server on the next, and
   K/D/A, ACS, PS and lobby rank under that. Tapping opens the same RR details
   and roster; the roster uses narrower columns and short rank labels.
-- **Overview**: the two KPI cards stack; their rows use the short rank label
-  ("Immo 3") and put the lobby count or win/loss count under the row label.
+- **Overview**: the lobby rank and top teammates cards stack; the lobby rows
+  use the short rank label ("Immo 3") and put the lobby count under the row
+  label. The last-20 RR card's four figures wrap to a 2×2 grid.
   (A combined hero card was tried first and replaced when the cards were
   reworked around the per-party-size lobby ranks.) A skeleton fills the page
   while matches load. Act stats use tighter cells.
