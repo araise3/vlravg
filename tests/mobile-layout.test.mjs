@@ -1,7 +1,7 @@
 import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {avgLabelShort,tierRR} from '../src/engine/core.mjs';
+import {avgLabel,avgLabelShort,tierRR} from '../src/engine/core.mjs';
 import {closeRenderer,load,renderHtml} from './helpers/react-render.mjs';
 
 after(closeRenderer);
@@ -95,9 +95,11 @@ test('the phone match card keeps result, score, RR change, stats and the roster 
   assert.match(html,/aria-label="Win on Abyss, 13–7\. 18 \/ 12 \/ 8 KDA, 240 ACS, 230 Performance Score\. Show RR details and roster"/);
 });
 
-test('the phone overview leads with one hero card holding lobby rank and net RR',async()=>{
+test('on phones the KPI rows show the short rank and put the lobby count under the party label',async()=>{
   const s={overviewStats:{overallRR:{tier:18,rr:50},overall:18.5},allMatches:[],statMatches:Array.from({length:12},()=>({partySize:2,avgRank:18.5}))};
-  const html=await renderHtml('/src/app/pages/Overview.jsx','KpiCards',{s,recent:[],mobile:true});
-  assert.match(html,/data-slot="mobile-kpis"/);
-  assert.match(text(html),/Avg lobby rank Diamond 1 50 RR · 12 rated Net RR · last 0 — 0 eligible No RR-eligible matches All duo lobbies/);
+  const html=await renderHtml('/src/app/pages/Overview.jsx','KpiCards',{s,recent:[]});
+  const r=tierRR(18.5);
+  assert.ok(html.includes(`<span class="truncate max-sm:hidden">${avgLabel(r.tier)}</span><span class="truncate sm:hidden">${avgLabelShort(r.tier)}</span>`));
+  assert.match(html,/<span class="block text-xs tabular-nums sm:hidden">12 lobbies<\/span>/);
+  assert.match(html,/<dd class="shrink-0 text-xs text-muted-foreground tabular-nums max-sm:hidden">12 lobbies<\/dd>/);
 });

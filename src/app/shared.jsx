@@ -283,13 +283,11 @@ export function EmptyState({children}){
   return <div role="status" className="rounded-xl border border-dashed px-6 py-12 text-center text-sm text-muted-foreground">{children}</div>;
 }
 
-export function PageHeading({id,title,children,titleRef}){
-  return (
-    <div className="mb-6 space-y-2 max-sm:mb-4 max-sm:space-y-1.5">
-      <h1 id={id} ref={titleRef} tabIndex={-1} className="text-2xl font-semibold tracking-tight outline-none sm:text-3xl">{title}</h1>
-      {children&&<p className="max-w-3xl text-sm text-muted-foreground max-sm:text-[13px] max-sm:leading-snug">{children}</p>}
-    </div>
-  );
+// The page title, for screen readers only: the navigation already names the
+// page, so content starts right under it. It stays the page's accessible
+// name (`aria-labelledby`) and the focus target after a page switch.
+export function PageHeading({id,title,titleRef}){
+  return <h1 id={id} ref={titleRef} tabIndex={-1} className="sr-only">{title}</h1>;
 }
 
 // The empty/loading line shared by detail pages.

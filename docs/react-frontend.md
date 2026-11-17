@@ -94,15 +94,23 @@ pickers, and every toggle.
 
 `src/app/pages/Overview.jsx` follows shadcn's dashboard blocks, top to bottom:
 
-- Two KPI cards (value, outline badge, two-line footer): average lobby rank
-  with its party-size split (shown only with more than one party size), and
-  net RR over the last 20 matches. Net sums every recorded RR change; the
-  per-win and per-loss averages use RR-eligible matches only.
+- Two KPI cards, reworked on request (17 Nov 2026): a headline value, then a
+  hairline-divided list of rows; no corner badges. Average lobby rank (with
+  its RR beside it) lists one row per party size played: party icon and
+  label, that size's average lobby rank with icon and RR, and its lobby
+  count. Net RR over the last 20 matches lists RR per win, RR per loss and
+  the W–L(–D) record with win rate, then "N of M eligible". Net sums every
+  recorded RR change; the per-win and per-loss averages use RR-eligible
+  matches only. An all-draw window says there are no wins or losses to
+  average. Phones show the short rank label and put each row's note under
+  its label.
 - Act stats: the eight act figures (K/D, ACS, PS, ADR, KAST, playtime,
   matches with W/L/D, win rate) as one 4×2 hairline grid, 2×4 on phones.
 - Clutch stats: 1v1–1v5 win rate with a `Progress` bar and counts (five
   columns at every width), the attempted share as a badge, and the
-  won/lost/saved split as one segmented bar.
+  won/lost/saved split as one segmented bar. The tiles have the pre-React
+  colours again (`CLUTCH_COLORS`: 1v1 green `#22c55e`, teal, blue, indigo,
+  1v5 purple `#a855f7`, white text); a tile with no situations stays neutral.
 - Top teammates: up to three side by side in the same hairline grid (name,
   K/D, matches together), stacked on phones. No avatars.
 - RR trend: the RR page's `RRTrendChart` in a card, with All/30/20 tabs that
@@ -143,8 +151,8 @@ All hand-built charts follow one system, checked against the dataviz method:
   labelled rank boundaries, date ticks and an end label; the payout chart gets
   Win/Loss end labels, an "Even · N RR" label and a "RR per game" axis; the
   score-margin chart labels only its tallest win and loss bars; the overview
-  clutch block replaces five rainbow tiles with neutral tiles and a one-hue
-  meter, and the outcome split is a thin segmented bar with gaps.
+  clutch outcome split is a thin segmented bar with gaps. (The clutch tiles
+  briefly went neutral; their old colours were restored on request.)
 
 ## Intentional differences
 
@@ -163,6 +171,11 @@ All hand-built charts follow one system, checked against the dataviz method:
   90ms apart, off under reduced motion. Phones replace this card with the app
   bar described in [mobile-layout.md](mobile-layout.md); the phone landing page
   keeps the full form, its "Pro players" button opening the search sheet.
+- Pages have no visible title or description (17 Nov 2026, on request): the
+  navigation names the page, so content starts right under it. Each page
+  keeps its `<h1>` as `sr-only` (`PageHeading`), since it is the page's
+  `aria-labelledby` name and the focus target after a page switch. The
+  replay page's note about sandboxed parsing moved into its footnote.
 - Server errors appear in one alert above the pages instead of only on the
   overview.
 - The width measurement for match-card badge columns (canvas `measureText`) is

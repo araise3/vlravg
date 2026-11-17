@@ -2,7 +2,7 @@ import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {avgLabel,avgLabelShort,tierRR} from '../src/engine/core.mjs';
-import {closeRenderer,renderHtml} from './helpers/react-render.mjs';
+import {closeRenderer,load,renderHtml} from './helpers/react-render.mjs';
 
 after(closeRenderer);
 const PAGE='/src/app/pages/Overview.jsx';
@@ -15,12 +15,14 @@ const state=(parties,matches=[])=>({
   statMatches:parties.flatMap(([size,avgRank,count])=>Array.from({length:count},()=>({partySize:size,avgRank}))),
 });
 
-test('KPI cards lead with the lobby rank and name each party size only when there is more than one',async()=>{
-  const single=text(await renderHtml(PAGE,'KpiCards',{s:state([[2,18.5,12]]),recent:[]}));
-  assert.match(single,/Avg lobby rank Diamond 1 50 RR 12 rated lobbies All duo lobbies/);
+test('the lobby rank card lists the average lobby rank for every party size played, with no corner badges',async()=>{
+  const single=await renderHtml(PAGE,'KpiCards',{s:state([[2,18.5,12]]),recent:[]});
+  const duo=tierRR(18.5);
+  assert.ok(text(single).includes(`Avg lobby rank · 12 rated lobbies Diamond 1 50 RR Duo 12 lobbies ${avgLabel(duo.tier)} ${avgLabelShort(duo.tier)} ${duo.rr} RR 12 lobbies `),text(single));
+  assert.doesNotMatch(single,/data-slot="card-action"|data-slot="badge"/);
   const mixed=text(await renderHtml(PAGE,'KpiCards',{s:state([[1,14.5,3],[2,18.5,9]]),recent:[]}));
-  const short=v=>avgLabelShort(tierRR(v).tier);
-  assert.ok(mixed.includes(`Solo ${short(14.5)} · Duo ${short(18.5)}`),mixed);
+  const row=(label,v,n)=>{const r=tierRR(v);return `${label} ${n} lobbies ${avgLabel(r.tier)} ${avgLabelShort(r.tier)} ${r.rr} RR ${n} lobbies`;};
+  assert.ok(mixed.includes(row('Solo',14.5,3)+' '+row('Duo',18.5,9)),mixed);
   assert.equal(avgLabel(18),'Diamond 1');
 });
 
@@ -30,8 +32,8 @@ test('net RR sums every recorded change while per-game averages use eligible mat
   const recent=[m(1,20),m(2,-15),m(3,24),m(4,-10,{partySize:5})];
   const html=text(await renderHtml(PAGE,'KpiCards',{s:state([[1,15,4]]),recent}));
   assert.match(html,/Net RR · last 4 \+19 /);
-  assert.match(html,/3 eligible/);
-  assert.match(html,/\+22\.0 per win · −15\.0 per loss/);
+  assert.match(html,/Per win 2 wins \+22\.0 2 wins Per loss 1 loss −15\.0 1 loss W–L 66\.7% win rate 2–1 66\.7% win rate/);
+  assert.match(html,/3 of 4 eligible · averages skip placements and 5-stacks/);
 });
 
 test('act stats keep all eight figures in one grid',async()=>{
@@ -76,8 +78,9 @@ test('overview is built from shadcn cards with no scrolling lists',()=>{
 test('an all-draw window says there are no wins or losses to average, not no eligible matches',async()=>{
   const recent=[1,2].map(i=>({matchId:'d'+i,startedAtMs:i,won:null,myRR:0,myPostRR:1500,myTierId:15,partySize:1}));
   const html=text(await renderHtml(PAGE,'KpiCards',{s:state([[1,15,2]]),recent}));
-  assert.match(html,/2 eligible/);
+  assert.match(html,/2 of 2 eligible/);
   assert.match(html,/No RR-eligible wins or losses/);
+  assert.doesNotMatch(html,/Per win/);
 });
 
 test('top teammates sit side by side without avatars, one column per teammate',async()=>{
@@ -99,4 +102,17 @@ test('rank icons keep their aspect ratio and use the sharp PNG from 32px',async(
   assert.match(small,/src="data:image/);
   assert.match(large,/src="\/assets\/ranks\/26\.png"/);
   for(const html of [small,large])assert.match(html,/object-contain/);
+});
+
+test('clutch tiles keep the old colours: 1v1 green through 1v5 purple, neutral without situations',async()=>{
+  const {CLUTCH_COLORS}=await load(PAGE);
+  const matches=[{myClutchAll:{1:{win:2,loss:1,save:0},3:{win:0,loss:1,save:1}}}];
+  const html=await renderHtml(PAGE,'ClutchCard',{matches});
+  const tiles=[...html.slice(html.indexOf('data-slot="clutch-tiles"')).matchAll(/<div class="([^"]*)"( style="background:([^"]+)")?[^>]*title="1v(\d)/g)]
+    .map(m=>({t:Number(m[4]),bg:m[3]||null,white:/text-white/.test(m[1])}));
+  assert.deepEqual(tiles,[
+    {t:1,bg:'#22c55e',white:true},{t:2,bg:null,white:false},{t:3,bg:'#3b82f6',white:true},
+    {t:4,bg:null,white:false},{t:5,bg:null,white:false},
+  ]);
+  assert.deepEqual(CLUTCH_COLORS,{1:'#22c55e',2:'#14b8a6',3:'#3b82f6',4:'#6366f1',5:'#a855f7'});
 });

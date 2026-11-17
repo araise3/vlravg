@@ -81,7 +81,7 @@ export function ServersPage({active}){
     :'Search for a player above to compare their servers.';
   return (
     <main aria-labelledby="servers-title" className="space-y-6">
-      <PageHeading id="servers-title" title="Servers">See where the selected act’s matches were played and compare results and performance on each server.</PageHeading>
+      <PageHeading id="servers-title" title="Servers"/>
       {showFilters&&(
         <div className="flex flex-wrap items-center justify-between gap-4">
           <PartySizeFilter value={s.serverPartySize} available={s.partySizeAvailability['servers-party-size']} onChange={setServerPartySize}/>

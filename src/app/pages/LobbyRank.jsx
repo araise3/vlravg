@@ -84,7 +84,7 @@ export function LobbyRankPage(){
     :'Search for a player above to explore their rank breakdown.';
   return (
     <main aria-labelledby="lobby-rank-title" className="space-y-6">
-      <PageHeading id="lobby-rank-title" title="Lobby Rank">Compare your performance by lobby rank, then see the average rank of your team and the enemy team in each group.</PageHeading>
+      <PageHeading id="lobby-rank-title" title="Lobby Rank"/>
       {showFilters&&(
         <div className="flex flex-wrap items-center justify-between gap-4">
           <PartySizeFilter value={s.lobbyRankPartySize} available={s.partySizeAvailability['lobby-rank-party-size']} onChange={setLobbyRankPartySize}/>
