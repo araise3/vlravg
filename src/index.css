@@ -204,6 +204,15 @@
 .rr-trend-svg .duo-band { fill: rgb(255 255 255 / .035); }
 .rr-trend-svg .duo-band-label { fill: var(--chart-ink); font-size: 10px; font-weight: 600; text-anchor: middle; }
 .rr-trend-svg .rank-tick { fill: var(--chart-ink); font-weight: 600; }
+.rr-trend-svg .rank-band { fill: rgb(255 255 255 / .022); }
+.rr-trend-svg .grid.minor { stroke-opacity: .45; stroke-dasharray: 2 4; }
+.rr-trend-svg .rr-tick { font-size: 10px; font-variant-numeric: tabular-nums; }
+.rr-trend-svg .rr-tick.unit { font-weight: 600; }
+.rr-trend-svg .peak-point { fill: var(--card); stroke: var(--series-1); stroke-width: 2; }
+.rr-trend-svg .peak-label { fill: var(--chart-ink); font-size: 11px; font-weight: 600; paint-order: stroke; stroke: var(--card); stroke-width: 4px; stroke-linejoin: round; }
+.rr-trend-svg .cursor-point.win { fill: var(--chart-win); }
+.rr-trend-svg .cursor-point.loss { fill: var(--chart-loss); }
+.rr-trend-svg .cursor-point.draw { fill: var(--chart-draw); }
 .rr-trend-svg [hidden] { display: none; }
 
 /* Overview mini RR trend */

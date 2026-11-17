@@ -148,8 +148,19 @@ All hand-built charts follow one system, checked against the dataviz method:
   readout (removed on request); its curve points keep their aria-labels. The
   score-margin chart has no tooltip either (removed on request); lobby
   dot-plot rows show their own tooltip. All keep their aria-labels.
-- **Per chart**: RR trend drops the rank-colour bands and icon-only axis for
-  labelled rank boundaries, date ticks and an end label; the payout chart gets
+- **Per chart**: RR trend (reworked 17 Nov 2026) labels rank bands with icon
+  and name on the left, washing every other band so each rank reads as a
+  range. Immortal 2/3 and Radiant floors sit between the highest game recorded
+  below that tier and the lowest recorded at or above it (no fixed Radiant
+  line; tiers never recorded get no band). Immortal+ adds a dashed leaderboard
+  RR scale on the right. Dates are evenly spaced, one per day at most; the end
+  label takes the first spot (above, left, below) the line does not cross, and
+  a "Peak" label marks a higher earlier point. Result dots show whenever
+  matches are at least 8px apart, the hover point takes its result colour, and
+  the area uses the gradient wash of the overview line. A range with no
+  performance bonus says so instead of "+0 RR across 0 games". The dev
+  fixture `?fixture=climb` reproduces a 106-game Immortal 1 to Radiant climb.
+  The payout chart gets
   Win/Loss end labels, an "Even at N RR" label and a "RR per game" axis; the
   score-margin chart shows the count on top of every bar again (exact
   scorelines are in each bar's aria-label); "RR by result" is a diverging bar

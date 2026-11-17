@@ -6,7 +6,7 @@ import './index.css';
 
 async function start(){
   let fixture=null;
-  // Local-only synthetic data (?fixture=demo|worst|draws|malformed|one|empty|loading|error|<n>).
+  // Local-only synthetic data (?fixture=demo|worst|draws|malformed|one|climb|empty|loading|error|<n>).
   const fixtureCase=new URLSearchParams(location.search).get('fixture');
   if(import.meta.env.DEV&&fixtureCase){
     const {loadFixture}=await import('@/dev/fixtures.mjs');
