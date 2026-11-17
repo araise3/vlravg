@@ -182,6 +182,10 @@ All hand-built charts follow one system, checked against the dataviz method:
   keeps its `<h1>` as `sr-only` (`PageHeading`), since it is the page's
   `aria-labelledby` name and the focus target after a page switch. The
   replay page's note about sandboxed parsing moved into its footnote.
+  Cards whose title says it all have no description line either (Act stats,
+  both RR trends, Recent matches, Top teammates, RR by result). Encounters
+  and Wintrading signals keep theirs (who counts, and the "heuristic, not
+  proof" caveat), and Clutch stats keeps its won-of-opportunities figure.
 - No dot (`·`) separators anywhere in the UI (17 Nov 2026, on request; a
   test enforces it). Inline visual lists use `Sep`, a thin vertical rule
   (`shared.jsx`); text, tooltips and screen-reader labels use commas, colons

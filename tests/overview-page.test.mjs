@@ -63,8 +63,8 @@ test('clutch stats show every situation, attempt share and the outcome split, an
 test('recent matches show result, score, K/D/A and RR per row',async()=>{
   const matches=[{matchId:'a',mapName:'Haven',startedAtMs:Date.UTC(2026,10,15,12),won:true,myR:13,opR:8,myRR:22,myStats:{kills:24,deaths:15,assists:11}},
     {matchId:'b',mapName:'Bind',startedAtMs:Date.UTC(2026,10,14,12),won:null,myR:12,opR:12,myRR:null,myStats:null}];
-  const html=text(await renderHtml(PAGE,'RecentMatchesCard',{matches,total:54,maps:null}));
-  assert.match(html,/Latest 2 of 54/);
+  const html=text(await renderHtml(PAGE,'RecentMatchesCard',{matches,maps:null}));
+  assert.match(html,/^ ?Recent matches All matches Map /);
   assert.match(html,/Haven 15 Nov Win 13–8 24 \/ 15 \/ 11 \+22/);
   assert.match(html,/Bind 14 Nov Draw 12–12 — —/);
 });
@@ -115,4 +115,17 @@ test('clutch tiles keep the old colours: 1v1 green through 1v5 purple, neutral w
     {t:4,bg:null,white:false},{t:5,bg:null,white:false},
   ]);
   assert.deepEqual(CLUTCH_COLORS,{1:'#22c55e',2:'#14b8a6',3:'#3b82f6',4:'#6366f1',5:'#a855f7'});
+});
+
+test('cards whose title says it all carry no description line',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const read=file=>readFileSync(new URL('../src/app/pages/'+file,import.meta.url),'utf8');
+  const overview=read('Overview.jsx'),rr=read('RR.jsx');
+  for(const gone of [/this act<\/CardDescription>/,/Latest \{matches\.length\} of/,/Most matches together this act/,/Total RR after each match/])assert.doesNotMatch(overview,gone);
+  assert.doesNotMatch(rr,/<CardDescription/);
+  // Descriptions that add information the title does not stay.
+  const duos=read('Duos.jsx');
+  assert.match(duos,/<CardDescription>Players you met in at least two counted matches/);
+  assert.match(duos,/<CardDescription>Repeated opponents with unusually low combat stats/);
+  assert.match(overview,/<CardDescription>\{win\} won of \{total\} opportunities<\/CardDescription>/);
 });
