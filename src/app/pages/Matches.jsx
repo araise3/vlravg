@@ -5,7 +5,7 @@ import {
   matchCardPlayerRank,playerRouteUrl,rClass,rColor,rrSigned,tierRR,winRateLabel,
 } from '@/engine/core.mjs';
 import {useEngine,useIsMobile} from '@/app/hooks.js';
-import {EmptyState,PageHeading,PlacementToggle,RankIcon} from '@/app/shared.jsx';
+import {EmptyState,PageHeading,PlacementToggle,RankIcon,Sep} from '@/app/shared.jsx';
 import {cn} from '@/lib/utils';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
@@ -28,8 +28,8 @@ export function RRDetails({m}){
   const add=(label,value)=>rows.push([label,value]);
   if(m.myRR!=null)add('Recorded payout',rrSigned(m.myRR,0)+' RR');
   if(d){
-    if(d.beforeTier!=null&&d.beforeRR!=null)add('Starting rank',avgLabelShort(d.beforeTier)+' · '+d.beforeRR+' RR');
-    if(d.afterTier!=null&&d.afterRR!=null)add('Ending rank',avgLabelShort(d.afterTier)+' · '+d.afterRR+' RR');
+    if(d.beforeTier!=null&&d.beforeRR!=null)add('Starting rank',avgLabelShort(d.beforeTier)+', '+d.beforeRR+' RR');
+    if(d.afterTier!=null&&d.afterRR!=null)add('Ending rank',avgLabelShort(d.afterTier)+', '+d.afterRR+' RR');
     if(d.bonus!=null)add('Performance bonus',rrSigned(d.bonus,0)+' RR');
     // Penalty units/sign conventions are not defined by the schema. Display
     // the reported values verbatim; do not turn a fractional factor into RR.
@@ -153,8 +153,8 @@ export function MobileMatchCard({m,s,maps,open,onOpenChange}){
             </span>
             <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
               <span className="shrink-0 font-semibold text-foreground">{mapName}</span>
-              {[time,duration].filter(Boolean).map(v=><span key={v} className="shrink-0">· {v}</span>)}
-              {serverName&&<span className="truncate">· {serverName}</span>}
+              {[time,duration].filter(Boolean).map(v=><Fragment key={v}><Sep/><span className="shrink-0">{v}</span></Fragment>)}
+              {serverName&&<><Sep/><span className="truncate">{serverName}</span></>}
             </span>
             <span className="flex min-w-0 items-center gap-x-3 text-xs tabular-nums text-muted-foreground">
               <span className="shrink-0"><span className="font-semibold text-foreground">{myStats?<>{myStats.kills}<span className="text-zinc-500">/</span><span className="text-zinc-400">{myStats.deaths}</span><span className="text-zinc-500">/</span>{myStats.assists}</>:'—'}</span></span>
@@ -318,7 +318,7 @@ export function MatchesPage(){
           </div>
           <div className="mh-list-heading">
             <span>Match log</span>
-            <span>Newest first · Select a match for RR details and roster</span>
+            <span>Newest first. Select a match for RR details and roster.</span>
           </div>
           <div className="flex flex-col gap-2.5">
             {slice.map((m,index)=>{

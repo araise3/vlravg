@@ -62,3 +62,18 @@ test('pages have no visible title or description; the title stays for screen rea
   // App.jsx focuses `${page}-title` after navigation; every page keeps one.
   assert.deepEqual(ids.sort(),['duos-title','lobby-rank-title','matches-title','names-title','overview-title','replays-title','rr-title','servers-title']);
 });
+
+test('the site uses no dot separators in visible text, labels or status lines',async()=>{
+  const {readFileSync,readdirSync,statSync}=await import('node:fs');
+  const files=[];
+  const walk=url=>{for(const name of readdirSync(url)){const child=new URL(name+(statSync(new URL(name,url)).isDirectory()?'/':''),url);statSync(child).isDirectory()?walk(child):/\.(jsx|mjs|js|css)$/.test(name)&&files.push(child);}};
+  walk(new URL('../src/',import.meta.url));
+  files.push(new URL('../assets/ping-map/map.js',import.meta.url));
+  for(const file of files){
+    readFileSync(file,'utf8').split('\n').forEach((line,i)=>{
+      const code=line.replace(/\/\/.*$/,'').replace(/\/\*.*?\*\//g,'');
+      if(/^\s*\*/.test(line))return;
+      assert.ok(!code.includes('·'),`${file.pathname.split('/').slice(-2).join('/')}:${i+1} uses a dot separator`);
+    });
+  }
+});

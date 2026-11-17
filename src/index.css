@@ -214,7 +214,7 @@
 .rr-movement-svg .rank-band:hover { fill: rgb(255 255 255 / .05); }
 .rr-movement-svg .rank-band-label { font-size: 11px; font-weight: 600; fill: var(--chart-ink); }
 .rr-movement-svg .tick-label { font-size: 11px; }
-.rr-movement-svg .trend-point { opacity: .55; stroke: var(--card); stroke-width: 1; }
+.rr-movement-svg .trend-point { opacity: .28; stroke: var(--card); stroke-width: 1; }
 .rr-movement-svg .trend-point.positive { fill: var(--chart-win); }
 .rr-movement-svg .trend-point.negative { fill: var(--chart-loss); }
 .rr-movement-svg .payout-trend { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }

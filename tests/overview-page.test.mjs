@@ -18,7 +18,7 @@ const state=(parties,matches=[])=>({
 test('the lobby rank card lists the average lobby rank for every party size played, with no corner badges',async()=>{
   const single=await renderHtml(PAGE,'KpiCards',{s:state([[2,18.5,12]]),recent:[]});
   const duo=tierRR(18.5);
-  assert.ok(text(single).includes(`Avg lobby rank · 12 rated lobbies Diamond 1 50 RR Duo 12 lobbies ${avgLabel(duo.tier)} ${avgLabelShort(duo.tier)} ${duo.rr} RR 12 lobbies `),text(single));
+  assert.ok(text(single).includes(`Avg lobby rank (12 rated lobbies) Diamond 1 50 RR Duo 12 lobbies ${avgLabel(duo.tier)} ${avgLabelShort(duo.tier)} ${duo.rr} RR 12 lobbies `),text(single));
   assert.doesNotMatch(single,/data-slot="card-action"|data-slot="badge"/);
   const mixed=text(await renderHtml(PAGE,'KpiCards',{s:state([[1,14.5,3],[2,18.5,9]]),recent:[]}));
   const row=(label,v,n)=>{const r=tierRR(v);return `${label} ${n} lobbies ${avgLabel(r.tier)} ${avgLabelShort(r.tier)} ${r.rr} RR ${n} lobbies`;};
@@ -31,9 +31,9 @@ test('net RR sums every recorded change while per-game averages use eligible mat
   const m=(i,rr,extra={})=>({matchId:'m'+i,startedAtMs:at(i),won:rr>0,myRR:rr,myPostRR:1500+i*5,myTierId:15,partySize:1,...extra});
   const recent=[m(1,20),m(2,-15),m(3,24),m(4,-10,{partySize:5})];
   const html=text(await renderHtml(PAGE,'KpiCards',{s:state([[1,15,4]]),recent}));
-  assert.match(html,/Net RR · last 4 \+19 /);
+  assert.match(html,/Net RR \(last 4\) \+19 /);
   assert.match(html,/Per win 2 wins \+22\.0 2 wins Per loss 1 loss −15\.0 1 loss W–L 66\.7% win rate 2–1 66\.7% win rate/);
-  assert.match(html,/3 of 4 eligible · averages skip placements and 5-stacks/);
+  assert.match(html,/3 of 4 eligible\. Averages skip placements and 5-stacks\./);
 });
 
 test('act stats keep all eight figures in one grid',async()=>{

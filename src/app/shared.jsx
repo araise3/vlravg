@@ -43,6 +43,11 @@ export function PageLink({page,className,children,...props}){
   );
 }
 
+// A thin vertical rule between inline items (the site uses no dot separators).
+export function Sep({className}){
+  return <span aria-hidden="true" className={cn('inline-block h-3 w-px shrink-0 bg-muted-foreground/40',className)}/>;
+}
+
 export function toneClass(value,neutral=1){
   if(value==null||value===neutral)return '';
   return value>neutral?'text-positive':'text-negative';
@@ -52,7 +57,7 @@ export function LobbyValue({sum,count}){
   if(!count)return '—';
   const lobby=tierRR(sum/count);
   return (
-    <span className="inline-flex items-center gap-2 whitespace-nowrap" title={`${avgLabel(lobby.tier)} · ${lobby.rr} RR`}>
+    <span className="inline-flex items-center gap-2 whitespace-nowrap" title={`${avgLabel(lobby.tier)}, ${lobby.rr} RR`}>
       <RankIcon tier={lobby.tier} size={22}/>{avgLabel(lobby.tier)} <span className="text-muted-foreground">({lobby.rr} RR)</span>
     </span>
   );
@@ -201,7 +206,7 @@ export function SortableTable({id,caption,columns,rows,values,maxima=[],classNam
                 const props=row.cellProps?.[column]||{};
                 const top=best.get(column);
                 const isBest=top&&values[index][column]===top.max;
-                const title=isBest?[props.title,`Highest ${top.label} in this table`].filter(Boolean).join(' · '):props.title;
+                const title=isBest?[props.title,`Highest ${top.label} in this table`].filter(Boolean).join('. '):props.title;
                 if(column===0)return <TableHead key={0} scope="row" className={props.className} title={title}>{cell}</TableHead>;
                 return (
                   <TableCell key={column} title={title} className={cn(props.className,isBest&&'table-best')}>

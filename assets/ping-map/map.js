@@ -149,7 +149,7 @@ serverPins.append('circle').attr('class','pin-dot').attr('r',5);
 serverPins.append('text').attr('x',s=>['london','paris','riyadh'].includes(s.id)?-12:12).attr('y',s=>s.id==='paris'?17:4)
   .attr('text-anchor',s=>['london','paris','riyadh'].includes(s.id)?'end':'start').text(s=>s.name);
 serverPins.each(function(){const group=d3.select(this),box=group.select('text').node().getBBox();group.insert('rect',':first-child').attr('class','pin-hit').attr('x',box.x-6).attr('y',box.y-10).attr('width',box.width+12).attr('height',box.height+20);});
-serverPins.append('title').text(s=>s.name+' · '+s.country);
+serverPins.append('title').text(s=>s.name+', '+s.country);
 
 const zoom=d3.zoom().scaleExtent([.7,5]).translateExtent([[-450,-350],[1450,1110]]).extent([[0,0],[1000,760]])
   .on('zoom',event=>{scene.attr('transform',event.transform);positionPins();hideTooltip();});
@@ -189,7 +189,7 @@ function render(){
   readout.replaceChildren();
   const route=document.createElement('span');route.textContent=place.capital+' → '+selectedServer.name;
   const value=document.createElement('strong');value.style.color=pingColor(ping.ms);value.textContent=(ping.observed?'':'~')+ping.ms+' ms';
-  const note=document.createElement('small');note.textContent=ping.observed?'Observed '+ping.reference+' reference':'Sample-informed estimate'+' · '+ping.low+'–'+ping.high+' ms';
+  const note=document.createElement('small');note.textContent=ping.observed?'Observed '+ping.reference+' reference':'Sample-informed estimate, '+ping.low+'–'+ping.high+' ms';
   readout.append(route,value,note);
   readout.title='Estimates and 10 ms contours use all seven screenshot origins: Berlin, Tbilisi, Helsinki, Luton, Jerez, Gothenburg and Saint Petersburg. Only those cities are measured; routing elsewhere is interpolated and may differ by ISP. Ranges are heuristic, not confidence intervals.';
   positionPins();
@@ -217,7 +217,7 @@ function showTooltip(event,feature){
   const t=document.getElementById('tooltip'),ping=estimatePing(c.coords,selectedServer);
   t.replaceChildren();const name=document.createElement('strong');name.textContent=c.name;
   const value=document.createElement('div');value.textContent=(ping.observed?'':'~')+ping.ms+' ms to '+selectedServer.name;value.style.color=pingColor(ping.ms);
-  const note=document.createElement('span');note.textContent=ping.observed?'Observed '+ping.reference+' reference':(c.capital+' · sample-informed estimate')+' · '+ping.low+'–'+ping.high+' ms';t.append(name,value,note);t.hidden=false;
+  const note=document.createElement('span');note.textContent=ping.observed?'Observed '+ping.reference+' reference':(c.capital+', sample-informed estimate')+', '+ping.low+'–'+ping.high+' ms';t.append(name,value,note);t.hidden=false;
   const panel=document.getElementById('server-ping-map').getBoundingClientRect();
   t.style.left=Math.max(8,Math.min(event.clientX-panel.left+14,panel.width-t.offsetWidth-12))+'px';
   t.style.top=Math.max(8,Math.min(event.clientY-panel.top+14,panel.height-t.offsetHeight-70))+'px';

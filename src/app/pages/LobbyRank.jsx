@@ -61,7 +61,7 @@ function LobbyTeamsSvg({data,compact}){
     </svg>
     {tip&&(
       <ChartTooltip x={tipX} y={Math.max(0,tipMid*scale()-28)} width={boxRef.current?.clientWidth}>
-        <div className="tt-muted">{avgLabel(tip.tier)} lobbies · {tip.total} {tip.total===1?'match':'matches'}</div>
+        <div className="tt-muted">{avgLabel(tip.tier)} lobbies ({tip.total} {tip.total===1?'match':'matches'})</div>
         <div className="tt-row"><span className="tt-key" style={{background:'var(--series-1)'}}/><span className="tt-value">{tip.team==null?'—':rankText(tip.team)}</span> your team</div>
         <div className="tt-row"><span className="tt-key" style={{background:'var(--chart-loss)'}}/><span className="tt-value">{tip.enemy==null?'—':rankText(tip.enemy)}</span> enemy</div>
         {tip.gap!=null&&<div className="tt-muted">{tip.gap===0?'Both teams even':`${tip.gap>0?'Enemy':'Your team'} ${Math.abs(tip.gap)} RR higher`}</div>}

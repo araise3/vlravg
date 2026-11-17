@@ -64,8 +64,8 @@ const base = { uploaded_at: '2026-10-29T10:00:00Z', progress: { header_build: '1
 test('queued replays show their position and whether a parser run was requested', () => {
   const steps = ui.replayProgressSteps({ ...base, status: 'pending', progress: { ...base.progress, queue_position: 2 } });
   assert.deepEqual(plain(steps), ['upload:done:Uploaded', 'queue:active:Queued']);
-  assert.match(steps[0].detail, /^build 13\.09 per the replay header · /);
-  assert.match(steps[1].detail, /^position 2 · parser run requested /);
+  assert.match(steps[0].detail, /^build 13\.09 per the replay header; /);
+  assert.match(steps[1].detail, /^position 2; parser run requested /);
   assert.equal(steps[1].since, base.uploaded_at, 'elapsed time runs from the upload');
   const noToken = ui.replayProgressSteps({ ...base, status: 'pending', progress: { dispatch: { requested: false } } });
   assert.equal(noToken[1].detail, 'waiting for the daily parser run at 04:23 UTC');
@@ -92,7 +92,7 @@ test('a parsing replay follows the parser run\'s real jobs', () => {
   jobs.push({ name: 'submit', status: 'in_progress', started_at: '2026-10-29T10:01:52Z' });
   const storing = ui.replayProgressSteps({ ...base, status: 'parsing', progress: { ...progress, decoded_at: '2026-10-29T10:02:00Z',
     export: { files: 14, files_done: 9, bytes: 24814693, bytes_done: 19000000 } } });
-  assert.match(storing.at(-1).detail, /result validated .* · 9 of 14 export files · 18\.1 of 23\.7 MB$/);
+  assert.match(storing.at(-1).detail, /result validated .*; 9 of 14 export files, 18\.1 of 23\.7 MB$/);
 
   // The snapshot stops refreshing once the row is parsed; its running submit job is stale.
   const parsed = ui.replayProgressSteps({ ...base, status: 'parsed', parsed_at: '2026-10-29T10:02:30Z', progress: { ...progress, decoded_at: '2026-10-29T10:02:00Z' } });

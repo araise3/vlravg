@@ -29,7 +29,7 @@ function PingMap({active}){
   return (
     <section id="server-ping-map" className="map-panel" aria-label="Europe server ping map" style={{'--text':'var(--foreground)','--font-body':'var(--font-sans)'}}>
       <div className="map-heading">
-        <div className="map-server-heading"><strong id="map-server-name">Frankfurt</strong><span>10 ms contours · informed by 7 measured locations</span></div>
+        <div className="map-server-heading"><strong id="map-server-name">Frankfurt</strong><span>10 ms contours, informed by 7 measured locations</span></div>
       </div>
       <svg id="map" viewBox="0 0 1000 760" preserveAspectRatio="xMidYMid slice" aria-label="Select a server pin and a country to explore approximate ping."><defs><clipPath id="map-clip"><rect width="1000" height="760"/></clipPath></defs><g clipPath="url(#map-clip)"><g id="map-scene"></g></g></svg>
       <div className="map-controls" aria-label="Map controls"><button id="zoom-in" type="button" aria-label="Zoom in">+</button><button id="zoom-out" type="button" aria-label="Zoom out">−</button><button id="reset-map" type="button" aria-label="Reset map view">↺</button></div>

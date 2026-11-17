@@ -57,9 +57,9 @@ export function NamesPage(){
   const count=s.nameHistoryRows.length;
   const status=s.nameBackfillError?`Scan paused after ${checked}. Progress is saved; retry to continue.`
     :backfill?.limited?`Scan limit reached after ${checked}; available history may be incomplete.`
-    :backfill?.complete?`Scan complete · ${checked} checked · ${count} name period${count===1?'':'s'} found.`
-    :s.nameBackfillBusy?`${s.nameBackfillStopRequested?'Stopping after this request':'Live scan: '+phase} · ${checked} checked · ${s.nameBackfillPages} pages saved.`
-    :s.nameBackfillStopped?`Scan paused · ${checked} checked. Progress is saved.`
+    :backfill?.complete?`Scan complete: ${checked} checked, ${count} name period${count===1?'':'s'} found.`
+    :s.nameBackfillBusy?`${s.nameBackfillStopRequested?'Stopping after this request':'Live scan: '+phase}, ${checked} checked, ${s.nameBackfillPages} pages saved.`
+    :s.nameBackfillStopped?`Scan paused after ${checked}. Progress is saved.`
     :backfill?.available?`${checked} checked. Start the scan to find older names; keep this tab open.`
     :'Ranked match history is unavailable for this account.';
   const buttonLabel=s.nameBackfillBusy?s.nameBackfillStopRequested?'Stopping…':'Stop scan'

@@ -79,7 +79,7 @@ export function RRTrendChart({matches,range,PUUID,PLAYER,TAG}){
   const rankLines=edges.filter(value=>value>min&&value<max);
   const line=points.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
   const dateLabel=m=>Number.isFinite(m.startedAtMs)?new Date(m.startedAtMs).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'Date unavailable';
-  const matchLabel=m=>[m.mapName??m.map,Number.isInteger(m.myR)&&Number.isInteger(m.opR)?`${m.myR}–${m.opR}`:null].filter(Boolean).join(' · ');
+  const matchLabel=m=>[m.mapName??m.map,Number.isInteger(m.myR)&&Number.isInteger(m.opR)?`${m.myR}–${m.opR}`:null].filter(Boolean).join(', ');
   const dateTicks=(points.length>1?[0,...(width>=520&&points.length>2?[Math.round((points.length-1)/2)]:[]),points.length-1]:[0])
     .map(i=>({i,label:dateLabel(points[i].match),anchor:i===0?'start':i===points.length-1?'end':'middle'}));
   const last=points.length-1,end=points[last],endRank=rrPositionFromElo(end.value,end.match.myPostTierId);
@@ -130,7 +130,7 @@ export function RRTrendChart({matches,range,PUUID,PLAYER,TAG}){
         {!tip&&(
           <g aria-hidden="true">
             <circle className="end-point" cx={x(last)} cy={y(end.value)} r={4.5}/>
-            <text x={x(last)} y={endLabelY} textAnchor="end" className="ink-strong">{avgLabelShort(endRank.tier)} · {endRank.rr} RR</text>
+            <text x={x(last)} y={endLabelY} textAnchor="end" className="ink-strong">{avgLabelShort(endRank.tier)}, {endRank.rr} RR</text>
           </g>
         )}
         {duoRuns.map(run=>{
@@ -155,7 +155,7 @@ export function RRTrendChart({matches,range,PUUID,PLAYER,TAG}){
         {points.map(({match,value},i)=>{
           const rank=rrPositionFromElo(value,match.myPostTierId),duo=duoInfos[i],run=duoRunAt[i];
           const result=match.won===true?'Win':match.won===false?'Loss':'Draw';
-          const label=`Match ${i+1} of ${points.length}, ${dateLabel(match)}, ${matchLabel(match)}, ${result}: ${avgLabel(rank.tier)} · ${rank.rr} RR after ${rrSigned(match.myRR,0)} RR change${duo?`; ${duo.label}${run?`, ${rrSigned(run.net,0)} RR across ${run.count} games`:''}`:''}`;
+          const label=`Match ${i+1} of ${points.length}, ${dateLabel(match)}, ${matchLabel(match)}, ${result}: ${avgLabel(rank.tier)}, ${rank.rr} RR after ${rrSigned(match.myRR,0)} RR change${duo?`; ${duo.label}${run?`, ${rrSigned(run.net,0)} RR across ${run.count} games`:''}`:''}`;
           return (
             <g key={i} tabIndex={0} aria-label={label} onFocus={()=>setActive(i)} onBlur={()=>setActive(null)}>
               <circle cx={x(i)} cy={y(value)} r={Math.min(11,Math.max(3,spacing/2))} fill="transparent"/>
@@ -167,10 +167,10 @@ export function RRTrendChart({matches,range,PUUID,PLAYER,TAG}){
         <ChartTooltip x={tip.xx} y={Math.max(0,tip.yy-40)} width={width}>
           <div className="tt-value">{rrSigned(tip.match.myRR,0)} RR</div>
           <div className="tt-row"><span className="tt-key" style={{background:tip.match.won===true?'var(--chart-win)':tip.match.won===false?'var(--chart-loss)':'var(--chart-draw)'}}/>
-            {tip.match.won===true?'Win':tip.match.won===false?'Loss':'Draw'}{matchLabel(tip.match)?` · ${matchLabel(tip.match)}`:''}</div>
-          <div className="tt-row"><RankIcon tier={tip.rank.tier} size={14}/>{avgLabel(tip.rank.tier)} · {tip.rank.rr} RR after</div>
-          {tip.duo&&<div className="tt-muted">{tip.duo.label}{tip.run?` · ${rrSigned(tip.run.net,0)} RR across ${tip.run.count} games`:''}</div>}
-          <div className="tt-muted">Match {active+1} of {points.length} · {dateLabel(tip.match)}</div>
+            {tip.match.won===true?'Win':tip.match.won===false?'Loss':'Draw'}{matchLabel(tip.match)?` on ${matchLabel(tip.match)}`:''}</div>
+          <div className="tt-row"><RankIcon tier={tip.rank.tier} size={14}/>{avgLabel(tip.rank.tier)}, {tip.rank.rr} RR after</div>
+          {tip.duo&&<div className="tt-muted">{tip.duo.label}{tip.run?`, ${rrSigned(tip.run.net,0)} RR across ${tip.run.count} games`:''}</div>}
+          <div className="tt-muted">Match {active+1} of {points.length}, {dateLabel(tip.match)}</div>
         </ChartTooltip>
       )}
     </div>
@@ -200,7 +200,7 @@ function RRBonusNote({matches}){
   return (
     <p className="-mt-3 text-xs text-muted-foreground" aria-live="polite">
       {reported.covered
-        ?<>Performance bonus <strong className="font-medium text-foreground">{rrSigned(reported.bonusTotal,0)} RR</strong> across <strong className="font-medium text-foreground">{reported.bonusMatches}</strong> games · bonus data for {reported.covered} of {reported.total} eligible games.</>
+        ?<>Performance bonus <strong className="font-medium text-foreground">{rrSigned(reported.bonusTotal,0)} RR</strong> across <strong className="font-medium text-foreground">{reported.bonusMatches}</strong> games. Bonus data for {reported.covered} of {reported.total} eligible games.</>
         :'Performance bonus data unavailable for this range.'}
     </p>
   );
@@ -237,7 +237,7 @@ export function RRMovementChart({matches,zoomTier}){
   const evenText=even?`Wins and losses pay about the same from a starting rank of ${evenLabel} (about ${even.payout.toFixed(1)} RR each). Below it wins pay more than losses cost; above it losses cost more. Each 100 RR higher, wins pay ${Math.abs(even.winSlope*100).toFixed(1)} RR ${even.winSlope<0?'less':'more'} and losses cost ${Math.abs(even.lossSlope*100).toFixed(1)} RR ${even.lossSlope>0?'more':'less'}. Fitted on ${even.wins} wins and ${even.losses} losses.`:null;
   const penalties=rows.filter(row=>row.penalty>0).length;
   const count=[zoomTier!=null?`${avgLabel(zoomTier)} only`:null,`${rows.length} covered ${rows.length===1?'match':'matches'}`,
-    penalties?`${penalties} penalized`:null,zoomTier!=null?'double-click to reset':null].filter(Boolean).join(' · ');
+    penalties?`${penalties} penalized`:null,zoomTier!=null?'double-click to reset':null].filter(Boolean).join(', ');
   const xMin=axis.min,xMax=axis.max;
   const payouts=rows.map(row=>Math.abs(row.net)).concat(gainTrend,lossTrend).filter(v=>typeof v==='number'||v.payout!=null).map(v=>typeof v==='number'?v:v.payout);
   const payoutMin=Math.min(...payouts),payoutMax=Math.max(...payouts);
@@ -322,7 +322,7 @@ export function RRMovementChart({matches,zoomTier}){
           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground max-sm:gap-x-3 max-sm:gap-y-1 max-sm:text-xs" aria-label="Chart legend">
             <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-4 rounded" style={{background:'var(--chart-win)'}}/>Estimated RR / win</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-4 rounded" style={{background:'var(--chart-loss)'}}/>Estimated RR / loss</span>
-            <span className="inline-flex items-center gap-1.5"><span className="flex gap-0.5"><span className="size-1.5 rounded-full" style={{background:'var(--chart-win)'}}/><span className="size-1.5 rounded-full" style={{background:'var(--chart-loss)'}}/></span>Individual win or loss</span>
+            <span className="inline-flex items-center gap-1.5"><span className="flex gap-0.5 opacity-45"><span className="size-1.5 rounded-full" style={{background:'var(--chart-win)'}}/><span className="size-1.5 rounded-full" style={{background:'var(--chart-loss)'}}/></span>Individual win or loss</span>
             {even&&<span className="inline-flex items-center gap-1.5"><span className="h-3 w-0 border-l border-dashed border-foreground/60"/>Estimated even point</span>}
           </div>
           {evenText&&<p className="text-sm text-muted-foreground" data-even-point>{evenText}</p>}
@@ -375,7 +375,7 @@ export function RRMovementChart({matches,zoomTier}){
               {evenX!=null&&(
                 <g className="even-point">
                   <line x1={evenX} y1={top} x2={evenX} y2={plotBottom} className="even-line" aria-hidden="true"/>
-                  <text x={evenX+6} y={top+13} textAnchor={evenX>plotRight-(compact?80:110)?'end':'start'} dx={evenX>plotRight-(compact?80:110)?-12:0} className="even-label" aria-hidden="true">Even · {zoomTier==null?rrPositionFromElo(even.position,even.tier).rr:Math.round(evenAxis)} RR</text>
+                  <text x={evenX+6} y={top+13} textAnchor={evenX>plotRight-(compact?80:110)?'end':'start'} dx={evenX>plotRight-(compact?80:110)?-12:0} className="even-label" aria-hidden="true">Even at {zoomTier==null?rrPositionFromElo(even.position,even.tier).rr:Math.round(evenAxis)} RR</text>
                   <rect x={evenX-5} y={top} width={10} height={plotHeight} className="even-hit-area" tabIndex={0} role="img" aria-label={evenText}/>
                 </g>
               )}
@@ -516,15 +516,15 @@ export function ScoreMarginChart({matches}){
                   </g>
                 );
               })}
-              <text x={left+plotWidth/2} y={height-8} textAnchor="middle">{compact?'Round margin (yours − enemy)':'Round margin · your rounds minus enemy rounds'}</text>
+              <text x={left+plotWidth/2} y={height-8} textAnchor="middle">{compact?'Round margin (yours − enemy)':'Round margin (your rounds minus enemy rounds)'}</text>
             </svg>
           </div>
           {activeBin&&(
             <ChartTooltip x={tipLeft} y={8} width={scrollRef.current?.clientWidth}>
-              <div className="tt-value">{activeBin.count} {activeBin.count===1?'match':'matches'} <span className="tt-muted">· {(100*activeBin.count/total).toFixed(1)}%</span></div>
+              <div className="tt-value">{activeBin.count} {activeBin.count===1?'match':'matches'} <span className="tt-muted">({(100*activeBin.count/total).toFixed(1)}%)</span></div>
               <div className="tt-row"><span className="tt-key" style={{background:activeBin.margin<0?'var(--chart-loss)':activeBin.margin>0?'var(--chart-win)':'var(--chart-draw)'}}/>
                 {activeBin.margin===0?'Draws':`${activeBin.margin>0?'Won':'Lost'} by ${Math.abs(activeBin.margin)} ${Math.abs(activeBin.margin)===1?'round':'rounds'}`}</div>
-              {activeBin.scorelines.map(score=><div key={score.scoreline} className="tt-muted">{score.scoreline} · {score.count} {score.count===1?'match':'matches'}</div>)}
+              {activeBin.scorelines.map(score=><div key={score.scoreline} className="tt-muted">{score.scoreline}: {score.count} {score.count===1?'match':'matches'}</div>)}
             </ChartTooltip>
           )}
           </ChartFrame>

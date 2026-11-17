@@ -28,8 +28,8 @@ function ReplaySteps({steps}){
             <span className={cn('font-medium',step.state==='pending'&&'text-muted-foreground',step.state==='failed'&&'text-negative')}>{step.label}</span>
             <span className="ml-2 text-muted-foreground">
               {step.detail}
-              {step.since&&step.state==='active'&&<>{step.detail?' · ':''}{replayDuration(now-Date.parse(step.since))}</>}
-              {step.link&&<>{(step.detail||step.since)?' · ':''}<a href={step.link.href} target="_blank" rel="noopener noreferrer" className="underline">{step.link.text}</a></>}
+              {step.since&&step.state==='active'&&<>{step.detail?'; ':''}{replayDuration(now-Date.parse(step.since))}</>}
+              {step.link&&<>{(step.detail||step.since)?'; ':''}<a href={step.link.href} target="_blank" rel="noopener noreferrer" className="underline">{step.link.text}</a></>}
             </span>
           </span>
         </li>

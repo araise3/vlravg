@@ -176,6 +176,14 @@ All hand-built charts follow one system, checked against the dataviz method:
   keeps its `<h1>` as `sr-only` (`PageHeading`), since it is the page's
   `aria-labelledby` name and the focus target after a page switch. The
   replay page's note about sandboxed parsing moved into its footnote.
+- No dot (`·`) separators anywhere in the UI (17 Nov 2026, on request; a
+  test enforces it). Inline visual lists use `Sep`, a thin vertical rule
+  (`shared.jsx`); text, tooltips and screen-reader labels use commas, colons
+  or parentheses, and replay step details use semicolons because their
+  upload times already contain a comma.
+- Text boxes (inputs, the search bar, textareas) show a 1px focus ring
+  around the 1px border, fading in with it. The payout chart's individual
+  match dots are drawn at 28% opacity (were 55%) so the estimate curves lead.
 - Server errors appear in one alert above the pages instead of only on the
   overview.
 - The width measurement for match-card badge columns (canvas `measureText`) is

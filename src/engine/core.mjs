@@ -539,7 +539,7 @@ function replayProgressSteps(status){
   if(!s||s==='none')return [];
   const p=status.progress||{};
   const steps=[];
-  const uploadedDetail=[p.header_build&&`build ${p.header_build} per the replay header`,status.uploaded_at&&replayClock(status.uploaded_at)].filter(Boolean).join(' · ');
+  const uploadedDetail=[p.header_build&&`build ${p.header_build} per the replay header`,status.uploaded_at&&replayClock(status.uploaded_at)].filter(Boolean).join('; ');
   steps.push(s==='uploading'?{key:'upload',label:'Upload in progress',state:'active',detail:'Another upload of this match has not finished.'}
     :{key:'upload',label:'Uploaded',state:'done',detail:uploadedDetail});
   if(s==='uploading')return steps;
@@ -547,7 +547,7 @@ function replayProgressSteps(status){
   const dispatch=!p.dispatch?'':!p.dispatch.requested?'waiting for the daily parser run at 04:23 UTC'
     :p.dispatch.ok?`parser run requested ${replayClock(p.dispatch.at)}`:'the parser run request failed; the daily run at 04:23 UTC picks it up';
   steps.push(s==='pending'
-    ?{key:'queue',label:'Queued',state:'active',since:status.uploaded_at,detail:[p.queue_position&&`position ${p.queue_position}`,dispatch].filter(Boolean).join(' · ')}
+    ?{key:'queue',label:'Queued',state:'active',since:status.uploaded_at,detail:[p.queue_position&&`position ${p.queue_position}`,dispatch].filter(Boolean).join('; ')}
     :{key:'queue',label:'Queued',state:claimed?'done':'pending',detail:claimed&&status.uploaded_at?`waited ${replayDuration(Date.parse(p.claimed_at)-Date.parse(status.uploaded_at))}`:''});
   if(claimed){
     const runLink=p.run_url?{href:p.run_url,text:'View parser run'}:null;
@@ -580,18 +580,18 @@ function replayProgressSteps(status){
       steps.push(jobStep('store','submit',{done:'Checked and stored',active:'Checking and storing',pending:'Check and store'}));
     }else{
       steps.push({key:'run',label:s==='parsing'?'Parser run in progress':'Parser run',state:s==='parsing'?'active':'done',since:p.claimed_at,
-        detail:[`started ${replayClock(p.claimed_at)}`,p.attempt>1&&`attempt ${p.attempt}`].filter(Boolean).join(' · '),link:runLink});
+        detail:[`started ${replayClock(p.claimed_at)}`,p.attempt>1&&`attempt ${p.attempt}`].filter(Boolean).join('; '),link:runLink});
     }
     const store=steps.find(step=>step.key==='store')||steps.at(-1);
     const extra=[p.decoded_at&&`result validated ${replayClock(p.decoded_at)}`,
-      p.export&&`${p.export.files_done} of ${p.export.files} export files · ${replayMB(p.export.bytes_done)} of ${replayMB(p.export.bytes)} MB`].filter(Boolean);
-    if(extra.length&&s==='parsing')store.detail=[store.detail,...extra].filter(Boolean).join(' · ');
+      p.export&&`${p.export.files_done} of ${p.export.files} export files, ${replayMB(p.export.bytes_done)} of ${replayMB(p.export.bytes)} MB`].filter(Boolean);
+    if(extra.length&&s==='parsing')store.detail=[store.detail,...extra].filter(Boolean).join('; ');
   }
   if(s==='parsed'){
     const c=status.counts||{};
     steps.push({key:'stored',label:'Stored',state:'done',detail:[status.parsed_at&&replayClock(status.parsed_at),c.rounds!=null&&`${c.rounds} rounds`,c.kills!=null&&`${c.kills} kills`,
       status.duration_ms&&`${Math.round(status.duration_ms/60000)} min`,status.build&&status.build.replace(/^\+\+Ares-Core\+release-/,'build '),
-      status.export_bytes&&`full export ${replayMB(status.export_bytes)} MB`].filter(Boolean).join(' · ')});
+      status.export_bytes&&`full export ${replayMB(status.export_bytes)} MB`].filter(Boolean).join('; ')});
   }
   if(s==='failed'||s==='rejected'){
     const key=REPLAY_FAILED_STEP[status.error]||'decode';
@@ -748,7 +748,7 @@ async function uploadReplay(matchId,file,host){
   if(embedded!==matchId){reject(`This replay is from match ${embedded}.`);return;}
   const build=replayFileBuild(head);
   const steps=[
-    {key:'check',label:'File checked',state:'done',detail:[`replay of this match`,build&&`build ${build}`,`${replayMB(file.size)} MB`].filter(Boolean).join(' · ')},
+    {key:'check',label:'File checked',state:'done',detail:[`replay of this match`,build&&`build ${build}`,`${replayMB(file.size)} MB`].filter(Boolean).join('; ')},
     {key:'verify',label:'Verifying you are human',state:'active',detail:''},
     {key:'send',label:'Upload',state:'pending',detail:''},
     {key:'finish',label:'Finish upload',state:'pending',detail:''},
@@ -760,7 +760,7 @@ async function uploadReplay(matchId,file,host){
   try{
     const turnstileToken=await replayTurnstileToken(host);
     update('verify',{state:'done',label:'Verified'});
-    update('send',{state:'active',label:'Uploading',detail:`0.0 of ${replayMB(file.size)} MB · 0%`});
+    update('send',{state:'active',label:'Uploading',detail:`0.0 of ${replayMB(file.size)} MB, 0%`});
     const start=await replayRequest(`/api/replays/upload/${matchId}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({size:file.size,turnstileToken})},1);
     const started=await start.json().catch(()=>({}));
     if(!start.ok)throw Object.assign(new Error(started.error||'Upload could not start.'),{step:'send'});
@@ -771,7 +771,7 @@ async function uploadReplay(matchId,file,host){
       const now=Date.now(),sent=loaded.reduce((sum,b)=>sum+b,0),speed=replaySpeed(samples,now,sent);
       if(!force&&now-lastPaint<200)return;
       lastPaint=now;
-      update('send',{detail:[`${replayMB(sent)} of ${replayMB(file.size)} MB`,`${Math.floor(sent/file.size*100)}%`,speed!=null&&`${replayMB(speed)} MB/s`,`${finished} of ${parts} parts done`].filter(Boolean).join(' · ')});
+      update('send',{detail:[`${replayMB(sent)} of ${replayMB(file.size)} MB`,`${Math.floor(sent/file.size*100)}%`,speed!=null&&`${replayMB(speed)} MB/s`,`${finished} of ${parts} parts done`].filter(Boolean).join('; ')});
     };
     const sendPart=async n=>{
       if(failure)return;
@@ -796,7 +796,7 @@ async function uploadReplay(matchId,file,host){
       throw Object.assign(failure,{step:'send'});
     }
     const took=Date.now()-began;
-    update('send',{state:'done',label:'Uploaded',detail:`${replayMB(file.size)} MB in ${replayDuration(took)} · ${replayMB(file.size/Math.max(took/1000,0.001))} MB/s average`});
+    update('send',{state:'done',label:'Uploaded',detail:`${replayMB(file.size)} MB in ${replayDuration(took)}, ${replayMB(file.size/Math.max(took/1000,0.001))} MB/s average`});
     update('finish',{state:'active',label:'Finishing upload'});
     const done=await replayRequest(`/api/replays/upload/${matchId}/complete`,{method:'POST',headers:{'X-Upload-Token':uploadToken}});
     if(!done.ok)throw Object.assign(new Error((await done.json().catch(()=>({}))).error||'Upload could not be finished.'),{step:'finish'});
@@ -935,8 +935,8 @@ function seasonOptionCountText(option){
   if(!option?.value||!option.countKind)return '';
   const games=Number(option.games)||0,amount=games.toLocaleString();
   return option.countKind==='loading'
-    ?(games?`${amount}+ matches found · still checking`:'Checking matches…')
-    :option.countKind==='partial'?`${amount}+ matches found · scan paused`
+    ?(games?`${amount}+ matches found, still checking`:'Checking matches…')
+    :option.countKind==='partial'?`${amount}+ matches found, scan paused`
     :option.countKind==='found'?`${amount} ${games===1?'match':'matches'} found`
     :option.countKind==='saved'?`${amount} saved ${games===1?'match':'matches'}`
     :`${amount} in current region`;
@@ -2522,7 +2522,7 @@ async function recoverStoredSeasonMatches(collected,alreadySaved,myGen,onRateLim
   let failures=0;
   for(let i=0;i<missing.length;i++){
     if(myGen!==_analysisGen)return false;
-    setStatus(`Adding older games · ${i+1} of ${missing.length}…`,true);
+    setStatus(`Adding older games (${i+1} of ${missing.length})…`,true);
     try{
       const {id,region:matchRegion}=missing[i];
       const {j}=await apiGet(`${API_BASE}/match-detail/${encodeURIComponent(matchRegion)}/${encodeURIComponent(id)}${scanQuery?`?${scanQuery.slice(1)}`:''}`,{...opts,onRateLimit});
@@ -2845,7 +2845,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     while(true){
       if(start>=MAX_HISTORY_OFFSET||++guardPages>MAX_PAGES){scanStoppedEarly=true;break;}
       setStatus(allMatches.length
-        ?`Showing ${allMatches.length} matches · checking the rest of this act…`
+        ?`Showing ${allMatches.length} matches, checking the rest of this act…`
         :'Checking competitive match history…',true);
 
       const url=serverScan
@@ -3112,7 +3112,7 @@ function renderServers(matches){
   const mostPlayed=serverData[0]||null;
   const best=[...serverData].filter(row=>row.games>=3&&row.winRate!=null).sort((a,b)=>b.winRate-a.winRate||b.games-a.games)[0]||null;
   serverSummary=[
-    {label:'Most played',value:mostPlayed?.name||'—',note:mostPlayed?`${mostPlayed.games} matches · ${Math.round(mostPlayed.share)}% share`:''},
+    {label:'Most played',value:mostPlayed?.name||'—',note:mostPlayed?`${mostPlayed.games} matches, ${Math.round(mostPlayed.share)}% share`:''},
     {label:'Best win rate',value:best?.name||'—',note:best?`${winRateLabel(best.winRate)} across ${best.games} matches`:'Requires 3 matches on a server'},
     {label:'Servers played',value:serverData.length?String(serverData.length):'—',note:'Distinct servers this selection'},
     {label:'Server coverage',value:selectedMatches.length?`${knownMatches}/${selectedMatches.length}`:'—',note:selectedMatches.length?`${Math.round(knownMatches/selectedMatches.length*100)}% of matches identified`:''},
@@ -3518,7 +3518,7 @@ function rrPositionFromElo(elo,tierHint=null){
     while(rr<0&&tier>3){tier--;rr+=100;}
     while(rr>=100&&tier<24){tier++;rr-=100;}
   }
-  return{tier,rr,label:`${avgLabelShort(tier)} · ${rr} RR`};
+  return{tier,rr,label:`${avgLabelShort(tier)}, ${rr} RR`};
 }
 
 function rrMovementXAxis(rows,zoomTier){

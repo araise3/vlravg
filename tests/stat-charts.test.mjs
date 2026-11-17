@@ -199,9 +199,9 @@ test('duo table switches its K/D, ACS and PS columns between the teammate and yo
   let row=await cells('teammate');
   assert.equal(row[2].text,'1.50');
   assert.match(row[2].attrs,/text-positive/);
-  assert.match(row[2].attrs,/title="Teammate: 1\.50 \(30 kills \/ 20 deaths\) · You: 0\.80 \(24 kills \/ 30 deaths\)/);
-  assert.equal(row[3].text,'200');assert.match(row[3].attrs,/title="Teammate: 200 · You: 180/);
-  assert.equal(row[4].text,'—');assert.match(row[4].attrs,/title="Teammate: — · You: 250 · /);
+  assert.match(row[2].attrs,/title="Teammate: 1\.50 \(30 kills \/ 20 deaths\), you: 0\.80 \(24 kills \/ 30 deaths\)/);
+  assert.equal(row[3].text,'200');assert.match(row[3].attrs,/title="Teammate: 200, you: 180/);
+  assert.equal(row[4].text,'—');assert.match(row[4].attrs,/title="Teammate: —, you: 250\. /);
   // You view: your figures from the same matches drive the cells.
   row=await cells('you');
   assert.equal(row[2].text,'0.80');assert.match(row[2].attrs,/text-negative/);
