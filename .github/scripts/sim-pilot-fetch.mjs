@@ -35,7 +35,8 @@ export const MAX_PAGES=10;     // 1,000 matches: more than anyone plays in an ac
 export const MAX_ATTEMPTS=3;
 export const MAX_FULL_OFFSET=990; // /api/history-by-puuid: 100 pages of 10 at most per player
 export const NOT_FOUND_CONFIRM=2; // a 404 counts only when a later run gets it again
-export const WORKERS=2;        // a request takes 1-2 s, so one worker alone can't keep the pace
+export const WORKERS=2;
+export const MAINTENANCE_WORKERS=4;        // a request takes 1-2 s, so one worker alone can't keep the pace
 const RR_SINCE=Date.parse('2026-08-01T00:00:00Z'); // the pilot's matches start 13 Oct 2026
 const PREV_GAMES=20;           // Ascend's Riot fallback looks at the last 20 games
 const KAST_CUT=Date.parse('2026-10-27T17:00:00Z'); // tracker kept its older trade rule before this
@@ -150,7 +151,10 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
   sleep=realSleep,now=Date.now,log=console.log,kastOf=null}={}){
   const ORIGIN=env.SITE_ORIGIN||'https://vlravg1.pages.dev';
   const ACT=env.SIM_ACT||'e11a6';
-  const GAP_MS=Math.max(1000,Number(env.SIM_GAP_MS)||1500); // 40/min leaves the live site 20/min
+  // With the site in maintenance (SIM_PILOT_TOKEN, read from site_flags at start) the job has the
+  // public key to itself: 60/min and more workers, since full-match pages take seconds each.
+  const TOKEN=env.SIM_PILOT_TOKEN||null;
+  const GAP_MS=Math.max(1000,Number(env.SIM_GAP_MS)||(TOKEN?1000:1500)); // 40/min leaves the live site 20/min
   const deadline=now()+Math.min(345,Math.max(1,Number(env.RUNTIME_MINUTES)||330))*60000;
   const st={requests:0,rateLimited:0,saved:0,retryLater:0,closed:0,d1Retries:0,prevQueued:0,kastQueued:0,fullPages:0,kastFromPages:0,byQueue:{}};
   const left=()=>deadline-now();
@@ -181,7 +185,7 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
       st.requests++;
       let res,body=null;
       try{
-        res=await fetchImpl(`${ORIGIN}/api/${path}`,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(45000)});
+        res=await fetchImpl(`${ORIGIN}/api/${path}`,{headers:{Accept:'application/json',...(TOKEN?{'X-Sim-Pilot':TOKEN}:{})},signal:AbortSignal.timeout(45000)});
         body=await res.json().catch(()=>null);
       }catch{await pause(10000*(attempt+1));continue;}
       if(res.status===429){st.rateLimited++;const wait=Math.max(2000,Math.min(Number(body?.retryAfterMs)||60000,120000));nextSlot=Math.max(nextSlot,now()+wait);continue;}
@@ -353,7 +357,7 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
     }
   }
 
-  await Promise.all(Array.from({length:WORKERS},worker));
+  await Promise.all(Array.from({length:TOKEN?MAINTENANCE_WORKERS:WORKERS},worker));
   let remaining=null;
   try{remaining=0;for(const Q of queues)remaining+=(await q(`SELECT SUM(status IS NULL) AS left FROM ${Q.table}`))[0]?.left??0;}catch{remaining=null;}
   log(`Run done: saved ${st.saved} (${Object.entries(st.byQueue).map(([k,v])=>`${k} ${v}`).join(', ')||'none'}), requests ${st.requests}, 429s ${st.rateLimited}, retry later ${st.retryLater}, closed after ${MAX_ATTEMPTS} tries ${st.closed}, D1 retries ${st.d1Retries}, follow-ups queued: prev ${st.prevQueued}, KAST ${st.kastQueued}; KAST from ${st.fullPages} full-match pages ${st.kastFromPages}; remaining ${remaining??'unknown'}.${fatal?' Stopped early: D1 unreachable.':''}${kastOf?'':' KAST rules not loaded.'}`);
@@ -368,7 +372,9 @@ if(import.meta.url===pathToFileURL(process.argv[1]).href){
     // Every queueing statement can be repeated safely (CREATE IF NOT EXISTS, INSERT OR IGNORE, upserts,
     // UPDATE), so an overloaded D1 (7429) is waited out instead of ending the step.
     const d1=retryOnD1Overload((sql,params)=>d1Query(env,sql,params));
-    await enqueueLive({d1});await enqueueLiveFollowups({d1});
+    await enqueueLive({d1});
+    try{const m=(await d1(`SELECT value,until FROM site_flags WHERE name='maintenance'`))[0];
+      if(m?.value&&!(m.until!=null&&Number(m.until)<=Date.now())){env.SIM_PILOT_TOKEN=m.value;console.log('Site in maintenance: the public key is ours (60/min).');}}catch{}await enqueueLiveFollowups({d1});
   }
   const r=await run().catch(error=>{console.log(`Run failed: ${error?.message??error}`);return{remaining:null,progressed:0,fatal:true};});
   if(process.env.GITHUB_OUTPUT)appendFileSync(process.env.GITHUB_OUTPUT,`remaining=${r.remaining??''}\nprogressed=${r.progressed}\n`);

@@ -303,3 +303,12 @@ test('live follow-ups: a failed full page only ends the walk; everything left is
   assert.ok([...db.sim_pilot_kast.values()].every(x=>x.status===null));
   assert.equal(r.kastQueued,2);assert.equal(db.sim_live_players.get('u1').status,200);
 });
+
+test('maintenance token: every request carries X-Sim-Pilot and the pace is 60 a minute',async()=>{
+  const {d1}=fakeD1({sim_pilot_players:hundred('p').slice(0,30).map(p=>[p,'eu'])});
+  const seen=[],c=clock(),t0=c.now();
+  const fetchImpl=async(url,opts)=>{seen.push(opts.headers['X-Sim-Pilot']);return{status:200,json:async()=>pageOf(['x'],0)};};
+  await run({env:{...env,SIM_PILOT_TOKEN:'tok',SIM_QUEUES:'history'},fetchImpl,d1,...c,log:quiet});
+  assert.equal(seen.length,30);assert.ok(seen.every(h=>h==='tok'));
+  assert.ok(c.now()-t0>=29*1000-100,'never faster than 60 a minute');
+});

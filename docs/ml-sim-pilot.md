@@ -95,3 +95,20 @@ downloads.
 
 The simulation and training run locally in ascend-companion-re. Once the pilot is evaluated,
 delete the workflow and, if not needed, the `sim_pilot_*` tables.
+
+## Maintenance mode (17 Nov 2026)
+
+To give the pilot the public key's full 60 requests a minute, the site can be switched off
+without a redeploy (`lib/site-flags.mjs`):
+
+```sql
+CREATE TABLE IF NOT EXISTS site_flags (name TEXT PRIMARY KEY, value TEXT, until INTEGER);
+INSERT OR REPLACE INTO site_flags VALUES ('maintenance', '<random token>', <end in ms, or NULL>);
+DELETE FROM site_flags WHERE name = 'maintenance';  -- back online (or wait for `until`)
+```
+
+While it is on, visitors' API requests get a 503 that the app shows as "offline for
+maintenance", collector workflows keep their own key pool but don't borrow public slots, and
+only requests with `X-Sim-Pilot: <token>` use the public key. Each pilot run reads the token
+from D1 at start and then paces itself to 60 a minute with 4 workers. The proxy rereads the
+switch every 15 s per isolate; a missing table or a storage error counts as off.
