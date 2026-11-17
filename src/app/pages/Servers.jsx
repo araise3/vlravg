@@ -64,7 +64,7 @@ function ServersTable({rows}){
   return (
     <SortableTable id="servers-table" rows={tableRows} values={values}
       caption="Match results and performance grouped by game server; match share is the percentage of matches with a known server"
-      columns={[{label:'Server'},{label:'Matches'},{label:'Avg Lobby',wide:true},{label:'K/D'},{label:'ACS',title:'Average combat score'},{label:'PS',title:'Avg PS across matches with available data'},{label:'Win rate',title:'Wins divided by wins plus losses; draws excluded'}]}
+      columns={[{label:'Server'},{label:'Matches'},{label:'Avg Lobby',wide:true,align:'left'},{label:'K/D'},{label:'ACS',title:'Average combat score'},{label:'PS',title:'Avg PS across matches with available data'},{label:'Win rate',title:'Wins divided by wins plus losses; draws excluded'}]}
       maxima={[{column:1,label:'matches and match share'},{column:2,label:'average lobby rank'},{column:3,label:'K/D'},{column:4,label:'average ACS'},{column:5,label:'Avg PS'},{column:6,label:'win rate'}]}/>
   );
 }

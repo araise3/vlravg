@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {ArrowDown,ArrowUp,ArrowUpDown} from 'lucide-react';
+import {ArrowDown,ArrowUp,ArrowUpDown,ChevronDown,ChevronLeft,ChevronRight} from 'lucide-react';
 import {RANK_ICONS} from '@/engine/rank-icons.mjs';
 import {avgLabel,navigateToPage,pageHref,PARTY_LABELS,tierRR,toggleIncludeReset} from '@/engine/core.mjs';
 import {useEngine,useIsMobile} from '@/app/hooks.js';
@@ -57,7 +57,7 @@ export function LobbyValue({sum,count}){
   if(!count)return '—';
   const lobby=tierRR(sum/count);
   return (
-    <span className="inline-flex items-center gap-2 whitespace-nowrap" title={`${avgLabel(lobby.tier)}, ${lobby.rr} RR`}>
+    <span className="flex items-center gap-2 whitespace-nowrap" title={`${avgLabel(lobby.tier)}, ${lobby.rr} RR`}>
       <RankIcon tier={lobby.tier} size={22}/>{avgLabel(lobby.tier)} <span className="text-muted-foreground">({lobby.rr} RR)</span>
     </span>
   );
@@ -93,7 +93,7 @@ export function MobileRowList({id,caption,columns,rows,values,order,best,sort,ch
     return {cell:rows[index].cells[columnIndex],props,isBest:top&&values[index][columnIndex]===top.max,top};
   };
   return (
-    <div className={cn('mobile-row-list',className)} data-slot="mobile-row-list" data-table-id={id}>
+    <div id={id} className={cn('mobile-row-list',className)} data-slot="mobile-row-list" data-table-id={id}>
       <p className="sr-only">{caption}</p>
       <div className={cn('flex items-center gap-2 border-b px-4 pt-2 pb-3',rows.length<3&&'hidden')}>
         <label htmlFor={`${id}-sort`} className="text-xs text-muted-foreground">Sort</label>
@@ -151,8 +151,41 @@ export function MobileRowList({id,caption,columns,rows,values,order,best,sort,ch
   );
 }
 
-export function SortableTable({id,caption,columns,rows,values,maxima=[],className}){
+// "Show all N" / "Show fewer" under a list cut to its first rows.
+export function ShowAllButton({expanded,total,noun,onToggle,controls}){
+  return (
+    <div className="flex justify-center border-t px-4 py-2" data-slot="show-all">
+      <button type="button" onClick={onToggle} aria-expanded={expanded} aria-controls={controls}
+        className="inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50">
+        {expanded?'Show fewer':`Show all ${total} ${noun}`}
+        <ChevronDown className={cn('size-4 transition-transform',expanded&&'rotate-180')} aria-hidden="true"/>
+      </button>
+    </div>
+  );
+}
+
+// Previous/next pages under a long table; the range says where you are.
+export function TablePager({page,pageSize,total,noun,onPage,controls}){
+  const pages=Math.ceil(total/pageSize),start=page*pageSize;
+  const button='grid size-8 place-items-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-40 focus-visible:ring-[3px] focus-visible:ring-ring/50';
+  return (
+    <nav className="flex items-center justify-between gap-3 border-t px-4 py-2 text-sm text-muted-foreground" aria-label={`${noun} pages`} data-slot="table-pager">
+      <span className="tabular-nums" aria-live="polite">{start+1}–{Math.min(total,start+pageSize)} of {total} {noun}</span>
+      <div className="flex items-center gap-1">
+        <button type="button" className={button} onClick={()=>onPage(page-1)} disabled={page===0} aria-label="Previous page" aria-controls={controls}><ChevronLeft className="size-4" aria-hidden="true"/></button>
+        <span className="min-w-14 text-center text-xs tabular-nums">{page+1} / {pages}</span>
+        <button type="button" className={button} onClick={()=>onPage(page+1)} disabled={page>=pages-1} aria-label="Next page" aria-controls={controls}><ChevronRight className="size-4" aria-hidden="true"/></button>
+      </div>
+    </nav>
+  );
+}
+
+// `pageSize` splits long tables into pages (sorting covers every row, then
+// the page is cut); `align: 'left'` on a column left-aligns cells whose
+// contents vary in width, such as a rank icon and label, so icons line up.
+export function SortableTable({id,caption,columns,rows,values,maxima=[],className,pageSize,noun='rows'}){
   const mobile=useIsMobile();
+  const [page,setPage]=useState(0);
   const [sort,setSort]=useState(()=>tableSortState.get(id)||null);
   const best=new Map();
   for(const {column,label} of maxima){
@@ -172,25 +205,34 @@ export function SortableTable({id,caption,columns,rows,values,maxima=[],classNam
   const choose=next=>{
     tableSortState.set(id,next);
     setSort(next);
+    setPage(0);
   };
   const toggle=column=>{
     const direction=sort?.column===column?(sort.direction==='ascending'?'descending':'ascending'):(column===0?'ascending':'descending');
     choose({column,direction});
   };
-  if(mobile)return <MobileRowList {...{id,caption,columns,rows,values,order,best,sort,choose,className}}/>;
+  const paged=pageSize&&order.length>pageSize;
+  const current=paged?Math.min(page,Math.ceil(order.length/pageSize)-1):0;
+  const shown=paged?order.slice(current*pageSize,(current+1)*pageSize):order;
+  const more=paged
+    ?<TablePager page={current} pageSize={pageSize} total={order.length} noun={noun} controls={id} onPage={setPage}/>
+    :null;
+  if(mobile)return <>{<MobileRowList {...{id,caption,columns,rows,values,order:shown,best,sort,choose,className}}/>}{more}</>;
   return (
-    <Table className={cn('rank-table',className)}>
+    <>
+    <Table id={id} className={cn('rank-table',className)}>
       <caption className="sr-only">{caption}</caption>
       <TableHeader>
         <TableRow>
           {columns.map((col,column)=>{
             const active=sort?.column===column;
             const Icon=active?(sort.direction==='ascending'?ArrowUp:ArrowDown):ArrowUpDown;
+            const left=column===0||col.align==='left';
             return (
-              <TableHead key={column} scope="col" aria-sort={active?sort.direction:'none'} title={col.title}>
+              <TableHead key={column} scope="col" aria-sort={active?sort.direction:'none'} title={col.title} className={column>0&&left?'col-left':undefined}>
                 <button type="button" onClick={()=>toggle(column)} className="table-sort-btn"
                   aria-label={`${col.label}: sort ${active&&sort.direction==='ascending'?'descending':active?'ascending':column===0?'ascending':'descending'}`}>
-                  {column>0&&<Icon className="sort-icon" aria-hidden="true"/>}{col.label}{column===0&&<Icon className="sort-icon" aria-hidden="true"/>}
+                  {!left&&<Icon className="sort-icon" aria-hidden="true"/>}{col.label}{left&&<Icon className="sort-icon" aria-hidden="true"/>}
                 </button>
               </TableHead>
             );
@@ -198,7 +240,7 @@ export function SortableTable({id,caption,columns,rows,values,maxima=[],classNam
         </TableRow>
       </TableHeader>
       <TableBody>
-        {order.map(index=>{
+        {shown.map(index=>{
           const row=rows[index];
           return (
             <TableRow key={row.key}>
@@ -209,7 +251,7 @@ export function SortableTable({id,caption,columns,rows,values,maxima=[],classNam
                 const title=isBest?[props.title,`Highest ${top.label} in this table`].filter(Boolean).join('. '):props.title;
                 if(column===0)return <TableHead key={0} scope="row" className={props.className} title={title}>{cell}</TableHead>;
                 return (
-                  <TableCell key={column} title={title} className={cn(props.className,isBest&&'table-best')}>
+                  <TableCell key={column} title={title} className={cn(columns[column]?.align==='left'&&'col-left',props.className,isBest&&'table-best')}>
                     {cell}
                   </TableCell>
                 );
@@ -219,6 +261,8 @@ export function SortableTable({id,caption,columns,rows,values,maxima=[],classNam
         })}
       </TableBody>
     </Table>
+    {more}
+    </>
   );
 }
 
