@@ -1378,7 +1378,10 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
     return apiGet(url,opts,_attempt,_rl+1);
   }
 
-  // 2) Transient server errors — exponential backoff.
+  // 2) Maintenance (the proxy's switch, lib/site-flags.mjs): not transient, say so once.
+  if(r.status===503&&j?.maintenance)throw new Error(j.error||'vlravg is offline for maintenance. Please try again later.');
+
+  // 3) Transient server errors — exponential backoff.
   if([500,502,503,504].includes(r.status)){
     if(_attempt>=MAX_RETRIES)throw new Error(parseApiError(r,j));
     const wait=Math.min(1000*Math.pow(2,_attempt),16000); // 1,2,4,8,16s
@@ -1387,7 +1390,7 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
     return apiGet(url,opts,_attempt+1,_rl);
   }
 
-  // 3) Other non-OK (400/401/403/404…) — not retryable, surface the real reason.
+  // 4) Other non-OK (400/401/403/404…) — not retryable, surface the real reason.
   if(!r.ok)throw new Error(parseApiError(r,j));
 
   return{j};

@@ -88,6 +88,7 @@ import { beginCoverageScan, readCoverageScan, recordCoveragePage, finishCoverage
 import { collectRR, mergeRRUpdate, saveFeatures, trackRRAccount } from "../../lib/rr-corpus.mjs";
 import { discoverMatchPlayers } from "../../lib/rr-activity.mjs";
 import { workflowAuthorized } from "../../lib/workflow-auth.mjs";
+import { maintenance } from "../../lib/site-flags.mjs";
 import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, observePublicQuota, acquireBorrowedPublicPermit } from "../../lib/upstream-pacing.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
@@ -887,8 +888,16 @@ export async function onRequestGet(context) {
     if(!env.HENRIK_WORKFLOW_KEY)return json({error:'Workflow proxy misconfigured: HENRIK_WORKFLOW_KEY secret not set'},503);
     if(!await workflowAuthorized(request,env.HENRIK_WORKFLOW_KEY))return json({error:'Unauthorized workflow request'},401);
   }
+  // Maintenance (lib/site-flags.mjs): visitors get a 503; the ML pilot job (X-Sim-Pilot = the
+  // switch's token) has the public key to itself; collectors keep their own pool but don't borrow.
+  const maint=await maintenance(env.APP_DB);
+  if(maint&&!workflow&&request.headers.get('X-Sim-Pilot')!==maint.token){
+    const res=json({error:'vlravg is offline for maintenance. Please try again later.',maintenance:true,until:maint.until},503);
+    res.headers.set('Cache-Control','no-store');res.headers.set('Retry-After','3600');
+    return res;
+  }
   const henrikKey=workflow?env.HENRIK_WORKFLOW_KEY:env.HENRIK_KEY;
-  const admission={pool:null};
+  const admission={pool:null,noBorrow:!!maint};
   const response=await handleGet(context,{workflow,henrikKey,admission});
   if(workflow){
     response.headers.set('X-Workflow-Pacing','upstream-v1');
@@ -1091,7 +1100,7 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
   try{
     if(workflow){
       permit=await acquireWorkflowPermit(env.APP_DB,{maxWaitMs:0});
-      if(permit.retryAfterMs&&env.HENRIK_KEY){
+      if(permit.retryAfterMs&&env.HENRIK_KEY&&!admission.noBorrow){
         const loan=await acquireBorrowedPublicPermit(env.APP_DB);
         if(!loan.retryAfterMs){permit=loan;borrowed=true;}
       }
