@@ -29,7 +29,7 @@ import {gzipSync,gunzipSync} from 'node:zlib';
 import {appendFileSync,readFileSync,existsSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
 import {pathToFileURL} from 'node:url';
-import {d1Query} from './d1-query.mjs';
+import {d1Query,retryOnD1Overload} from './d1-query.mjs';
 
 export const MAX_PAGES=10;     // 1,000 matches: more than anyone plays in an act
 export const MAX_ATTEMPTS=3;
@@ -63,6 +63,11 @@ export async function enqueueLive({d1,now=Date.now,log=console.log}={}){
   const st={scanned:0,matches:0,players:0};
   try{
     await d1(`CREATE TABLE IF NOT EXISTS sim_live_rr (id TEXT PRIMARY KEY, region TEXT NOT NULL, puuid TEXT NOT NULL, match_id TEXT NOT NULL, started_at TEXT, status INTEGER, n INTEGER, data TEXT, attempts INTEGER, fetched_at TEXT)`);
+    // Queueing a match's players and a player's collected matches look rows up by match and by
+    // player; without these each lookup scanned the whole table (~14M rows read for 1,045 matches
+    // on 17 Nov 2026, which D1 refused as overloaded, code 7429).
+    await d1(`CREATE INDEX IF NOT EXISTS sim_live_rr_match ON sim_live_rr(match_id)`);
+    await d1(`CREATE INDEX IF NOT EXISTS sim_live_rr_puuid ON sim_live_rr(puuid)`);
     await d1(`CREATE TABLE IF NOT EXISTS sim_live_matches (match_id TEXT PRIMARY KEY, region TEXT, started_at TEXT, season TEXT, players INTEGER, queued_at TEXT, followed INTEGER)`);
     await d1(`CREATE TABLE IF NOT EXISTS sim_live_state (id INTEGER PRIMARY KEY CHECK (id=1), cursor INTEGER NOT NULL)`);
     const cutoff=new Date(now()-LIVE_WINDOW_H*3600000).toISOString();
@@ -360,7 +365,9 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
 if(import.meta.url===pathToFileURL(process.argv[1]).href){
   const env=process.env;
   if(!env.SIM_QUEUES||env.SIM_QUEUES.split(',').includes('live')){
-    const d1=(sql,params)=>d1Query(env,sql,params);
+    // Every queueing statement can be repeated safely (CREATE IF NOT EXISTS, INSERT OR IGNORE, upserts,
+    // UPDATE), so an overloaded D1 (7429) is waited out instead of ending the step.
+    const d1=retryOnD1Overload((sql,params)=>d1Query(env,sql,params));
     await enqueueLive({d1});await enqueueLiveFollowups({d1});
   }
   const r=await run().catch(error=>{console.log(`Run failed: ${error?.message??error}`);return{remaining:null,progressed:0,fatal:true};});
