@@ -145,12 +145,18 @@ All hand-built charts follow one system, checked against the dataviz method:
   chart, then notes in small muted text.
 - **Hover/focus**: one shared `ChartTooltip` (value first). RR trend uses a
   crosshair that snaps to the nearest match. The payout chart has no hover
-  readout (removed on request); its curve points keep their aria-labels. Bars
-  and dot-plot rows show their own tooltip and keep their aria-labels.
+  readout (removed on request); its curve points keep their aria-labels. The
+  score-margin chart has no tooltip either (removed on request); lobby
+  dot-plot rows show their own tooltip. All keep their aria-labels.
 - **Per chart**: RR trend drops the rank-colour bands and icon-only axis for
   labelled rank boundaries, date ticks and an end label; the payout chart gets
-  Win/Loss end labels, an "Even · N RR" label and a "RR per game" axis; the
-  score-margin chart labels only its tallest win and loss bars; the overview
+  Win/Loss end labels, an "Even at N RR" label and a "RR per game" axis; the
+  score-margin chart shows the count on top of every bar again (exact
+  scorelines are in each bar's aria-label); "RR by result" is a diverging bar
+  chart instead of a table (`RRResultChart`): one row per exact scoreline,
+  closest margin first, average RR per loss growing left in red and per win
+  right in green on one shared scale, value and game count at each bar end,
+  "OT" on overtime scorelines and a dashed rule between margins; the overview
   clutch outcome split is a thin segmented bar with gaps. (The clutch tiles
   briefly went neutral; their old colours were restored on request.)
 

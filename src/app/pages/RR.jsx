@@ -1,4 +1,4 @@
-import {useRef,useState} from 'react';
+import {useState} from 'react';
 import {
   avgLabel,avgLabelShort,buildRRScoreRows,computeRRStats,rrDuoInfo,rrMovementRows,rrMovementXAxis,
   rrPayoutEstimates,rrPayoutEvenPoint,rrPayoutSegments,rrPositionFromElo,rrRankRows,rrReportedStats,rrSigned,rrTrendScopedMatches,
@@ -429,45 +429,74 @@ export function RRRankTable({matches}){
   );
 }
 
-function RRScoreTable({matches}){
+// RR by result: one row per exact scoreline (closest margin first). The
+// average RR lost per loss grows left in red, the average RR gained per win
+// grows right in green, on one shared scale; each bar end carries its value
+// and game count. Rows are HTML so they stay sharp and fit any width.
+export function RRResultChart({matches}){
   const rows=buildRRScoreRows(matches);
-  if(!rows.length)return <p className="px-6 py-4 text-sm text-muted-foreground">No wins or losses with both a recorded score and eligible RR yet.</p>;
-  const tableRows=rows.map(({high,low,margin,stats:s})=>({key:`${high}-${low}`,cells:[
-    `${high}–${low}`,margin,s.wins,s.avgGain==null?'—':rrSigned(s.avgGain,1),s.losses,s.avgLoss==null?'—':rrSigned(-s.avgLoss,1),
-  ],cellProps:[null,null,null,{className:'text-positive'},null,{className:'text-negative'}]}));
-  const values=rows.map(({high,low,margin,stats:s})=>[high*1000+low,margin,s.wins,s.avgGain,s.losses,s.avgLoss==null?null:-s.avgLoss]);
+  if(!rows.length)return <p className="text-sm text-muted-foreground">No wins or losses with both a recorded score and eligible RR yet.</p>;
+  const scale=Math.max(1,...rows.flatMap(({stats:s})=>[s.avgGain??0,s.avgLoss??0]));
+  const games=(n,one,many)=>`${n} ${n===1?one:many}`;
+  // Each side keeps 4.75rem beside the bar for its value label.
+  const barWidth=value=>`calc((100% - 4.75rem) * ${(Math.abs(value)/scale).toFixed(4)})`;
+  const side=(value,count,kind)=>{
+    if(value==null)return <span className={cn('absolute top-1/2 -translate-y-1/2 text-xs text-muted-foreground',kind==='win'?'left-1.5':'right-1.5')}>—</span>;
+    const width=barWidth(value);
+    return (
+      <>
+        <span className={cn('absolute top-1/2 h-3.5 -translate-y-1/2',kind==='win'?'left-0 rounded-r-[4px]':'right-0 rounded-l-[4px]')}
+          style={{width,background:kind==='win'?'var(--chart-win)':'var(--chart-loss)'}}/>
+        <span className={cn('absolute top-1/2 -translate-y-1/2 text-xs whitespace-nowrap tabular-nums',kind==='win'?'text-positive':'text-negative')}
+          style={kind==='win'?{left:`calc(${width} + 6px)`}:{right:`calc(${width} + 6px)`}}>
+          <span className="font-semibold">{rrSigned(kind==='win'?value:-value,1)}</span> <span className="text-muted-foreground">({count})</span>
+        </span>
+      </>
+    );
+  };
   return (
-    <SortableTable id="rr-score-table" rows={tableRows} values={values}
-      caption="Average recorded RR by exact scoreline, grouped from closest to widest round margin. Scorelines show the winning team's rounds first."
-      columns={[{label:'Scoreline'},{label:'Round margin'},{label:'Wins'},{label:'RR / Win'},{label:'Losses'},{label:'RR / Loss'}]}
-      maxima={[{column:2,label:'wins'},{column:3,label:'RR per win'},{column:4,label:'losses'},{column:5,label:'RR retained on a loss'}]}/>
+    <div data-slot="rr-result-chart" className="flex flex-col">
+      <div className="grid grid-cols-[4.25rem_1fr_1fr] gap-x-0 pb-2 text-xs text-muted-foreground" aria-hidden="true">
+        <span>Score</span>
+        <span className="pr-2 text-right">RR per loss</span>
+        <span className="pl-2">RR per win</span>
+      </div>
+      <ul className="flex flex-col" aria-label="Average recorded RR per win and per loss for each exact scoreline">
+        {rows.map(({high,low,margin,stats:s},index)=>{
+          const newMargin=index>0&&rows[index-1].margin!==margin;
+          const label=`${high}–${low}${high>13?' (overtime)':''}: `+
+            [s.wins?`${games(s.wins,'win','wins')} averaging ${rrSigned(s.avgGain,1)} RR`:'no wins',
+              s.losses?`${games(s.losses,'loss','losses')} averaging ${rrSigned(-s.avgLoss,1)} RR`:'no losses'].join(', ');
+          return (
+            <li key={`${high}-${low}`} aria-label={label} className={cn('grid h-8 grid-cols-[4.25rem_1fr_1fr] items-center',newMargin&&'mt-1.5 border-t border-dashed pt-1.5 h-[2.375rem]')}>
+              <span className="text-sm font-medium whitespace-nowrap tabular-nums" aria-hidden="true">{high}–{low}{high>13&&<span className="ml-1 text-[10px] font-normal text-muted-foreground">OT</span>}</span>
+              <span className="relative h-full border-r border-[var(--chart-axis)]" aria-hidden="true">{side(s.avgLoss,s.losses,'loss')}</span>
+              <span className="relative h-full" aria-hidden="true">{side(s.avgGain,s.wins,'win')}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
 export function ScoreMarginChart({matches}){
-  const [active,setActive]=useState(null);
-  const scrollRef=useRef(null);
   const compact=useIsMobile();
   const {bins,total}=scoreMarginDistribution(matches);
   if(!total)return null;
-  const width=compact?360:900,height=compact?260:300,left=compact?34:48,right=compact?8:22,top=compact?28:30,bottom=compact?50:58;
+  const width=compact?360:900,height=compact?260:300,left=compact?34:48,right=compact?8:22,top=compact?30:34,bottom=compact?50:58;
   const plotWidth=width-left-right,plotBottom=height-bottom,plotHeight=plotBottom-top;
   const maxCount=Math.max(...bins.map(b=>b.count)),step=Math.max(1,Math.ceil(maxCount/4));
   const ceiling=Math.ceil(maxCount/step)*step,slot=plotWidth/bins.length;
   const y=count=>plotBottom-count/ceiling*plotHeight;
   const ticks=[];
   for(let count=0;count<=ceiling;count+=step)ticks.push(count);
-  // Bars stay thin (<=24px) with air between them; only the tallest win and
-  // loss bars carry a number, the rest are in the tooltip and aria-label.
+  // Bars stay thin (<=24px) with air between them. Every bar carries its
+  // count on top (no hover tooltip); exact scorelines are in its aria-label.
   const barWidth=Math.min(24,slot*.72);
-  // Phones: label every 1st, 2nd or 4th margin so labels stay ~30px apart.
+  // Phones: label every 1st, 2nd or 4th margin so axis labels stay ~30px apart.
   const labelStep=[1,2,4,8].find(step=>slot*step>=30)||8;
-  const peak=sign=>bins.filter(b=>Math.sign(b.margin)===sign&&b.count>0).reduce((best,b)=>best==null||b.count>best.count?b:best,null)?.margin;
-  const labelled=new Set([peak(1),peak(-1)].filter(v=>v!=null));
   const center=index=>left+(index+.5)*slot;
-  const svgBox=scrollRef.current?.querySelector('svg')?.getBoundingClientRect();
-  const activeBin=active!=null?bins[active]:null;
-  const tipLeft=activeBin?center(active)*(svgBox?svgBox.width/width:1)-(scrollRef.current?.scrollLeft||0):null;
   const describe=bin=>{
     const margin=Math.abs(bin.margin);
     const outcome=bin.margin===0?'Draws':`${bin.margin>0?'Wins':'Losses'} by ${margin} ${margin===1?'round':'rounds'}`;
@@ -486,9 +515,8 @@ export function ScoreMarginChart({matches}){
             {[['Losses','var(--chart-loss)'],['Draws','var(--chart-draw)'],['Wins','var(--chart-win)']].map(([label,color])=><span key={label} className="inline-flex items-center gap-1.5"><span className="size-2.5 rounded-[3px]" style={{background:color}}/>{label}</span>)}
           </div>
           <ChartFrame className="mt-2">
-          <div ref={scrollRef} className={compact?undefined:'overflow-x-auto'} role="region" aria-label="Match counts by round margin" tabIndex={0} onScroll={()=>setActive(null)}>
-            <svg className={cn('chart-svg',compact?'compact':'min-w-[600px]',active!=null&&'has-active')} viewBox={`0 0 ${width} ${height}`} role="group" aria-label="Match counts by round margin"
-              onPointerLeave={()=>setActive(null)}>
+          <div className={compact?undefined:'overflow-x-auto'} role="region" aria-label="Match counts by round margin" tabIndex={0}>
+            <svg className={cn('chart-svg',compact?'compact':'min-w-[600px]')} viewBox={`0 0 ${width} ${height}`} role="group" aria-label="Match counts by round margin">
               <text x={left} y={16}>Matches</text>
               {ticks.map(count=>(
                 <g key={count}>
@@ -499,36 +527,26 @@ export function ScoreMarginChart({matches}){
               {bins.map((bin,index)=>{
                 const cx=center(index),kind=bin.margin<0?'loss':bin.margin>0?'win':'draw';
                 const label=bin.margin===0?'0':`${bin.margin>0?'+':'−'}${Math.abs(bin.margin)}`;
-                const detail=describe(bin),barTop=y(bin.count),barHeight=plotBottom-barTop,on=active===index;
+                const barTop=y(bin.count),barHeight=plotBottom-barTop;
                 return (
                   <g key={bin.margin}>
-                    <rect x={cx-slot/2} y={top} width={slot} height={plotHeight} className="hit" onPointerEnter={()=>setActive(bin.count>0?index:null)} aria-hidden="true"/>
                     {bin.count>0&&(
                       <>
                         <rect x={cx-barWidth/2} y={barTop} width={barWidth} height={barHeight} rx={Math.min(4,barHeight/2)}
-                          className={cn('bar',kind,on&&'active')} tabIndex={0} role="img" aria-label={detail}
-                          onPointerEnter={()=>setActive(index)} onFocus={()=>setActive(index)} onBlur={()=>setActive(null)}/>
-                        {barHeight>4&&<rect x={cx-barWidth/2} y={plotBottom-4} width={barWidth} height={4} className={cn('bar-foot',kind,on&&'active')} aria-hidden="true"/>}
-                        {labelled.has(bin.margin)&&<text x={cx} y={barTop-7} textAnchor="middle" className="value">{bin.count}</text>}
+                          className={`bar ${kind}`} tabIndex={0} role="img" aria-label={describe(bin)}/>
+                        {barHeight>4&&<rect x={cx-barWidth/2} y={plotBottom-4} width={barWidth} height={4} className={`bar-foot ${kind}`} aria-hidden="true"/>}
+                        <text x={cx} y={barTop-7} textAnchor="middle" className="value" aria-hidden="true">{bin.count}</text>
                       </>
                     )}
-                    {(!compact||on||bin.margin%labelStep===0)&&<text x={cx} y={plotBottom+22} textAnchor="middle" className={on?'ink-strong':undefined}>{label}</text>}
+                    {(!compact||bin.margin%labelStep===0)&&<text x={cx} y={plotBottom+22} textAnchor="middle" aria-hidden="true">{label}</text>}
                   </g>
                 );
               })}
               <text x={left+plotWidth/2} y={height-8} textAnchor="middle">{compact?'Round margin (yours − enemy)':'Round margin (your rounds minus enemy rounds)'}</text>
             </svg>
           </div>
-          {activeBin&&(
-            <ChartTooltip x={tipLeft} y={8} width={scrollRef.current?.clientWidth}>
-              <div className="tt-value">{activeBin.count} {activeBin.count===1?'match':'matches'} <span className="tt-muted">({(100*activeBin.count/total).toFixed(1)}%)</span></div>
-              <div className="tt-row"><span className="tt-key" style={{background:activeBin.margin<0?'var(--chart-loss)':activeBin.margin>0?'var(--chart-win)':'var(--chart-draw)'}}/>
-                {activeBin.margin===0?'Draws':`${activeBin.margin>0?'Won':'Lost'} by ${Math.abs(activeBin.margin)} ${Math.abs(activeBin.margin)===1?'round':'rounds'}`}</div>
-              {activeBin.scorelines.map(score=><div key={score.scoreline} className="tt-muted">{score.scoreline}: {score.count} {score.count===1?'match':'matches'}</div>)}
-            </ChartTooltip>
-          )}
           </ChartFrame>
-          <p className="text-xs text-muted-foreground">Your rounds minus enemy rounds, for all scored matches this act, including placements. Regulation 13–11 and overtime share ±2; draws sit at 0. Hover or focus for exact scorelines.</p>
+          <p className="text-xs text-muted-foreground">Your rounds minus enemy rounds, for all scored matches this act, including placements. Regulation 13–11 and overtime share ±2; draws sit at 0.</p>
         </CardContent>
       </Card>
     </section>
@@ -577,12 +595,12 @@ export function RRPage(){
           <RRMovementChart matches={matches} zoomTier={s.rrMovementZoomTier}/>
           <Card className="py-2"><RRRankTable matches={matches}/></Card>
           <section aria-labelledby="rr-score-title">
-            <Card className="gap-2 pb-2">
+            <Card>
               <CardHeader>
                 <CardTitle><h2 id="rr-score-title">RR by result</h2></CardTitle>
-                <CardDescription>Average recorded RR by exact scoreline. Regulation and overtime results stay separate. Excludes placements, unrated ranks and full 5-stacks.</CardDescription>
+                <CardDescription>Average RR lost per loss and gained per win for each exact scoreline, closest first; brackets count the games. Regulation and overtime stay separate. Excludes placements, unrated ranks and full 5-stacks.</CardDescription>
               </CardHeader>
-              <RRScoreTable matches={matches}/>
+              <CardContent><ChartFrame><RRResultChart matches={matches}/></ChartFrame></CardContent>
             </Card>
           </section>
         </>
