@@ -88,14 +88,14 @@ export function ReplaysPage({active}){
   useEffect(()=>{if(active&&hasMatches&&!maps)loadMatchMapMetadata().then(setMaps);},[active,hasMatches,maps]);
   return (
     <main aria-labelledby="replays-title" className="space-y-6">
-      <PageHeading id="replays-title" title="Replay import">Upload the VALORANT replay (.vrf) of a loaded match. It is parsed offline in a sandbox into a compact timeline of rounds, kills and positions every 250 ms. Uploaded replays are user-supplied and kept apart from HenrikDev match data.</PageHeading>
+      <PageHeading id="replays-title" title="Replay import"/>
       {hasMatches?(
         <>
           {s.replayConfig&&!s.replayConfig.enabled&&<p role="status" aria-live="polite" className="text-sm text-muted-foreground">Replay uploads are not available right now.</p>}
           <ul className="space-y-2" aria-label="Loaded matches and their replays">
             {rows.map(row=><ReplayRow key={row.matchId} row={row} art={maps?.get(row.map.toLowerCase())}/>)}
           </ul>
-          <p className="text-xs text-muted-foreground">Replays are saved in <code className="rounded bg-muted px-1 py-0.5">%LOCALAPPDATA%\VALORANT\Saved\Demos</code> and named by match ID. A file is accepted only for the match it was recorded in, and the parsed replay must contain every player HenrikDev lists for that match.</p>
+          <p className="text-xs text-muted-foreground">Replays are saved in <code className="rounded bg-muted px-1 py-0.5">%LOCALAPPDATA%\VALORANT\Saved\Demos</code> and named by match ID. A file is accepted only for the match it was recorded in, and the parsed replay must contain every player HenrikDev lists for that match. Uploads are parsed offline in a sandbox and kept apart from HenrikDev match data.</p>
         </>
       ):s.analysisState!=='error'&&(
         <EmptyState>{s.analysisState==='loading'?'Loading this player’s matches…':ready?'No matches found for this season. Try another act.':'Search for a player above to upload replays for their matches.'}</EmptyState>

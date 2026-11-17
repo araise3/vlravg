@@ -45,3 +45,20 @@ test('indicator snaps instead of animating on first show and after being hidden'
   assert.equal(nextIndicatorBox(null,'hidden'),null);
   assert.equal(nextIndicatorBox(moved,null),null);
 });
+
+test('pages have no visible title or description; the title stays for screen readers and focus',async()=>{
+  const {readFileSync,readdirSync}=await import('node:fs');
+  const shared=readFileSync(new URL('../src/app/shared.jsx',import.meta.url),'utf8');
+  assert.match(shared,/export function PageHeading\(\{id,title,titleRef\}\)\{\n  return <h1 id=\{id\} ref=\{titleRef\} tabIndex=\{-1\} className="sr-only">\{title\}<\/h1>;/);
+  const dir=new URL('../src/app/pages/',import.meta.url);
+  const ids=[];
+  for(const file of readdirSync(dir)){
+    const source=readFileSync(new URL(file,dir),'utf8');
+    for(const m of source.matchAll(/<PageHeading id="([a-z-]+)" title="[^"]+"(\/?)>/g)){
+      assert.equal(m[2],'/',`${file}: ${m[1]} still passes a description`);
+      ids.push(m[1]);
+    }
+  }
+  // App.jsx focuses `${page}-title` after navigation; every page keeps one.
+  assert.deepEqual(ids.sort(),['duos-title','lobby-rank-title','matches-title','names-title','overview-title','replays-title','rr-title','servers-title']);
+});

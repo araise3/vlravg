@@ -69,7 +69,7 @@ export function NamesPage(){
     :s.nameHistoryState==='ready'?'No name observations have been saved for this account yet.':'Search for a player above to see their name history.';
   return (
     <main aria-labelledby="names-title" className="space-y-6">
-      <PageHeading id="names-title" title="Name History">Riot IDs observed across this account’s competitive history.</PageHeading>
+      <PageHeading id="names-title" title="Name History"/>
       {hasRows?(
         <>
           {mobile?<MobileNameList rows={rows}/>:<Card className="py-2">

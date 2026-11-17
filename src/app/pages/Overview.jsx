@@ -4,7 +4,7 @@ import {
   playerRouteUrl,rrSigned,setRRTrendRange,tierRR,winRateLabel,
 } from '@/engine/core.mjs';
 import {useEngine,useIsMobile} from '@/app/hooks.js';
-import {ChartFrame,PageHeading,PageLink,PlacementToggle,RankIcon,toneClass} from '@/app/shared.jsx';
+import {ChartFrame,PageHeading,PageLink,PartyIcon,PlacementToggle,RankIcon,toneClass} from '@/app/shared.jsx';
 import {RRTrendChart} from '@/app/pages/RR.jsx';
 import {useMapArt} from '@/app/pages/Matches.jsx';
 import {cn} from '@/lib/utils';
@@ -28,18 +28,33 @@ function ViewLink({page,children}){
   );
 }
 
-function KpiCard({label,value,valueClassName,badge,footer,note,icon}){
+// One KPI card: label, headline value, then a hairline-divided list of rows
+// (label, value, note). No corner badges; supporting figures live in rows.
+function KpiCard({label,labelId,value,valueClassName,icon,rows,note,empty}){
   return (
-    <Card className="@container/card gap-4 py-5">
-      <CardHeader className="px-5">
-        <CardDescription>{label}</CardDescription>
-        <CardTitle className={cn('flex items-center gap-2.5 text-2xl font-semibold whitespace-nowrap tabular-nums @[300px]/card:text-3xl',valueClassName)}>{icon}{value}</CardTitle>
-        {badge&&<CardAction><Badge variant="outline" className="tabular-nums">{badge}</Badge></CardAction>}
+    <Card className="gap-4 py-5" aria-labelledby={labelId}>
+      <CardHeader className="gap-1.5 px-5">
+        <CardDescription id={labelId}>{label}</CardDescription>
+        <CardTitle className={cn('flex min-w-0 items-center gap-2.5 text-2xl font-semibold whitespace-nowrap tabular-nums sm:text-3xl',valueClassName)}>{icon}{value}</CardTitle>
       </CardHeader>
-      <CardFooter className="flex-col items-start gap-1 px-5 text-sm">
-        <div className="line-clamp-1 font-medium">{footer}</div>
-        <div className="line-clamp-1 text-muted-foreground">{note}</div>
-      </CardFooter>
+      <CardContent className="flex flex-1 flex-col gap-3 px-5">
+        {rows.length
+          ?<dl className="divide-y rounded-lg border">
+            {rows.map(row=>(
+              <div key={row.key} className="flex min-w-0 items-center gap-3 px-3 py-2 text-sm" title={row.title}>
+                <dt className="w-[5.75rem] shrink-0 text-muted-foreground max-sm:w-[5.5rem]">
+                  <span className="flex items-center gap-1.5 whitespace-nowrap">{row.label}</span>
+                  {/* Phones: the note goes under the label to leave room for the value. */}
+                  {row.note!=null&&<span className="block text-xs tabular-nums sm:hidden">{row.note}</span>}
+                </dt>
+                <dd className={cn('flex min-w-0 flex-1 items-center gap-2 font-medium tabular-nums',row.className)}>{row.value}</dd>
+                {row.note!=null&&<dd className="shrink-0 text-xs text-muted-foreground tabular-nums max-sm:hidden">{row.note}</dd>}
+              </div>
+            ))}
+          </dl>
+          :<p className="rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">{empty}</p>}
+        {note&&<p className="mt-auto text-xs text-muted-foreground">{note}</p>}
+      </CardContent>
     </Card>
   );
 }
@@ -56,59 +71,43 @@ function partyLobbyRanks(rated){
   return [...groups].sort((a,b)=>a[0]-b[0]).map(([size,{sum,count}])=>({size,count,rank:tierRR(sum/count)}));
 }
 
-export function KpiCards({s,recent,mobile=false}){
+// Average lobby rank, broken down by party size (one row per size played),
+// and net RR over the recent window with its per-win/per-loss split.
+export function KpiCards({s,recent}){
   const o=s.overviewStats;
   const rated=s.statMatches.filter(m=>m.avgRank!=null);
   const parties=partyLobbyRanks(rated);
   const rank=o.overallRR;
   const partyName=size=>PARTY_LABELS[size]||size+'-Stack';
-  const partyNote=parties.length>1
-    ?parties.map(({size,rank:r})=>`${partyName(size)} ${avgLabelShort(r.tier)}`).join(' · ')
-    :parties.length?`All ${partyName(parties[0].size).toLowerCase()} lobbies`:'No rated lobbies yet';
+  const lobbies=n=>`${n} ${n===1?'lobby':'lobbies'}`;
   const rr=computeRRStats(recent);
   const withRR=recent.filter(m=>Number.isFinite(m.myRR));
   const net=withRR.length?withRR.reduce((sum,m)=>sum+m.myRR,0):null;
   const Trend=net==null||net===0?Minus:net>0?TrendingUp:TrendingDown;
-  const perGame=[rr.avgGain!=null?`${rrSigned(rr.avgGain,1)} per win`:null,rr.avgLoss!=null?`${rrSigned(-rr.avgLoss,1)} per loss`:null].filter(Boolean).join(' · ');
-  if(mobile){
-    // Phones: both headline figures side by side in one hero card, with
-    // their notes underneath instead of corner badges that would not fit.
-    const netTone=net>0?'text-positive':net<0?'text-negative':null;
-    return (
-      <Card className="gap-0 overflow-hidden py-0" role="group" aria-label="Key figures this act" data-slot="mobile-kpis">
-        <dl className="grid grid-cols-2 divide-x">
-          <div className="min-w-0 p-4">
-            <dt className="text-xs text-muted-foreground">Avg lobby rank</dt>
-            <dd className="mt-2 flex min-w-0 items-center gap-2">
-              {rank&&<RankIcon tier={rank.tier} size={28}/>}
-              <span className="truncate text-lg leading-tight font-semibold">{rank?avgLabel(rank.tier):avgLabel(o.overall)}</span>
-            </dd>
-            <dd className="mt-1.5 text-xs text-muted-foreground tabular-nums">{rank&&`${rank.rr} RR · `}{rated.length} rated</dd>
-          </div>
-          <div className="min-w-0 p-4">
-            <dt className="text-xs text-muted-foreground">Net RR · last {recent.length}</dt>
-            <dd className={cn('mt-2 flex items-center gap-1.5 text-[26px] leading-[28px] font-semibold tabular-nums',netTone)}>
-              {net!=null?rrSigned(net,0):'—'}<Trend className="size-4 opacity-70" aria-hidden="true"/>
-            </dd>
-            <dd className="mt-1.5 text-xs text-muted-foreground tabular-nums">{rr.n} eligible</dd>
-          </div>
-        </dl>
-        <div className="flex flex-col gap-0.5 border-t bg-muted/20 px-4 py-2.5 text-xs text-muted-foreground">
-          <span className="truncate"><span className="font-medium text-foreground">{perGame||(rr.n?'No RR-eligible wins or losses':'No RR-eligible matches')}</span></span>
-          <span className="truncate">{partyNote}</span>
-        </div>
-      </Card>
-    );
-  }
+  const partyRows=parties.map(({size,count,rank:r})=>({
+    key:size,
+    label:<><PartyIcon size={size}/>{partyName(size)}</>,
+    value:<><RankIcon tier={r.tier} size={18}/><span className="truncate max-sm:hidden">{avgLabel(r.tier)}</span><span className="truncate sm:hidden">{avgLabelShort(r.tier)}</span><span className="shrink-0 font-normal text-muted-foreground">{r.rr} RR</span></>,
+    note:lobbies(count),
+    title:`${partyName(size)}: ${avgLabel(r.tier)}, ${r.rr} RR across ${lobbies(count)}`,
+  }));
+  const record=`${rr.wins}–${rr.losses}${rr.draws?`–${rr.draws}`:''}`;
+  // Only wins and losses have a payout split; an all-draw window says so instead.
+  const rrRows=rr.wins+rr.losses?[
+    {key:'win',label:'Per win',value:rr.avgGain==null?'—':rrSigned(rr.avgGain,1),className:rr.avgGain!=null&&'text-positive',note:`${rr.wins} ${rr.wins===1?'win':'wins'}`},
+    {key:'loss',label:'Per loss',value:rr.avgLoss==null?'—':rrSigned(-rr.avgLoss,1),className:rr.avgLoss!=null&&'text-negative',note:`${rr.losses} ${rr.losses===1?'loss':'losses'}`},
+    {key:'record',label:rr.draws?'W–L–D':'W–L',value:record,note:`${winRateLabel(rr.winRate)} win rate`,title:'Wins divided by wins plus losses; draws excluded'},
+  ]:[];
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" role="group" aria-label="Key figures this act">
-      <KpiCard label="Avg lobby rank" value={rank?avgLabel(rank.tier):avgLabel(o.overall)}
-        icon={rank&&<RankIcon tier={rank.tier} size={34}/>} badge={rank&&`${rank.rr} RR`}
-        footer={`${rated.length} rated ${rated.length===1?'lobby':'lobbies'}`} note={partyNote}/>
-      <KpiCard label={`Net RR · last ${recent.length}`} value={net!=null?rrSigned(net,0):'—'}
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" role="group" aria-label="Key figures this act" data-slot="kpi-cards">
+      <KpiCard label={`Avg lobby rank · ${rated.length} rated ${rated.length===1?'lobby':'lobbies'}`} labelId="kpi-lobby-label"
+        value={<>{rank?avgLabel(rank.tier):avgLabel(o.overall)}{rank&&<span className="text-base font-normal text-muted-foreground">{rank.rr} RR</span>}</>}
+        icon={rank&&<RankIcon tier={rank.tier} size={34}/>} rows={partyRows} empty="No rated lobbies yet"/>
+      <KpiCard label={`Net RR · last ${recent.length}`} labelId="kpi-rr-label"
+        value={<>{net!=null?rrSigned(net,0):'—'}<Trend className="size-5 opacity-70" aria-hidden="true"/></>}
         valueClassName={net>0?'text-positive':net<0?'text-negative':null}
-        badge={<><Trend aria-hidden="true"/>{rr.n} eligible</>}
-        footer={perGame||(rr.n?'No RR-eligible wins or losses':'No RR-eligible matches')} note="Averages skip placements and 5-stacks"/>
+        rows={rrRows} empty={rr.n?'No RR-eligible wins or losses':'No RR-eligible matches in this window'}
+        note={`${rr.n} of ${recent.length} eligible · averages skip placements and 5-stacks`}/>
     </div>
   );
 }
@@ -272,6 +271,11 @@ function clutchSummary(matches){
   return {totals,win,loss,save,total:win+loss+save};
 }
 
+// The pre-React tile colours, restored on request (17 Nov 2026): vlr.gg's
+// multi-kill progression applied to clutch difficulty, 1v1 green through 1v5
+// purple. Tiles without situations stay neutral.
+export const CLUTCH_COLORS={1:'#22c55e',2:'#14b8a6',3:'#3b82f6',4:'#6366f1',5:'#a855f7'};
+
 export function ClutchCard({matches}){
   const {totals,win,loss,save,total}=clutchSummary(matches);
   if(!total)return null;
@@ -287,17 +291,18 @@ export function ClutchCard({matches}){
         <CardAction><Badge variant="outline" className="tabular-nums" title="Won or lost while contesting, rather than saved">{pct(win+loss)}% attempted</Badge></CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
-        <dl className="grid grid-cols-5 gap-px overflow-hidden rounded-lg border bg-border" aria-label="Clutch win rate by situation">
+        <dl className="grid grid-cols-5 gap-1.5 sm:gap-2" aria-label="Clutch win rate by situation" data-slot="clutch-tiles">
           {[1,2,3,4,5].map(t=>{
             const {win:w,loss:l,save:sv}=totals[t];
             const situations=w+l+sv,rate=situations?w/situations*100:null;
             return (
-              <div key={t} className="flex min-w-0 flex-col gap-2.5 bg-card px-2.5 py-3 sm:px-4 sm:py-3.5"
+              <div key={t} className={cn('flex min-w-0 flex-col gap-2.5 rounded-lg px-2.5 py-3 sm:px-4 sm:py-3.5',situations?'text-white':'border bg-muted/40 text-muted-foreground')}
+                style={situations?{background:CLUTCH_COLORS[t]}:undefined}
                 title={situations?`1v${t}: won ${w} of ${situations} (${Math.round(rate)}%)`:`1v${t}: no situations`}>
-                <dt className="text-xs text-muted-foreground">1v{t}</dt>
-                <dd className={cn('text-lg leading-none font-semibold tabular-nums sm:text-2xl',rate==null&&'text-muted-foreground')}>{rate!=null?`${Math.round(rate)}%`:'—'}</dd>
-                <dd><Progress value={rate??0} className="h-1.5" aria-label={`1v${t} clutch win rate`}/></dd>
-                <dd className="text-xs text-muted-foreground tabular-nums">{situations?<><span className="sm:hidden">{w}/{situations}</span><span className="max-sm:hidden">{w} of {situations} won</span></>:'None'}</dd>
+                <dt className={cn('text-xs font-medium',situations&&'text-white/85')}>1v{t}</dt>
+                <dd className="text-lg leading-none font-semibold tabular-nums [text-shadow:0_1px_2px_rgb(0_0_0/.25)] sm:text-2xl">{rate!=null?`${Math.round(rate)}%`:'—'}</dd>
+                <dd><Progress value={rate??0} className={cn('h-1.5',situations?'bg-black/20 [&>[data-slot=progress-indicator]]:bg-white':'bg-muted')} aria-label={`1v${t} clutch win rate`}/></dd>
+                <dd className={cn('text-xs tabular-nums',situations?'text-white/85':'opacity-70')}>{situations?<><span className="sm:hidden">{w}/{situations}</span><span className="max-sm:hidden">{w} of {situations} won</span></>:'None'}</dd>
               </div>
             );
           })}
@@ -343,11 +348,9 @@ export function OverviewPage(){
   const latest=[...s.allMatches].sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0)).slice(0,8);
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-x-6">
-        <PageHeading id="overview-title" title="Overview">Your act at a glance. Each card links to the page with the full breakdown.</PageHeading>
-        <div className="pt-2 max-sm:-mt-3 max-sm:mb-4 max-sm:pt-0"><PlacementToggle/></div>
-      </div>
-      <KpiCards s={s} recent={recent} mobile={mobile}/>
+      <PageHeading id="overview-title" title="Overview"/>
+      <PlacementToggle/>
+      <KpiCards s={s} recent={recent}/>
       <ActStatsCard s={s}/>
       <ClutchCard matches={s.allMatches}/>
       <TeammatesCard teammates={s.allTeammates}/>

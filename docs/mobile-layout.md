@@ -55,9 +55,11 @@ only the chrome around them and the way some data is drawn differ.
   trophy and RR change on one line, map/time/length/server on the next, and
   K/D/A, ACS, PS and lobby rank under that. Tapping opens the same RR details
   and roster; the roster uses narrower columns and short rank labels.
-- **Overview**: the two KPI cards merge into one hero card (lobby rank and net
-  RR side by side, their notes underneath). A skeleton fills the page while
-  matches load. Act stats use tighter cells.
+- **Overview**: the two KPI cards stack; their rows use the short rank label
+  ("Immo 3") and put the lobby count or win/loss count under the row label.
+  (A combined hero card was tried first and replaced when the cards were
+  reworked around the per-party-size lobby ranks.) A skeleton fills the page
+  while matches load. Act stats use tighter cells.
 - **RR Breakdown**: the payout and score-margin charts draw a narrow viewBox
   (360 wide) with larger type instead of a sideways-scrolling 900-wide one.
   Axis ticks thin out to at least 44px apart, and the score-margin chart
@@ -84,7 +86,7 @@ overview fixture).
   (search focus opens the sheet, closes only on a started search, no
   `rounded-full` controls), card-list order/sort options/wide cells/best tint,
   the one-row case, the compact match card text and label, and the overview
-  hero card.
+  KPI rows' phone labels.
 - In the browser (Vite dev, `?fixture=demo` and `?fixture=worst`) at 375×812
   and 320×700: every page had `scrollWidth` equal to the viewport width (no
   sideways scroll) and no element past the right edge outside intentional

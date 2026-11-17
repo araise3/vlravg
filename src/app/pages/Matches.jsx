@@ -304,7 +304,7 @@ export function MatchesPage(){
   let lastDay=null;
   return (
     <main aria-labelledby="matches-title" className="space-y-6">
-      <PageHeading id="matches-title" title="Match History">Every match, at a glance. Explore your performance, lobby ranks, and standout games.</PageHeading>
+      <PageHeading id="matches-title" title="Match History"/>
       {hasMatches&&(
         <>
           <PlacementToggle/>
