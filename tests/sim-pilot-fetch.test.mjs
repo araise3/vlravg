@@ -312,3 +312,13 @@ test('maintenance token: every request carries X-Sim-Pilot and the pace is 60 a 
   assert.equal(seen.length,30);assert.ok(seen.every(h=>h==='tok'));
   assert.ok(c.now()-t0>=29*1000-100,'never faster than 60 a minute');
 });
+
+test('collection off and picked matches: no RR windows; only picked players\u2019 histories are loaded',async()=>{
+  const {d1,db}=fakeD1({sim_live_rr:[['u1:m1','eu']],sim_live_players:[['p1','eu',{act:'e11a6'}]]});
+  const sqls=[];const d1s=async(sql,p)=>{sqls.push(sql);return d1(sql,p);};
+  const fetchImpl=fakeFetch({[`${H}p1:1`]:[{status:200,body:pageOf([],0)}]});
+  await run({env:{...env,SIM_LIVE_OFF:'1',SIM_LIVE_PICKED:'1',SIM_QUEUES:'live,livehist'},fetchImpl,d1:d1s,...clock(),log:quiet,kastOf:null});
+  assert.equal(db.sim_live_rr.get('u1:m1').status,null,'live queue skipped');
+  assert.ok(sqls.some(q=>q.includes('FROM sim_live_players WHERE status IS NULL AND puuid IN (SELECT r.puuid FROM sim_live_rr r JOIN sim_live_matches x ON x.match_id=r.match_id WHERE x.picked=1)')),'livehist loads picked players only');
+  assert.ok(!sqls.some(q=>q.includes('FROM sim_live_rr WHERE status IS NULL')),'no RR windows loaded');
+});

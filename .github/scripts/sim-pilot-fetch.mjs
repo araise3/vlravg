@@ -154,6 +154,10 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
   // With the site in maintenance (SIM_PILOT_TOKEN, read from site_flags at start) the job has the
   // public key to itself: 60/min and more workers, since full-match pages take seconds each.
   const TOKEN=env.SIM_PILOT_TOKEN||null;
+  // Picked matches (sim_live_matches.picked = 1, chosen by hand once enough are ranked): only their
+  // players' histories are fetched, and only their earlier games' KAST and pre-act tails queued.
+  const PICKED=!!env.SIM_LIVE_PICKED;
+  const PICKED_PLAYERS=`puuid IN (SELECT r.puuid FROM sim_live_rr r JOIN sim_live_matches x ON x.match_id=r.match_id WHERE x.picked=1)`;
   const GAP_MS=Math.max(1000,Number(env.SIM_GAP_MS)||(TOKEN?1000:1500)); // 40/min leaves the live site 20/min
   const deadline=now()+Math.min(345,Math.max(1,Number(env.RUNTIME_MINUTES)||330))*60000;
   const st={requests:0,rateLimited:0,saved:0,retryLater:0,closed:0,d1Retries:0,prevQueued:0,kastQueued:0,fullPages:0,kastFromPages:0,byQueue:{}};
@@ -216,7 +220,7 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
   // /api/match-detail one by one. The stored list stays the source of the act history itself,
   // since that is the record the gate's parity check matched.
   async function liveFollowups(puuid,region,act,ms){
-    const games=await q(`SELECT r.match_id AS m,r.started_at AS t FROM sim_live_rr r JOIN sim_live_matches x ON x.match_id=r.match_id WHERE r.puuid=?1 AND x.followed=1 AND x.season=?2`,[puuid,act]);
+    const games=await q(`SELECT r.match_id AS m,r.started_at AS t FROM sim_live_rr r JOIN sim_live_matches x ON x.match_id=r.match_id WHERE r.puuid=?1 AND x.followed=1${PICKED?' AND x.picked=1':''} AND x.season=?2`,[puuid,act]);
     const before=t=>ms.filter(e=>Date.parse(e.t)<Date.parse(t)-60000);
     if(games.some(g=>before(g.t).length<12)){await q(`INSERT OR IGNORE INTO sim_live_prev (id,region) VALUES (?1,?2)`,[`${puuid}:${act}`,region]);st.prevQueued++;}
     const need=[...new Set(games.flatMap(g=>before(g.t).map(e=>e.m)))],missing=[];
@@ -283,7 +287,7 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
       return{status:200,data:hist.filter(h=>Date.parse(h?.date)>=RR_SINCE).map(liveEntry)};
     }},
     // Collected matches' players (enqueueLiveFollowups): act history as of now, then follow-ups.
-    {name:'livehist',table:'sim_live_players',id:'puuid',cols:'act',async fetch(row){
+    {name:'livehist',table:'sim_live_players',id:'puuid',cols:'act',where:PICKED?PICKED_PLAYERS:null,async fetch(row){
       const act=row.act||ACT,h=await actHistory(row.region,row.puuid,act);
       if(h.status===200&&(await liveFollowups(row.puuid,row.region,act,h.data)).budget)return{budget:true};
       return h;
@@ -307,7 +311,8 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
       const k=kastOf(r.body.data);
       return k?{status:200,data:k}:{retry:true};
     }},
-  ].filter(x=>(!env.SIM_QUEUES||env.SIM_QUEUES.split(',').includes(x.name))&&(x.name!=='kast'||kastOf)); // no KAST rules: leave KAST rows untouched
+  ].filter(x=>(!env.SIM_QUEUES||env.SIM_QUEUES.split(',').includes(x.name))&&(x.name!=='kast'||kastOf) // no KAST rules: leave KAST rows untouched
+    &&!(x.name==='live'&&env.SIM_LIVE_OFF)); // collection off: no RR windows for matches that won't be followed
 
   let qi=0,queue=[],loading=null,fatal=null,consecutiveFails=0;
   const claimed=new Set();
@@ -316,7 +321,7 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
       if(queue.length)return queue.shift();
       if(qi>=queues.length||left()<=0||fatal)return null;
       const Q=queues[qi];
-      loading??=q(`SELECT ${Q.id} AS id,region,COALESCE(attempts,0) AS attempts${Q.cols?`,${Q.cols}`:''} FROM ${Q.table} WHERE status IS NULL ORDER BY COALESCE(attempts,0),${Q.id} LIMIT 60`)
+      loading??=q(`SELECT ${Q.id} AS id,region,COALESCE(attempts,0) AS attempts${Q.cols?`,${Q.cols}`:''} FROM ${Q.table} WHERE status IS NULL${Q.where?` AND ${Q.where}`:''} ORDER BY COALESCE(attempts,0),${Q.id} LIMIT 60`)
         .then(rows=>{rows=rows.filter(r=>!claimed.has(`${Q.name}:${r.id}`));rows.forEach(r=>claimed.add(`${Q.name}:${r.id}`));
           if(rows.length)queue.push(...rows.map(r=>({Q,row:{...r,[Q.id]:r.id}})));else qi++;})
         .catch(error=>{fatal=error;})
@@ -359,7 +364,7 @@ export async function run({env=process.env,fetchImpl=fetch,d1=(sql,params)=>d1Qu
 
   await Promise.all(Array.from({length:TOKEN?MAINTENANCE_WORKERS:WORKERS},worker));
   let remaining=null;
-  try{remaining=0;for(const Q of queues)remaining+=(await q(`SELECT SUM(status IS NULL) AS left FROM ${Q.table}`))[0]?.left??0;}catch{remaining=null;}
+  try{remaining=0;for(const Q of queues)remaining+=(await q(`SELECT SUM(status IS NULL) AS left FROM ${Q.table}${Q.where?` WHERE ${Q.where}`:''}`))[0]?.left??0;}catch{remaining=null;}
   log(`Run done: saved ${st.saved} (${Object.entries(st.byQueue).map(([k,v])=>`${k} ${v}`).join(', ')||'none'}), requests ${st.requests}, 429s ${st.rateLimited}, retry later ${st.retryLater}, closed after ${MAX_ATTEMPTS} tries ${st.closed}, D1 retries ${st.d1Retries}, follow-ups queued: prev ${st.prevQueued}, KAST ${st.kastQueued}; KAST from ${st.fullPages} full-match pages ${st.kastFromPages}; remaining ${remaining??'unknown'}.${fatal?' Stopped early: D1 unreachable.':''}${kastOf?'':' KAST rules not loaded.'}`);
   if(remaining===0)log('All pilot queues are done.');
   // Retries count as progress: each one raises a row's attempts, so chaining always ends.
@@ -372,9 +377,17 @@ if(import.meta.url===pathToFileURL(process.argv[1]).href){
     // Every queueing statement can be repeated safely (CREATE IF NOT EXISTS, INSERT OR IGNORE, upserts,
     // UPDATE), so an overloaded D1 (7429) is waited out instead of ending the step.
     const d1=retryOnD1Overload((sql,params)=>d1Query(env,sql,params));
-    await enqueueLive({d1});
+    // site_flags 'sim_live_collect' = 'off' stops collecting: no new matches, no RR windows, no new
+    // follow-ups; the run only finishes what is queued (the picked matches, when there are any).
+    let collect=true;
+    try{collect=(await d1(`SELECT value FROM site_flags WHERE name='sim_live_collect'`))[0]?.value!=='off';}catch{}
+    if(collect)await enqueueLive({d1});
+    else{env.SIM_LIVE_OFF='1';console.log('Live collection is off: finishing queued follow-ups only.');}
     try{const m=(await d1(`SELECT value,until FROM site_flags WHERE name='maintenance'`))[0];
-      if(m?.value&&!(m.until!=null&&Number(m.until)<=Date.now())){env.SIM_PILOT_TOKEN=m.value;console.log('Site in maintenance: the public key is ours (60/min).');}}catch{}await enqueueLiveFollowups({d1});
+      if(m?.value&&!(m.until!=null&&Number(m.until)<=Date.now())){env.SIM_PILOT_TOKEN=m.value;console.log('Site in maintenance: the public key is ours (60/min).');}}catch{}
+    if(collect)await enqueueLiveFollowups({d1});
+    try{const n=Number((await d1(`SELECT COUNT(*) AS n FROM sim_live_matches WHERE picked=1`))[0]?.n);
+      if(n>0){env.SIM_LIVE_PICKED='1';console.log(`Following up ${n} picked matches only.`);}}catch{}
   }
   const r=await run().catch(error=>{console.log(`Run failed: ${error?.message??error}`);return{remaining:null,progressed:0,fatal:true};});
   if(process.env.GITHUB_OUTPUT)appendFileSync(process.env.GITHUB_OUTPUT,`remaining=${r.remaining??''}\nprogressed=${r.progressed}\n`);
