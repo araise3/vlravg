@@ -145,7 +145,7 @@ All hand-built charts follow one system, checked against the dataviz method:
   the latest RR), with a surface halo where they cross a line.
 - **Frames and cards**: every plot sits in a `ChartFrame` (an inset `#0f0f11`
   panel with a hairline border) inside its card. Chart cards follow one order:
-  header (title, one-line description, range control on the right), key
+  header (title, one-line description, range control on the right) (20 Nov 2026: a `CardAction` link, badge or figure is centred on the title row; `CardAction` no longer spans the description row), key
   figures as a hairline-divided `StatStrip` (no boxed tiles), the framed
   chart, then notes in small muted text.
 - **Hover/focus**: one shared `ChartTooltip` (value first). RR trend uses a
