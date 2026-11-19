@@ -24,6 +24,9 @@ test('the lobby rank card has the teammates card header and lists the average lo
   // Same header shape as Top teammates: an h2 title and a link to the full page.
   assert.match(lobbyCard,/<h2 id="overview-lobby-title">Avg lobby rank<\/h2>/);
   assert.match(lobbyCard,/data-slot="card-action"[\s\S]*Lobby Rank/);
+  // The link is centred on the title row, not pinned to the top of a two-row span.
+  assert.match(lobbyCard,/data-slot="card-header" class="[^"]*has-data-\[slot=card-action\]:items-center/);
+  assert.match(lobbyCard,/data-slot="card-action" class="col-start-2 row-start-1 self-center justify-self-end"/);
   const mixed=text(await renderHtml(PAGE,'KpiCards',{s:state([[1,14.5,3],[2,18.5,9]])}));
   const row=(label,v,n)=>{const r=tierRR(v);return `${label} ${n} lobbies ${avgLabel(r.tier)} (${r.rr} RR) ${avgLabelShort(r.tier)} (${r.rr} RR) ${n} lobbies`;};
   assert.ok(mixed.includes(row('Solo',14.5,3)+' '+row('Duo',18.5,9)),mixed);
