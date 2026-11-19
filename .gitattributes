@@ -1,0 +1,4 @@
+# Keep LF in the working tree on every platform. Several tests cut functions
+# out of source files by literal text markers and break on CRLF, and
+# core.autocrlf=true would otherwise write CRLF on every checkout.
+* text=auto eol=lf
