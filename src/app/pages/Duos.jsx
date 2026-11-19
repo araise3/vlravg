@@ -175,9 +175,11 @@ export function DuoMatchup({t,base,scales}){
   );
 }
 
-// Header and rows share these columns and sit in the same scroll box, so a
-// scrollbar narrows both alike and the header stays over its column.
+// Header and rows share these columns. The header sits above the scroll box,
+// so the scrollbar starts under it; both reserve the same scrollbar gutter,
+// so the columns stay aligned whether or not the list overflows.
 const PARTNER_COLS='grid grid-cols-[minmax(0,1fr)_3.5rem_3rem_2.75rem] gap-x-2 px-3';
+const PARTNER_GUTTER='sm:pr-1 sm:[scrollbar-gutter:stable] sm:[scrollbar-color:rgb(255_255_255/.14)_transparent] sm:[scrollbar-width:thin]';
 
 function PartnerButton({t,selected,onSelect,controls}){
   return (
@@ -220,11 +222,13 @@ export function DuoChemistry({teammates,matches}){
         {/* contain:size keeps the list from setting the row height, so it
             matches the matchup beside it and scrolls inside that height. */}
         <div className="flex min-w-0 flex-col sm:[contain:size]" data-slot="duo-partner-list">
-          <div className="sm:min-h-0 sm:flex-1 sm:overflow-y-auto sm:pr-1 sm:[scrollbar-color:rgb(255_255_255/.14)_transparent] sm:[scrollbar-width:thin]" data-slot="duo-partner-scroll">
-            <div className={cn(PARTNER_COLS,'bg-card pb-1.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase sm:sticky sm:top-0 sm:z-10')} aria-hidden="true">
+          <div className={cn(PARTNER_GUTTER,'sm:overflow-y-hidden')} aria-hidden="true">
+            <div className={cn(PARTNER_COLS,'pb-1.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase')}>
               <span>Teammate</span><span className="text-right">Win rate</span><span className="text-right">RR</span>
               <span className="text-right" title="Your K/D in the matches you shared with this teammate">K/D</span>
             </div>
+          </div>
+          <div className={cn(PARTNER_GUTTER,'sm:min-h-0 sm:flex-1 sm:overflow-y-auto')} data-slot="duo-partner-scroll">
             <ul id="duo-partners" className="flex flex-col gap-0.5" aria-label="Party teammates">
               {shown.map(t=>(
                 <li key={t.key}>
