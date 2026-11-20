@@ -3670,6 +3670,24 @@ function rrTrendScopedMatches(matches){
     .sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0))
     .slice(0,Number(rrTrendRange));
 }
+// RR payout over time: every RR-eligible match (isRREligible: no placements,
+// unrated ranks or full 5-stacks) in play order with its recorded payout, plus
+// trailing averages of the last `window` win payouts and the last `window`
+// loss payouts so far (each over its own results; null until one exists).
+// Shows whether gains and losses drift as the act goes on.
+const RR_PAYOUT_WINDOW=5;
+function rrPayoutTimeline(matches,window=RR_PAYOUT_WINDOW){
+  const ordered=matches.filter(m=>isRREligible(m)&&Number.isFinite(m.myRR))
+    .sort((a,b)=>(a.startedAtMs||0)-(b.startedAtMs||0));
+  const wins=[],losses=[];
+  const mean=list=>{if(!list.length)return null;const recent=list.slice(-window);return recent.reduce((a,b)=>a+b,0)/recent.length;};
+  return ordered.map((m,i)=>{
+    const result=m.won===true?'win':m.won===false?'loss':'draw';
+    if(result==='win')wins.push(m.myRR);
+    if(result==='loss')losses.push(m.myRR);
+    return{match:m,i,result,rr:m.myRR,winAvg:mean(wins),lossAvg:mean(losses)};
+  });
+}
 function rrDuoInfo(match){
   if(match.partySize!==2||!match.myPartyId)return null;
   const me=match.players?.find(p=>PUUID?p.puuid===PUUID:
@@ -3995,7 +4013,7 @@ export {
   nameHistoryActRange,computeWintradeSignals,overviewRecentMatches,decidedWinRate,
   winRateLabel,winRateTone,rrSigned,computeRRStats,isRREligible,rrPositionFromElo,
   rrMovementRows,rrMovementXAxis,rrPayoutEstimates,rrPayoutEvenPoint,rrPayoutSegments,rrTrendScopedMatches,
-  rrDuoInfo,rrReportedStats,buildRRScoreRows,rrRankRows,clutchTotals,lobbyTeamsChartRows,
+  rrDuoInfo,rrPayoutTimeline,RR_PAYOUT_WINDOW,rrReportedStats,buildRRScoreRows,rrRankRows,clutchTotals,lobbyTeamsChartRows,
   lobbyTeamsGapLabel,loadMatchMapMetadata,matchAward,matchCardPlayerRank,dayHeaderLabel,
   scoreMarginDistribution,
 };
