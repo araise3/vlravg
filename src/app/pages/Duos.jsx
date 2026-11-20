@@ -1,12 +1,13 @@
 import {useState} from 'react';
 import {
-  avgLabel,computeWintradeSignals,lobbyRankText,decidedWinRate,playerRouteUrl,rName,rrSigned,tierRR,winRateLabel,winRateTone,
+  computeWintradeSignals,decidedWinRate,playerRouteUrl,rName,rrSigned,winRateLabel,winRateTone,
 } from '@/engine/core.mjs';
-import {useEngine,useIsMobile} from '@/app/hooks.js';
-import {EmptyState,Hint,LobbyValue,PageHeading,PartyIcon,PlacementToggle,PlayerLink,RankIcon,ShowAllButton,SortableTable,TableSection,pageEmptyText,toneClass} from '@/app/shared.jsx';
+import {useEngine} from '@/app/hooks.js';
+import {EmptyState,Hint,InlineEmpty,LobbyValue,PageHeading,PartyIcon,PlacementToggle,PlayerLink,RankIcon,SortableTable,TableSection,pageEmptyText,toneClass} from '@/app/shared.jsx';
 import {cn} from '@/lib/utils';
 import {Card,CardContent,CardDescription,CardHeader,CardTitle} from '@/components/ui/card';
-import {ScrollArea} from '@/components/ui/scroll-area';
+import {Progress} from '@/components/ui/progress';
+import {ToggleGroup,ToggleGroupItem} from '@/components/ui/toggle-group';
 
 const toneOf=tone=>tone==='rank-positive'?'text-positive':tone==='rank-negative'?'text-negative':'';
 const rrTone=(count,total)=>!count||total===0?'':total>0?'text-positive':'text-negative';
@@ -60,16 +61,13 @@ export function PerformanceTable({id,rows,party}){
   );
 }
 
-/* ── Duo chemistry ─────────────────────────────────────────── */
-// Teammates as a pick-a-partner matchup (17 Nov 2026), replacing the
-// Teammate/You switch and the duo cards. Partners by matches together on the
-// left, each with your K/D in the matches you shared; the list scrolls inside
-// the matchup's height on desktop. The selected partner's matchup sits on the
-// right: shared results, then mirrored bars (you left, them right) for K/D,
-// ACS and PS on one scale across every partner, with your figures compared
-// with your act average. Colour is kept for RR only, where the sign is the
-// point. Phones open the matchup under the tapped partner instead.
-export const DUO_PREVIEW=8;
+/* ── Teammates ─────────────────────────────────────────────── */
+// Redesigned 20 Nov 2026 on request, replacing the pick-a-partner layout:
+// three highlight tiles (most matches, best RR, best win rate), then every
+// party teammate as a row of a sortable data table. Opening a row shows the
+// you-vs-them comparison (K/D, ACS, PS as mirrored bars on one scale across
+// every teammate, with your act-average deltas) under it. Colour stays on RR
+// only, where the sign is the point.
 
 // Your act averages, computed the way the per-teammate figures are: K/D from
 // summed kills and deaths, ACS and PS as the mean of per-match values, over
@@ -108,7 +106,6 @@ const DUO_STATS=[
   {key:'ps',label:'PS',you:'myPerformanceScore',them:'performanceScore',base:'ps',format:v=>String(Math.round(v)),delta:v=>rrSigned(v,0)},
 ];
 
-
 const TAPE_COLS='grid-cols-[4.75rem_minmax(0,1fr)_2.75rem_minmax(0,1fr)_4.75rem] max-sm:grid-cols-[3.25rem_minmax(0,1fr)_2.25rem_minmax(0,1fr)_3.25rem] max-sm:gap-x-2';
 
 // One mirrored stat row: your value and bar on the left, theirs on the right.
@@ -123,46 +120,21 @@ function TapeRow({stat,t,base,scale}){
         <div className={cn('text-lg leading-none',lead==='you'?'font-semibold text-foreground':'text-muted-foreground')}>{you==null?'—':stat.format(you)}</div>
         {delta!=null&&<div className="mt-1 text-[11px] leading-none whitespace-nowrap text-muted-foreground">{stat.delta(delta)}<span className="max-sm:hidden"> vs avg</span></div>}
       </div>
-      <div className="flex h-2.5 justify-end overflow-hidden rounded-full bg-muted/40" aria-hidden="true">
-        <div className={cn('h-full rounded-full',lead==='them'&&'opacity-45')} style={{width:`${width(you)}%`,background:'var(--series-1)'}}/>
-      </div>
+      {/* Your bar grows leftward from the stat label: a shadcn Progress turned around. */}
+      <Progress value={width(you)} aria-hidden="true" className="h-2.5 rotate-180 bg-muted/40"
+        indicatorClassName={cn('rounded-full bg-(--series-1)',lead==='them'&&'opacity-45')}/>
       <div className="text-center text-xs font-medium text-muted-foreground" role="rowheader">{stat.label}</div>
-      <div className="flex h-2.5 overflow-hidden rounded-full bg-muted/40" aria-hidden="true">
-        <div className={cn('h-full rounded-full bg-foreground/70',lead==='you'&&'opacity-45')} style={{width:`${width(them)}%`}}/>
-      </div>
+      <Progress value={width(them)} aria-hidden="true" className="h-2.5 bg-muted/40"
+        indicatorClassName={cn('rounded-full bg-foreground/70',lead==='you'&&'opacity-45')}/>
       <div className={cn('text-lg leading-none tabular-nums',lead==='them'?'font-semibold text-foreground':'text-muted-foreground')} role="cell">{them==null?'—':stat.format(them)}</div>
     </div>
   );
 }
 
-export function DuoMatchup({t,base,scales}){
-  const lobby=t.rankCount?tierRR(t.lobby):null;
-  const losses=t.decided-t.wins,draws=t.games-t.decided;
+// The you-vs-them comparison shown when a teammate's row is opened.
+export function DuoComparison({t,base,scales}){
   return (
-    <div className="flex min-w-0 flex-col gap-5" data-slot="duo-matchup">
-      <div className="flex min-w-0 items-baseline justify-between gap-3">
-        <PlayerLink href={playerRouteUrl(t.name,t.tag)} name={t.name} tag={t.tag} className="min-w-0 text-lg"/>
-        <span className="shrink-0 text-sm text-muted-foreground tabular-nums">{t.games} {t.games===1?'match':'matches'} together</span>
-      </div>
-      <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border text-sm tabular-nums sm:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="min-w-0 bg-card px-3 py-2.5 max-sm:col-span-2">
-          <dt className="text-xs text-muted-foreground">Avg lobby</dt>
-          <dd className="mt-1 flex min-w-0 items-center gap-1.5 font-medium">
-            {lobby?<><RankIcon tier={lobby.tier} size={18}/><span className="truncate">{lobbyRankText(t.lobby)}</span></>:'—'}
-          </dd>
-        </div>
-        <div className="min-w-0 bg-card px-3 py-2.5">
-          <dt className="text-xs text-muted-foreground"><Hint content="Wins divided by wins plus losses; draws excluded">Win rate</Hint></dt>
-          <dd className="mt-1 flex items-baseline gap-1.5 font-medium">
-            <span>{winRateLabel(t.wr)}</span>
-            <span className="text-xs font-normal text-muted-foreground">{t.wins}W {losses}L{draws?` ${draws}D`:''}</span>
-          </dd>
-        </div>
-        <div className="min-w-0 bg-card px-3 py-2.5">
-          <dt className="text-xs text-muted-foreground"><Hint content={`Your net RR change together; ${t.rrCount} of ${t.games} shared matches have a recorded change`}>Total RR</Hint></dt>
-          <dd className={cn('mt-1 font-medium',rrTone(t.rrCount,t.rrTotal))}>{t.rrCount?rrSigned(t.rrTotal,0):'—'}</dd>
-        </div>
-      </dl>
+    <div className="mx-auto flex max-w-2xl min-w-0 flex-col gap-4" data-slot="duo-comparison">
       <div className="flex flex-col gap-4" role="table" aria-label={`Your and ${t.name}’s K/D, ACS and PS in the ${t.games} matches you shared`}>
         <div className={cn('grid gap-x-2.5 text-xs text-muted-foreground',TAPE_COLS)} role="row">
           <span className="col-span-2 flex items-center justify-end gap-1.5" role="columnheader"><span className="size-2 rounded-full" style={{background:'var(--series-1)'}} aria-hidden="true"/>You</span>
@@ -171,105 +143,141 @@ export function DuoMatchup({t,base,scales}){
         </div>
         {DUO_STATS.map(stat=><TapeRow key={stat.key} stat={stat} t={t} base={base} scale={scales[stat.key]}/>)}
       </div>
-      <p className="text-xs text-muted-foreground">Bars share one scale across all your teammates. The leader of each stat is solid. The small number under each of yours compares it with your act average.</p>
+      <p className="text-center text-xs text-muted-foreground">Bars share one scale across all your teammates; the leader of each stat is solid. The small number under yours compares it with your act average.</p>
     </div>
   );
 }
 
-// Header and rows share these columns. The header sits above the scroll box
-// (shadcn ScrollArea), so the scrollbar starts under it; the scrollbar
-// overlays the rows' right padding, so the columns line up without a gutter.
-const PARTNER_COLS='grid grid-cols-[minmax(0,1fr)_3.5rem_3rem_2.75rem] gap-x-2 px-3';
-// Radix wraps the content in a display:table div, which stops names truncating.
-const SCROLL_BLOCK='[&_[data-slot=scroll-area-viewport]>div]:!block';
-
-function PartnerButton({t,selected,onSelect,controls}){
-  return (
-    <button type="button" onClick={onSelect} aria-pressed={selected} aria-controls={controls}
-      className={cn(PARTNER_COLS,'w-full items-center rounded-md py-2 text-left text-sm tabular-nums transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
-        selected?'bg-accent text-foreground':'hover:bg-accent/50')}
-      aria-label={`${t.name}#${t.tag}: ${t.games} matches, ${winRateLabel(t.wr)} win rate, ${t.rrCount?rrSigned(t.rrTotal,0):'no'} RR, your K/D ${t.myKd.toFixed(2)}`}>
-      <span className="min-w-0">
-        <span className="block truncate font-medium">{t.name}<span className="font-normal text-muted-foreground"> #{t.tag}</span></span>
-        <span className="block text-xs text-muted-foreground">{t.games} {t.games===1?'match':'matches'}</span>
-      </span>
-      <span className="text-right">{winRateLabel(t.wr)}</span>
-      <span className={cn('text-right',rrTone(t.rrCount,t.rrTotal))}>{t.rrCount?rrSigned(t.rrTotal,0):'—'}</span>
-      <span className="text-right">{t.myKd.toFixed(2)}</span>
-    </button>
-  );
+// Three standouts: most matches together, best total RR together, and the
+// best win rate over at least DUO_HIGHLIGHT_MIN_DECIDED decided matches.
+export const DUO_HIGHLIGHT_MIN_DECIDED=3;
+export function duoHighlights(rows){
+  const most=rows.reduce((a,b)=>b.games>a.games?b:a,rows[0]);
+  const withRR=rows.filter(t=>t.rrCount>0);
+  const rr=withRR.length?withRR.reduce((a,b)=>b.rrTotal>a.rrTotal?b:a):null;
+  const decided=rows.filter(t=>t.decided>=DUO_HIGHLIGHT_MIN_DECIDED&&t.wr!=null);
+  const wr=decided.length?decided.reduce((a,b)=>b.wr>a.wr||b.wr===a.wr&&b.decided>a.decided?b:a):null;
+  return [
+    {key:'most',label:'Most matches together',t:most,value:String(most.games),note:most.games===1?'match':'matches'},
+    rr&&{key:'rr',label:'Best RR together',t:rr,value:rrSigned(rr.rrTotal,0),note:'RR',tone:toneClass(rr.rrTotal,0)},
+    wr&&{key:'wr',label:'Best win rate',t:wr,value:winRateLabel(wr.wr),note:`${wr.wins}W ${wr.decided-wr.wins}L`,title:`Over at least ${DUO_HIGHLIGHT_MIN_DECIDED} decided matches; wins divided by wins plus losses`},
+  ].filter(Boolean);
 }
 
-export function DuoChemistry({teammates,matches}){
-  const mobile=useIsMobile();
-  const [expanded,setExpanded]=useState(false);
-  const [picked,setPicked]=useState(null);
-  const base=duoBaseline(matches);
-  const all=duoRows(teammates,base);
-  // Most matches together first; ties keep the engine's order.
-  const rows=all.map((t,index)=>({t,index})).sort((a,b)=>b.t.games-a.t.games||a.index-b.index).map(({t})=>t);
-  // Desktop scrolls the whole list beside the matchup; phones cut it and offer "Show all".
-  const cut=mobile&&!expanded&&rows.length>DUO_PREVIEW;
-  const shown=cut?rows.slice(0,DUO_PREVIEW):rows;
-  const selected=rows.find(t=>t.key===picked)||(mobile?null:rows[0]);
-  // One scale per stat across every partner, both sides, so bar lengths compare between partners.
-  const scales=Object.fromEntries(DUO_STATS.map(stat=>[stat.key,Math.max(0,...all.flatMap(t=>[t[stat.you],t[stat.them]]).filter(Number.isFinite))]));
-  const select=t=>setPicked(mobile&&selected?.key===t.key?'':t.key);
+function DuoHighlights({rows}){
   return (
-    <Card className="gap-4 pb-0" aria-labelledby="teammates-title" data-slot="duo-chemistry">
-      <CardHeader>
-        <CardTitle><h2 id="teammates-title">Teammates</h2></CardTitle>
-      </CardHeader>
-      <CardContent className={cn('grid gap-6 sm:grid-cols-[minmax(0,19rem)_minmax(0,1fr)]',!(mobile&&rows.length>DUO_PREVIEW)&&'pb-6')}>
-        {/* contain:size keeps the list from setting the row height, so it
-            matches the matchup beside it and scrolls inside that height. */}
-        <div className="flex min-w-0 flex-col sm:[contain:size]" data-slot="duo-partner-list">
-          <div aria-hidden="true">
-            <div className={cn(PARTNER_COLS,'pb-1.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase')}>
-              <span>Teammate</span><span className="text-right">Win rate</span><span className="text-right">RR</span>
-              <Hint asChild content="Your K/D in the matches you shared with this teammate"><span className="text-right">K/D</span></Hint>
-            </div>
+    <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-3" aria-label="Teammate highlights" data-slot="duo-highlights">
+      {duoHighlights(rows).map(({key,label,t,value,note,tone,title})=>(
+        <div key={key} className="flex min-w-0 flex-col gap-2 bg-card px-4 py-3.5 max-sm:flex-row max-sm:items-center max-sm:justify-between">
+          <div className="min-w-0">
+            <dt className="text-xs text-muted-foreground"><Hint content={title}>{label}</Hint></dt>
+            <dd className="mt-1 min-w-0"><PlayerLink href={playerRouteUrl(t.name,t.tag)} name={t.name} tag={t.tag} className="max-w-full text-sm"/></dd>
           </div>
-          <ScrollArea className={cn(SCROLL_BLOCK,'sm:min-h-0 sm:flex-1')} data-slot="duo-partner-scroll">
-            <ul id="duo-partners" className="flex flex-col gap-0.5" aria-label="Party teammates">
-              {shown.map(t=>(
-                <li key={t.key}>
-                  <PartnerButton t={t} selected={selected?.key===t.key} onSelect={()=>select(t)} controls="duo-matchup"/>
-                  {mobile&&selected?.key===t.key&&<div id="duo-matchup" className="px-1 pt-3 pb-4"><DuoMatchup t={t} base={base} scales={scales}/></div>}
-                </li>
-              ))}
-            </ul>
-          </ScrollArea>
+          <dd className="flex shrink-0 items-baseline gap-1.5 tabular-nums">
+            <span className={cn('text-2xl leading-none font-semibold tracking-tight max-sm:text-xl',tone)}>{value}</span>
+            <span className="text-xs text-muted-foreground">{note}</span>
+          </dd>
         </div>
-        {!mobile&&selected&&(
-          <section id="duo-matchup" aria-live="polite" aria-label={`You and ${selected.name}`} className="min-w-0 border-l pl-6">
-            <DuoMatchup t={selected} base={base} scales={scales}/>
-          </section>
-        )}
-      </CardContent>
-      {mobile&&rows.length>DUO_PREVIEW&&<ShowAllButton expanded={expanded} total={rows.length} noun="teammates" controls="duo-partners" onToggle={()=>setExpanded(open=>!open)}/>}
-    </Card>
+      ))}
+    </dl>
   );
 }
 
-function EncountersTable({s}){
-  if(!s.allEncounters.length)return <p className="py-2 text-sm text-muted-foreground max-sm:px-4">No players met at least twice outside your party in these matches.</p>;
-  const tableRows=s.allEncounters.map(e=>({key:e.key,cells:[
+export const TEAMMATE_PAGE_SIZES=[10,25,50];
+
+export function DuoRoster({teammates,matches}){
+  const base=duoBaseline(matches);
+  // Most matches together first; ties keep the engine's order.
+  const rows=duoRows(teammates,base).map((t,index)=>({t,index})).sort((a,b)=>b.t.games-a.t.games||a.index-b.index).map(({t})=>t);
+  // One scale per stat across every teammate, both sides, so bar lengths compare between teammates.
+  const scales=Object.fromEntries(DUO_STATS.map(stat=>[stat.key,Math.max(0,...rows.flatMap(t=>[t[stat.you],t[stat.them]]).filter(Number.isFinite))]));
+  const tableRows=rows.map(t=>{
+    const losses=t.decided-t.wins,draws=t.games-t.decided;
+    return {key:t.key,cells:[
+      <PlayerLink href={playerRouteUrl(t.name,t.tag)} name={t.name} tag={t.tag} className="max-w-40"/>,
+      t.games,
+      <span className="flex items-center justify-end gap-2.5">
+        <Progress value={t.wr??0} aria-hidden="true" className="h-1.5 w-12 bg-muted max-sm:hidden" indicatorClassName="rounded-full bg-foreground/60"/>
+        <span className="w-12 text-right">{winRateLabel(t.wr)}</span>
+      </span>,
+      t.rrCount?rrSigned(t.rrTotal,0):'—',
+      <LobbyValue sum={t.rankSum} count={t.rankCount}/>,
+      t.myKd.toFixed(2),
+      t.kd.toFixed(2),
+    ],cellProps:[null,null,
+      {title:`${t.wins}W ${losses}L${draws?` ${draws}D`:''}; wins divided by wins plus losses, draws excluded`},
+      {className:rrTone(t.rrCount,t.rrTotal),title:`Your net RR change together; ${t.rrCount} of ${t.games} shared matches have a recorded change`},
+      null,
+      {title:`Your K/D in the ${t.games} matches you shared`},
+      {title:`${t.name}’s K/D in those matches`},
+    ]};
+  });
+  const values=rows.map(t=>[`${t.name}#${t.tag}`,t.games,t.wr,t.rrCount?t.rrTotal:null,t.lobby,t.myKd,t.kd]);
+  return (
+    <section aria-labelledby="teammates-title">
+      <Card className="gap-5" data-slot="duo-roster">
+        <CardHeader>
+          <CardTitle><h2 id="teammates-title">Teammates</h2></CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-5 max-sm:px-0">
+          {rows.length>1&&<div className="max-sm:px-4"><DuoHighlights rows={rows}/></div>}
+          <SortableTable id="teammates-list" rows={tableRows} values={values} noun="teammates"
+            pageSize={TEAMMATE_PAGE_SIZES[0]} pageSizes={TEAMMATE_PAGE_SIZES}
+            columns={[{label:'Teammate'},{label:'Matches'},{label:'Win rate'},{label:'RR',title:'Your net RR change in matches together'},
+              {label:'Avg lobby',wide:true,align:'left'},{label:'Your K/D'},{label:'Their K/D'}]}
+            maxima={[{column:1,label:'matches together'},{column:2,label:'win rate'}]}
+            detail={index=><DuoComparison t={rows[index]} base={base} scales={scales}/>} detailLabel="Compare stats"
+            caption="Party teammates this act, by matches together; open a row to compare your stats with theirs"/>
+        </CardContent>
+      </Card>
+    </section>
+  );
+}
+
+/* ── Encounters ────────────────────────────────────────────── */
+// A database-style table (20 Nov 2026): search, a same-team / opposing filter,
+// sortable columns including each player's same-team share, and a
+// rows-per-page picker. Players who ever queued in your party are excluded
+// by the engine (computeEncounters).
+export const ENCOUNTER_FILTERS=[['all','All'],['same','Same team'],['opposing','Opposing']];
+export const ENCOUNTER_PAGE_SIZES=[10,25,50];
+const encounterFilter={all:()=>true,same:e=>e.sameTeam>0,opposing:e=>e.opponents>0};
+
+export function EncountersTable({s}){
+  const [filter,setFilter]=useState('all');
+  if(!s.allEncounters.length)return <div className="max-sm:px-4"><InlineEmpty>No players met at least twice outside your party in these matches.</InlineEmpty></div>;
+  const list=s.allEncounters.filter(encounterFilter[filter]);
+  const share=e=>e.games?e.sameTeam/e.games*100:0;
+  const tableRows=list.map(e=>({key:e.key,cells:[
     <PlayerLink href={playerRouteUrl(e.name,e.tag,'overview',s.TARGET_SEASON)} name={e.name} tag={e.tag}/>,
     e.games,e.sameTeam,e.opponents,
+    <span className="flex items-center justify-end gap-2.5">
+      <Progress value={share(e)} aria-hidden="true" className="h-1.5 w-16 bg-muted max-sm:hidden" indicatorClassName="rounded-full bg-(--series-1)"/>
+      <span className="w-10 text-right">{Math.round(share(e))}%</span>
+    </span>,
     e.lastSeen?new Date(e.lastSeen).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'}):'—',
-  ]}));
-  const values=s.allEncounters.map(row=>[`${row.name}#${row.tag}`,row.games,row.sameTeam,row.opponents,row.lastSeen||null]);
+  ],cellProps:[null,null,null,null,{title:`${e.sameTeam} of ${e.games} encounters on your team`}]}));
+  const values=list.map(row=>[`${row.name}#${row.tag}`,row.games,row.sameTeam,row.opponents,share(row),row.lastSeen||null]);
+  const tools=(
+    <ToggleGroup type="single" variant="outline" size="sm" value={filter} onValueChange={value=>value&&setFilter(value)} aria-label="Show encounters">
+      {ENCOUNTER_FILTERS.map(([value,label])=>(
+        <ToggleGroupItem key={value} value={value} className="h-8 px-3 text-xs data-[state=on]:text-foreground">{label}</ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  );
   return (
-    <SortableTable id="encounters-list" rows={tableRows} values={values}
-      columns={[{label:'Player'},{label:'Encounters'},{label:'Same team'},{label:'Opposing team'},{label:'Last seen'}]}
-      caption="Players encountered in at least two matches who were never in your party this act" pageSize={TABLE_PAGE_SIZE} noun="players"/>
+    <SortableTable key={filter} id="encounters-list" rows={tableRows} values={values} searchable tools={tools}
+      emptyText={filter==='same'?'No encounters on your team in these matches.':'No encounters on the opposing team in these matches.'}
+      columns={[{label:'Player'},{label:'Encounters'},{label:'Same team'},{label:'Opposing'},{label:'Same team %',title:'Share of your encounters with this player where they were on your team'},{label:'Last seen'}]}
+      maxima={[{column:1,label:'encounters'}]}
+      caption="Players encountered in at least two matches who were never in your party this act"
+      pageSize={ENCOUNTER_PAGE_SIZES[0]} pageSizes={ENCOUNTER_PAGE_SIZES} noun="players"/>
   );
 }
 
 function WintradeTable({s}){
   const rows=computeWintradeSignals(s.statMatches,s.allMatches,s.PUUID,s.PLAYER,s.TAG);
-  if(!rows.length)return <p className="py-2 text-sm text-muted-foreground max-sm:px-4">No repeated opponents with unusually low combat stats in these matches.</p>;
+  if(!rows.length)return <div className="max-sm:px-4"><InlineEmpty>No repeated opponents with unusually low combat stats in these matches.</InlineEmpty></div>;
   const tableRows=rows.map(r=>({key:r.key,cells:[
     <PlayerLink href={playerRouteUrl(r.name,r.tag,'overview',s.TARGET_SEASON)} name={r.name} tag={r.tag}/>,
     r.score+'%',r.encounters,`${r.lowGames}/${r.measuredGames}`,r.avgAcs==null?'—':Math.round(r.avgAcs),
@@ -297,7 +305,7 @@ export function DuosPage(){
       {hasMatches&&s.partySizeData.length>0&&(
         <TableSection label="Party size breakdown"><PerformanceTable id="party-size-list" rows={s.partySizeData} party/></TableSection>
       )}
-      {ready&&s.allTeammates.length>0&&<DuoChemistry teammates={s.allTeammates} matches={s.statMatches}/>}
+      {ready&&s.allTeammates.length>0&&<DuoRoster teammates={s.allTeammates} matches={s.statMatches}/>}
       {hasMatches&&(
         <section aria-labelledby="encounters-title">
           <Card className="gap-4">

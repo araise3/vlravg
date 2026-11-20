@@ -252,46 +252,96 @@ test('duo chemistry: your act baseline is computed like the per-teammate figures
   assert.equal(row.myAcs,180);assert.equal(row.myKd,0.8);
 });
 
-test('duo chemistry: the matchup mirrors your figures against the teammate\'s on one scale, with your act-average deltas',async()=>{
+test('duo comparison: your figures mirror the teammate\'s on one scale, with your act-average deltas',async()=>{
   const {duoRows}=await load('/src/app/pages/Duos.jsx');
   const base={kd:1,acs:200,ps:300};
   const [t]=duoRows([duoMate('Friend')],base);
-  const html=await renderHtml('/src/app/pages/Duos.jsx','DuoMatchup',{t,base,scales:{kd:2,acs:250,ps:400}});
+  const html=await renderHtml('/src/app/pages/Duos.jsx','DuoComparison',{t,base,scales:{kd:2,acs:250,ps:400}});
   const text=flat(html);
-  assert.match(text,/Friend #EU 3 matches together Avg lobby — Win rate 66\.7% 2W 1L Total RR \+12 /);
   // Rows read: your value, your delta vs your act average, stat, their value.
   assert.match(text,/0\.80 −0\.20 vs avg K\/D 1\.50 180 −20 vs avg ACS 200 250 −50 vs avg PS — /);
   const rows=[...html.matchAll(/data-slot="tape-row">(.*?)(?=<div class="grid[^"]*" role="row" data-slot="tape-row"|<\/div><p)/g)].map(m=>m[1]);
   assert.equal(rows.length,3);
-  // Bars share the passed scale: your K/D 0.80 of 2 is 40%, theirs 1.50 is 75%; the trailing side is faded.
-  assert.match(rows[0],/opacity-45" style="width:40%/);
-  assert.match(rows[0],/bg-foreground\/70" style="width:75%/);
+  // Bars are shadcn Progress on the passed scale: your K/D 0.80 of 2 is 40% (your bar turned
+  // around so it grows leftward), theirs 1.50 is 75%; the trailing side is faded.
+  assert.match(rows[0],/data-slot="progress" class="[^"]*rotate-180[^"]*" aria-hidden="true"><div data-state="loading" data-value="40"[^>]*class="[^"]*bg-\(--series-1\) opacity-45" style="transform:translateX\(-60%\)"/);
+  assert.match(rows[0],/data-value="75"[^>]*class="[^"]*bg-foreground\/70" style="transform:translateX\(-25%\)"/);
   assert.match(rows[0],/font-semibold text-foreground" role="cell">1\.50/);
-  const source=readFileSync(new URL('../src/app/pages/Duos.jsx',import.meta.url),'utf8');
-  assert.doesNotMatch(source,/duoStatsView|setDuoStatsView|TabsTrigger/);
 });
 
-test('duo chemistry: partners by matches together with your K/D, the first selected, all in a scroll box on desktop, no sort control',async()=>{
-  const {DUO_PREVIEW}=await load('/src/app/pages/Duos.jsx');
-  assert.equal(DUO_PREVIEW,8);
-  const teammates=Array.from({length:10},(_,i)=>duoMate('m'+i,{games:20-i,rrCount:i===0?0:3}));
+test('teammate highlights: most matches, best RR together, best win rate over three or more decided matches',async()=>{
+  const {duoRows,duoHighlights,DUO_HIGHLIGHT_MIN_DECIDED}=await load('/src/app/pages/Duos.jsx');
+  assert.equal(DUO_HIGHLIGHT_MIN_DECIDED,3);
+  const rows=duoRows([
+    duoMate('Busy',{games:20,wins:10,decided:20,rrTotal:-15,rrCount:18}),
+    duoMate('Lucky',{games:2,wins:2,decided:2,rrTotal:40,rrCount:2}),
+    duoMate('Steady',{games:6,wins:5,decided:6,rrTotal:30,rrCount:6}),
+    duoMate('NoRR',{games:4,wins:1,decided:4,rrTotal:0,rrCount:0}),
+  ]);
+  const tiles=duoHighlights(rows);
+  assert.deepEqual(tiles.map(t=>[t.key,t.t.name,t.value]),[['most','Busy','20'],['rr','Lucky','+40'],['wr','Steady','83.3%']]);
+  assert.equal(tiles[1].tone,'text-positive');
+  // Without RR or enough decided matches, those tiles drop out.
+  assert.deepEqual(duoHighlights(duoRows([duoMate('A',{rrCount:0,decided:2}),duoMate('B',{rrCount:0,decided:1})])).map(t=>t.key),['most']);
+});
+
+test('teammates: highlight tiles above a sortable table by matches together, rows open a comparison, only RR coloured',async()=>{
+  const {TEAMMATE_PAGE_SIZES}=await load('/src/app/pages/Duos.jsx');
+  assert.deepEqual(TEAMMATE_PAGE_SIZES,[10,25,50]);
+  const teammates=Array.from({length:12},(_,i)=>duoMate('m'+i,{games:i===3?30:20-i,rrCount:i===0?0:3}));
   const matches=[{myStats:{kills:1,deaths:1,acs:170,performanceScore:250}}];
-  const html=await renderHtml('/src/app/pages/Duos.jsx','DuoChemistry',{teammates,matches});
-  // Desktop lists every partner in a scroll box sized to the matchup; no "Show all".
-  assert.equal((html.match(/aria-pressed=/g)||[]).length,10);
-  assert.match(html,/sm:\[contain:size\][^"]*" data-slot="duo-partner-list"/);
-  // The header sits above the scroll box (a shadcn ScrollArea, so the scrollbar
-  // starts under it and overlays the padding); both share one column template.
-  assert.match(html,/<div aria-hidden="true"><div class="grid grid-cols-\[minmax\(0,1fr\)_3\.5rem_3rem_2\.75rem\] gap-x-2 px-3[^"]*">.*?Teammate.*?<\/div><\/div><div[^>]*data-slot="duo-partner-scroll"[^>]*>(<style>[^<]*<\/style>)?<div[^>]*data-slot="scroll-area-viewport"/);
-  assert.match(html,/data-slot="duo-partner-scroll"[^>]*class="[^"]*sm:min-h-0 sm:flex-1/);
-  assert.doesNotMatch(html,/sm:sticky/);
-  assert.match(html,/<button type="button" aria-pressed="true"[^>]*class="grid grid-cols-\[minmax\(0,1fr\)_3\.5rem_3rem_2\.75rem\] gap-x-2 px-3/);
-  assert.match(html,/aria-pressed="true"[^>]*aria-label="m0#EU: 20 matches, 66\.7% win rate, no RR, your K\/D 0\.80"/);
-  assert.equal((html.match(/data-slot="duo-matchup"/g)||[]).length,1);
-  assert.match(flat(html.replace(/<style>[^<]*<\/style>/g,'')),/Teammate Win rate RR K\/D m0 #EU 20 matches 66\.7% — 0\.80 /);
-  assert.doesNotMatch(html,/Show all/);
-  // No sort control: partners are listed by matches together.
-  assert.doesNotMatch(html,/<select|duo-sort/);
+  const html=await renderHtml('/src/app/pages/Duos.jsx','DuoRoster',{teammates,matches});
+  assert.match(html,/<h2 id="teammates-title">Teammates<\/h2>/);
+  assert.match(html,/data-slot="duo-highlights"/);
+  assert.match(flat(html),/Most matches together m3 #EU 30 matches Best RR together/);
+  const table=html.slice(html.indexOf('id="teammates-list"'));
+  const heads=[...table.matchAll(/aria-label="([^"]+): sort/g)].map(m=>m[1]);
+  assert.deepEqual(heads,['Teammate','Matches','Win rate','RR','Avg lobby','Your K/D','Their K/D']);
+  // Default order: most matches together first; ten rows on the first page.
+  const names=[...table.matchAll(/scope="row"[^>]*>.*?title="([^"#]+)#EU"/g)].map(m=>m[1]);
+  assert.deepEqual(names,['m3','m0','m1','m2','m4','m5','m6','m7','m8','m9']);
+  // Every row opens its comparison from a chevron in the row header; none open on load.
+  assert.equal((table.match(/aria-expanded="false"[^>]*aria-controls="teammates-list-detail-\d+"[^>]*aria-label="Compare stats"/g)||[]).length,10);
+  assert.doesNotMatch(table,/data-slot="row-detail"/);
+  // Twelve teammates page at ten, with a rows-per-page picker of 10, 25 and 50.
+  assert.match(table,/1–10 of 12 teammates/);
+  assert.match(table,/<label for="teammates-list-page-size"[^>]*>Rows per page<\/label>/);
+  assert.deepEqual([...table.matchAll(/<option[^>]*value="(\d+)"/g)].map(m=>m[1]),['10','25','50']);
+  // Colour is kept for RR only: win rate and K/D stay neutral.
+  assert.doesNotMatch(table.slice(0,table.indexOf('data-slot="table-pager"')),/text-positive[^"]*"[^>]*>\d+\.\d%|text-negative[^"]*"[^>]*>\d+\.\d%/);
+  assert.match(table,/class="[^"]*text-positive[^"]*"[^>]*>\+12</);
+  const source=readFileSync(new URL('../src/app/pages/Duos.jsx',import.meta.url),'utf8');
+  assert.doesNotMatch(source,/DuoChemistry|PartnerButton|duoStatsView|setDuoStatsView|TabsTrigger/);
+  // A lone teammate gets no highlight tiles.
+  assert.doesNotMatch(await renderHtml('/src/app/pages/Duos.jsx','DuoRoster',{teammates:[duoMate('Solo')],matches}),/duo-highlights/);
+});
+
+test('encounters: a database-style table with search, a same-team / opposing filter, team share and rows per page',async()=>{
+  const {ENCOUNTER_FILTERS,ENCOUNTER_PAGE_SIZES}=await load('/src/app/pages/Duos.jsx');
+  assert.deepEqual(ENCOUNTER_FILTERS.map(f=>f[1]),['All','Same team','Opposing']);
+  assert.deepEqual(ENCOUNTER_PAGE_SIZES,[10,25,50]);
+  const enc=(i,same,opp)=>({key:'e'+i,name:'P'+i,tag:'EU',games:same+opp,sameTeam:same,opponents:opp,lastSeen:Date.UTC(2026,10,1+i)});
+  const s={TARGET_SEASON:'act',allEncounters:Array.from({length:12},(_,i)=>enc(i,i%3,2))};
+  const html=await renderHtml('/src/app/pages/Duos.jsx','EncountersTable',{s});
+  // Search is always on, with the filter beside it.
+  assert.match(html,/data-slot="table-toolbar"><input[^>]*type="search"[^>]*aria-label="Search players"/);
+  assert.match(html,/aria-label="Show encounters"[\s\S]*>All<[\s\S]*>Same team<[\s\S]*>Opposing</);
+  const heads=[...html.matchAll(/aria-label="([^"]+): sort/g)].map(m=>m[1]);
+  assert.deepEqual(heads,['Player','Encounters','Same team','Opposing','Same team %','Last seen']);
+  // P1 met once on your team and twice as an opponent: 33%.
+  assert.match(html,/title="1 of 3 encounters on your team"[^>]*>.*?data-value="33\.3[0-9]*"[\s\S]*?>33%</);
+  assert.match(html,/1–10 of 12 players/);
+  assert.match(html,/<label for="encounters-list-page-size"[^>]*>Rows per page<\/label>/);
+  const empty=await renderHtml('/src/app/pages/Duos.jsx','EncountersTable',{s:{allEncounters:[]}});
+  assert.match(empty,/data-slot="empty"[\s\S]*No players met at least twice outside your party in these matches\./);
+  // The Wintrading empty note is the shared shadcn Empty too.
+  const duosSource=readFileSync(new URL('../src/app/pages/Duos.jsx',import.meta.url),'utf8');
+  assert.match(duosSource,/<InlineEmpty>No repeated opponents with unusually low combat stats in these matches\.<\/InlineEmpty>/);
+});
+
+test('data tables: an outside filter that leaves no rows shows its empty text inside the frame',async()=>{
+  const html=await renderHtml('/src/app/data-table.jsx','SortableTable',{id:'t-empty',caption:'c',columns:[{label:'Name'},{label:'N'}],rows:[],values:[],emptyText:'Nothing here.'});
+  assert.match(html,/<td[^>]*colspan="2"[^>]*role="status">Nothing here\.<\/td>/i);
 });
 
 test('variable-width lobby cells are left-aligned flex rows so the rank sits level with the other cells',async()=>{
