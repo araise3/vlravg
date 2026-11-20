@@ -1,9 +1,10 @@
 # RR payout even point
 
 The RR page's "Estimated RR payout by starting rank" chart can draw a dashed vertical line,
-labelled **Even**, at the starting rank where RR per win and RR per loss are about equal. A
-sentence above the chart describes the pattern around it: wins pay more than losses cost below
-the line, and losses cost more above it, with the change per 100 RR for each.
+labelled **Even**, at the starting rank where RR per win and RR per loss are about equal. The
+line's accessible label describes the pattern around it: wins pay more than losses cost below
+the line, and losses cost more above it, with the change per 100 RR for each. (Until 20 Nov 2026
+the same sentence also sat above the chart; it was removed on request.)
 
 ## Why a crossing exists
 
