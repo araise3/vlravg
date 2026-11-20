@@ -612,7 +612,7 @@ export function RRMovementChart({matches,zoomTier}){
                   })}
                   {trend.filter(e=>e.payout!=null).map(estimate=>{
                     const rangeStart=rrPositionFromElo(estimate.min,estimate.minTier).label,rangeEnd=rrPositionFromElo(estimate.max,estimate.maxTier).label;
-                    const detail=`Estimated RR / ${won?'win':'loss'}: ${won?'+':'−'}${estimate.payout.toFixed(1)} RR. ${estimate.n} nearby ${won?'wins':'losses'} from ${rangeStart} to ${rangeEnd}. Act average: ${estimate.actMean.toFixed(1)} RR.`;
+                    const detail=`Estimated RR / ${won?'win':'loss'}: ${won?'+':'−'}${estimate.payout.toFixed(1)} RR. Weighted from ${estimate.n} ${won?'wins':'losses'} within 120 RR, ${rangeStart} to ${rangeEnd}. Act average: ${estimate.actMean.toFixed(1)} RR.`;
                     return <circle key={estimate.position} cx={x(estimate.axisPosition)} cy={y(estimate.payout)} r={6} className="estimate-hit-area" tabIndex={0} role="img" aria-label={detail}/>;
                   })}
                 </g>
@@ -621,7 +621,7 @@ export function RRMovementChart({matches,zoomTier}){
             </svg>
           </div>
           </ChartFrame>
-          <p className="text-xs text-muted-foreground">Estimates use 3–5 nearby wins or losses within 30 RR, blended with the act average. Gaps mean sparse data; faint dots are individual matches.{even?' The even point comes from straight-line fits of every win and loss in range (party-penalized games left out); it usually marks where your rank met your hidden MMR this act, which Riot does not show.':''}</p>
+          <p className="text-xs text-muted-foreground">Each estimate weights your wins or losses by how close their starting rank is (on a 60 RR scale) and needs at least 3 within 120 RR. Gaps mean sparse data; faint dots are individual matches.{even?' The even point comes from straight-line fits of every win and loss in range (party-penalized games left out); it usually marks where your rank met your hidden MMR this act, which Riot does not show.':''}</p>
         </CardContent>
       </Card>
     </section>

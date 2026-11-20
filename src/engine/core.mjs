@@ -3557,44 +3557,36 @@ function rrMovementRows(matches){
   });
 }
 
-const RR_ESTIMATE_NEIGHBORS=5;
-const RR_ESTIMATE_MAX_SPAN=30;
+// Estimated payout at each starting rank: a Gaussian-weighted average of the
+// player's own wins (or losses), each weighted by how close its starting RR is
+// (σ = RR_ESTIMATE_BANDWIDTH), with no pull toward the act mean. Chosen
+// 2026-11-20 from 141 local curves on the RR corpus by tuning players and
+// checked on 290 holdout players (docs/rr-payout-model-2026-11-20.md): RMSE
+// 2.49 vs 2.83 RR for the previous 5-nearby-games curve with an act-mean
+// prior of 8, better in both acts and both rank bands. An estimate needs
+// RR_ESTIMATE_MIN_SAMPLES games within RR_ESTIMATE_SUPPORT (2σ); otherwise
+// it is left out, so a lone distant game draws no curve.
+const RR_ESTIMATE_BANDWIDTH=60;
+const RR_ESTIMATE_SUPPORT=120;
 const RR_ESTIMATE_MIN_SAMPLES=3;
-const RR_ESTIMATE_PRIOR_WEIGHT=8;
 
 function rrPayoutEstimates(visibleRows,allRows,won){
-  const pool=allRows.filter(row=>row.m.won===won).sort((a,b)=>a.m.myPreRR-b.m.myPreRR);
+  const pool=allRows.filter(row=>row.m.won===won);
   if(!pool.length)return[];
   const actMean=pool.reduce((sum,row)=>sum+Math.abs(row.net),0)/pool.length;
   const centers=new Map(visibleRows.filter(row=>row.m.won===won).map(row=>[row.m.myPreRR,row.axisRR]));
   return [...centers.keys()].sort((a,b)=>a-b).map(position=>{
     const axisPosition=centers.get(position);
-    let low=0,high=pool.length;
-    while(low<high){
-      const mid=(low+high)>>1;
-      if(pool[mid].m.myPreRR<position)low=mid+1;
-      else high=mid;
-    }
-    let before=low-1,after=low;
-    const sample=[];
-    let min=Infinity,max=-Infinity;
-    while(sample.length<RR_ESTIMATE_NEIGHBORS&&(before>=0||after<pool.length)){
-      const takeBefore=before>=0&&(after===pool.length||
-        position-pool[before].m.myPreRR<=pool[after].m.myPreRR-position);
-      const row=pool[takeBefore?before--:after++];
-      if(Math.abs(row.m.myPreRR-position)>RR_ESTIMATE_MAX_SPAN)break;
-      const candidateMin=Math.min(min,row.m.myPreRR),candidateMax=Math.max(max,row.m.myPreRR);
-      if(candidateMax-candidateMin>RR_ESTIMATE_MAX_SPAN)continue;
-      sample.push(row);
-      min=candidateMin;max=candidateMax;
-    }
-    if(sample.length<RR_ESTIMATE_MIN_SAMPLES)return{position,axisPosition,payout:null};
-    const localTotal=sample.reduce((sum,row)=>sum+Math.abs(row.net),0);
-    // The act mean stabilizes a small local sample; eight is the measured
-    // prior weight from leave-one-out validation against stored RR history.
-    const payout=(localTotal+RR_ESTIMATE_PRIOR_WEIGHT*actMean)/(sample.length+RR_ESTIMATE_PRIOR_WEIGHT);
-    const minRow=sample.find(row=>row.m.myPreRR===min),maxRow=sample.find(row=>row.m.myPreRR===max);
-    return{position,axisPosition,payout,n:sample.length,min,max,
+    const near=pool.filter(row=>Math.abs(row.m.myPreRR-position)<=RR_ESTIMATE_SUPPORT);
+    if(near.length<RR_ESTIMATE_MIN_SAMPLES)return{position,axisPosition,payout:null};
+    let weighted=0,weights=0;
+    pool.forEach(row=>{
+      const weight=Math.exp(-.5*((row.m.myPreRR-position)/RR_ESTIMATE_BANDWIDTH)**2);
+      weighted+=weight*Math.abs(row.net);weights+=weight;
+    });
+    const min=Math.min(...near.map(row=>row.m.myPreRR)),max=Math.max(...near.map(row=>row.m.myPreRR));
+    const minRow=near.find(row=>row.m.myPreRR===min),maxRow=near.find(row=>row.m.myPreRR===max);
+    return{position,axisPosition,payout:weighted/weights,n:near.length,min,max,
       minTier:minRow.m.myPreTierId??minRow.m.myTierId,
       maxTier:maxRow.m.myPreTierId??maxRow.m.myTierId,actMean};
   });
@@ -3606,7 +3598,7 @@ function rrPayoutSegments(estimates){
   const flush=()=>{if(current.length)segments.push(current);current=[];};
   estimates.forEach(estimate=>{
     if(estimate.payout==null){flush();previous=null;return;}
-    if(previous!=null&&estimate.position-previous>RR_ESTIMATE_MAX_SPAN)flush();
+    if(previous!=null&&estimate.position-previous>RR_ESTIMATE_SUPPORT)flush();
     current.push(estimate);
     previous=estimate.position;
   });

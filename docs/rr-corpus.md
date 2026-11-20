@@ -268,8 +268,9 @@ All targets remain Riot's `last_change`; no adjustment is subtracted or added
 again, and unspecified penalty units/overlap are not guessed. The local benchmark command runs this analysis;
 no new upstream endpoint, database migration or quota budget is needed.
 
-Candidate models are act mean, regularized linear, the current nearby-30-RR
-5-neighbor/prior-8 curve, and Gaussian curves with two bandwidths. Stable player
+Candidate models are act mean, regularized linear, the nearby-30-RR
+5-neighbor/prior-8 curve (the frontend's until 20 Nov 2026; see
+[rr-payout-model-2026-11-20.md](rr-payout-model-2026-11-20.md)), and Gaussian curves with two bandwidths. Stable player
 hashes separate tuning and holdout accounts. Each player/act/outcome needs 20
 clean samples; its earliest 70% trains the curve and later 30% tests it. Errors
 give each player equal weight. Model selection uses tuning accounts only.
