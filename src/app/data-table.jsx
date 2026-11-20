@@ -1,8 +1,8 @@
 // Data tables on TanStack Table v9 (moved from the hand-built SortableTable,
 // 20 Nov 2026). TanStack owns sorting, search and paging; this module owns
 // the markup: the shadcn table on desktop, cards on phones.
-import {useMemo,useState} from 'react';
-import {ArrowDown,ArrowUp,ArrowUpDown,ChevronLeft,ChevronRight} from 'lucide-react';
+import {Fragment,useMemo,useState} from 'react';
+import {ArrowDown,ArrowUp,ArrowUpDown,ChevronDown,ChevronLeft,ChevronRight} from 'lucide-react';
 import {
   columnFilteringFeature,createFilteredRowModel,createPaginatedRowModel,createSortedRowModel,
   globalFilteringFeature,rowPaginationFeature,rowSortingFeature,tableFeatures,useTable,
@@ -53,7 +53,7 @@ const toSort=sorting=>sorting[0]?{column:Number(sorting[0].id),direction:sorting
 // the first visible data column its headline figure, the rest a label/value
 // grid. Sorting moves to a native select (the OS picker) plus a direction
 // button. Columns flagged `wide` (lobby ranks with icon and RR) span two cells.
-export function MobileRowList({id,caption,columns,rows,values,order,best,sort,choose,className}){
+export function MobileRowList({id,caption,columns,rows,values,order,best,sort,choose,className,detail,detailLabel='Details',expanded,toggle}){
   const column=sort?.column??null;
   const direction=sort?.direction||'descending';
   const DirIcon=direction==='ascending'?ArrowUp:ArrowDown;
@@ -115,6 +115,15 @@ export function MobileRowList({id,caption,columns,rows,values,order,best,sort,ch
                   })}
                 </dl>
               )}
+              {detail&&(
+                <>
+                  <Button type="button" variant="ghost" size="sm" onClick={()=>toggle(row.key)} aria-expanded={expanded.has(row.key)}
+                    aria-controls={`${id}-detail-${index}`} className="-mx-2 mt-2 gap-1 px-2 text-muted-foreground hover:text-foreground">
+                    {detailLabel}<ChevronDown className={cn('transition-transform',expanded.has(row.key)&&'rotate-180')} aria-hidden="true"/>
+                  </Button>
+                  {expanded.has(row.key)&&<div id={`${id}-detail-${index}`} className="pt-3" data-slot="row-detail">{detail(index)}</div>}
+                </>
+              )}
             </li>
           );
         })}
@@ -125,13 +134,23 @@ export function MobileRowList({id,caption,columns,rows,values,order,best,sort,ch
 
 // Previous/next under a long table, as in shadcn's data-table example; the
 // range on the left says where you are.
-export function TablePager({page,pageSize,total,noun,onPrevious,onNext,canPrevious,canNext,controls}){
+// `pageSizes` adds a rows-per-page picker (a native select, the OS picker on phones).
+export function TablePager({page,pageSize,total,noun,onPrevious,onNext,canPrevious,canNext,controls,pageSizes,onPageSize}){
   const pages=Math.max(1,Math.ceil(total/pageSize)),start=page*pageSize;
   return (
-    <nav className="flex items-center justify-between gap-3 pt-3 max-sm:px-4 max-sm:pb-1" aria-label={`${noun} pages`} data-slot="table-pager">
+    <nav className="flex flex-wrap items-center justify-between gap-3 pt-3 max-sm:px-4 max-sm:pb-1" aria-label={`${noun} pages`} data-slot="table-pager">
       <span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">{total?`${start+1}–${Math.min(total,start+pageSize)} of ${total} ${noun}`:`0 ${noun}`}</span>
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground tabular-nums">Page {page+1} of {pages}</span>
+      <div className="flex flex-wrap items-center gap-2">
+        {pageSizes&&(
+          <span className="mr-2 flex items-center gap-2 text-sm text-muted-foreground">
+            <label htmlFor={`${controls}-page-size`} className="max-sm:sr-only">Rows per page</label>
+            <NativeSelect id={`${controls}-page-size`} size="sm" value={String(pageSize)} onChange={event=>onPageSize(Number(event.target.value))}
+              className="text-foreground">
+              {pageSizes.map(size=><NativeSelectOption key={size} value={size}>{size}</NativeSelectOption>)}
+            </NativeSelect>
+          </span>
+        )}
+        <span className="text-sm text-muted-foreground tabular-nums max-sm:hidden">Page {page+1} of {pages}</span>
         <Button variant="outline" size="sm" onClick={onPrevious} disabled={!canPrevious} aria-label="Previous page" aria-controls={controls}><ChevronLeft aria-hidden="true"/>Previous</Button>
         <Button variant="outline" size="sm" onClick={onNext} disabled={!canNext} aria-label="Next page" aria-controls={controls}>Next<ChevronRight aria-hidden="true"/></Button>
       </div>
@@ -150,8 +169,17 @@ export function TablePager({page,pageSize,total,noun,onPrevious,onNext,canPrevio
 // tables into pages (sorting and search cover every row, then the page is
 // cut); a table long enough to page also gets a search over the row header.
 // Number columns are right-aligned; `align: 'left'` keeps a column left.
-export function SortableTable({id,caption,columns,rows,values,maxima=[],className,pageSize,noun='rows',searchable=!!pageSize&&rows.length>pageSize,standalone=false}){
+//
+// Database-style options (20 Nov 2026): `pageSizes` adds a rows-per-page
+// picker (the pager then shows whenever more rows exist than the smallest
+// size), `tools` adds controls beside the search, `searchable` can force the
+// search on, and `detail(index)` makes rows expandable: a chevron in the row
+// header opens that row's detail in a full-width row under it (on phones, a
+// toggle under the card). `emptyText` is shown inside the frame when no rows are passed.
+export function SortableTable({id,caption,columns,rows,values,maxima=[],className,pageSize,pageSizes,noun='rows',searchable=!!pageSize&&rows.length>pageSize,standalone=false,tools,detail,detailLabel,emptyText}){
   const mobile=useIsMobile();
+  const [expanded,setExpanded]=useState(()=>new Set());
+  const toggle=key=>setExpanded(previous=>{const next=new Set(previous);if(next.has(key))next.delete(key);else next.add(key);return next;});
   const [sorting,setSorting]=useState(()=>viewOf(id).sorting);
   const [globalFilter,setGlobalFilter]=useState('');
   const [pagination,setPagination]=useState({pageIndex:0,pageSize:pageSize||Math.max(1,rows.length)});
@@ -192,23 +220,26 @@ export function SortableTable({id,caption,columns,rows,values,maxima=[],classNam
   const filteredCount=table.getFilteredRowModel().rows.length;
   const shown=table.getRowModel().rows.map(row=>row.original.index);
   const sort=toSort(sorting);
-  const paged=pageSize&&filteredCount>pageSize;
+  const paged=pageSize&&filteredCount>(pageSizes?Math.min(...pageSizes):pagination.pageSize);
   const {pageIndex}=table.state.pagination;
   const right=index=>index>0&&columns[index]?.align!=='left';
-  const toolbar=searchable&&(
-    <div className="flex items-center pb-3" data-slot="table-toolbar">
-      <Input type="search" value={globalFilter} onChange={event=>table.setGlobalFilter(event.target.value)}
-        placeholder={`Search ${noun}…`} aria-label={`Search ${noun}`} aria-controls={id} className="max-w-sm"/>
+  const toolbar=(searchable||tools)&&(
+    <div className="flex flex-wrap items-center gap-2 pb-3 max-sm:px-4" data-slot="table-toolbar">
+      {searchable&&<Input type="search" value={globalFilter} onChange={event=>table.setGlobalFilter(event.target.value)}
+        placeholder={`Search ${noun}…`} aria-label={`Search ${noun}`} aria-controls={id} className="h-8 max-w-sm min-w-0 flex-1 max-sm:max-w-none max-sm:basis-full"/>}
+      {tools}
     </div>
   );
-  const noMatch=globalFilter&&!filteredCount?`No ${noun} match “${globalFilter.trim()}”.`:null;
+  // A search with no hits, or (`emptyText`) an outside filter that left no rows.
+  const noMatch=globalFilter&&!filteredCount?`No ${noun} match “${globalFilter.trim()}”.`:!rows.length&&emptyText?emptyText:null;
   const empty=noMatch&&mobile?<p className="px-4 py-6 text-center text-sm text-muted-foreground" role="status">{noMatch}</p>:null;
   const more=paged
-    ?<TablePager page={pageIndex} pageSize={pageSize} total={filteredCount} noun={noun} controls={id}
+    ?<TablePager page={pageIndex} pageSize={pagination.pageSize} total={filteredCount} noun={noun} controls={id}
+      pageSizes={pageSizes} onPageSize={size=>setPagination({pageIndex:0,pageSize:size})}
       onPrevious={()=>table.previousPage()} onNext={()=>table.nextPage()} canPrevious={table.getCanPreviousPage()} canNext={table.getCanNextPage()}/>
     :null;
   const choose=next=>table.setSorting(next?[{id:String(next.column),desc:next.direction==='descending'}]:[]);
-  if(mobile)return <>{toolbar}{empty||<MobileRowList {...{id,caption,columns,rows,values,order:shown,best,sort,choose,className}}/>}{more}</>;
+  if(mobile)return <>{toolbar}{empty||<MobileRowList {...{id,caption,columns,rows,values,order:shown,best,sort,choose,className,detail,detailLabel,expanded,toggle}}/>}{more}</>;
   return (
     <div className={className} data-slot="data-table">
       {toolbar}
@@ -244,17 +275,37 @@ export function SortableTable({id,caption,columns,rows,values,maxima=[],classNam
               {noMatch&&<TableRow className="hover:bg-transparent"><TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground" role="status">{noMatch}</TableCell></TableRow>}
               {shown.map(index=>{
                 const row=rows[index];
+                const open=detail&&expanded.has(row.key);
                 return (
-                  <TableRow key={row.key}>
+                  <Fragment key={row.key}>
+                  <TableRow data-state={open?'expanded':undefined}>
                     {row.cells.map((cell,column)=>{
                       const props=row.cellProps?.[column]||{};
                       const top=best.get(column);
                       const isBest=top&&values[index][column]===top.max;
                       const title=isBest?[props.title,`Highest ${top.label} in this table`].filter(Boolean).join('. '):props.title;
-                      if(column===0)return <TableHead key={0} scope="row" className={cn('h-11 px-3 font-medium',props.className)} title={title}>{cell}</TableHead>;
+                      if(column===0)return (
+                        <TableHead key={0} scope="row" className={cn('h-11 px-3 font-medium',props.className)} title={title}>
+                          {detail?(
+                            <span className="flex min-w-0 items-center gap-1">
+                              <Button type="button" variant="ghost" size="icon-sm" onClick={()=>toggle(row.key)} aria-expanded={!!open}
+                                aria-controls={`${id}-detail-${index}`} aria-label={detailLabel||'Details'} className="-ml-1.5 size-7 shrink-0 text-muted-foreground">
+                                <ChevronRight className={cn('transition-transform',open&&'rotate-90')} aria-hidden="true"/>
+                              </Button>
+                              <span className="min-w-0">{cell}</span>
+                            </span>
+                          ):cell}
+                        </TableHead>
+                      );
                       return <TableCell key={column} title={title} className={cn(TABLE_CELL,right(column)&&'text-right tabular-nums',props.className,isBest&&'font-semibold')}>{cell}</TableCell>;
                     })}
                   </TableRow>
+                  {open&&(
+                    <TableRow className="bg-muted/20 hover:bg-muted/20" data-slot="row-detail">
+                      <TableCell id={`${id}-detail-${index}`} colSpan={columns.length} className="px-4 py-4 whitespace-normal">{detail(index)}</TableCell>
+                    </TableRow>
+                  )}
+                  </Fragment>
                 );
               })}
             </TableBody>

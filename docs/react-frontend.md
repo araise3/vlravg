@@ -122,6 +122,12 @@ end of `src/index.css` (they outrank Tailwind's utility layer):
   html's `scrollbar-gutter: stable`, then adds a scrollbar-width margin. Body
   now reserves the gutter too and the margin is removed (`src/index.css`), so
   no Radix menu, select or dialog moves the page.
+  Database-style options (20 Nov 2026, first used on Duos): `pageSizes`
+  adds a rows-per-page picker to the pager, `tools` puts controls beside the
+  search, `searchable` forces the search on, `emptyText` fills the frame when
+  an outside filter leaves no rows, and `detail(index)` makes rows expandable
+  (a chevron in the row header opens a full-width detail row; on phones a
+  toggle under the card).
 - Overview: rebuilt as a shadcn dashboard (see "Overview dashboard" below).
 - Match History: one summary strip, one-line day headers, and the old match
   card (210 px map-art panel, 25 px scoreline, uppercase result tag, bold
