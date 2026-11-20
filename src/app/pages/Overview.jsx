@@ -5,6 +5,7 @@ import {
   playerRouteUrl,rrSigned,tierRR,winRateLabel,winRateTone,
 } from '@/engine/core.mjs';
 import {useElementWidth,useEngine,useIsMobile} from '@/app/hooks.js';
+import {TABLE_CELL,TABLE_FRAME,TABLE_HEAD,TABLE_HEAD_ROW} from '@/app/data-table.jsx';
 import {ChartTooltip,PageHeading,PageLink,PartyIcon,PlacementToggle,RankIcon,toneClass} from '@/app/shared.jsx';
 import {useMapArt} from '@/app/pages/Matches.jsx';
 import {cn} from '@/lib/utils';
@@ -232,15 +233,17 @@ export function RecentMatchesCard({matches,maps,className}){
         <CardTitle><h2 id="overview-matches-title">Recent matches</h2></CardTitle>
         <CardAction><ViewLink page="matches">All matches</ViewLink></CardAction>
       </CardHeader>
-      <CardContent className="px-0">
+      {/* Phones: full-bleed with tighter cells so all four columns fit. */}
+      <CardContent className="max-sm:px-0">
+        <div className={cn(TABLE_FRAME,'rounded-lg max-sm:rounded-none max-sm:border-x-0')}>
         <Table>
           <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="pl-6 max-sm:pl-4">Map</TableHead>
-              <TableHead>Result</TableHead>
-              <TableHead className="text-right">Score</TableHead>
-              <TableHead className="text-right max-sm:hidden">K / D / A</TableHead>
-              <TableHead className="pr-6 text-right max-sm:pr-4">RR</TableHead>
+            <TableRow className={TABLE_HEAD_ROW}>
+              <TableHead className={cn(TABLE_HEAD,'max-sm:pl-4')}>Map</TableHead>
+              <TableHead className={cn(TABLE_HEAD,'max-sm:px-2')}>Result</TableHead>
+              <TableHead className={cn(TABLE_HEAD,'text-right max-sm:px-2')}>Score</TableHead>
+              <TableHead className={cn(TABLE_HEAD,'text-right max-sm:hidden')}>K / D / A</TableHead>
+              <TableHead className={cn(TABLE_HEAD,'text-right max-sm:pr-4')}>RR</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -250,9 +253,9 @@ export function RecentMatchesCard({matches,maps,className}){
               const date=m.startedAtMs!=null?new Date(m.startedAtMs).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'';
               return (
                 <TableRow key={m.matchId}>
-                  <TableCell className="pl-6 max-sm:pl-4">
-                    <div className="flex items-center gap-3">
-                      <div className="h-8 w-14 shrink-0 overflow-hidden rounded-md bg-muted">
+                  <TableCell className={cn(TABLE_CELL,'max-sm:pl-4')}>
+                    <div className="flex items-center gap-3 max-sm:gap-2">
+                      <div className="h-8 w-14 shrink-0 max-sm:w-10 overflow-hidden rounded-md bg-muted">
                         {art&&<img src={art} alt="" loading="lazy" decoding="async" className="size-full object-cover" onError={event=>event.currentTarget.remove()}/>}
                       </div>
                       <div className="min-w-0">
@@ -261,12 +264,12 @@ export function RecentMatchesCard({matches,maps,className}){
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className={cn(TABLE_CELL,'max-sm:px-2')}>
                     <Badge variant="outline"><span className="size-1.5 rounded-full" style={{background:color}} aria-hidden="true"/>{label}</Badge>
                   </TableCell>
-                  <TableCell className="text-right tabular-nums">{m.myR!=null&&m.opR!=null?`${m.myR}–${m.opR}`:'—'}</TableCell>
-                  <TableCell className="text-right text-muted-foreground tabular-nums max-sm:hidden">{m.myStats?`${m.myStats.kills} / ${m.myStats.deaths} / ${m.myStats.assists}`:'—'}</TableCell>
-                  <TableCell className={cn('pr-6 text-right font-medium tabular-nums max-sm:pr-4',m.myRR==null?'text-muted-foreground':m.myRR>0?'text-positive':m.myRR<0?'text-negative':null)}>
+                  <TableCell className={cn(TABLE_CELL,'text-right tabular-nums max-sm:px-2')}>{m.myR!=null&&m.opR!=null?`${m.myR}–${m.opR}`:'—'}</TableCell>
+                  <TableCell className={cn(TABLE_CELL,'text-right text-muted-foreground tabular-nums max-sm:hidden')}>{m.myStats?`${m.myStats.kills} / ${m.myStats.deaths} / ${m.myStats.assists}`:'—'}</TableCell>
+                  <TableCell className={cn(TABLE_CELL,'text-right font-medium tabular-nums max-sm:pr-4',m.myRR==null?'text-muted-foreground':m.myRR>0?'text-positive':m.myRR<0?'text-negative':null)}>
                     {m.myRR==null?'—':rrSigned(m.myRR,0)}
                   </TableCell>
                 </TableRow>
@@ -274,6 +277,7 @@ export function RecentMatchesCard({matches,maps,className}){
             })}
           </TableBody>
         </Table>
+        </div>
       </CardContent>
     </Card>
   );

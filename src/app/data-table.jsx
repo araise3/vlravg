@@ -20,6 +20,13 @@ const features=tableFeatures({
   rowPaginationFeature,paginatedRowModel:createPaginatedRowModel(),
 });
 
+// Shared look for every table on the site (also used by plain, unsorted
+// tables such as the Overview's recent matches).
+export const TABLE_FRAME='overflow-hidden border bg-card';
+export const TABLE_HEAD_ROW='bg-muted/40 hover:bg-muted/40';
+export const TABLE_HEAD='h-10 px-3 text-xs font-medium text-muted-foreground';
+export const TABLE_CELL='px-3 py-2.5';
+
 const collator=new Intl.Collator(undefined,{numeric:true,sensitivity:'base'});
 // Ascending comparison only; TanStack reverses it for descending sorts. Missing
 // values are `undefined` and `sortUndefined: 'last'` keeps them last both ways.
@@ -205,11 +212,11 @@ export function SortableTable({id,caption,columns,rows,values,maxima=[],classNam
     <div className={className} data-slot="data-table">
       {toolbar}
       {(
-        <div className={cn('overflow-hidden border bg-card',standalone?'rounded-[12px]':'rounded-lg')}>
+        <div className={cn(TABLE_FRAME,standalone?'rounded-[12px]':'rounded-lg')}>
           <Table id={id}>
             <caption className="sr-only">{caption}</caption>
             <TableHeader>
-              <TableRow className="bg-muted/40 hover:bg-muted/40">
+              <TableRow className={TABLE_HEAD_ROW}>
                 {table.getAllLeafColumns().map(column=>{
                   const index=Number(column.id),col=columns[index];
                   const state=column.getIsSorted();
@@ -242,7 +249,7 @@ export function SortableTable({id,caption,columns,rows,values,maxima=[],classNam
                       const isBest=top&&values[index][column]===top.max;
                       const title=isBest?[props.title,`Highest ${top.label} in this table`].filter(Boolean).join('. '):props.title;
                       if(column===0)return <TableHead key={0} scope="row" className={cn('h-11 px-3 font-medium',props.className)} title={title}>{cell}</TableHead>;
-                      return <TableCell key={column} title={title} className={cn('px-3 py-2.5',right(column)&&'text-right tabular-nums',props.className,isBest&&'font-semibold')}>{cell}</TableCell>;
+                      return <TableCell key={column} title={title} className={cn(TABLE_CELL,right(column)&&'text-right tabular-nums',props.className,isBest&&'font-semibold')}>{cell}</TableCell>;
                     })}
                   </TableRow>
                 );
