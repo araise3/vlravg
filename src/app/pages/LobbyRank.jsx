@@ -111,7 +111,7 @@ export function LobbyRankPage(){
           </Card>
         </section>
       )}
-      {!hasRanks&&s.analysisState!=='error'&&<EmptyState>{empty}</EmptyState>}
+      {!hasRanks&&s.analysisState!=='error'&&<EmptyState loading={s.analysisState==='loading'}>{empty}</EmptyState>}
     </main>
   );
 }

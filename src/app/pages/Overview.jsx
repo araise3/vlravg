@@ -6,7 +6,7 @@ import {
 } from '@/engine/core.mjs';
 import {useElementWidth,useEngine,useIsMobile} from '@/app/hooks.js';
 import {TABLE_CELL,TABLE_FRAME,TABLE_HEAD,TABLE_HEAD_ROW} from '@/app/data-table.jsx';
-import {ChartTooltip,PageHeading,PageLink,PartyIcon,PlacementToggle,RankIcon,toneClass} from '@/app/shared.jsx';
+import {ChartTooltip,Hint,InlineEmpty,PageHeading,PageLink,PartyIcon,PlacementToggle,RankIcon,toneClass} from '@/app/shared.jsx';
 import {useMapArt} from '@/app/pages/Matches.jsx';
 import {cn} from '@/lib/utils';
 import {Badge} from '@/components/ui/badge';
@@ -56,7 +56,7 @@ function KpiCard({title,titleId,action,value,valueClassName,icon,rows,note,empty
               </div>
             ))}
           </dl>
-          :<p className="rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">{empty}</p>}
+          :<InlineEmpty>{empty}</InlineEmpty>}
         {note&&<p className="mt-auto text-xs text-muted-foreground">{note}</p>}
       </CardContent>
     </Card>
@@ -121,8 +121,8 @@ export function ActStatsCard({s}){
       <CardContent>
         <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-4" aria-label="Basic statistics for all matches in this act">
           {items.map(([label,value,title,note])=>(
-            <div key={label} className="min-w-0 bg-card px-4 py-3.5 max-sm:px-3.5 max-sm:py-3" title={title||undefined}>
-              <dt className="text-xs text-muted-foreground">{label}</dt>
+            <div key={label} className="min-w-0 bg-card px-4 py-3.5 max-sm:px-3.5 max-sm:py-3">
+              <dt className="text-xs text-muted-foreground"><Hint content={title}>{label}</Hint></dt>
               <dd className="mt-1.5 flex items-baseline gap-2 text-2xl leading-none font-semibold whitespace-nowrap tabular-nums max-sm:text-xl">
                 {value}{note&&<span className="text-xs font-normal text-muted-foreground">{note}</span>}
               </dd>
@@ -176,8 +176,9 @@ export function RecentRRCard({matches}){
       <CardHeader>
         <CardTitle><h2 id="overview-rr-title">RR trend, last {matches.length} {matches.length===1?'match':'matches'}</h2></CardTitle>
         {net!=null&&(
-          <CardAction className={cn('text-lg leading-none font-semibold tabular-nums',toneClass(net,0))}
-            title={`Net RR across the ${ordered.length} of ${matches.length} matches with a recorded change`}>{rrSigned(net,0)} RR</CardAction>
+          <CardAction className={cn('text-lg leading-none font-semibold tabular-nums',toneClass(net,0))}>
+            <Hint content={`Net RR across the ${ordered.length} of ${matches.length} matches with a recorded change`}>{rrSigned(net,0)} RR</Hint>
+          </CardAction>
         )}
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
@@ -208,7 +209,7 @@ export function RecentRRCard({matches}){
               </ChartTooltip>
             )}
           </div>
-          :<p className="rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">No recorded RR changes in these matches</p>}
+          :<InlineEmpty>No recorded RR changes in these matches</InlineEmpty>}
         <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-4" aria-label="RR over the recent matches">
           {figures.map(([label,value,className,note])=>(
             <div key={label} className="min-w-0 bg-card px-4 py-3 max-sm:px-3.5">
@@ -286,7 +287,6 @@ export function RecentMatchesCard({matches,maps,className}){
 // The top party teammates, one row each, beside the lobby rank card.
 export function TeammatesCard({teammates}){
   const top=teammates.slice(0,4);
-  const head='px-3 py-2 font-normal';
   return (
     <Card className="gap-4 py-5" aria-labelledby="overview-duos-title">
       <CardHeader className="px-5">
@@ -295,37 +295,37 @@ export function TeammatesCard({teammates}){
       </CardHeader>
       <CardContent className="px-5">
         {top.length
-          ?<div className="overflow-hidden rounded-lg border">
-            <table className="w-full text-sm tabular-nums">
-              <thead>
-                <tr className="border-b text-xs text-muted-foreground">
-                  <th scope="col" className={cn(head,'text-left')}>Teammate</th>
-                  <th scope="col" className={cn(head,'text-right')}>Matches</th>
-                  <th scope="col" className={cn(head,'text-right whitespace-nowrap')} title="Wins divided by wins plus losses; draws excluded">Win rate</th>
-                  <th scope="col" className={cn(head,'text-right')} title="Your net RR change in matches with this teammate">RR</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
+          ?<div className={cn(TABLE_FRAME,'rounded-lg')}>
+            <Table className="tabular-nums">
+              <TableHeader>
+                <TableRow className={TABLE_HEAD_ROW}>
+                  <TableHead className={TABLE_HEAD}>Teammate</TableHead>
+                  <TableHead className={cn(TABLE_HEAD,'text-right')}>Matches</TableHead>
+                  <TableHead className={cn(TABLE_HEAD,'text-right')}><Hint content="Wins divided by wins plus losses; draws excluded">Win rate</Hint></TableHead>
+                  <TableHead className={cn(TABLE_HEAD,'text-right')}><Hint content="Your net RR change in matches with this teammate">RR</Hint></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {top.map(t=>{
                   const wr=decidedWinRate(t.wins,t.decided);
                   return (
-                    <tr key={t.key}>
-                      <td className="w-full max-w-0 px-3 py-2">
+                    <TableRow key={t.key}>
+                      <TableCell className={cn(TABLE_CELL,'w-full max-w-0')}>
                         <a href={playerRouteUrl(t.name,t.tag)} title={t.name+'#'+t.tag} className="block truncate font-medium hover:underline">
                           {t.name}<span className="font-normal text-muted-foreground"> #{t.tag}</span>
                         </a>
-                      </td>
-                      <td className="px-3 py-2 text-right text-muted-foreground">{t.games}</td>
-                      <td className={cn('px-3 py-2 text-right',toneOf(winRateTone(wr)))}>{winRateLabel(wr)}</td>
-                      <td className={cn('px-3 py-2 text-right font-medium',t.rrCount?toneClass(t.rrTotal,0):'text-muted-foreground')}
-                        title={`${t.rrCount} of ${t.games} shared matches have a recorded RR change`}>{t.rrCount?rrSigned(t.rrTotal,0):'—'}</td>
-                    </tr>
+                      </TableCell>
+                      <TableCell className={cn(TABLE_CELL,'text-right text-muted-foreground')}>{t.games}</TableCell>
+                      <TableCell className={cn(TABLE_CELL,'text-right',toneOf(winRateTone(wr)))}>{winRateLabel(wr)}</TableCell>
+                      <TableCell className={cn(TABLE_CELL,'text-right font-medium',t.rrCount?toneClass(t.rrTotal,0):'text-muted-foreground')}
+                        title={`${t.rrCount} of ${t.games} shared matches have a recorded RR change`}>{t.rrCount?rrSigned(t.rrTotal,0):'—'}</TableCell>
+                    </TableRow>
                   );
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
-          :<p className="rounded-lg border border-dashed px-3 py-2 text-sm text-muted-foreground">No party teammates this act</p>}
+          :<InlineEmpty>No party teammates this act</InlineEmpty>}
       </CardContent>
     </Card>
   );
@@ -355,7 +355,7 @@ export function ClutchCard({matches}){
       <CardHeader>
         <CardTitle><h2 id="overview-clutch-title">Clutch stats</h2></CardTitle>
         <CardDescription>{win} won of {total} opportunities</CardDescription>
-        <CardAction><Badge variant="outline" className="tabular-nums" title="Won or lost while contesting, rather than saved">{pct(win+loss)}% attempted</Badge></CardAction>
+        <CardAction><Hint content="Won or lost while contesting, rather than saved"><Badge variant="outline" className="tabular-nums">{pct(win+loss)}% attempted</Badge></Hint></CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         <dl className="grid grid-cols-5 gap-1.5 sm:gap-2" aria-label="Clutch win rate by situation" data-slot="clutch-tiles">
@@ -381,8 +381,8 @@ export function ClutchCard({matches}){
           </div>
           <div className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground">
             {segments.map(([key,c,color,title])=>(
-              <span key={key} title={title} className="inline-flex items-center gap-1.5 tabular-nums">
-                <span className="size-2 rounded-full" style={{background:color}} aria-hidden="true"/>{key} <span className="font-medium text-foreground">{c}</span> ({pct(c)}%)
+              <span key={key} className="inline-flex items-center gap-1.5 tabular-nums">
+                <span className="size-2 rounded-full" style={{background:color}} aria-hidden="true"/><Hint content={title}>{key}</Hint> <span className="font-medium text-foreground">{c}</span> ({pct(c)}%)
               </span>
             ))}
           </div>
@@ -392,15 +392,27 @@ export function ClutchCard({matches}){
   );
 }
 
-// Phones: placeholder cards in the overview's shape while matches load, so
-// the screen under the app bar is not empty.
-function MobileOverviewSkeleton(){
-  return (
+// Placeholder cards in the overview's shape while matches load, so the page
+// under the search is not empty: the phone stack, or on desktop the lobby and
+// teammates pair above the act stats and clutch cards.
+function OverviewSkeleton({mobile}){
+  if(mobile)return (
     <div className="flex flex-col gap-4" aria-hidden="true" data-slot="overview-skeleton">
       <Skeleton className="h-8 w-40"/>
       <Skeleton className="h-32 rounded-xl"/>
       <Skeleton className="h-60 rounded-xl"/>
       <Skeleton className="h-44 rounded-xl"/>
+    </div>
+  );
+  return (
+    <div className="flex flex-col gap-4" aria-hidden="true" data-slot="overview-skeleton">
+      <Skeleton className="h-5 w-44"/>
+      <div className="grid grid-cols-2 gap-4">
+        <Skeleton className="h-64 rounded-xl"/>
+        <Skeleton className="h-64 rounded-xl"/>
+      </div>
+      <Skeleton className="h-48 rounded-xl"/>
+      <Skeleton className="h-60 rounded-xl"/>
     </div>
   );
 }
@@ -409,7 +421,7 @@ export function OverviewPage(){
   const s=useEngine();
   const maps=useMapArt();
   const mobile=useIsMobile();
-  if(mobile&&s.hasAnalysis&&s.analysisState==='loading')return <MobileOverviewSkeleton/>;
+  if(s.hasAnalysis&&s.analysisState==='loading')return <OverviewSkeleton mobile={mobile}/>;
   if(!s.hasAnalysis||!s.overviewStats||!s.allMatches.length||s.analysisState!=='ready')return null;
   const recent=overviewRecentMatches(s.allMatches);
   const latest=[...s.allMatches].sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0)).slice(0,8);

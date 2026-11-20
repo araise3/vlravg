@@ -3,9 +3,10 @@ import {
   avgLabel,computeWintradeSignals,decidedWinRate,playerRouteUrl,rName,rrSigned,tierRR,winRateLabel,winRateTone,
 } from '@/engine/core.mjs';
 import {useEngine,useIsMobile} from '@/app/hooks.js';
-import {EmptyState,LobbyValue,PageHeading,PartyIcon,PlacementToggle,PlayerLink,RankIcon,ShowAllButton,SortableTable,TableSection,pageEmptyText,toneClass} from '@/app/shared.jsx';
+import {EmptyState,Hint,LobbyValue,PageHeading,PartyIcon,PlacementToggle,PlayerLink,RankIcon,ShowAllButton,SortableTable,TableSection,pageEmptyText,toneClass} from '@/app/shared.jsx';
 import {cn} from '@/lib/utils';
 import {Card,CardContent,CardDescription,CardHeader,CardTitle} from '@/components/ui/card';
+import {ScrollArea} from '@/components/ui/scroll-area';
 
 const toneOf=tone=>tone==='rank-positive'?'text-positive':tone==='rank-negative'?'text-negative':'';
 const rrTone=(count,total)=>!count||total===0?'':total>0?'text-positive':'text-negative';
@@ -150,15 +151,15 @@ export function DuoMatchup({t,base,scales}){
             {lobby?<><RankIcon tier={lobby.tier} size={18}/><span className="truncate">{avgLabel(lobby.tier)} ({lobby.rr} RR)</span></>:'—'}
           </dd>
         </div>
-        <div className="min-w-0 bg-card px-3 py-2.5" title="Wins divided by wins plus losses; draws excluded">
-          <dt className="text-xs text-muted-foreground">Win rate</dt>
+        <div className="min-w-0 bg-card px-3 py-2.5">
+          <dt className="text-xs text-muted-foreground"><Hint content="Wins divided by wins plus losses; draws excluded">Win rate</Hint></dt>
           <dd className="mt-1 flex items-baseline gap-1.5 font-medium">
             <span>{winRateLabel(t.wr)}</span>
             <span className="text-xs font-normal text-muted-foreground">{t.wins}W {losses}L{draws?` ${draws}D`:''}</span>
           </dd>
         </div>
-        <div className="min-w-0 bg-card px-3 py-2.5" title={`Your net RR change together; ${t.rrCount} of ${t.games} shared matches have a recorded change`}>
-          <dt className="text-xs text-muted-foreground">Total RR</dt>
+        <div className="min-w-0 bg-card px-3 py-2.5">
+          <dt className="text-xs text-muted-foreground"><Hint content={`Your net RR change together; ${t.rrCount} of ${t.games} shared matches have a recorded change`}>Total RR</Hint></dt>
           <dd className={cn('mt-1 font-medium',rrTone(t.rrCount,t.rrTotal))}>{t.rrCount?rrSigned(t.rrTotal,0):'—'}</dd>
         </div>
       </dl>
@@ -175,11 +176,12 @@ export function DuoMatchup({t,base,scales}){
   );
 }
 
-// Header and rows share these columns. The header sits above the scroll box,
-// so the scrollbar starts under it; both reserve the same scrollbar gutter,
-// so the columns stay aligned whether or not the list overflows.
+// Header and rows share these columns. The header sits above the scroll box
+// (shadcn ScrollArea), so the scrollbar starts under it; the scrollbar
+// overlays the rows' right padding, so the columns line up without a gutter.
 const PARTNER_COLS='grid grid-cols-[minmax(0,1fr)_3.5rem_3rem_2.75rem] gap-x-2 px-3';
-const PARTNER_GUTTER='sm:pr-1 sm:[scrollbar-gutter:stable] sm:[scrollbar-color:rgb(255_255_255/.14)_transparent] sm:[scrollbar-width:thin]';
+// Radix wraps the content in a display:table div, which stops names truncating.
+const SCROLL_BLOCK='[&_[data-slot=scroll-area-viewport]>div]:!block';
 
 function PartnerButton({t,selected,onSelect,controls}){
   return (
@@ -222,13 +224,13 @@ export function DuoChemistry({teammates,matches}){
         {/* contain:size keeps the list from setting the row height, so it
             matches the matchup beside it and scrolls inside that height. */}
         <div className="flex min-w-0 flex-col sm:[contain:size]" data-slot="duo-partner-list">
-          <div className={cn(PARTNER_GUTTER,'sm:overflow-y-hidden')} aria-hidden="true">
+          <div aria-hidden="true">
             <div className={cn(PARTNER_COLS,'pb-1.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase')}>
               <span>Teammate</span><span className="text-right">Win rate</span><span className="text-right">RR</span>
-              <span className="text-right" title="Your K/D in the matches you shared with this teammate">K/D</span>
+              <Hint asChild content="Your K/D in the matches you shared with this teammate"><span className="text-right">K/D</span></Hint>
             </div>
           </div>
-          <div className={cn(PARTNER_GUTTER,'sm:min-h-0 sm:flex-1 sm:overflow-y-auto')} data-slot="duo-partner-scroll">
+          <ScrollArea className={cn(SCROLL_BLOCK,'sm:min-h-0 sm:flex-1')} data-slot="duo-partner-scroll">
             <ul id="duo-partners" className="flex flex-col gap-0.5" aria-label="Party teammates">
               {shown.map(t=>(
                 <li key={t.key}>
@@ -237,7 +239,7 @@ export function DuoChemistry({teammates,matches}){
                 </li>
               ))}
             </ul>
-          </div>
+          </ScrollArea>
         </div>
         {!mobile&&selected&&(
           <section id="duo-matchup" aria-live="polite" aria-label={`You and ${selected.name}`} className="min-w-0 border-l pl-6">
@@ -322,7 +324,7 @@ export function DuosPage(){
         </section>
       )}
       {!hasMatches&&s.analysisState!=='error'&&(
-        <EmptyState>{pageEmptyText(s,{ready:s.allMatches.length?'No party teammates found for these filters.':undefined,idle:'Search for a player above to see who they queue with.'})}</EmptyState>
+        <EmptyState loading={s.analysisState==='loading'}>{pageEmptyText(s,{ready:s.allMatches.length?'No party teammates found for these filters.':undefined,idle:'Search for a player above to see who they queue with.'})}</EmptyState>
       )}
     </main>
   );

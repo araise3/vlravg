@@ -50,8 +50,11 @@ test('the recent RR card sums every recorded change while per-game averages use 
 test('act stats keep all eight figures in one grid',async()=>{
   const matches=[{won:true},{won:true},{won:false},{won:null}];
   const html=await renderHtml(PAGE,'ActStatsCard',{s:state([],matches)});
-  const cells=[...html.matchAll(/<dt[^>]*>([^<]*)<\/dt>/g)].map(m=>m[1]);
+  const cells=[...html.matchAll(/<dt[^>]*>([\s\S]*?)<\/dt>/g)].map(m=>text(m[1]).trim());
   assert.deepEqual(cells,['K/D','Avg ACS','Avg PS','Avg ADR','KAST','Playtime','Matches','Win rate']);
+  // Explained figures (ADR, playtime, win rate here) carry a tap/hover hint, not a native title.
+  assert.equal((html.match(/data-slot="hint"/g)||[]).length,3);
+  assert.doesNotMatch(html.slice(html.indexOf('<dl')),/ title="/);
   assert.match(html,/sm:grid-cols-4/);
   const t=text(html);
   assert.match(t,/Matches 4 2W 1L 1D/);

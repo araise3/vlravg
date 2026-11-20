@@ -8,9 +8,11 @@ import {
   globalFilteringFeature,rowPaginationFeature,rowSortingFeature,tableFeatures,useTable,
 } from '@tanstack/react-table';
 import {useIsMobile} from '@/app/hooks.js';
+import {Hint} from '@/app/hint.jsx';
 import {cn} from '@/lib/utils';
 import {Button} from '@/components/ui/button';
 import {Input} from '@/components/ui/input';
+import {NativeSelect,NativeSelectOption} from '@/components/ui/native-select';
 import {Table,TableBody,TableCell,TableHead,TableHeader,TableRow} from '@/components/ui/table';
 
 // Registered once: prerequisites come before the row-model slots they feed.
@@ -68,21 +70,20 @@ export function MobileRowList({id,caption,columns,rows,values,order,best,sort,ch
       <p className="sr-only">{caption}</p>
       <div className={cn('flex items-center gap-2 border-b px-4 pt-2 pb-3',rows.length<3&&'hidden')}>
         <label htmlFor={`${id}-sort`} className="text-xs text-muted-foreground">Sort</label>
-        <select id={`${id}-sort`} value={column==null?'':String(column)}
+        <NativeSelect id={`${id}-sort`} size="sm" value={column==null?'':String(column)}
           onChange={event=>{
             if(event.target.value===''){choose(null);return;}
             const next=Number(event.target.value);
             choose({column:next,direction:next===0?'ascending':'descending'});
           }}
-          className="h-8 min-w-0 flex-1 rounded-md border border-input bg-transparent px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30">
-          <option value="">Default order</option>
-          {columns.map((col,i)=>!col.hidden&&<option key={i} value={i}>{col.label}</option>)}
-        </select>
-        <button type="button" disabled={column==null} onClick={()=>choose({column,direction:direction==='ascending'?'descending':'ascending'})}
-          aria-label={`Sort ${direction==='ascending'?'descending':'ascending'}`}
-          className="grid size-8 shrink-0 place-items-center rounded-md border border-input text-muted-foreground transition-colors outline-none active:bg-accent disabled:opacity-40 focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30">
-          <DirIcon className="size-4" aria-hidden="true"/>
-        </button>
+          className="text-foreground" wrapperClassName="min-w-0 flex-1">
+          <NativeSelectOption value="">Default order</NativeSelectOption>
+          {columns.map((col,i)=>!col.hidden&&<NativeSelectOption key={i} value={i}>{col.label}</NativeSelectOption>)}
+        </NativeSelect>
+        <Button type="button" variant="outline" size="icon-sm" disabled={column==null} onClick={()=>choose({column,direction:direction==='ascending'?'descending':'ascending'})}
+          aria-label={`Sort ${direction==='ascending'?'descending':'ascending'}`} className="text-muted-foreground">
+          <DirIcon aria-hidden="true"/>
+        </Button>
       </div>
       <ul className="divide-y">
         {order.map(index=>{
@@ -222,8 +223,9 @@ export function SortableTable({id,caption,columns,rows,values,maxima=[],classNam
                   const state=column.getIsSorted();
                   const Icon=state==='asc'?ArrowUp:state==='desc'?ArrowDown:ArrowUpDown;
                   return (
-                    <TableHead key={column.id} scope="col" aria-sort={state==='asc'?'ascending':state==='desc'?'descending':'none'} title={col.title}
+                    <TableHead key={column.id} scope="col" aria-sort={state==='asc'?'ascending':state==='desc'?'descending':'none'}
                       className={cn('h-10 px-3',right(index)&&'text-right')}>
+                      <Hint asChild content={col.title}>
                       <Button variant="ghost" size="sm" onClick={column.getToggleSortingHandler()}
                         className={cn('group/sort h-7 gap-1 px-1.5 text-xs font-medium text-muted-foreground hover:bg-transparent hover:text-foreground',
                           right(index)?'-mr-1.5':'-ml-1.5',state&&'text-foreground')}
@@ -232,6 +234,7 @@ export function SortableTable({id,caption,columns,rows,values,maxima=[],classNam
                         {col.label}
                         {!right(index)&&<Icon className={cn('size-3.5 transition-opacity',!state&&'opacity-0 group-hover/sort:opacity-60 group-focus-visible/sort:opacity-60')} aria-hidden="true"/>}
                       </Button>
+                      </Hint>
                     </TableHead>
                   );
                 })}

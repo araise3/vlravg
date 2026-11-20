@@ -7,10 +7,13 @@ import {useEngine,useSignal} from '@/app/hooks.js';
 import {PageLink,RankIcon,Sep} from '@/app/shared.jsx';
 import {ActPicker,StatusBar} from '@/app/SearchHeader.jsx';
 import {cn} from '@/lib/utils';
+import {Avatar,AvatarFallback} from '@/components/ui/avatar';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
 import {InputGroup,InputGroupAddon,InputGroupButton,InputGroupInput} from '@/components/ui/input-group';
 import {Sheet,SheetContent,SheetDescription,SheetHeader,SheetTitle} from '@/components/ui/sheet';
+import {Item,ItemActions,ItemContent,ItemDescription,ItemMedia,ItemTitle} from '@/components/ui/item';
+import {Progress} from '@/components/ui/progress';
 import {Spinner} from '@/components/ui/spinner';
 
 // The phone layout (below Tailwind's 640px `sm` breakpoint). Desktop keeps the
@@ -107,19 +110,24 @@ export function MobileSearchSheet({open,onOpenChange}){
           <ul aria-label="Pro player library" className="flex flex-col">
             {shown.map(row=>(
               <li key={row.puuid}>
-                <button type="button" onClick={()=>{submitted.current=false;onOpenChange(false);analyzeProAccount(row);}}
-                  aria-label={`${row.handle}, ${row.puuid}`}
-                  className="flex w-full min-w-0 items-center gap-3 rounded-lg px-2 py-2.5 text-left transition-colors active:bg-accent hover:bg-accent/60">
-                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-sm font-semibold uppercase text-muted-foreground" aria-hidden="true">{row.handle.slice(0,1)}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span className="truncate font-medium">{row.handle}</span>
-                      {row.accountCount>1&&<Badge variant="secondary" className="px-1.5 py-0 text-[10px]">{row.accountIndex===0?'Main':`Alt ${row.accountIndex}`}</Badge>}
-                    </span>
-                    <span className="block truncate font-mono text-[11px] text-muted-foreground">{row.puuid}</span>
-                  </span>
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground/60" aria-hidden="true"/>
-                </button>
+                <Item asChild size="sm" className="w-full min-w-0 flex-nowrap gap-3 rounded-lg px-2 py-2.5 text-left text-base hover:bg-accent/60 active:bg-accent">
+                  <button type="button" onClick={()=>{submitted.current=false;onOpenChange(false);analyzeProAccount(row);}}
+                    aria-label={`${row.handle}, ${row.puuid}`}>
+                    <ItemMedia>
+                      <Avatar className="size-9" aria-hidden="true">
+                        <AvatarFallback className="text-sm font-semibold text-muted-foreground uppercase">{row.handle.slice(0,1)}</AvatarFallback>
+                      </Avatar>
+                    </ItemMedia>
+                    <ItemContent className="min-w-0 gap-0">
+                      <ItemTitle className="w-full min-w-0 text-base">
+                        <span className="truncate">{row.handle}</span>
+                        {row.accountCount>1&&<Badge variant="secondary" className="px-1.5 py-0 text-[10px]">{row.accountIndex===0?'Main':`Alt ${row.accountIndex}`}</Badge>}
+                      </ItemTitle>
+                      <ItemDescription className="line-clamp-1 font-mono text-[11px] break-all">{row.puuid}</ItemDescription>
+                    </ItemContent>
+                    <ItemActions><ChevronRight className="size-4 text-muted-foreground/60" aria-hidden="true"/></ItemActions>
+                  </button>
+                </Item>
               </li>
             ))}
           </ul>
@@ -170,19 +178,17 @@ export function MobileTopBar(){
         {s.hasAnalysis&&<div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <ActPicker className="h-8 max-w-56 shrink-0 px-3 text-xs"/>
           {info?.showTracker&&info.trackerHref&&(
-            <a href={info.trackerHref} target="_blank" rel="noopener noreferrer" aria-label={`Open ${info.riotId} on Tracker.gg`}
-              className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border bg-background/60 px-3 text-muted-foreground shadow-xs transition-colors outline-none active:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30">
-              <img src="/assets/tracker-gg.svg" alt="" className="h-3 w-[67px]"/>
-              <ExternalLink className="size-3" aria-hidden="true"/>
-            </a>
+            <Button variant="outline" size="sm" asChild className="shrink-0 gap-1.5 bg-background/60 px-3 text-muted-foreground has-[>svg]:px-3 active:bg-accent">
+              <a href={info.trackerHref} target="_blank" rel="noopener noreferrer" aria-label={`Open ${info.riotId} on Tracker.gg`}>
+                <img src="/assets/tracker-gg.svg" alt="" className="h-3 w-[67px]"/>
+                <ExternalLink className="size-3" aria-hidden="true"/>
+              </a>
+            </Button>
           )}
         </div>}
         {s.statusSpin&&(
-          <div className="absolute inset-x-0 bottom-0 h-0.5 overflow-hidden" aria-hidden="true">
-            {s.progressValue==null
-              ?<div className="h-full w-[35%] bg-rank" style={{animation:'search-progress 1.5s ease-in-out infinite'}}/>
-              :<div className="h-full bg-rank transition-[width] duration-300" style={{width:`${Math.min(s.progressValue||0,100)}%`}}/>}
-          </div>
+          <Progress value={s.progressValue==null?null:Math.min(s.progressValue||0,100)} aria-hidden="true"
+            className="absolute inset-x-0 bottom-0 h-0.5 rounded-none bg-transparent" indicatorClassName="bg-rank"/>
         )}
       </header>
       {s.statusText&&<div className="pt-3"><StatusBar bar={false}/></div>}
@@ -235,15 +241,16 @@ export function MobileTabBar(){
               const active=page===target;
               return (
                 <li key={target}>
-                  <PageLink page={target} aria-current={active?'page':undefined} onClickCapture={()=>setMoreOpen(false)}
-                    className={cn('flex items-center gap-3 rounded-xl px-3 py-3 transition-colors outline-none focus-visible:bg-accent active:bg-accent',active&&'bg-accent')}>
-                    <span className={cn('grid size-10 shrink-0 place-items-center rounded-xl border bg-card',active&&'border-rank/50 text-rank')}><Icon className="size-[18px]" aria-hidden="true"/></span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-medium">{label}</span>
-                      <span className="block truncate text-xs text-muted-foreground">{note}</span>
-                    </span>
-                    <ChevronRight className="size-4 shrink-0 text-muted-foreground/60" aria-hidden="true"/>
-                  </PageLink>
+                  <Item asChild size="sm" className={cn('flex-nowrap gap-3 rounded-xl px-3 py-3 text-base focus-visible:bg-accent active:bg-accent',active&&'bg-accent')}>
+                    <PageLink page={target} aria-current={active?'page':undefined} onClickCapture={()=>setMoreOpen(false)}>
+                      <ItemMedia variant="icon" className={cn('size-10 rounded-xl bg-card',active&&'border-rank/50 text-rank')}><Icon className="size-[18px]" aria-hidden="true"/></ItemMedia>
+                      <ItemContent className="min-w-0 gap-0">
+                        <ItemTitle className="text-base">{label}</ItemTitle>
+                        <ItemDescription className="line-clamp-1 text-xs">{note}</ItemDescription>
+                      </ItemContent>
+                      <ItemActions><ChevronRight className="size-4 text-muted-foreground/60" aria-hidden="true"/></ItemActions>
+                    </PageLink>
+                  </Item>
                 </li>
               );
             })}

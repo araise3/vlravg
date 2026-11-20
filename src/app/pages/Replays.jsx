@@ -5,7 +5,7 @@ import {useEngine,useNow} from '@/app/hooks.js';
 import {EmptyState,PageHeading} from '@/app/shared.jsx';
 import {cn} from '@/lib/utils';
 import {Button} from '@/components/ui/button';
-import {Card} from '@/components/ui/card';
+import {Item,ItemActions,ItemContent,ItemDescription,ItemTitle} from '@/components/ui/item';
 
 const TONES={parsed:'text-positive',busy:'text-sky-300',bad:'text-negative'};
 const STEP_DOT={done:'bg-win',active:'bg-sky-400 animate-pulse',failed:'bg-loss',skipped:'bg-muted-foreground',pending:'bg-muted'};
@@ -44,35 +44,35 @@ function ReplayRow({row,art}){
   const inputRef=useRef(null),turnstileRef=useRef(null);
   return (
     <li>
-      <Card className="relative gap-3 overflow-hidden p-4">
+      {/* An outline Item: the match on the left, status and actions on the
+          right, then full-width rows for the error, the steps and Turnstile. */}
+      <Item variant="outline" className="relative items-start gap-3 overflow-hidden rounded-xl bg-card p-4 text-base shadow-sm">
         {art&&<img src={art} alt="" loading="lazy" decoding="async" className="absolute inset-y-0 right-0 h-full w-1/2 object-cover opacity-20 [mask-image:linear-gradient(to_left,black,transparent)]" onError={event=>event.currentTarget.remove()}/>}
-        <div className="relative flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-baseline gap-2">
-              <strong>{row.map}</strong>
-              <span className={cn('font-semibold tabular',row.result==='win'?'text-positive':row.result==='loss'?'text-negative':'text-draw')}>{row.score}</span>
-              <span className="text-sm text-muted-foreground">{row.date}</span>
-            </div>
-            <span className="block truncate font-mono text-xs text-muted-foreground">{row.matchId}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span role="status" className={cn('text-sm font-medium',TONES[view.tone]||'text-muted-foreground')}>{view.label}</span>
-            {view.foldable&&<Button variant="ghost" size="sm" aria-expanded={!view.folded} onClick={()=>toggleReplaySteps(row.matchId)}>{view.folded?'Details':'Hide details'}</Button>}
-            {view.canUpload&&(
-              <Button variant="outline" size="sm" aria-label={`Upload replay for ${row.map} ${row.date}`} onClick={()=>inputRef.current?.click()}>
-                <Upload aria-hidden="true"/>Upload .vrf
-              </Button>
-            )}
-            <input ref={inputRef} type="file" accept=".vrf" hidden onChange={event=>{
-              const file=event.target.files?.[0];event.target.value='';
-              if(file)uploadReplay(row.matchId,file,turnstileRef.current);
-            }}/>
-          </div>
-        </div>
-        {view.detail&&<p className="relative text-sm text-negative">{view.detail}</p>}
-        {view.steps.length>0&&!view.folded&&<div className="relative"><ReplaySteps steps={view.steps}/></div>}
-        <div ref={turnstileRef}/>
-      </Card>
+        <ItemContent className="relative min-w-0 gap-0">
+          <ItemTitle className="flex-wrap items-baseline text-base font-normal">
+            <strong>{row.map}</strong>
+            <span className={cn('font-semibold tabular',row.result==='win'?'text-positive':row.result==='loss'?'text-negative':'text-draw')}>{row.score}</span>
+            <span className="text-sm text-muted-foreground">{row.date}</span>
+          </ItemTitle>
+          <ItemDescription className="line-clamp-1 font-mono text-xs break-all">{row.matchId}</ItemDescription>
+        </ItemContent>
+        <ItemActions className="relative flex-wrap">
+          <span role="status" className={cn('text-sm font-medium',TONES[view.tone]||'text-muted-foreground')}>{view.label}</span>
+          {view.foldable&&<Button variant="ghost" size="sm" aria-expanded={!view.folded} onClick={()=>toggleReplaySteps(row.matchId)}>{view.folded?'Details':'Hide details'}</Button>}
+          {view.canUpload&&(
+            <Button variant="outline" size="sm" aria-label={`Upload replay for ${row.map} ${row.date}`} onClick={()=>inputRef.current?.click()}>
+              <Upload aria-hidden="true"/>Upload .vrf
+            </Button>
+          )}
+          <input ref={inputRef} type="file" accept=".vrf" hidden onChange={event=>{
+            const file=event.target.files?.[0];event.target.value='';
+            if(file)uploadReplay(row.matchId,file,turnstileRef.current);
+          }}/>
+        </ItemActions>
+        {view.detail&&<p className="relative basis-full text-sm text-negative">{view.detail}</p>}
+        {view.steps.length>0&&!view.folded&&<div className="relative basis-full"><ReplaySteps steps={view.steps}/></div>}
+        <div ref={turnstileRef} className="basis-full empty:hidden"/>
+      </Item>
     </li>
   );
 }
@@ -98,7 +98,7 @@ export function ReplaysPage({active}){
           <p className="text-xs text-muted-foreground">Replays are saved in <code className="rounded bg-muted px-1 py-0.5">%LOCALAPPDATA%\VALORANT\Saved\Demos</code> and named by match ID. A file is accepted only for the match it was recorded in, and the parsed replay must contain every player HenrikDev lists for that match. Uploads are parsed offline in a sandbox and kept apart from HenrikDev match data.</p>
         </>
       ):s.analysisState!=='error'&&(
-        <EmptyState>{s.analysisState==='loading'?'Loading this player’s matches…':ready?'No matches found for this season. Try another act.':'Search for a player above to upload replays for their matches.'}</EmptyState>
+        <EmptyState loading={s.analysisState==='loading'}>{s.analysisState==='loading'?'Loading this player’s matches…':ready?'No matches found for this season. Try another act.':'Search for a player above to upload replays for their matches.'}</EmptyState>
       )}
     </main>
   );
