@@ -1,6 +1,6 @@
 import {ChevronDown} from 'lucide-react';
 import {RANK_ICONS} from '@/engine/rank-icons.mjs';
-import {avgLabel,navigateToPage,pageHref,PARTY_LABELS,tierRR,toggleIncludeReset} from '@/engine/core.mjs';
+import {avgLabel,lobbyRankText,lobbyRR,navigateToPage,pageHref,PARTY_LABELS,tierRR,toggleIncludeReset} from '@/engine/core.mjs';
 import {useEngine,useIsMobile} from '@/app/hooks.js';
 import {Card,CardContent} from '@/components/ui/card';
 import {cn} from '@/lib/utils';
@@ -14,14 +14,14 @@ import {Separator} from '@/components/ui/separator';
 import {Skeleton} from '@/components/ui/skeleton';
 
 // Headline icons (64px+) use the 256px largeIcon PNGs; small badges stay embedded.
-export function RankIcon({tier,size=16,className}){
+export function RankIcon({tier,size=16,className,style}){
   const id=typeof tier==='number'?tier:typeof tier==='string'&&/^\d+$/.test(tier)?Number(tier):null;
   const iconTier=id!=null&&id>=0&&id<=2?0:tier;
   // The embedded icons are small and not all square (Immortal 3 is 40×37), so
   // larger sizes use the 256px PNG and every size keeps its aspect ratio.
   const src=size>=32&&RANK_ICONS[iconTier]?`/assets/ranks/${iconTier}.png`:RANK_ICONS[iconTier];
   if(!src)return null;
-  return <img src={src} width={size} height={size} alt="" className={cn('inline-block shrink-0 object-contain align-middle',className)} style={{width:size,height:size}}/>;
+  return <img src={src} width={size} height={size} alt="" className={cn('inline-block shrink-0 object-contain align-middle',className)} style={{width:size,height:size,...style}}/>;
 }
 
 export function PartyIcon({size}){
@@ -60,10 +60,10 @@ export function toneClass(value,neutral=1){
 
 export function LobbyValue({sum,count}){
   if(!count)return '—';
-  const lobby=tierRR(sum/count);
+  const lobby=tierRR(sum/count),rr=lobbyRR(lobby);
   return (
-    <span className="flex items-center gap-2 whitespace-nowrap" title={`${avgLabel(lobby.tier)}, ${lobby.rr} RR`}>
-      <RankIcon tier={lobby.tier} size={22}/>{avgLabel(lobby.tier)} <span className="text-muted-foreground">({lobby.rr} RR)</span>
+    <span className="flex items-center gap-2 whitespace-nowrap" title={lobbyRankText(sum/count)}>
+      <RankIcon tier={lobby.tier} size={22}/>{avgLabel(lobby.tier)}{rr!=null&&<> <span className="text-muted-foreground">({rr} RR)</span></>}
     </span>
   );
 }

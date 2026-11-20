@@ -1,6 +1,6 @@
 import {useState} from 'react';
 import {
-  avgLabel,computeWintradeSignals,decidedWinRate,playerRouteUrl,rName,rrSigned,tierRR,winRateLabel,winRateTone,
+  avgLabel,computeWintradeSignals,lobbyRankText,decidedWinRate,playerRouteUrl,rName,rrSigned,tierRR,winRateLabel,winRateTone,
 } from '@/engine/core.mjs';
 import {useEngine,useIsMobile} from '@/app/hooks.js';
 import {EmptyState,Hint,LobbyValue,PageHeading,PartyIcon,PlacementToggle,PlayerLink,RankIcon,ShowAllButton,SortableTable,TableSection,pageEmptyText,toneClass} from '@/app/shared.jsx';
@@ -148,7 +148,7 @@ export function DuoMatchup({t,base,scales}){
         <div className="min-w-0 bg-card px-3 py-2.5 max-sm:col-span-2">
           <dt className="text-xs text-muted-foreground">Avg lobby</dt>
           <dd className="mt-1 flex min-w-0 items-center gap-1.5 font-medium">
-            {lobby?<><RankIcon tier={lobby.tier} size={18}/><span className="truncate">{avgLabel(lobby.tier)} ({lobby.rr} RR)</span></>:'—'}
+            {lobby?<><RankIcon tier={lobby.tier} size={18}/><span className="truncate">{lobbyRankText(t.lobby)}</span></>:'—'}
           </dd>
         </div>
         <div className="min-w-0 bg-card px-3 py-2.5">

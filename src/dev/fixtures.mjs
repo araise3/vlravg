@@ -7,7 +7,10 @@ import {loadFixtureAnalysis} from '@/engine/core.mjs';
 
 export function loadFixture(stressCase='demo'){
   const climb=stressCase==='climb';
-  const stressWorst=stressCase!=='demo'&&!climb;
+  const demo=stressCase==='demo';
+  const stressWorst=!demo&&!climb;
+  // demo: lobbies spread from Platinum 3 to Ascendant 1 around the player's Diamond 1.
+  const demoLobbyTier=(i,j)=>Math.max(3,18+[0,-1,1,0,2,-2,1,0,-1,3,0,1][i%12]+[0,1,-1,0,1,-1,0,2,-2,0][j]);
   const stressNames=stressWorst?['WWWWWWWWWWWWWWWW','#unused','Đặng Ngọc Hân','王秀英','نور الهدى','Priya','Jax','Joy','Seán','Mia']:['Player','Duo','Alex','Sam','Joy','Enemy','Sky','Lee','Mia','Kai'];
   stressNames[1]=stressWorst?'KonstantinWWWWW':'Duo';
   if(stressCase==='malformed'){stressNames[5]='👩🏽‍💻 Priya';stressNames[6]='J';stressNames[7]='Jo';stressNames[9]='A&B <3';}
@@ -28,8 +31,9 @@ export function loadFixture(stressCase='demo'){
       name:stressWorst&&i%5===3&&j===9?undefined:name,
       tag:stressWorst&&i%5===3&&j===9?undefined:tag,
       puuid:j===0?stressPuuid:'00000000-0000-4000-8000-'+String(j+1).padStart(12,'0'),
-      team_id:j<5?'Red':'Blue',party_id:j<(stressWorst?(i%5===4?5:i%5===0?3:i%5===2?1:2):2)?'fixture-party':'solo-'+j,
-      tier:{id:stressWorst&&i%5===3?0:stressWorst?(j===0?27:26):18,patched:stressWorst&&i%5===3?'Unranked':stressWorst?(j===0?'Radiant':'Immortal 3'):'Diamond 1'},
+      team_id:j<5?'Red':'Blue',party_id:j<(stressWorst?(i%5===4?5:i%5===0?3:i%5===2?1:2):demo?[2,1,2,3][i%4]:2)?'fixture-party':'solo-'+j,
+      tier:stressWorst&&i%5===3?{id:0,patched:'Unranked'}:stressWorst?{id:j===0?27:26,patched:j===0?'Radiant':'Immortal 3'}
+        :{id:demo&&j?demoLobbyTier(i,j):18,patched:demo&&j?undefined:'Diamond 1'},
       stats:stressWorst&&i%5===3&&j===0?{}:{kills:j===0&&overtime?72:j===0&&stressWorst&&i%5===1?0:18-j,deaths:j===0&&stressWorst&&i%5===1?0:12+j,assists:8,score:(j===0&&overtime?450:stressWorst&&i%5===2&&j===5?480:stressWorst&&i%5===4&&j===1?480:240-j*12)*rounds,rounds_played:rounds,damage:{dealt:(j===0&&overtime?300:160)*rounds},shots:{head:30,body:60,leg:10}},
       performance:{score:stressWorst&&i%5===3?null:230-j*10},
     }));

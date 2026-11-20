@@ -15,22 +15,57 @@ const state=(parties,matches=[])=>({
   statMatches:parties.flatMap(([size,avgRank,count])=>Array.from({length:count},()=>({partySize:size,avgRank}))),
 });
 
-test('the lobby rank card has the teammates card header and lists the average lobby rank for every party size played',async()=>{
+test('the lobby rank card leads with the rank-coloured average, then the spread and a table row per party size played',async()=>{
   const single=await renderHtml(PAGE,'KpiCards',{s:state([[2,18.5,12]])});
   const duo=tierRR(18.5);
-  assert.ok(text(single).includes(`Avg lobby rank Lobby Rank Diamond 1 (50 RR) Duo 12 lobbies ${avgLabel(duo.tier)} (${duo.rr} RR) ${avgLabelShort(duo.tier)} (${duo.rr} RR) 12 lobbies `),text(single));
+  assert.ok(text(single).includes(`Avg lobby rank Lobby Rank Diamond 1 50 RR Across 12 rated lobbies By party size Party Lobby rank Lobbies Duo 12 lobbies ${avgLabel(duo.tier)} ${avgLabelShort(duo.tier)} 12 `),text(single));
   const lobbyCard=single.slice(0,single.indexOf('overview-duos-title'));
   assert.doesNotMatch(lobbyCard,/data-slot="badge"/);
   // Same header shape as Top teammates: an h2 title and a link to the full page.
   assert.match(lobbyCard,/<h2 id="overview-lobby-title">Avg lobby rank<\/h2>/);
   assert.match(lobbyCard,/data-slot="card-action"[\s\S]*Lobby Rank/);
-  // The link is centred on the title row, not pinned to the top of a two-row span.
   assert.match(lobbyCard,/data-slot="card-header" class="[^"]*has-data-\[slot=card-action\]:items-center/);
-  assert.match(lobbyCard,/data-slot="card-action" class="col-start-2 row-start-1 self-center justify-self-end"/);
+  // The hero: the 256px badge, the division in its rank colour (Diamond #c07de0) and the RR into it as a bar.
+  assert.match(lobbyCard,/src="\/assets\/ranks\/18\.png"/);
+  assert.match(lobbyCard,/style="color:#c07de0"[^>]*>Diamond 1</);
+  assert.match(lobbyCard,/data-slot="progress"[^>]*aria-label="50 of 100 RR into Diamond 1"|aria-label="50 of 100 RR into Diamond 1"[^>]*data-slot="progress"/);
+  assert.match(lobbyCard,/--lobby-rank:#c07de0/);
+  assert.match(lobbyCard,/rgb\(192 125 224 \/ \.14\)/);
+  // A shadcn Separator splits the hero from the breakdowns.
+  assert.match(lobbyCard,/data-slot="separator"/);
+  // One division seen: no spread chart.
+  assert.doesNotMatch(lobbyCard,/data-slot="lobby-spread"/);
   const mixed=text(await renderHtml(PAGE,'KpiCards',{s:state([[1,14.5,3],[2,18.5,9]])}));
-  const row=(label,v,n)=>{const r=tierRR(v);return `${label} ${n} lobbies ${avgLabel(r.tier)} (${r.rr} RR) ${avgLabelShort(r.tier)} (${r.rr} RR) ${n} lobbies`;};
+  const row=(label,v,n)=>{const r=tierRR(v);return `${label} ${n} lobbies ${avgLabel(r.tier)} ${avgLabelShort(r.tier)} ${n}`;};
   assert.ok(mixed.includes(row('Solo',14.5,3)+' '+row('Duo',18.5,9)),mixed);
+  // No RR column: the RR into an averaged division is interpolated and told nothing per party size (removed on request).
+  const table=single.slice(single.indexOf('data-slot="lobby-party-table"'),single.indexOf('overview-duos-title'));
+  assert.doesNotMatch(table,/>RR</);
+  assert.doesNotMatch(table,/title="[^"]* RR /);
   assert.equal(avgLabel(18),'Diamond 1');
+});
+
+test('the lobby spread has one bar per division from the lowest lobby to the highest, gaps included',async()=>{
+  const {lobbySpread}=await load(PAGE);
+  assert.deepEqual(lobbySpread([{avgRank:15.2},{avgRank:17.9},{avgRank:18.4},{avgRank:18}]),
+    [{tier:15,count:1},{tier:16,count:0},{tier:17,count:0},{tier:18,count:3}]);
+  assert.deepEqual(lobbySpread([]),[]);
+  const avg=(15*2+17*6+18*4)/12;
+  const html=await renderHtml(PAGE,'LobbyRankCard',{s:{...state([[1,15,2],[1,17,6],[2,18,4]]),overviewStats:{overall:avg,overallRR:tierRR(avg)}}});
+  const spread=html.slice(html.indexOf('data-slot="lobby-spread"'));
+  assert.match(spread,/aria-label="Rated lobbies by rank: Platinum 1 2, Platinum 3 6, Diamond 1 4"/);
+  assert.match(text(spread),/Lobby spread Plat 1 – Dia 1/);
+  // The average's division is lit, the others dimmed; the empty division is a muted stub.
+  const bars=[...spread.matchAll(/title="([^"]+)"><div class="([^"]*)" style="([^"]*)"/g)].map(m=>({title:m[1],lit:/opacity:1(;|$)/.test(m[3]),empty:/bg-muted/.test(m[2])}));
+  assert.deepEqual(bars.map(b=>b.title),['Platinum 1: 2 lobbies','Platinum 2: 0 lobbies','Platinum 3: 6 lobbies','Diamond 1: 4 lobbies']);
+  assert.deepEqual(bars.map(b=>b.lit),bars.map(b=>b.title.startsWith(avgLabel(tierRR(avg).tier)+':')));
+  assert.deepEqual(bars.map(b=>b.lit),[false,false,true,false]);
+  assert.deepEqual(bars.map(b=>b.empty),[false,true,false,false]);
+});
+
+test('without rated lobbies the lobby rank card says so',async()=>{
+  const html=text(await renderHtml(PAGE,'LobbyRankCard',{s:{overviewStats:{overallRR:null,overall:null},statMatches:[{partySize:1,avgRank:null}]}}));
+  assert.match(html,/Avg lobby rank Lobby Rank No rated lobbies yet $/);
 });
 
 test('the recent RR card sums every recorded change while per-game averages use eligible matches only',async()=>{

@@ -2,7 +2,7 @@ import {Fragment,useEffect,useState} from 'react';
 import {ChevronDown,Shield,Trophy} from 'lucide-react';
 import {
   avgLabel,avgLabelShort,dayHeaderLabel,decidedWinRate,hexToRgb,loadMatchMapMetadata,loadMoreMatches,matchAward,
-  matchCardPlayerRank,playerRouteUrl,rClass,rColor,rrSigned,tierRR,winRateLabel,
+  lobbyRankText,lobbyRR,matchCardPlayerRank,playerRouteUrl,rClass,rColor,rrSigned,tierRR,winRateLabel,
 } from '@/engine/core.mjs';
 import {useEngine,useIsMobile} from '@/app/hooks.js';
 import {EmptyState,Hint,PageHeading,PlacementToggle,RankIcon,Sep} from '@/app/shared.jsx';
@@ -165,7 +165,7 @@ export function MobileMatchCard({m,s,maps,open,onOpenChange}){
               <span className="shrink-0"><span className="font-semibold text-foreground">{myStats?<>{myStats.kills}<span className="text-zinc-500">/</span><span className="text-zinc-400">{myStats.deaths}</span><span className="text-zinc-500">/</span>{myStats.assists}</>:'—'}</span></span>
               <span className="shrink-0"><span className="font-semibold text-foreground">{acs}</span> ACS</span>
               <span className="shrink-0"><span className="font-semibold text-foreground">{performanceScore}</span> PS</span>
-              <Hint asChild content={rank?'Average lobby: '+avgLabel(rank.tier)+', '+rank.rr+' RR':'Lobby rank unavailable'}>
+              <Hint asChild content={rank?'Average lobby: '+lobbyRankText(avgRank):'Lobby rank unavailable'}>
                 <span className={cn('min-w-0 truncate font-medium',rank&&RANK_TEXT[rClass(rank.tier)])}>
                   {rank?avgLabelShort(rank.tier):m.lowRated?'Unrated':'—'}
                 </span>
@@ -198,7 +198,7 @@ function DesktopMatchCard({m,s,maps,open,onOpenChange}){
   const shielded=!!myDerankProtected&&myRR<0;
   const rank=avgRank!=null?tierRR(avgRank):null;
   const rankLabel=rank?avgLabelShort(rank.tier):m.lowRated?'Unrated':'—';
-  const rankTitle=m.lowRated?'Only '+m.ratedCount+' players were rated; excluded from stats':rank?'Average lobby: '+avgLabel(rank.tier)+', '+rank.rr+' RR':'Lobby rank unavailable';
+  const rankTitle=m.lowRated?'Only '+m.ratedCount+' players were rated; excluded from stats':rank?'Average lobby: '+lobbyRankText(avgRank):'Lobby rank unavailable';
   const kda=myStats?[myStats.kills,myStats.deaths,myStats.assists].join(' / '):'—';
   const acs=myStats?.acs!=null?Math.round(myStats.acs):'—';
   const performanceScore=Number.isFinite(myStats?.performanceScore)?Math.round(myStats.performanceScore):'—';
@@ -249,7 +249,7 @@ function DesktopMatchCard({m,s,maps,open,onOpenChange}){
               <Stat label="K / D / A">{myStats?<>{myStats.kills}<span className="mc-kda-separator">/</span><span className="mc-deaths">{myStats.deaths}</span><span className="mc-kda-separator">/</span>{myStats.assists}</>:'—'}</Stat>
               <Stat label="ACS">{acs}</Stat>
               <Stat label="PS" title={myStats?.performanceScore==null?'Performance Score is not provided in this match’s API data':'Performance Score'}>{performanceScore}</Stat>
-              <Stat label="Avg lobby" title={rankTitle}>{rankLabel}{rank?` (${rank.rr} RR)`:''}</Stat>
+              <Stat label="Avg lobby" title={rankTitle}>{rankLabel}{lobbyRR(rank)!=null?` (${rank.rr} RR)`:''}</Stat>
               <Stat label="RR change" className="mc-rr-stat">
                 <Hint asChild content={myRR==null?'No RR data for this match':shielded?'Rank Shield protected your displayed rank; this recorded RR loss still applied':'Recorded RR change for this match'}>
                   <span className={cn('match-rr-change',myRR!=null&&(myRR>=0?'gain':'loss'),shielded&&'shielded')}>
@@ -272,8 +272,8 @@ function DesktopMatchCard({m,s,maps,open,onOpenChange}){
 function DayHeader({ms,stat,first}){
   let avgValue='—',avgClass='',rrValue='—',rrClass='';
   if(stat&&stat.count>0){
-    const {tier,rr}=tierRR(stat.sum/stat.count);
-    avgValue=`${avgLabelShort(tier)} (${rr} RR)`;avgClass=RANK_TEXT[rClass(tier)];
+    const {tier}=tierRR(stat.sum/stat.count);
+    avgValue=lobbyRankText(stat.sum/stat.count,true);avgClass=RANK_TEXT[rClass(tier)];
   }
   if(stat&&stat.rrCount>0){rrValue=`${stat.rrTotal>=0?'+':''}${stat.rrTotal} RR`;rrClass=stat.rrTotal>=0?'text-positive':'text-negative';}
   const matchCount=stat?.matches??0;

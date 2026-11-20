@@ -93,7 +93,7 @@ Domain rules worth knowing:
 
 - **RR eligibility** (`isRREligible`): RR present, tier ≥3, not a placement (reported `is_placement_match` first, act-opening heuristic second), party size <5. Payout is Riot's `last_change`; reported bonus/penalty/forgiveness fields are shown verbatim, never re-added ([docs/rr-update-details.md](docs/rr-update-details.md)). Win rate everywhere is wins / (wins + losses).
 - **Overview RR** uses up to the last 20 matches (`overviewRecentMatches`). The RR page has all-time/50/30/20 ranges.
-- **Lobby rank** needs `MIN_RATED=7` rated players. Immortal+ RR uses a continuous axis rooted at 2100.
+- **Lobby rank** needs `MIN_RATED=7` rated players. Immortal+ RR uses a continuous axis rooted at 2100. Lobby averages come from tier ids only, so their "RR" is the average's decimal part; it is shown only below Immortal 1 (`lobbyRR`/`lobbyRankText`) and hidden everywhere from Immortal 1 up, where there are no 100-RR divisions.
 - **Rank Shield**: `was_derank_protected` gives a blue shield icon on the match card's RR change (`MatchCard` in `src/app/pages/Matches.jsx`). There is no aggregate note.
 - **MVP**: shown only for the searched player on their collapsed match card, as a quiet accolade (trophy plus "Match MVP"/"Team MVP" text, no badge). Louder treatments were tried and rejected.
 - **Clutch detection** (`computeRealDeaths`/`detectClutch`/`classifyClutchOutcome`): its timing constants (`POST_ROUND_PHASE_MS`, `CLOVE_REVIVE_*_BOUNDARY_MS`, `MAX_CLOVE_SELF_REVIVE_WINDOW_MS`, …) are empirically derived and documented inline. Don't change them without equivalent evidence.
