@@ -141,6 +141,30 @@ test('RR breakdown remains visible for a loaded act containing only games withou
   assert.doesNotMatch(page,/Search for a player above/);
 });
 
+test('the RR summary card sits above the trend chart as tiles with what each figure is built from',async()=>{
+  const m=(rr,won,extra={})=>({myRR:rr,won,myTierId:15,partySize:1,...extra});
+  const matches=[m(20,true),m(18,true),m(-15,false),m(-21,false),m(-17,false),m(0,undefined),m(30,true,{partySize:5})];
+  const html=await renderHtml('/src/app/pages/RR.jsx','RRSummary',{matches,net:15,netCount:7});
+  const tiles=[...html.matchAll(/<dt[^>]*>([\s\S]*?)<\/dt>/g)].map(t=>t[1].replace(/<[^>]+>/g,''));
+  assert.deepEqual(tiles,['Net RR','RR / Win','RR / Loss','W–L–D','Win rate']);
+  const text=html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+  // The 5-stack win counts toward Net RR only; averages and the record use eligible matches.
+  assert.match(text,/Net RR \+15 across 7 matches RR \/ Win \+19\.0 2 wins RR \/ Loss −17\.7 3 losses W–L–D 2 – 3 – 1 Win rate 40.0% /);
+  assert.match(html,/max-sm:col-span-2/);
+  // Draws always show, yellow, even at zero.
+  assert.match(html,/<span class="text-draw">1<\/span>/);
+  const noDraws=await renderHtml('/src/app/pages/RR.jsx','RRSummary',{matches:matches.filter(x=>x.won!==undefined),net:15,netCount:6});
+  assert.match(noDraws.replace(/<[^>]+>/g,' ').replace(/\s+/g,' '),/W–L–D 2 – 3 – 0 /);
+  assert.match(noDraws,/<span class="text-draw">0<\/span>/);
+  assert.match(html,/aria-label="2 wins, 3 losses, 1 draw" style="[^"]*"|role="img" aria-label="2 wins, 3 losses, 1 draw"/);
+  assert.match(html,/data-slot="progress"[^>]*aria-label="40\.0% win rate"|aria-label="40\.0% win rate"[^>]*data-slot="progress"/);
+  // The range tabs head the summary card at the top of the page; the trend card follows.
+  const page=readFileSync(new URL('../src/app/pages/RR.jsx',import.meta.url),'utf8');
+  const body=page.slice(page.indexOf('export function RRPage('));
+  assert.ok(body.indexOf('id="rr-summary-title"')<body.indexOf('<Tabs value={range}'));
+  assert.ok(body.indexOf('<Tabs value={range}')<body.indexOf('id="rr-trend-title"'));
+});
+
 test('distribution renders counts with accessible exact scores independently of RR',async()=>{
   const chart=matches=>renderHtml('/src/app/pages/RR.jsx','ScoreMarginChart',{matches});
   const svg=await chart([{myR:13,opR:11},{myR:14,opR:12},{myR:11,opR:13},{myR:13,opR:13}]);

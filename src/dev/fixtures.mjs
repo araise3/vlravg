@@ -19,8 +19,14 @@ export function loadFixture(stressCase='demo'){
   const rr={change:{},pre:{},post:{},preTier:{},postTier:{},protected:{},details:{}};
   // climb: index 0 is the newest match; the oldest starts at Immortal 1, 0 RR.
   const climbCount=106,climbWon=i=>(i*7)%3!==0||i%11===0;
+  // Payouts drift like a real climb: gains shrink from about +26 to +16 and
+  // losses grow from about −12 to −20 (oldest to newest), with a little jitter.
+  const climbDelta=i=>{
+    const p=(climbCount-1-i)/(climbCount-1),jitter=(i*37)%7-3;
+    return climbWon(i)?Math.round(26-10*p+jitter):-Math.round(12+8*p+jitter);
+  };
   const climbPre=[];
-  for(let i=climbCount-1,elo=2100;i>=0;i--){climbPre[i]=elo;elo+=climbWon(i)?21:-16;}
+  for(let i=climbCount-1,elo=2100;i>=0;i--){climbPre[i]=elo;elo+=climbDelta(i);}
   const climbTier=elo=>elo<2190?24:elo<2310?25:elo<2560?26:27;
   function stressRawMatch(i){
     const overtime=stressWorst&&stressCase!=='draws'&&i%5===0,draw=stressCase==='draws'||stressWorst&&i%5===2;
@@ -39,7 +45,7 @@ export function loadFixture(stressCase='demo'){
     }));
     const matchId='fixture-'+i;
     if(!(stressWorst&&i%5===3)){
-      rr.change[matchId]=climb?(lost?-16:21):draw?0:myRounds>enemyRounds?35:-30;
+      rr.change[matchId]=climb?climbDelta(i):draw?0:myRounds>enemyRounds?35:-30;
       rr.pre[matchId]=climb?climbPre[i]:stressWorst?2100+1100+i*5:1550+i*5;
       rr.protected[matchId]=stressWorst&&i%5===1&&rr.change[matchId]<0;
       rr.post[matchId]=rr.pre[matchId]+(rr.protected[matchId]?0:rr.change[matchId]);
@@ -64,7 +70,7 @@ export function loadFixture(stressCase='demo'){
   const names=stressCase==='empty'?[]:stressNames.map((name,i)=>({name,tag,first_seen:stressCase==='malformed'&&i===3?null:new Date(Date.UTC(2026,8,1+i)).toISOString(),last_seen:new Date(Date.UTC(2026,9,1+i)).toISOString(),ended_at:i?new Date(Date.UTC(2026,9,1+i)).toISOString():null}));
   loadFixtureAnalysis({
     player:stressNames[0],tag,puuid:stressPuuid,season:'fixture-act',
-    current:climb?{tier:{id:27,name:'Radiant'},rr:climbPre[0]+(climbWon(0)?21:-16)-2100}:{tier:{id:stressWorst?27:18,name:stressWorst?'Radiant':'Diamond 1'},rr:stressWorst?1284:50},
+    current:climb?{tier:{id:27,name:'Radiant'},rr:climbPre[0]+climbDelta(0)-2100}:{tier:{id:stressWorst?27:18,name:stressWorst?'Radiant':'Diamond 1'},rr:stressWorst?1284:50},
     rr,raw,names,mode:stressCase,
   });
 }

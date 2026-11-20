@@ -141,19 +141,6 @@ export function ChartFrame({className,children,...props}){
 }
 
 // Key figures in one hairline-divided row: items are [label, value, className?, title?].
-export function StatStrip({items,label}){
-  return (
-    <dl className="stat-strip" aria-label={label}>
-      {items.map(([name,value,className,title])=>(
-        <div key={name}>
-          <dt><Hint content={title}>{name}</Hint></dt>
-          <dd className={className}>{value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
 // Hover/focus readout for the hand-built charts. `x`/`y` are CSS pixels inside
 // the chart's `relative` container; it flips to the left near the right edge.
 // Decorative: every value it shows is also in the mark's aria-label or a table.

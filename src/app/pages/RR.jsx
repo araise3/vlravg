@@ -1,14 +1,15 @@
 import {useId,useState} from 'react';
 import {
   avgLabel,avgLabelShort,buildRRScoreRows,computeRRStats,rrDuoInfo,rrMovementRows,rrMovementXAxis,
-  rrPayoutEstimates,rrPayoutEvenPoint,rrPayoutSegments,rrPositionFromElo,rrRankRows,rrReportedStats,rrSigned,rrTrendScopedMatches,
+  rrPayoutEstimates,rrPayoutEvenPoint,rrPayoutSegments,rrPayoutTimeline,RR_PAYOUT_WINDOW,rrPositionFromElo,rrRankRows,rrReportedStats,rrSigned,rrTrendScopedMatches,
   scoreMarginDistribution,setRRMovementZoomTier,setRRTrendRange,winRateLabel,winRateTone,
 } from '@/engine/core.mjs';
 import {RANK_ICONS} from '@/engine/rank-icons.mjs';
 import {useElementWidth,useEngine,useIsMobile} from '@/app/hooks.js';
-import {ChartFrame,ChartTooltip,EmptyState,PageHeading,PlacementToggle,RankIcon,SortableTable,StatStrip,TableSection,toneClass} from '@/app/shared.jsx';
+import {ChartFrame,ChartTooltip,EmptyState,Hint,PageHeading,PlacementToggle,RankIcon,SortableTable,TableSection,toneClass} from '@/app/shared.jsx';
 import {cn} from '@/lib/utils';
-import {Card,CardContent,CardHeader,CardTitle} from '@/components/ui/card';
+import {Card,CardAction,CardContent,CardHeader,CardTitle} from '@/components/ui/card';
+import {Progress} from '@/components/ui/progress';
 import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs';
 import {ToggleGroup,ToggleGroupItem} from '@/components/ui/toggle-group';
 
@@ -247,28 +248,173 @@ export function RRTrendChart({matches,range}){
   );
 }
 
-function RRSummary({matches,net}){
-  const summary=computeRRStats(matches);
-  const record=(
-    <span aria-label={`${summary.wins} wins, ${summary.losses} losses${summary.draws?`, ${summary.draws} draws`:''}`}>
-      {summary.wins}<span className="text-muted-foreground">–</span>{summary.losses}{summary.draws>0&&<><span className="text-muted-foreground">–</span>{summary.draws}</>}
-    </span>
-  );
+/* ── RR payout over time ───────────────────────────────── */
+// X-axis ticks: match 1, then round match numbers at least `minGap` px apart.
+export function rrPayoutXTicks(count,plotWidth,minGap){
+  const step=[1,2,5,10,20,25,50,100].find(s=>count<2||s*plotWidth/(count-1)>=minGap)||100;
+  const ticks=[1];
+  for(let k=step;k<=count;k+=step)if(k>1)ticks.push(k);
+  return ticks.map(k=>({k:k-1,label:String(k)}));
+}
+
+// Each eligible match's recorded payout as a dot (wins above zero in green,
+// losses below in red, draws yellow) under the trailing averages of the last
+// RR_PAYOUT_WINDOW wins and losses as solid lines, so a shrinking gain or a
+// growing loss shows up as the act goes on. Matches are spaced evenly in play
+// order (a Date axis was tried and removed on request, 20 Nov 2026).
+export function RRPayoutChart({matches}){
+  const [ref,measured]=useElementWidth();
+  const [active,setActive]=useState(null);
+  const compact=useIsMobile();
+  const rows=rrPayoutTimeline(matches);
+  if(!rows.length)return <div ref={ref} className="py-10 text-center text-sm text-muted-foreground">No RR payouts to chart in this range.</div>;
+  const height=compact?220:260,top=12,bottom=height-26;
+  const left=compact?34:42,right=compact?8:14;
+  const width=Math.max(left+right+2,measured||872),plotWidth=width-left-right;
+  const values=rows.map(r=>r.rr);
+  const lo=Math.min(0,...values),hi=Math.max(0,...values);
+  const step=[5,10,20,25,50,100].find(s=>(hi-lo+10)/s<=(compact?4:6))||100;
+  const yMin=Math.floor((lo-4)/step)*step,yMax=Math.max(yMin+step,Math.ceil((hi+4)/step)*step);
+  const y=value=>bottom-(value-yMin)/(yMax-yMin)*(bottom-top);
+  const yTicks=[];
+  for(let value=yMin;value<=yMax;value+=step)yTicks.push(value);
+  const x=k=>left+(rows.length>1?k/(rows.length-1):.5)*plotWidth;
+  const spacing=rows.length>1?plotWidth/(rows.length-1):plotWidth;
+  const radius=Math.max(2.5,Math.min(4,spacing/3));
+  const dateLabel=t=>new Date(t).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  const xTicks=rrPayoutXTicks(rows.length,plotWidth,compact?28:40).map(tick=>({...tick,x:x(tick.k)}));
+  const path=key=>rows.map((r,k)=>[k,r[key]]).filter(([,v])=>v!=null)
+    .map(([k,v],j)=>`${j?'L':'M'}${x(k).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  const winPath=path('winAvg'),lossPath=path('lossAvg');
+  const matchLabel=m=>[m.mapName??m.map,Number.isInteger(m.myR)&&Number.isInteger(m.opR)?`${m.myR}–${m.opR}`:null].filter(Boolean).join(', ');
+  const resultLabel={win:'Win',loss:'Loss',draw:'Draw'};
+  const avgText=r=>[r.winAvg!=null&&`wins ${rrSigned(r.winAvg,1)}`,r.lossAvg!=null&&`losses ${rrSigned(r.lossAvg,1)}`].filter(Boolean).join(', ');
+  const pointerMove=event=>{
+    const bounds=event.currentTarget.getBoundingClientRect();
+    const plotX=(event.clientX-bounds.left)*width/bounds.width;
+    if(plotX<left-12||plotX>width-right+12){setActive(null);return;}
+    let best=0;
+    rows.forEach((_,k)=>{if(Math.abs(x(k)-plotX)<Math.abs(x(best)-plotX))best=k;});
+    setActive(best);
+  };
+  const tip=active!=null&&rows[active]?rows[active]:null;
+  const last=rows.at(-1);
   return (
-    <StatStrip label="RR summary for selected match range" items={[
-      ['Net RR',net==null?'—':`${rrSigned(net,0)}`,net==null?'text-muted-foreground':toneClass(net,0)],
-      ['RR / Win',summary.avgGain==null?'—':rrSigned(summary.avgGain,1),summary.avgGain==null?'':'text-positive'],
-      ['RR / Loss',summary.avgLoss==null?'—':rrSigned(-summary.avgLoss,1),summary.avgLoss==null?'':'text-negative'],
-      [summary.draws?'W–L–D':'W–L',record,'',`${summary.wins} wins, ${summary.losses} losses${summary.draws?`, ${summary.draws} draws`:''}`],
-      ['Win rate',winRateLabel(summary.winRate),''],
-    ]}/>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground max-sm:text-xs" aria-label="Chart legend">
+        <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-4 rounded" style={{background:'var(--chart-win)'}}/>
+          Avg win, last {RR_PAYOUT_WINDOW}{last.winAvg!=null&&<span className="font-medium text-positive tabular-nums">{rrSigned(last.winAvg,1)}</span>}</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-4 rounded" style={{background:'var(--chart-loss)'}}/>
+          Avg loss, last {RR_PAYOUT_WINDOW}{last.lossAvg!=null&&<span className="font-medium text-negative tabular-nums">{rrSigned(last.lossAvg,1)}</span>}</span>
+        <span className="inline-flex items-center gap-1.5"><span className="flex gap-0.5 opacity-60"><span className="size-1.5 rounded-full" style={{background:'var(--chart-win)'}}/><span className="size-1.5 rounded-full" style={{background:'var(--chart-loss)'}}/><span className="size-1.5 rounded-full" style={{background:'var(--chart-draw)'}}/></span>Each match</span>
+      </div>
+      <ChartFrame>
+        <div ref={ref} className="relative" role="region" aria-label="RR payout over time" tabIndex={0}>
+          <svg className={cn('chart-svg rr-payout-svg',tip&&'has-active')} width={width} height={height} viewBox={`0 0 ${width} ${height}`}
+            aria-label={`RR payout for ${rows.length} eligible matches in match order; latest averages over the last ${RR_PAYOUT_WINDOW}: ${avgText(last)||'none'}`}
+            onPointerMove={pointerMove} onPointerDown={pointerMove} onPointerLeave={()=>setActive(null)} style={{touchAction:'pan-y'}}>
+            {yTicks.map(value=>(
+              <g key={value} aria-hidden="true">
+                <line className={value===0?'zero':'grid'} x1={left} y1={y(value)} x2={width-right} y2={y(value)}/>
+                <text x={left-8} y={y(value)+4} textAnchor="end">{value>0?`+${value}`:value<0?`−${-value}`:'0'}</text>
+              </g>
+            ))}
+            {xTicks.map(({x:tx,label},j)=>(
+              <text key={j} x={tx} y={bottom+18} aria-hidden="true"
+                textAnchor={xTicks.length>1&&j===0?'start':xTicks.length>1&&j===xTicks.length-1?'end':'middle'}>{label}</text>
+            ))}
+            {rows.map((r,k)=>(
+              <circle key={k} className={cn('payout-point',r.result,k===active&&'active')} cx={x(k)} cy={y(r.rr)} r={k===active?radius+1.5:radius} aria-hidden="true"/>
+            ))}
+            {winPath&&<path className="avg-line win" d={winPath} aria-hidden="true"/>}
+            {lossPath&&<path className="avg-line loss" d={lossPath} aria-hidden="true"/>}
+            {tip&&<line className="hover-line" x1={x(active)} y1={top} x2={x(active)} y2={bottom} aria-hidden="true"/>}
+            {rows.map((r,k)=>(
+              <g key={k} tabIndex={0} onFocus={()=>setActive(k)} onBlur={()=>setActive(null)}
+                aria-label={`Match ${k+1} of ${rows.length}, ${Number.isFinite(r.match.startedAtMs)?dateLabel(r.match.startedAtMs):'date unavailable'}${matchLabel(r.match)?`, ${matchLabel(r.match)}`:''}, ${resultLabel[r.result]}: ${rrSigned(r.rr,0)} RR${avgText(r)?`; average of last ${RR_PAYOUT_WINDOW} ${avgText(r)}`:''}`}>
+                <circle cx={x(k)} cy={y(r.rr)} r={Math.min(10,Math.max(4,spacing/2))} fill="transparent"/>
+              </g>
+            ))}
+          </svg>
+          {tip&&(
+            <ChartTooltip x={x(active)} y={Math.max(0,y(tip.rr)-40)} width={width}>
+              <div className={cn('tt-value',toneClass(tip.rr,0))}>{rrSigned(tip.rr,0)} RR</div>
+              <div className="tt-row"><span className="tt-key" style={{background:`var(--chart-${tip.result})`}}/>
+                {resultLabel[tip.result]}{matchLabel(tip.match)?` on ${matchLabel(tip.match)}`:''}</div>
+              {avgText(tip)&&<div className="tt-muted">Last {RR_PAYOUT_WINDOW} average: {avgText(tip)}</div>}
+              <div className="tt-muted">Match {active+1} of {rows.length}{Number.isFinite(tip.match.startedAtMs)?`, ${dateLabel(tip.match.startedAtMs)}`:''}</div>
+            </ChartTooltip>
+          )}
+        </div>
+      </ChartFrame>
+      <p className="text-xs text-muted-foreground">Eligible matches only: placements, unrated ranks and full 5-stacks are left out.</p>
+    </div>
+  );
+}
+
+// The payout chart's card.
+export function RRPayoutCard({matches}){
+  return (
+    <section aria-labelledby="rr-payout-time-title">
+      <Card>
+        <CardHeader>
+          <CardTitle><h2 id="rr-payout-time-title">RR payout over time</h2></CardTitle>
+        </CardHeader>
+        <CardContent><RRPayoutChart matches={matches}/></CardContent>
+      </Card>
+    </section>
+  );
+}
+
+// The range's five headline figures as tiles in the Act stats grid look:
+// value first, then a quiet line or mini bar that says what it is built from.
+// Phones put Net RR across the full width above two rows of two.
+export function RRSummary({matches,net,netCount}){
+  const summary=computeRRStats(matches);
+  const {wins,losses,draws}=summary;
+  const games=wins+losses+draws;
+  const plural=(n,one,many)=>`${n} ${n===1?one:many}`;
+  const recordTitle=`${plural(wins,'win','wins')}, ${plural(losses,'loss','losses')}, ${plural(draws,'draw','draws')}`;
+  const dash=<span className="text-muted-foreground/60">–</span>;
+  const tiles=[
+    {label:'Net RR',value:net==null?'—':rrSigned(net,0),tone:net==null?'text-muted-foreground':toneClass(net,0),wide:true,
+      title:'Sum of every recorded RR change in this range, placements and 5-stacks included',
+      foot:net==null?'No recorded changes':`across ${plural(netCount,'match','matches')}`},
+    {label:'RR / Win',value:summary.avgGain==null?'—':rrSigned(summary.avgGain,1),tone:summary.avgGain==null?'text-muted-foreground':'text-positive',
+      title:'Average RR from eligible wins; excludes placements, unrated ranks and full 5-stacks',foot:plural(wins,'win','wins')},
+    {label:'RR / Loss',value:summary.avgLoss==null?'—':rrSigned(-summary.avgLoss,1),tone:summary.avgLoss==null?'text-muted-foreground':'text-negative',
+      title:'Average RR from eligible losses; excludes placements, unrated ranks and full 5-stacks',foot:plural(losses,'loss','losses')},
+    // Draws always show, in the site's draw yellow, even at zero.
+    {label:'W–L–D',title:`Eligible matches: ${recordTitle}`,
+      value:<span aria-label={recordTitle}>{wins}{dash}{losses}{dash}<span className="text-draw">{draws}</span></span>,
+      foot:games?(
+        <div className="flex h-1.5 gap-0.5 overflow-hidden rounded-full" role="img" aria-label={recordTitle}>
+          {[[wins,'var(--chart-win)'],[losses,'var(--chart-loss)'],[draws,'var(--chart-draw)']].filter(([n])=>n>0).map(([n,color],i)=>(
+            <div key={i} className="h-full first:rounded-l-full last:rounded-r-full" style={{flexGrow:n,flexBasis:0,background:color}}/>
+          ))}
+        </div>
+      ):'No eligible matches'},
+    {label:'Win rate',value:winRateLabel(summary.winRate),tone:toneOf(winRateTone(summary.winRate)),
+      title:'Wins divided by wins plus losses; draws excluded',
+      foot:summary.winRate==null?'No decided matches':<Progress value={summary.winRate} className="h-1.5 bg-muted" indicatorClassName="rounded-full bg-foreground/70" aria-label={`${winRateLabel(summary.winRate)} win rate`}/>},
+  ];
+  return (
+    <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-5" aria-label="RR summary for selected match range" data-slot="rr-summary">
+      {tiles.map(({label,value,tone,title,foot,wide})=>(
+        <div key={label} className={cn('flex min-w-0 flex-col gap-2 bg-card px-4 py-3.5 max-sm:px-3.5 max-sm:py-3',wide&&'max-sm:col-span-2')}>
+          <dt className="text-xs text-muted-foreground"><Hint content={title}>{label}</Hint></dt>
+          <dd className={cn('text-2xl leading-none font-semibold tracking-tight whitespace-nowrap tabular-nums max-sm:text-xl',tone)}>{value}</dd>
+          <dd className="mt-auto flex min-h-1.5 flex-col justify-end text-xs text-muted-foreground tabular-nums">{foot}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
 function RRBonusNote({matches}){
   const reported=rrReportedStats(matches);
   return (
-    <p className="-mt-3 text-xs text-muted-foreground" aria-live="polite">
+    <p className="text-xs text-muted-foreground" aria-live="polite">
       {reported.covered&&!reported.bonusMatches
         ?<>No performance bonus in this range. Bonus data for {reported.covered} of {reported.total} eligible games.</>
         :reported.covered
@@ -635,35 +781,46 @@ export function RRPage(){
   const range=s.rrTrendRange;
   const scoped=rrTrendScopedMatches(matches);
   const running=scoped.filter(m=>Number.isFinite(m.myRR)&&Number.isFinite(m.myPostRR)).reduce((sum,m)=>sum+m.myRR,0);
-  const anyTrend=scoped.some(m=>Number.isFinite(m.myRR)&&Number.isFinite(m.myPostRR));
+  const trendCount=scoped.filter(m=>Number.isFinite(m.myRR)&&Number.isFinite(m.myPostRR)).length;
+  const anyTrend=trendCount>0;
   return (
     <main aria-labelledby="rr-title" className="space-y-6">
       <PageHeading id="rr-title" title="RR Breakdown"/>
       {hasRR&&(
         <>
           <PlacementToggle/>
-          <section aria-labelledby="rr-trend-title">
-            <Card>
-              <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-                <div className="space-y-1.5">
-                  <CardTitle><h2 id="rr-trend-title">RR trend</h2></CardTitle>
-                </div>
+          {/* The range's headline figures in their own card at the top; its range tabs drive the trend chart below too. */}
+          <section aria-labelledby="rr-summary-title">
+            <Card className="gap-5">
+              {/* Phones: the range tabs drop under the title instead of squeezing beside it. */}
+              <CardHeader className="max-sm:grid-cols-1">
+                <CardTitle><h2 id="rr-summary-title">RR summary</h2></CardTitle>
+                <CardAction className="max-sm:col-start-1 max-sm:row-start-2 max-sm:justify-self-start">
                   <Tabs value={range} onValueChange={setRRTrendRange}>
-                    <TabsList aria-label="RR trend match range">
+                    <TabsList aria-label="RR match range">
                       <TabsTrigger value="all">All time ({matches.length})</TabsTrigger>
                       {matches.length>50&&<TabsTrigger value="50" aria-label="50 most recent matches">50</TabsTrigger>}
                       <TabsTrigger value="30" aria-label="30 most recent matches">30</TabsTrigger>
                       <TabsTrigger value="20" aria-label="20 most recent matches">20</TabsTrigger>
                     </TabsList>
                   </Tabs>
+                </CardAction>
               </CardHeader>
-              <CardContent className="flex flex-col gap-6">
-                <RRSummary matches={scoped} net={anyTrend?running:null}/>
-                <ChartFrame><RRTrendChart matches={matches} range={range}/></ChartFrame>
+              <CardContent className="flex flex-col gap-4">
+                <RRSummary matches={scoped} net={anyTrend?running:null} netCount={trendCount}/>
                 <RRBonusNote matches={scoped}/>
               </CardContent>
             </Card>
           </section>
+          <section aria-labelledby="rr-trend-title">
+            <Card>
+              <CardHeader>
+                <CardTitle><h2 id="rr-trend-title">RR trend</h2></CardTitle>
+              </CardHeader>
+              <CardContent><ChartFrame><RRTrendChart matches={matches} range={range}/></ChartFrame></CardContent>
+            </Card>
+          </section>
+          <RRPayoutCard matches={scoped}/>
           <RRMovementChart matches={matches} zoomTier={s.rrMovementZoomTier}/>
           <TableSection label="RR by your rank"><RRRankTable matches={matches}/></TableSection>
           <section aria-labelledby="rr-score-title">

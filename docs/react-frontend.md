@@ -207,8 +207,15 @@ All hand-built charts follow one system, checked against the dataviz method:
 - **Frames and cards**: every plot sits in a `ChartFrame` (an inset `#0f0f11`
   panel with a hairline border) inside its card. Chart cards follow one order:
   header (title, one-line description, range control on the right) (20 Nov 2026: a `CardAction` link, badge or figure is centred on the title row; `CardAction` no longer spans the description row), key
-  figures as a hairline-divided `StatStrip` (no boxed tiles), the framed
-  chart, then notes in small muted text.
+  figures, the framed chart, then notes in small muted text. The RR page
+  splits its key figures off (20 Nov 2026, on request): an "RR summary" card
+  at the top holds the range tabs (they also drive the RR trend chart below)
+  and five tiles in the Act stats grid look (`RRSummary`): Net RR (with the
+  match count it sums), RR / Win and RR / Loss (with the eligible win and
+  loss counts), W–L–D (draws always shown, in the draw yellow `text-draw`, even at zero; with a win/loss/draw split bar) and win rate (with a
+  shadcn `Progress` bar), then the performance bonus note. Phones put Net RR
+  across the full width above two rows of two. The "RR trend" card below is
+  title and chart only. `StatStrip` and its `.stat-strip` CSS are gone.
 - **Hover/focus**: one shared `ChartTooltip` (value first). RR trend uses a
   crosshair that snaps to the nearest match. The payout chart has no hover
   readout (removed on request); its curve points keep their aria-labels. The
@@ -225,7 +232,11 @@ All hand-built charts follow one system, checked against the dataviz method:
   matches are at least 8px apart, the hover point takes its result colour, and
   the area uses the gradient wash of the overview line. A range with no
   performance bonus says so instead of "+0 RR across 0 games". The dev
-  fixture `?fixture=climb` reproduces a 106-game Immortal 1 to Radiant climb.
+  fixture `?fixture=climb` reproduces a 106-game Immortal 1 to Radiant climb;
+  since 20 Nov 2026 its payouts drift (gains about +26 to +16, losses about
+  −12 to −20, oldest to newest, with jitter) so payout charts have a trend to
+  show. "RR payout over time" (`RRPayoutCard`, 20 Nov 2026, match order only) follows the RR
+  trend card; see [rr-payout-over-time.md](rr-payout-over-time.md).
   The payout chart gets
   Win/Loss end labels, an "Even at N RR" label and a "RR per game" axis; the
   score-margin chart shows the count on top of every bar again (exact
