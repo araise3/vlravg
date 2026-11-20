@@ -1,20 +1,40 @@
 import {loadNameHistory,loadOlderNames,nameHistoryActRange} from '@/engine/core.mjs';
 import {useEngine,useIsMobile} from '@/app/hooks.js';
-import {EmptyState,PageHeading} from '@/app/shared.jsx';
+import {EmptyState,PageHeading,SortableTable} from '@/app/shared.jsx';
 import {Button} from '@/components/ui/button';
-import {Card} from '@/components/ui/card';
-import {Table,TableBody,TableCell,TableHead,TableHeader,TableRow} from '@/components/ui/table';
 
 const dateFormat=new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
-
-function DateCell({value}){
-  const date=new Date(value);
-  return <TableCell className="whitespace-nowrap tabular">{Number.isFinite(date.getTime())?<time dateTime={date.toISOString()}>{dateFormat.format(date)}</time>:'—'}</TableCell>;
-}
 
 function formatDate(value){
   const date=new Date(value);
   return Number.isFinite(date.getTime())?<time dateTime={date.toISOString()}>{dateFormat.format(date)}</time>:'—';
+}
+
+const timeOf=value=>{const ms=Date.parse(value);return Number.isFinite(ms)?ms:null;};
+
+// Desktop: the shared data table (same look as the other tables), newest
+// first until a column is sorted. Columns are text, so all left-aligned.
+function NameHistoryTable({rows}){
+  const tableRows=rows.map((h,i)=>{
+    const act=nameHistoryActRange(h.first_seen,h.last_seen);
+    return {
+      key:`${h.name}#${h.tag}-${h.first_seen}-${i}`,
+      cells:[
+        <span className="flex items-baseline">
+          <strong className="font-semibold text-foreground">{h.name}</strong><span className="font-normal text-muted-foreground">#{h.tag}</span>
+          {h.ended_at==null&&<span className="ml-2 text-[11px] font-bold text-brand">Current</span>}
+        </span>,
+        formatDate(h.first_seen),formatDate(h.last_seen),act.label,
+      ],
+      cellProps:[null,null,null,{title:act.title}],
+    };
+  });
+  const values=rows.map(h=>[`${h.name}#${h.tag}`,timeOf(h.first_seen),timeOf(h.last_seen),nameHistoryActRange(h.first_seen,h.last_seen).label]);
+  return (
+    <SortableTable id="name-history-table" standalone rows={tableRows} values={values} noun="names"
+      caption="Observed Riot IDs, first and last observation dates, and acts"
+      columns={[{label:'Riot ID'},{label:'First observed',align:'left'},{label:'Last observed',align:'left'},{label:'Act',align:'left'}]}/>
+  );
 }
 
 // Phones: one row per Riot ID, newest first, with its observed date range and
@@ -72,34 +92,7 @@ export function NamesPage(){
       <PageHeading id="names-title" title="Name History"/>
       {hasRows?(
         <>
-          {mobile?<MobileNameList rows={rows}/>:<Card className="py-2">
-            <Table aria-label="Name history table" className="rank-table text-left">
-              <caption className="sr-only">Observed Riot IDs, first and last observation dates, and acts</caption>
-              <TableHeader>
-                <TableRow>
-                  {['Riot ID','First observed','Last observed','Act'].map(label=><TableHead key={label} scope="col">{label}</TableHead>)}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((h,i)=>{
-                  const act=nameHistoryActRange(h.first_seen,h.last_seen);
-                  return (
-                    <TableRow key={`${h.name}#${h.tag}-${h.first_seen}-${i}`}>
-                      <TableHead scope="row">
-                        <span className="flex items-baseline text-[15px]">
-                          <strong className="font-bold text-[#f4f4f5]">{h.name}</strong><span className="font-medium text-muted-foreground">#{h.tag}</span>
-                          {h.ended_at==null&&<span className="ml-[9px] text-[11px] font-bold text-brand">Current</span>}
-                        </span>
-                      </TableHead>
-                      <DateCell value={h.first_seen}/>
-                      <DateCell value={h.last_seen}/>
-                      <TableCell title={act.title} className="whitespace-nowrap">{act.label}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </Card>}
+          {mobile?<MobileNameList rows={rows}/>:<NameHistoryTable rows={rows}/>}
           <div className="flex flex-wrap items-center gap-3">
             {!backfill?.complete&&backfill?.available&&(
               <Button variant="outline" disabled={!!backfill?.limited||s.nameBackfillStopRequested} onClick={loadOlderNames}>{buttonLabel}</Button>

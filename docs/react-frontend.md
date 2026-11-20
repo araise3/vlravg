@@ -103,8 +103,12 @@ end of `src/index.css` (they outrank Tailwind's utility layer):
   on desktop its frame is the card (12px radius, no card around it), on
   phones the row list sits in a card. Tables inside a titled card
   (Encounters, Wintrading) keep an inset 8px-radius frame.
-  Phones keep the `MobileRowList` cards, full-bleed in the card. Name History
-  and the Overview's recent matches stay plain `Table`s (not sortable).
+  Name History's desktop table moved onto the same data table (standalone,
+  newest first until a column is sorted, every column left-aligned since they
+  are text and dates); phones keep the timeline list. With that, nothing used
+  `.rank-table` and its CSS was removed.
+  Phones keep the `MobileRowList` cards, full-bleed in the card. The
+  Overview's recent matches stays a plain `Table` (not sortable).
   Opening that Columns menu first shifted the page 7.5px left: Radix's scroll
   lock puts `overflow: hidden` on body, which takes over the viewport and drops
   html's `scrollbar-gutter: stable`, then adds a scrollbar-width margin. Body

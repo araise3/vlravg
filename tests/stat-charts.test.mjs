@@ -276,7 +276,8 @@ test('variable-width lobby cells are left-aligned flex rows so the rank sits lev
     const source=readFileSync(new URL('../src/app/pages/'+file,import.meta.url),'utf8');
     assert.match(source,/label:'Avg Lobby',wide:true,align:'left'/,file);
   }
-  assert.match(readFileSync(new URL('../src/index.css',import.meta.url),'utf8'),/\.rank-table th\.col-left, \.rank-table td\.col-left \{ text-align: left; \}/);
+  // The data table keeps `align: 'left'` columns left; other data columns are right-aligned.
+  assert.match(readFileSync(new URL('../src/app/data-table.jsx',import.meta.url),'utf8'),/const right=index=>index>0&&columns\[index\]\?\.align!=='left';/);
 });
 
 test('long tables page ten rows at a time after sorting every row',async()=>{
