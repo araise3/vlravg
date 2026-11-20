@@ -3,7 +3,7 @@ import {
   avgLabel,computeWintradeSignals,decidedWinRate,playerRouteUrl,rName,rrSigned,tierRR,winRateLabel,winRateTone,
 } from '@/engine/core.mjs';
 import {useEngine,useIsMobile} from '@/app/hooks.js';
-import {EmptyState,LobbyValue,PageHeading,PartyIcon,PlacementToggle,PlayerLink,RankIcon,ShowAllButton,SortableTable,pageEmptyText,toneClass} from '@/app/shared.jsx';
+import {EmptyState,LobbyValue,PageHeading,PartyIcon,PlacementToggle,PlayerLink,RankIcon,ShowAllButton,SortableTable,TableSection,pageEmptyText,toneClass} from '@/app/shared.jsx';
 import {cn} from '@/lib/utils';
 import {Card,CardContent,CardDescription,CardHeader,CardTitle} from '@/components/ui/card';
 
@@ -54,7 +54,7 @@ export function PerformanceTable({id,rows,party}){
     ?[{column:2,label:'average lobby rank'},{column:3,label:'K/D'},{column:4,label:'average ACS'},{column:5,label:'Avg PS'},{column:6,label:'win rate'}]
     :[{column:2,label:'K/D'},{column:3,label:'average ACS'},{column:4,label:'Avg PS'},{column:5,label:'win rate'}];
   return (
-    <SortableTable id={id} rows={tableRows} values={values} columns={columns} maxima={maxima}
+    <SortableTable id={id} rows={tableRows} values={values} columns={columns} maxima={maxima} standalone
       caption={`Your performance grouped by ${party?'party size, including your total recorded RR change':'average lobby rank'}`}/>
   );
 }
@@ -251,7 +251,7 @@ export function DuoChemistry({teammates,matches}){
 }
 
 function EncountersTable({s}){
-  if(!s.allEncounters.length)return <p className="px-6 py-4 text-sm text-muted-foreground">No players met at least twice outside your party in these matches.</p>;
+  if(!s.allEncounters.length)return <p className="py-2 text-sm text-muted-foreground max-sm:px-4">No players met at least twice outside your party in these matches.</p>;
   const tableRows=s.allEncounters.map(e=>({key:e.key,cells:[
     <PlayerLink href={playerRouteUrl(e.name,e.tag,'overview',s.TARGET_SEASON)} name={e.name} tag={e.tag}/>,
     e.games,e.sameTeam,e.opponents,
@@ -267,7 +267,7 @@ function EncountersTable({s}){
 
 function WintradeTable({s}){
   const rows=computeWintradeSignals(s.statMatches,s.allMatches,s.PUUID,s.PLAYER,s.TAG);
-  if(!rows.length)return <p className="px-6 py-4 text-sm text-muted-foreground">No repeated opponents with unusually low combat stats in these matches.</p>;
+  if(!rows.length)return <p className="py-2 text-sm text-muted-foreground max-sm:px-4">No repeated opponents with unusually low combat stats in these matches.</p>;
   const tableRows=rows.map(r=>({key:r.key,cells:[
     <PlayerLink href={playerRouteUrl(r.name,r.tag,'overview',s.TARGET_SEASON)} name={r.name} tag={r.tag}/>,
     r.score+'%',r.encounters,`${r.lowGames}/${r.measuredGames}`,r.avgAcs==null?'—':Math.round(r.avgAcs),
@@ -293,17 +293,17 @@ export function DuosPage(){
       <PageHeading id="duos-title" title="Duos"/>
       {ready&&<PlacementToggle/>}
       {hasMatches&&s.partySizeData.length>0&&(
-        <Card className="py-2" aria-label="Party size breakdown"><PerformanceTable id="party-size-list" rows={s.partySizeData} party/></Card>
+        <TableSection label="Party size breakdown"><PerformanceTable id="party-size-list" rows={s.partySizeData} party/></TableSection>
       )}
       {ready&&s.allTeammates.length>0&&<DuoChemistry teammates={s.allTeammates} matches={s.statMatches}/>}
       {hasMatches&&(
         <section aria-labelledby="encounters-title">
-          <Card className="gap-2 pb-2">
+          <Card className="gap-4">
             <CardHeader>
               <CardTitle><h2 id="encounters-title">Encounters</h2></CardTitle>
               <CardDescription>Players you met in at least two counted matches this act, on either team. Anyone who queued in your party is excluded.</CardDescription>
             </CardHeader>
-            <EncountersTable s={s}/>
+            <CardContent className="max-sm:px-0"><EncountersTable s={s}/></CardContent>
           </Card>
         </section>
       )}
@@ -314,7 +314,7 @@ export function DuosPage(){
               <CardTitle><h2 id="wintrade-title">Wintrading signals</h2></CardTitle>
               <CardDescription>Repeated opponents with unusually low combat stats in your matches. The likelihood score is a heuristic ranking, not a measured probability or proof of intent. A verified prior party game raises the score; one bad game alone does not flag anyone.</CardDescription>
             </CardHeader>
-            <WintradeTable s={s}/>
+            <CardContent className="max-sm:px-0"><WintradeTable s={s}/></CardContent>
             <CardContent>
               <p className="text-xs text-muted-foreground">Low game: under 65% of the other enemy players’ median ACS and below 0.65 K/D. Only opponents met at least twice with at least one low game appear. Scores use repeat meetings, low games, your wins against them, and verified party history.</p>
             </CardContent>

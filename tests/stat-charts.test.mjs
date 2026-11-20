@@ -286,7 +286,7 @@ test('long tables page ten rows at a time after sorting every row',async()=>{
   const html=await renderHtml('/src/app/shared.jsx','SortableTable',{id:'paged-test',caption:'test',columns,rows,values,pageSize:10,noun:'players'});
   assert.equal((html.match(/<tr/g)||[]).length,11);
   const text=html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
-  assert.match(text,/1–10 of 23 players 1 \/ 3/);
+  assert.match(text,/1–10 of 23 players Page 1 of 3 Previous Next/);
   assert.match(html,/disabled="" aria-label="Previous page"/);
   assert.doesNotMatch(html,/disabled="" aria-label="Next page"/);
   const short=await renderHtml('/src/app/shared.jsx','SortableTable',{id:'short-test',caption:'test',columns,rows:rows.slice(0,5),values:values.slice(0,5),pageSize:10});

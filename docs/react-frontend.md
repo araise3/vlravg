@@ -80,6 +80,36 @@ end of `src/index.css` (they outrank Tailwind's utility layer):
   header strip, column lines, tinted best-value cell (`.table-best`), sticky
   first column. The sort arrow appears on hover and stays on the sorted
   column with the blue underline.
+  Since 20 Nov 2026 `SortableTable` runs on TanStack Table v9
+  (`src/app/data-table.jsx`, re-exported from `shared.jsx`; callers kept the
+  same `columns`/`rows`/`values`/`maxima`/`pageSize` props). TanStack owns the
+  state: one-column sorting (data columns high-to-low first, the row header
+  A-to-Z; missing values last in both directions; ties keep the given order),
+  paging (page reset only on a sort or search change) and a search over the
+  row header for tables long enough to page. Sort is remembered per table for
+  the session. On request the desktop table then took shadcn's default
+  data-table look instead of `.rank-table`: a bordered rounded frame inside
+  the card's content padding, ghost sort buttons with the arrow after the
+  label, number columns right-aligned, shadcn `Input` search and outline
+  Previous/Next with "Page N of M". The best value per column keeps only its
+  tooltip. A "Columns" visibility menu was added and then removed on request.
+  Refined the same day: a muted header row with small muted labels whose
+  sort arrow appears on hover and stays on the sorted column (labels of
+  right-aligned columns put the arrow first); 44px rows with 12px cell
+  padding; the best value per column in semibold, but only where rows differ
+  (an all-tie column has no best); a search with no match shows a row inside
+  the frame; Previous/Next carry chevrons. A table that is a section's only
+  content (party size, lobby rank, servers, RR by rank) uses `TableSection`:
+  on desktop its frame is the card (12px radius, no card around it), on
+  phones the row list sits in a card. Tables inside a titled card
+  (Encounters, Wintrading) keep an inset 8px-radius frame.
+  Phones keep the `MobileRowList` cards, full-bleed in the card. Name History
+  and the Overview's recent matches stay plain `Table`s (not sortable).
+  Opening that Columns menu first shifted the page 7.5px left: Radix's scroll
+  lock puts `overflow: hidden` on body, which takes over the viewport and drops
+  html's `scrollbar-gutter: stable`, then adds a scrollbar-width margin. Body
+  now reserves the gutter too and the margin is removed (`src/index.css`), so
+  no Radix menu, select or dialog moves the page.
 - Overview: rebuilt as a shadcn dashboard (see "Overview dashboard" below).
 - Match History: one summary strip, one-line day headers, and the old match
   card (210 px map-art panel, 25 px scoreline, uppercase result tag, bold
