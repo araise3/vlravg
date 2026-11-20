@@ -1,10 +1,9 @@
-import {useState} from 'react';
-import {ArrowDown,ArrowUp,ArrowUpDown,ChevronDown,ChevronLeft,ChevronRight} from 'lucide-react';
+import {ChevronDown} from 'lucide-react';
 import {RANK_ICONS} from '@/engine/rank-icons.mjs';
 import {avgLabel,navigateToPage,pageHref,PARTY_LABELS,tierRR,toggleIncludeReset} from '@/engine/core.mjs';
 import {useEngine,useIsMobile} from '@/app/hooks.js';
+import {Card,CardContent} from '@/components/ui/card';
 import {cn} from '@/lib/utils';
-import {Table,TableBody,TableCell,TableHead,TableHeader,TableRow} from '@/components/ui/table';
 import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs';
 import {Switch} from '@/components/ui/switch';
 import {Label} from '@/components/ui/label';
@@ -71,84 +70,17 @@ export function PlayerLink({href,name,tag,className}){
   );
 }
 
-// Keep each table's chosen sort through incremental loads and filter changes.
-const tableSortState=new Map();
+// Data tables live in data-table.jsx (TanStack Table); re-exported here so
+// pages keep importing them from shared.
+export {MobileRowList,SortableTable,TablePager} from '@/app/data-table.jsx';
 
-// A sortable shadcn table. `rows[i].cells[0]` is the row header; `values[i]`
-// holds the raw sort value per column (null always sorts last). `maxima`
-// marks the highest numeric value in a column.
-// Phones: the same rows as a list of cards. The row header is the card title,
-// the first data column its headline figure, the rest a label/value grid.
-// Sorting moves to a native select (the OS picker) plus a direction button.
-// Columns flagged `wide` (lobby ranks with icon and RR) span two grid cells.
-export function MobileRowList({id,caption,columns,rows,values,order,best,sort,choose,className}){
-  const column=sort?.column??null;
-  const direction=sort?.direction||'descending';
-  const DirIcon=direction==='ascending'?ArrowUp:ArrowDown;
-  const [headline,...rest]=columns.slice(1).map((col,i)=>({...col,index:i+1}));
-  const cellAt=(index,columnIndex)=>{
-    const props=rows[index].cellProps?.[columnIndex]||{};
-    // With one row every value is the "highest"; only mark real comparisons.
-    const top=rows.length>1?best.get(columnIndex):null;
-    return {cell:rows[index].cells[columnIndex],props,isBest:top&&values[index][columnIndex]===top.max,top};
-  };
-  return (
-    <div id={id} className={cn('mobile-row-list',className)} data-slot="mobile-row-list" data-table-id={id}>
-      <p className="sr-only">{caption}</p>
-      <div className={cn('flex items-center gap-2 border-b px-4 pt-2 pb-3',rows.length<3&&'hidden')}>
-        <label htmlFor={`${id}-sort`} className="text-xs text-muted-foreground">Sort</label>
-        <select id={`${id}-sort`} value={column==null?'':String(column)}
-          onChange={event=>{
-            if(event.target.value===''){choose(null);return;}
-            const next=Number(event.target.value);
-            choose({column:next,direction:next===0?'ascending':'descending'});
-          }}
-          className="h-8 min-w-0 flex-1 rounded-md border border-input bg-transparent px-2 text-sm text-foreground outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30">
-          <option value="">Default order</option>
-          {columns.map((col,i)=><option key={i} value={i}>{col.label}</option>)}
-        </select>
-        <button type="button" disabled={column==null} onClick={()=>choose({column,direction:direction==='ascending'?'descending':'ascending'})}
-          aria-label={`Sort ${direction==='ascending'?'descending':'ascending'}`}
-          className="grid size-8 shrink-0 place-items-center rounded-md border border-input text-muted-foreground transition-colors outline-none active:bg-accent disabled:opacity-40 focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30">
-          <DirIcon className="size-4" aria-hidden="true"/>
-        </button>
-      </div>
-      <ul className="divide-y">
-        {order.map(index=>{
-          const row=rows[index];
-          const head=headline&&cellAt(index,headline.index);
-          return (
-            <li key={row.key} className="px-4 py-3.5">
-              <div className="flex items-center justify-between gap-3">
-                <div className={cn('min-w-0 flex-1 text-[15px] font-semibold [&_a]:max-w-full',row.cellProps?.[0]?.className)}>{row.cells[0]}</div>
-                {head&&(
-                  <div className="shrink-0 text-right">
-                    <div className={cn('text-base leading-tight font-semibold tabular-nums',head.props.className,head.isBest&&'text-brand')}>{head.cell}</div>
-                    <div className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">{headline.label}</div>
-                  </div>
-                )}
-              </div>
-              {rest.length>0&&(
-                <dl className="mt-3 grid grid-cols-3 gap-x-3 gap-y-2.5">
-                  {rest.map(col=>{
-                    const {cell,props,isBest,top}=cellAt(index,col.index);
-                    return (
-                      <div key={col.index} className={cn('min-w-0',col.wide&&'col-span-2')} title={isBest?`Highest ${top.label} in this list`:undefined}>
-                        <dt className="truncate text-[10px] font-medium tracking-wide text-muted-foreground uppercase">{col.label}</dt>
-                        <dd className={cn('mt-0.5 flex min-w-0 items-center text-sm font-medium tabular-nums [&_img]:!size-4',props.className)}>
-                          <span className={cn('min-w-0 truncate [&>span]:!gap-1.5',isBest&&'-mx-1.5 rounded-md bg-brand/15 px-1.5 font-semibold')}>{cell}</span>
-                        </dd>
-                      </div>
-                    );
-                  })}
-                </dl>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
+// A table that is a section's only content: on desktop the table's own frame
+// is the card (no frame inside a frame); phones wrap the row list in a card.
+export function TableSection({label,children}){
+  const mobile=useIsMobile();
+  return mobile
+    ?<Card className="py-2" aria-label={label}><CardContent className="px-0">{children}</CardContent></Card>
+    :<section aria-label={label}>{children}</section>;
 }
 
 // "Show all N" / "Show fewer" under a list cut to its first rows.
@@ -161,108 +93,6 @@ export function ShowAllButton({expanded,total,noun,onToggle,controls}){
         <ChevronDown className={cn('size-4 transition-transform',expanded&&'rotate-180')} aria-hidden="true"/>
       </button>
     </div>
-  );
-}
-
-// Previous/next pages under a long table; the range says where you are.
-export function TablePager({page,pageSize,total,noun,onPage,controls}){
-  const pages=Math.ceil(total/pageSize),start=page*pageSize;
-  const button='grid size-8 place-items-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground disabled:pointer-events-none disabled:opacity-40 focus-visible:ring-[3px] focus-visible:ring-ring/50';
-  return (
-    <nav className="flex items-center justify-between gap-3 border-t px-4 py-2 text-sm text-muted-foreground" aria-label={`${noun} pages`} data-slot="table-pager">
-      <span className="tabular-nums" aria-live="polite">{start+1}–{Math.min(total,start+pageSize)} of {total} {noun}</span>
-      <div className="flex items-center gap-1">
-        <button type="button" className={button} onClick={()=>onPage(page-1)} disabled={page===0} aria-label="Previous page" aria-controls={controls}><ChevronLeft className="size-4" aria-hidden="true"/></button>
-        <span className="min-w-14 text-center text-xs tabular-nums">{page+1} / {pages}</span>
-        <button type="button" className={button} onClick={()=>onPage(page+1)} disabled={page>=pages-1} aria-label="Next page" aria-controls={controls}><ChevronRight className="size-4" aria-hidden="true"/></button>
-      </div>
-    </nav>
-  );
-}
-
-// `pageSize` splits long tables into pages (sorting covers every row, then
-// the page is cut); `align: 'left'` on a column left-aligns cells whose
-// contents vary in width, such as a rank icon and label, so icons line up.
-export function SortableTable({id,caption,columns,rows,values,maxima=[],className,pageSize,noun='rows'}){
-  const mobile=useIsMobile();
-  const [page,setPage]=useState(0);
-  const [sort,setSort]=useState(()=>tableSortState.get(id)||null);
-  const best=new Map();
-  for(const {column,label} of maxima){
-    const numeric=values.map(row=>row[column]).filter(v=>typeof v==='number'&&Number.isFinite(v));
-    if(numeric.length)best.set(column,{max:Math.max(...numeric),label});
-  }
-  const order=rows.map((row,index)=>index);
-  if(sort&&sort.column<columns.length){
-    const collator=new Intl.Collator(undefined,{numeric:true,sensitivity:'base'});
-    order.sort((a,b)=>{
-      const av=values[a][sort.column],bv=values[b][sort.column];
-      if(av==null||bv==null)return av==null?(bv==null?a-b:1):-1;
-      const comparison=typeof av==='number'&&typeof bv==='number'?av-bv:collator.compare(String(av),String(bv));
-      return comparison*(sort.direction==='ascending'?1:-1)||a-b;
-    });
-  }
-  const choose=next=>{
-    tableSortState.set(id,next);
-    setSort(next);
-    setPage(0);
-  };
-  const toggle=column=>{
-    const direction=sort?.column===column?(sort.direction==='ascending'?'descending':'ascending'):(column===0?'ascending':'descending');
-    choose({column,direction});
-  };
-  const paged=pageSize&&order.length>pageSize;
-  const current=paged?Math.min(page,Math.ceil(order.length/pageSize)-1):0;
-  const shown=paged?order.slice(current*pageSize,(current+1)*pageSize):order;
-  const more=paged
-    ?<TablePager page={current} pageSize={pageSize} total={order.length} noun={noun} controls={id} onPage={setPage}/>
-    :null;
-  if(mobile)return <>{<MobileRowList {...{id,caption,columns,rows,values,order:shown,best,sort,choose,className}}/>}{more}</>;
-  return (
-    <>
-    <Table id={id} className={cn('rank-table',className)}>
-      <caption className="sr-only">{caption}</caption>
-      <TableHeader>
-        <TableRow>
-          {columns.map((col,column)=>{
-            const active=sort?.column===column;
-            const Icon=active?(sort.direction==='ascending'?ArrowUp:ArrowDown):ArrowUpDown;
-            const left=column===0||col.align==='left';
-            return (
-              <TableHead key={column} scope="col" aria-sort={active?sort.direction:'none'} title={col.title} className={column>0&&left?'col-left':undefined}>
-                <button type="button" onClick={()=>toggle(column)} className="table-sort-btn"
-                  aria-label={`${col.label}: sort ${active&&sort.direction==='ascending'?'descending':active?'ascending':column===0?'ascending':'descending'}`}>
-                  {!left&&<Icon className="sort-icon" aria-hidden="true"/>}{col.label}{left&&<Icon className="sort-icon" aria-hidden="true"/>}
-                </button>
-              </TableHead>
-            );
-          })}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {shown.map(index=>{
-          const row=rows[index];
-          return (
-            <TableRow key={row.key}>
-              {row.cells.map((cell,column)=>{
-                const props=row.cellProps?.[column]||{};
-                const top=best.get(column);
-                const isBest=top&&values[index][column]===top.max;
-                const title=isBest?[props.title,`Highest ${top.label} in this table`].filter(Boolean).join('. '):props.title;
-                if(column===0)return <TableHead key={0} scope="row" className={props.className} title={title}>{cell}</TableHead>;
-                return (
-                  <TableCell key={column} title={title} className={cn(columns[column]?.align==='left'&&'col-left',props.className,isBest&&'table-best')}>
-                    {cell}
-                  </TableCell>
-                );
-              })}
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
-    {more}
-    </>
   );
 }
 

@@ -1,7 +1,7 @@
 import {useEffect,useState} from 'react';
 import {PARTY_LABELS,setServerPartySize,winRateLabel,winRateTone} from '@/engine/core.mjs';
 import {useEngine} from '@/app/hooks.js';
-import {EmptyState,LobbyValue,PageHeading,PartySizeFilter,PlacementToggle,SortableTable,toneClass} from '@/app/shared.jsx';
+import {EmptyState,LobbyValue,PageHeading,PartySizeFilter,PlacementToggle,SortableTable,TableSection,toneClass} from '@/app/shared.jsx';
 import {Card} from '@/components/ui/card';
 
 // The EU ping map (assets/ping-map) is a standalone D3 script that binds to the
@@ -62,7 +62,7 @@ function ServersTable({rows}){
   ]}));
   const values=rows.map(row=>[row.name,row.games,row.avgLobby,row.kd,row.acs,row.performanceScore,row.winRate]);
   return (
-    <SortableTable id="servers-table" rows={tableRows} values={values}
+    <SortableTable id="servers-table" standalone rows={tableRows} values={values}
       caption="Match results and performance grouped by game server; match share is the percentage of matches with a known server"
       columns={[{label:'Server'},{label:'Matches'},{label:'Avg Lobby',wide:true,align:'left'},{label:'K/D'},{label:'ACS',title:'Average combat score'},{label:'PS',title:'Avg PS across matches with available data'},{label:'Win rate',title:'Wins divided by wins plus losses; draws excluded'}]}
       maxima={[{column:1,label:'matches and match share'},{column:2,label:'average lobby rank'},{column:3,label:'K/D'},{column:4,label:'average ACS'},{column:5,label:'Avg PS'},{column:6,label:'win rate'}]}/>
@@ -99,7 +99,7 @@ export function ServersPage({active}){
               </Card>
             ))}
           </dl>
-          <Card className="py-2"><ServersTable rows={s.serverData}/></Card>
+          <TableSection label="Servers"><ServersTable rows={s.serverData}/></TableSection>
         </>
       )}
       {!hasServers&&s.analysisState!=='error'&&<EmptyState>{empty}</EmptyState>}

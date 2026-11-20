@@ -2,7 +2,7 @@ import {avgLabel,avgLabelShort,lobbyTeamsChartRows,lobbyTeamsGapLabel,PARTY_LABE
 import {RANK_ICONS} from '@/engine/rank-icons.mjs';
 import {useRef,useState} from 'react';
 import {useEngine} from '@/app/hooks.js';
-import {ChartFrame,ChartTooltip,EmptyState,PageHeading,PartySizeFilter,PlacementToggle} from '@/app/shared.jsx';
+import {ChartFrame,ChartTooltip,EmptyState,PageHeading,PartySizeFilter,PlacementToggle,TableSection} from '@/app/shared.jsx';
 import {PerformanceTable} from '@/app/pages/Duos.jsx';
 import {Card,CardContent,CardHeader,CardTitle} from '@/components/ui/card';
 
@@ -91,7 +91,7 @@ export function LobbyRankPage(){
           <PlacementToggle/>
         </div>
       )}
-      {hasRanks&&<Card className="py-2"><PerformanceTable id="sg-rank-overview" rows={s.lobbyRankData}/></Card>}
+      {hasRanks&&<TableSection label="Performance by lobby rank"><PerformanceTable id="sg-rank-overview" rows={s.lobbyRankData}/></TableSection>}
       {hasRanks&&chartRows.length>0&&(
         <section aria-labelledby="lobby-teams-title">
           <Card>

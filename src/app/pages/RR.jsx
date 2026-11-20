@@ -6,7 +6,7 @@ import {
 } from '@/engine/core.mjs';
 import {RANK_ICONS} from '@/engine/rank-icons.mjs';
 import {useElementWidth,useEngine,useIsMobile} from '@/app/hooks.js';
-import {ChartFrame,ChartTooltip,EmptyState,PageHeading,PlacementToggle,RankIcon,SortableTable,StatStrip,toneClass} from '@/app/shared.jsx';
+import {ChartFrame,ChartTooltip,EmptyState,PageHeading,PlacementToggle,RankIcon,SortableTable,StatStrip,TableSection,toneClass} from '@/app/shared.jsx';
 import {cn} from '@/lib/utils';
 import {Card,CardContent,CardHeader,CardTitle} from '@/components/ui/card';
 import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs';
@@ -491,7 +491,7 @@ export function RRRankTable({matches}){
   ],cellProps:[null,null,{className:toneClass(s.kd)},null,null,{className:toneOf(winRateTone(s.winRate))},{className:'text-positive'},{className:'text-negative'}]}));
   const values=rows.map(({tier,stats:s})=>[tier,s.n,s.kd,s.acs,s.performanceScore,s.winRate,s.avgGain,s.avgLoss==null?null:-s.avgLoss]);
   return (
-    <SortableTable id="rr-rank-table" rows={tableRows} values={values} caption={`Matches grouped by your rank in each match. ${RR_SCOPE}`}
+    <SortableTable id="rr-rank-table" standalone rows={tableRows} values={values} caption={`Matches grouped by your rank in each match. ${RR_SCOPE}`}
       columns={[{label:'Player rank'},{label:'Games',title:'All matches in this act, including games without RR payouts'},{label:'K/D'},{label:'ACS',title:'Average combat score'},
         {label:'PS',title:'Avg PS across matches with available data'},{label:'WR%',title:'Wins divided by wins plus losses across all games; draws excluded'},
         {label:'RR / Win',title:'Average recorded RR from eligible wins; excludes placements, unrated ranks and full 5-stacks'},
@@ -663,7 +663,7 @@ export function RRPage(){
             </Card>
           </section>
           <RRMovementChart matches={matches} zoomTier={s.rrMovementZoomTier}/>
-          <Card className="py-2"><RRRankTable matches={matches}/></Card>
+          <TableSection label="RR by your rank"><RRRankTable matches={matches}/></TableSection>
           <section aria-labelledby="rr-score-title">
             <Card>
               <CardHeader>
