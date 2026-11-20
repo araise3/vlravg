@@ -107,8 +107,12 @@ end of `src/index.css` (they outrank Tailwind's utility layer):
   newest first until a column is sorted, every column left-aligned since they
   are text and dates); phones keep the timeline list. With that, nothing used
   `.rank-table` and its CSS was removed.
-  Phones keep the `MobileRowList` cards, full-bleed in the card. The
-  Overview's recent matches stays a plain `Table` (not sortable).
+  The Overview's recent matches (not sortable) takes the same look through
+  the shared class constants in `data-table.jsx` (`TABLE_FRAME`,
+  `TABLE_HEAD_ROW`, `TABLE_HEAD`, `TABLE_CELL`): an inset frame in its card on
+  desktop; on phones it runs full-bleed with 8px inner cells and a 40px map
+  thumbnail, since the inset version was 27px too wide at 375px.
+  Phones keep the `MobileRowList` cards, full-bleed in the card.
   Opening that Columns menu first shifted the page 7.5px left: Radix's scroll
   lock puts `overflow: hidden` on body, which takes over the viewport and drops
   html's `scrollbar-gutter: stable`, then adds a scrollbar-width margin. Body

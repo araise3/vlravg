@@ -80,6 +80,14 @@ test('recent matches show result, score, K/D/A and RR per row',async()=>{
   assert.match(html,/Bind 14 Nov Draw 12–12 — —/);
 });
 
+test('recent matches use the shared table look',async()=>{
+  const html=await renderHtml(PAGE,'RecentMatchesCard',{matches:[{matchId:'a',mapName:'Haven',won:true,myR:13,opR:8,myRR:22,myStats:{kills:1,deaths:1,assists:1}}],maps:null});
+  assert.match(html,/<div class="overflow-hidden border bg-card rounded-lg max-sm:rounded-none max-sm:border-x-0">/);
+  assert.match(html,/<tr[^>]*class="[^"]*bg-muted\/40 hover:bg-muted\/40/);
+  assert.match(html,/<th[^>]*class="[^"]*h-10 px-3 text-xs font-medium text-muted-foreground/);
+  assert.match(html,/<td[^>]*class="[^"]*px-3 py-2\.5/);
+});
+
 test('overview is built from shadcn cards with no scrolling lists',()=>{
   const source=readFileSync(new URL('../src/app/pages/Overview.jsx',import.meta.url),'utf8');
   assert.match(source,/components\/ui\/card/);
