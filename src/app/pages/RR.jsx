@@ -543,7 +543,7 @@ export function RRMovementChart({matches,zoomTier}){
             <span className="inline-flex items-center gap-1.5"><span className="flex gap-0.5 opacity-45"><span className="size-1.5 rounded-full" style={{background:'var(--chart-win)'}}/><span className="size-1.5 rounded-full" style={{background:'var(--chart-loss)'}}/></span>Individual win or loss</span>
             {even&&<span className="inline-flex items-center gap-1.5"><span className="h-3 w-0 border-l border-dashed border-foreground/60"/>Estimated even point</span>}
           </div>
-          {evenText&&<p className="text-sm text-muted-foreground" data-even-point>{evenText}</p>}
+          {/* The even-point sentence above the chart was removed on request (20 Nov 2026); it stays as the even line's label. */}
           {compact&&tierGroups.length>1&&(
             // Single-choice chips: tapping the chosen rank again (an empty
             // value) goes back to all ranks.
