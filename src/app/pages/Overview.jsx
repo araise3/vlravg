@@ -1,4 +1,4 @@
-import {useState} from 'react';
+import {useLayoutEffect,useRef,useState} from 'react';
 import {ArrowUpRight} from 'lucide-react';
 import {
   avgLabel,avgLabelShort,clutchTotals,computeRRStats,decidedWinRate,hexToRgb,lobbyRR,MIN_RATED,overviewRecentMatches,PARTY_LABELS,
@@ -67,8 +67,10 @@ function SectionLabel({children,aside}){
   );
 }
 
-// One slim bar per division between the lowest and highest lobby, all in the
-// average's rank colour: its division solid, the others faint. Labels under
+// One slim bar per division between the lowest and highest lobby, each in its
+// own rank colour (Ascendant green, Immortal red, …): the average's division
+// solid, the others faint. (One shared hue was tried and dropped: an Immortal
+// average painted its Ascendant bars red.) Labels under
 // every bar when they fit, else only the ends and the average.
 function LobbySpread({spread,avgTier}){
   const max=Math.max(...spread.map(d=>d.count));
@@ -82,8 +84,8 @@ function LobbySpread({spread,avgTier}){
           aria-label={'Rated lobbies by rank: '+spread.filter(d=>d.count).map(d=>`${avgLabel(d.tier)} ${d.count}`).join(', ')}>
           {spread.map(({tier,count})=>(
             <div key={tier} className="flex h-full min-w-0 flex-1 items-end" title={`${avgLabel(tier)}: ${lobbiesText(count)}`}>
-              <div className={cn('w-full rounded-sm',count?'bg-(--lobby-rank)':'bg-muted')}
-                style={{height:count?`${Math.max(10,Math.round(count/max*1000)/10)}%`:3,...(count?{opacity:tier===avgTier?1:.3}:{})}}/>
+              <div className={cn('w-full rounded-sm',count?'':'bg-muted')}
+                style={{height:count?`${Math.max(10,Math.round(count/max*1000)/10)}%`:3,...(count?{background:rColor(tier),opacity:tier===avgTier?1:.35}:{})}}/>
             </div>
           ))}
         </div>
@@ -378,18 +380,48 @@ export function RecentMatchesCard({matches,maps,className}){
   );
 }
 
-// The top party teammates, one row each, beside the lobby rank card.
+// How many whole table rows fit in a box: its height minus the header and the
+// frame's borders, over one body row's height; at least `min`. Re-measured
+// whenever the box resizes. Server render and phones keep `min`.
+export const TEAMMATES_MIN_ROWS=4;
+function useRowsThatFit(min){
+  const ref=useRef(null);
+  const [fit,setFit]=useState(min);
+  useLayoutEffect(()=>{
+    const box=ref.current;
+    if(!box||typeof ResizeObserver==='undefined')return;
+    const measure=()=>{
+      const head=box.querySelector('thead')?.getBoundingClientRect().height||0;
+      const row=box.querySelector('tbody tr')?.getBoundingClientRect().height;
+      if(!row)return;
+      setFit(Math.max(min,Math.floor((box.clientHeight-head-2)/row)));
+    };
+    measure();
+    const observer=new ResizeObserver(measure);
+    observer.observe(box);
+    return()=>observer.disconnect();
+  },[min]);
+  return [ref,fit];
+}
+
+// The top party teammates, one row each, beside the lobby rank card. From sm
+// up the two cards share a row, so the list takes the height the lobby card
+// sets and shows as many teammates as fit (at least four); its own content
+// sits out of flow there, so it never makes the row taller. Phones stack the
+// cards and show four.
 export function TeammatesCard({teammates}){
-  const top=teammates.slice(0,4);
+  const [fitRef,fit]=useRowsThatFit(TEAMMATES_MIN_ROWS);
+  const top=teammates.slice(0,fit);
   return (
     <Card className="gap-4 py-5" aria-labelledby="overview-duos-title">
       <CardHeader className="px-5">
         <CardTitle><h2 id="overview-duos-title">Top teammates</h2></CardTitle>
         <CardAction><ViewLink page="duos">Duos</ViewLink></CardAction>
       </CardHeader>
-      <CardContent className="px-5">
+      <CardContent className="flex flex-1 flex-col px-5">
         {top.length
-          ?<div className={cn(TABLE_FRAME,'rounded-lg')}>
+          ?<div ref={fitRef} className="relative sm:min-h-52 sm:flex-1" data-slot="teammates-fit">
+          <div className={cn(TABLE_FRAME,'rounded-lg sm:absolute sm:inset-x-0 sm:top-0')}>
             <Table className="tabular-nums">
               <TableHeader>
                 <TableRow className={TABLE_HEAD_ROW}>
@@ -418,6 +450,7 @@ export function TeammatesCard({teammates}){
                 })}
               </TableBody>
             </Table>
+          </div>
           </div>
           :<InlineEmpty>No party teammates this act</InlineEmpty>}
       </CardContent>
