@@ -61,6 +61,9 @@ test('the lobby spread has one bar per division from the lowest lobby to the hig
   assert.deepEqual(bars.map(b=>b.lit),bars.map(b=>b.title.startsWith(avgLabel(tierRR(avg).tier)+':')));
   assert.deepEqual(bars.map(b=>b.lit),[false,false,true,false]);
   assert.deepEqual(bars.map(b=>b.empty),[false,true,false,false]);
+  // Each bar wears its own division's rank colour, not the average's (Platinum #36b5c0, Diamond #c07de0).
+  const colours=[...spread.matchAll(/title="[^"]+"><div class="[^"]*" style="[^"]*?background:(#[0-9a-f]{6})/g)].map(m=>m[1]);
+  assert.deepEqual(colours,['#36b5c0','#36b5c0','#c07de0']);
 });
 
 test('without rated lobbies the lobby rank card says so',async()=>{
@@ -150,6 +153,12 @@ test('top teammates sit beside the lobby rank card as rows with matches, win rat
   const t=text(html);
   assert.match(t,/Top teammates Duos Teammate Matches Win rate RR Orange #EUW 18 62\.5% \+42 Unfair #EUW 14 35\.7% −30 Sevire #EUW 8 50\.0% — Fourth #EUW 4 50\.0% \+8 $/);
   assert.doesNotMatch(t,/Extra/);
+  // From sm up the list fills the height the lobby card sets: an out-of-flow table in a flex-1 box
+  // that is measured on the client; the server render (and phones) start from four rows.
+  const {TEAMMATES_MIN_ROWS}=await load(PAGE);
+  assert.equal(TEAMMATES_MIN_ROWS,4);
+  assert.match(html,/data-slot="card-content" class="[^"]*flex-1[^"]*"/);
+  assert.match(html,/class="relative sm:min-h-52 sm:flex-1" data-slot="teammates-fit"><div class="[^"]*sm:absolute sm:inset-x-0 sm:top-0/);
   assert.match(text(await renderHtml(PAGE,'TeammatesCard',{teammates:[]})),/No party teammates this act/);
   const kpis=await renderHtml(PAGE,'KpiCards',{s:{...state([[2,18.5,3]]),allTeammates:teammates}});
   assert.ok(kpis.indexOf('overview-lobby-title')<kpis.indexOf('overview-duos-title'));

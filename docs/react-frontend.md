@@ -148,8 +148,10 @@ pickers, and every toggle.
   count (a hint explains the 7-rated-player rule). A shadcn `Separator` then
   splits off two uppercase-labelled sections. "Lobby spread" (`lobbySpread`)
   appears when the lobbies cover more than one division: one slim rounded bar
-  per division from the lowest to the highest, empty divisions as stubs, all
-  in the average's rank colour with only its division solid; labels under
+  per division from the lowest to the highest, empty divisions as stubs, each
+  in its own division's rank colour with only the average's division solid
+  (one shared hue was tried and dropped on 20 Nov 2026: an Immortal average
+  painted its Ascendant bars red); labels under
   every bar up to eight, else the ends and the average. "By party size" is a
   shadcn table in the shared data-table look (as Top teammates): one row per
   size played with party icon and label, lobby rank (icon and label) and
@@ -164,7 +166,11 @@ pickers, and every toggle.
   "Net RR (last 20)" card on request (17 Nov 2026): up to four party
   teammates as table rows (name, matches together, win rate, your net RR
   with them), with a link to Duos. A solo player gets a dashed empty note
-  so the row keeps both cards.
+  so the row keeps both cards. From 20 Nov 2026 the list fills the height
+  the lobby rank card sets (from sm up): the table sits out of flow in a
+  flex-1 box, and `useRowsThatFit` measures how many whole rows fit (at least
+  `TEAMMATES_MIN_ROWS`, 4) whenever the box resizes. Phones stack the cards
+  and keep four.
 - Act stats: the eight act figures (K/D, ACS, PS, ADR, KAST, playtime,
   matches with W/L/D, win rate) as one 4×2 hairline grid, 2×4 on phones.
 - Clutch stats: 1v1–1v5 win rate with a `Progress` bar and counts (five
