@@ -95,11 +95,15 @@ test('the phone match card keeps result, score, RR change, stats and the roster 
   assert.match(html,/aria-label="Win on Abyss, 13–7\. 18 \/ 12 \/ 8 KDA, 240 ACS, 230 Performance Score\. Show RR details and roster"/);
 });
 
-test('on phones the KPI rows show the short rank and put the lobby count under the party label',async()=>{
+test('a narrow party-size table drops the Lobbies column and long rank label, putting the count under the party label',async()=>{
   const s={overviewStats:{overallRR:{tier:18,rr:50},overall:18.5},allMatches:[],statMatches:Array.from({length:12},()=>({partySize:2,avgRank:18.5}))};
   const html=await renderHtml('/src/app/pages/Overview.jsx','KpiCards',{s});
   const r=tierRR(18.5);
-  assert.ok(html.includes(`<span class="truncate max-sm:hidden">${avgLabel(r.tier)} (${r.rr} RR)</span><span class="truncate sm:hidden">${avgLabelShort(r.tier)} (${r.rr} RR)</span>`));
-  assert.match(html,/<span class="block text-xs tabular-nums sm:hidden">12 lobbies<\/span>/);
-  assert.match(html,/<dd class="shrink-0 text-xs text-muted-foreground tabular-nums max-sm:hidden">12 lobbies<\/dd>/);
+  const table=html.slice(html.indexOf('data-slot="lobby-party-table"'),html.indexOf('overview-duos-title'));
+  // A container query on the table frame: phones fit all three columns, the narrow two-column card on tablets does not.
+  assert.match(html,/class="[^"]*@container[^"]*" data-slot="lobby-party-table"/);
+  assert.match(table,/<th [^>]*class="[^"]*@max-\[19rem\]:hidden[^"]*"[^>]*>Lobbies<\/th>/);
+  assert.match(table,/<span class="block text-xs @min-\[19rem\]:hidden">12 lobbies<\/span>/);
+  assert.ok(table.includes(`<span class="truncate @max-[19rem]:hidden">${avgLabel(r.tier)}</span><span class="truncate @min-[19rem]:hidden">${avgLabelShort(r.tier)}</span>`));
+  assert.match(table,new RegExp(`title="Duo: ${avgLabel(r.tier)} across 12 lobbies"`));
 });

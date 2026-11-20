@@ -1,8 +1,8 @@
 import {useState} from 'react';
 import {ArrowUpRight} from 'lucide-react';
 import {
-  avgLabel,avgLabelShort,clutchTotals,computeRRStats,decidedWinRate,overviewRecentMatches,PARTY_LABELS,
-  playerRouteUrl,rrSigned,tierRR,winRateLabel,winRateTone,
+  avgLabel,avgLabelShort,clutchTotals,computeRRStats,decidedWinRate,hexToRgb,lobbyRR,MIN_RATED,overviewRecentMatches,PARTY_LABELS,
+  playerRouteUrl,rColor,rrSigned,tierRR,winRateLabel,winRateTone,
 } from '@/engine/core.mjs';
 import {useElementWidth,useEngine,useIsMobile} from '@/app/hooks.js';
 import {TABLE_CELL,TABLE_FRAME,TABLE_HEAD,TABLE_HEAD_ROW} from '@/app/data-table.jsx';
@@ -13,6 +13,7 @@ import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
 import {Card,CardAction,CardContent,CardDescription,CardHeader,CardTitle} from '@/components/ui/card';
 import {Progress} from '@/components/ui/progress';
+import {Separator} from '@/components/ui/separator';
 import {Skeleton} from '@/components/ui/skeleton';
 import {Table,TableBody,TableCell,TableHead,TableHeader,TableRow} from '@/components/ui/table';
 
@@ -30,39 +31,6 @@ function ViewLink({page,children}){
   );
 }
 
-// One KPI card with the same header as Top teammates (title, link to the full
-// page), then the headline value and a hairline-divided list of rows (label,
-// value, note). Supporting figures live in rows, not badges.
-function KpiCard({title,titleId,action,value,valueClassName,icon,rows,note,empty}){
-  return (
-    <Card className="gap-4 py-5" aria-labelledby={titleId}>
-      <CardHeader className="px-5">
-        <CardTitle><h2 id={titleId}>{title}</h2></CardTitle>
-        {action&&<CardAction>{action}</CardAction>}
-      </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-3 px-5">
-        <div className={cn('flex min-w-0 items-center gap-2.5 text-2xl leading-none font-semibold whitespace-nowrap tabular-nums sm:text-3xl',valueClassName)}>{icon}{value}</div>
-        {rows.length
-          ?<dl className="divide-y rounded-lg border">
-            {rows.map(row=>(
-              <div key={row.key} className="flex min-w-0 items-center gap-3 px-3 py-2 text-sm" title={row.title}>
-                <dt className="w-[5.75rem] shrink-0 text-muted-foreground max-sm:w-[5.5rem]">
-                  <span className="flex items-center gap-1.5 whitespace-nowrap">{row.label}</span>
-                  {/* Phones: the note goes under the label to leave room for the value. */}
-                  {row.note!=null&&<span className="block text-xs tabular-nums sm:hidden">{row.note}</span>}
-                </dt>
-                <dd className={cn('flex min-w-0 flex-1 items-center gap-2 font-medium tabular-nums',row.className)}>{row.value}</dd>
-                {row.note!=null&&<dd className="shrink-0 text-xs text-muted-foreground tabular-nums max-sm:hidden">{row.note}</dd>}
-              </div>
-            ))}
-          </dl>
-          :<InlineEmpty>{empty}</InlineEmpty>}
-        {note&&<p className="mt-auto text-xs text-muted-foreground">{note}</p>}
-      </CardContent>
-    </Card>
-  );
-}
-
 // Lobby rank per party size, over exactly the rated matches in the headline
 // average under the current placement choice.
 function partyLobbyRanks(rated){
@@ -75,27 +43,153 @@ function partyLobbyRanks(rated){
   return [...groups].sort((a,b)=>a[0]-b[0]).map(([size,{sum,count}])=>({size,count,rank:tierRR(sum/count)}));
 }
 
-// Average lobby rank, broken down by party size (one row per size played),
-// beside the top party teammates.
-export function KpiCards({s}){
+// How many rated lobbies landed in each division, over every division from the
+// lowest to the highest seen (gaps included, so the bars share one rank axis).
+export function lobbySpread(rated){
+  const counts=new Map();
+  rated.forEach(m=>{const tier=tierRR(m.avgRank).tier;counts.set(tier,(counts.get(tier)||0)+1);});
+  if(!counts.size)return [];
+  const tiers=[...counts.keys()];
+  const out=[];
+  for(let tier=Math.min(...tiers);tier<=Math.max(...tiers);tier++)out.push({tier,count:counts.get(tier)||0});
+  return out;
+}
+
+const lobbiesText=n=>`${n} ${n===1?'lobby':'lobbies'}`;
+
+// A small uppercase section label inside the lobby rank card.
+function SectionLabel({children,aside}){
+  return (
+    <div className="flex items-baseline justify-between gap-3 text-xs">
+      <span className="font-medium tracking-wide text-muted-foreground uppercase">{children}</span>
+      {aside&&<span className="text-muted-foreground tabular-nums">{aside}</span>}
+    </div>
+  );
+}
+
+// One slim bar per division between the lowest and highest lobby, all in the
+// average's rank colour: its division solid, the others faint. Labels under
+// every bar when they fit, else only the ends and the average.
+function LobbySpread({spread,avgTier}){
+  const max=Math.max(...spread.map(d=>d.count));
+  const labelAll=spread.length<=8;
+  const lowest=spread[0].tier,highest=spread[spread.length-1].tier;
+  return (
+    <div className="flex flex-col gap-3" data-slot="lobby-spread">
+      <SectionLabel aside={lowest!==highest&&`${avgLabelShort(lowest)} – ${avgLabelShort(highest)}`}>Lobby spread</SectionLabel>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex h-14 items-end gap-1.5" role="img"
+          aria-label={'Rated lobbies by rank: '+spread.filter(d=>d.count).map(d=>`${avgLabel(d.tier)} ${d.count}`).join(', ')}>
+          {spread.map(({tier,count})=>(
+            <div key={tier} className="flex h-full min-w-0 flex-1 items-end" title={`${avgLabel(tier)}: ${lobbiesText(count)}`}>
+              <div className={cn('w-full rounded-sm',count?'bg-(--lobby-rank)':'bg-muted')}
+                style={{height:count?`${Math.max(10,Math.round(count/max*1000)/10)}%`:3,...(count?{opacity:tier===avgTier?1:.3}:{})}}/>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-1.5 text-[10px] leading-none text-muted-foreground tabular-nums" aria-hidden="true">
+          {spread.map(({tier},i)=>(
+            <span key={tier} className={cn('min-w-0 flex-1 text-center whitespace-nowrap',tier===avgTier&&'font-semibold text-foreground')}>
+              {labelAll||tier===avgTier||i===0||i===spread.length-1?avgLabelShort(tier):''}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// The site's namesake: the average lobby rank as a rank-tinted hero (badge,
+// division, RR into the division on a Progress bar), the spread of lobbies
+// across divisions, then a table row per party size played. Beside the top
+// party teammates.
+export function LobbyRankCard({s}){
   const o=s.overviewStats;
   const rated=s.statMatches.filter(m=>m.avgRank!=null);
   const parties=partyLobbyRanks(rated);
   const rank=o.overallRR;
+  // Immortal+ averages have no 100-RR division, so no RR figure or bar (see lobbyRR).
+  const rr=lobbyRR(rank);
+  const color=rank?rColor(rank.tier):null;
+  const rgb=color&&hexToRgb(color).replaceAll(',',' ');
+  const spread=lobbySpread(rated);
   const partyName=size=>PARTY_LABELS[size]||size+'-Stack';
-  const lobbies=n=>`${n} ${n===1?'lobby':'lobbies'}`;
-  const partyRows=parties.map(({size,count,rank:r})=>({
-    key:size,
-    label:<><PartyIcon size={size}/>{partyName(size)}</>,
-    value:<><RankIcon tier={r.tier} size={18}/><span className="truncate max-sm:hidden">{avgLabel(r.tier)} ({r.rr} RR)</span><span className="truncate sm:hidden">{avgLabelShort(r.tier)} ({r.rr} RR)</span></>,
-    note:lobbies(count),
-    title:`${partyName(size)}: ${avgLabel(r.tier)}, ${r.rr} RR across ${lobbies(count)}`,
-  }));
+  return (
+    <Card className="relative gap-5 overflow-hidden py-5" aria-labelledby="overview-lobby-title" data-slot="lobby-rank-card"
+      style={rgb?{'--lobby-rank':color,backgroundImage:`radial-gradient(120% 70% at 0% 0%, rgb(${rgb} / .14), transparent 60%)`}:undefined}>
+      {rgb&&<div className="pointer-events-none absolute inset-x-0 top-0 h-px" aria-hidden="true"
+        style={{background:`linear-gradient(90deg, rgb(${rgb} / .9), rgb(${rgb} / .15) 70%, transparent)`}}/>}
+      <CardHeader className="px-5">
+        <CardTitle><h2 id="overview-lobby-title">Avg lobby rank</h2></CardTitle>
+        <CardAction><ViewLink page="lobby-rank">Lobby Rank</ViewLink></CardAction>
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col gap-5 px-5">
+        {rank
+          ?<div className="flex items-center gap-4" data-slot="lobby-rank-hero">
+            <div className="relative grid size-[72px] shrink-0 place-items-center" aria-hidden="true">
+              <div className="absolute inset-1 rounded-full bg-(--lobby-rank) opacity-25 blur-xl"/>
+              <RankIcon tier={rank.tier} size={64} className="relative drop-shadow-[0_6px_10px_rgb(0_0_0/.45)]"/>
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+              <div className="flex min-w-0 items-baseline justify-between gap-3">
+                <span className="truncate text-3xl leading-none font-semibold tracking-tight" style={{color}}>{avgLabel(rank.tier)}</span>
+                {rr!=null&&<span className="shrink-0 text-sm leading-none text-muted-foreground tabular-nums"><span className="text-lg font-semibold text-foreground">{rr}</span> RR</span>}
+              </div>
+              {rr!=null&&<Progress value={rr} className="h-1.5 bg-(--lobby-rank)/15" indicatorClassName="rounded-full bg-(--lobby-rank)"
+                aria-label={`${rr} of 100 RR into ${avgLabel(rank.tier)}`}/>}
+              <div className="text-xs text-muted-foreground tabular-nums">
+                Across <Hint content={`Lobbies with at least ${MIN_RATED} rated players; the average counts rated players only`}>{rated.length} rated {rated.length===1?'lobby':'lobbies'}</Hint>
+              </div>
+            </div>
+          </div>
+          :<InlineEmpty>No rated lobbies yet</InlineEmpty>}
+        {rank&&(spread.length>1||parties.length>0)&&<Separator/>}
+        {spread.length>1&&<LobbySpread spread={spread} avgTier={rank?.tier}/>}
+        {parties.length>0&&(
+          <div className="flex flex-col gap-3">
+            <SectionLabel>By party size</SectionLabel>
+            <div className={cn(TABLE_FRAME,'@container rounded-lg')} data-slot="lobby-party-table">
+              <Table className="tabular-nums">
+                <TableHeader>
+                  <TableRow className={TABLE_HEAD_ROW}>
+                    <TableHead className={TABLE_HEAD}>Party</TableHead>
+                    <TableHead className={TABLE_HEAD}>Lobby rank</TableHead>
+                    <TableHead className={cn(TABLE_HEAD,'text-right @max-[19rem]:hidden')}>Lobbies</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {parties.map(({size,count,rank:r})=>(
+                    <TableRow key={size} title={`${partyName(size)}: ${avgLabel(r.tier)} across ${lobbiesText(count)}`}>
+                      <TableCell className={cn(TABLE_CELL,'text-muted-foreground')}>
+                        <span className="flex items-center gap-1.5 whitespace-nowrap"><PartyIcon size={size}/>{partyName(size)}</span>
+                        {/* A narrow table (phones, the two-column card on tablets) drops the Lobbies
+                            column and the long rank label: the count goes under the party label. */}
+                        <span className="block text-xs @min-[19rem]:hidden">{lobbiesText(count)}</span>
+                      </TableCell>
+                                            <TableCell className={cn(TABLE_CELL,'w-full max-w-0 font-medium')}>
+                        <span className="flex min-w-0 items-center gap-2">
+                          <RankIcon tier={r.tier} size={18}/>
+                          <span className="truncate @max-[19rem]:hidden">{avgLabel(r.tier)}</span><span className="truncate @min-[19rem]:hidden">{avgLabelShort(r.tier)}</span>
+                        </span>
+                      </TableCell>
+                      <TableCell className={cn(TABLE_CELL,'text-right text-muted-foreground @max-[19rem]:hidden')}>{count}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// The lobby rank card beside the top party teammates.
+export function KpiCards({s}){
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2" role="group" aria-label="Key figures this act" data-slot="kpi-cards">
-      <KpiCard title="Avg lobby rank" titleId="overview-lobby-title" action={<ViewLink page="lobby-rank">Lobby Rank</ViewLink>}
-        value={<span className="truncate">{rank?`${avgLabel(rank.tier)} (${rank.rr} RR)`:avgLabel(o.overall)}</span>}
-        icon={rank&&<RankIcon tier={rank.tier} size={34}/>} rows={partyRows} empty="No rated lobbies yet"/>
+      <LobbyRankCard s={s}/>
       <TeammatesCard teammates={s.allTeammates||[]}/>
     </div>
   );

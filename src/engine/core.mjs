@@ -205,6 +205,17 @@ function tierRR(v){
   if(rr<0){rr+=100;tier-=1;}
   return{tier,rr};
 }
+// Lobby averages come from tier ids alone (match data has no player RR), so
+// their "RR" is the average's decimal part read as RR into a division. That
+// only holds where divisions are 100 RR wide (Iron through Ascendant). From
+// Immortal 1 up RR accumulates from the Immortal 1 floor and Immortal 2/3 and
+// Radiant are regional leaderboard cutoffs, so an average there shows its
+// rank without RR (decision 20 Nov 2026). Returns null when hidden.
+function lobbyRR(r){return r&&r.tier<24?r.rr:null;}
+function lobbyRankText(v,short=false){
+  const r=tierRR(v),label=short?avgLabelShort(r.tier):avgLabel(r.tier);
+  return lobbyRR(r)==null?label:`${label} (${r.rr} RR)`;
+}
 function rClass(n){
   if(n<=2)return 'r-unr';if(n<=5)return 'r-iron';if(n<=8)return 'r-bronze';
   if(n<=11)return 'r-silver';if(n<=14)return 'r-gold';if(n<=17)return 'r-plat';
@@ -3774,13 +3785,19 @@ function lobbyTeamsChartRows(rows){
   return rows.map(b=>{
     const team=b.teamRankCount?b.teamRankSum/b.teamRankCount:null;
     const enemy=b.enemyRankCount?b.enemyRankSum/b.enemyRankCount:null;
-    // Rank values move 0.01 per RR (see tierRR), so the gap converts directly.
+    // Rank values move 0.01 per RR (see tierRR), so the gap converts directly,
+    // but only below Immortal: once either side averages Immortal 1 or higher
+    // (rounds to tier 24+) there are no 100-RR divisions, so the gap keeps its
+    // direction and drops the RR figure (see lobbyRR).
     const gap=team!=null&&enemy!=null?Math.round((enemy-team)*100):null;
-    return{tier:b.tier,total:b.total,team,enemy,gap};
+    const gapInRR=gap!=null&&Math.max(team,enemy)<23.5;
+    return{tier:b.tier,total:b.total,team,enemy,gap,gapInRR};
   });
 }
-function lobbyTeamsGapLabel(gap){
-  return gap==null?'—':gap===0?'Even':gap>0?`Enemy +${gap} RR`:`Team +${-gap} RR`;
+function lobbyTeamsGapLabel(gap,inRR=true){
+  if(gap==null)return '—';
+  if(gap===0)return 'Even';
+  return inRR?(gap>0?`Enemy +${gap} RR`:`Team +${-gap} RR`):(gap>0?'Enemy higher':'Team higher');
 }
 
 /* ── STATUS ──────────────────────────────────────────────── */
@@ -3973,7 +3990,7 @@ export {
   setRRTrendRange,setRRMovementZoomTier,loadMoreMatches,loadOlderNames,loadNameHistory,
   syncReplayImport,uploadReplay,toggleReplaySteps,replayRowView,replayMatchRows,
   // presentation helpers
-  overviewStatValues,PARTY_LABELS,PER_PAGE,RANK_MAP,rName,rColor,rClass,avgLabel,avgLabelShort,tierRR,hexToRgb,
+  overviewStatValues,PARTY_LABELS,PER_PAGE,MIN_RATED,RANK_MAP,rName,rColor,rClass,avgLabel,avgLabelShort,tierRR,lobbyRR,lobbyRankText,hexToRgb,
   seasonOptionCountText,playerRouteUrl,PUUID_RE,
   nameHistoryActRange,computeWintradeSignals,overviewRecentMatches,decidedWinRate,
   winRateLabel,winRateTone,rrSigned,computeRRStats,isRREligible,rrPositionFromElo,

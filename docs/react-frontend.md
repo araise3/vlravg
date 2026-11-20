@@ -138,10 +138,29 @@ pickers, and every toggle.
 
 - Lobby rank beside top teammates (`KpiCards`). Both cards share one header
   shape: an h2 title and an outline link to the full page (Lobby Rank,
-  Duos). Average lobby rank (with its RR beside it) then lists one row per
-  party size played: party icon and label, that size's average lobby rank
-  with icon and RR in brackets, and its lobby count; no badges or footnote. Phones show the short rank label and put each
-  row's note under its label. Top teammates took the slot of the former
+  Duos). The lobby rank card (`LobbyRankCard`, the site's namesake,
+  redesigned 20 Nov 2026) sets `--lobby-rank` to the average's rank colour
+  (`rColor`), tints the card from the top-left with it and draws a hairline
+  accent along its top edge. Its hero is the 64px rank badge over a soft
+  blurred glow, the division in rank colour with the RR into it on the right,
+  a shadcn `Progress` bar (0–100 RR) in the rank colour (both left out when
+  the average is Immortal 1 or higher; see "Lobby RR at Immortal+"), and the rated-lobby
+  count (a hint explains the 7-rated-player rule). A shadcn `Separator` then
+  splits off two uppercase-labelled sections. "Lobby spread" (`lobbySpread`)
+  appears when the lobbies cover more than one division: one slim rounded bar
+  per division from the lowest to the highest, empty divisions as stubs, all
+  in the average's rank colour with only its division solid; labels under
+  every bar up to eight, else the ends and the average. "By party size" is a
+  shadcn table in the shared data-table look (as Top teammates): one row per
+  size played with party icon and label, lobby rank (icon and label) and
+  lobby count; the row's title has the full summary. There is no RR column
+  (removed on request): the RR into an averaged division is interpolated
+  and added nothing per party size. A container query on the table frame
+  (`@container`, 19rem) handles the narrow two-column card on tablets
+  (640–~800px): the Lobbies column hides, the count goes under the party
+  label, and the rank shows its short label. Phones fit all three columns. No badges. The `demo`
+  fixture spreads lobbies from Platinum 2 to Ascendant 1 and mixes solo, duo
+  and trio queues so the card has something to show. Top teammates took the slot of the former
   "Net RR (last 20)" card on request (17 Nov 2026): up to four party
   teammates as table rows (name, matches together, win rate, your net RR
   with them), with a link to Duos. A solo player gets a dashed empty note
@@ -310,3 +329,23 @@ before deploying this change.
   uses `?fixture=` instead.
 - The production deploy is unverified until the Pages build settings are
   changed.
+
+## Lobby RR at Immortal+
+
+Lobby averages are means of rated players' tier ids; match data carries no
+player RR. Their "RR" (`tierRR`) is the average's decimal part read as RR
+into a division, which is a fair shorthand only where divisions are 100 RR
+wide (Iron through Ascendant). From Immortal 1 up, RR accumulates from the
+Immortal 1 floor and Immortal 2, Immortal 3 and Radiant are regional
+leaderboard cutoffs, so an "N RR into Immortal 3" figure describes nothing.
+Since 20 Nov 2026 (user decision) every lobby-average display goes through
+`lobbyRR`/`lobbyRankText` in `core.mjs`, which drop the RR once the average
+rounds to tier 24+: the Overview lobby rank card (no RR figure or bar), table
+lobby values (`LobbyValue`), the Duos matchup, match cards and their
+tooltips, the match-history day headers, and the Lobby Rank team/enemy chart
+rows and tooltips. The team gap there (`lobbyTeamsGapLabel`) stays in RR
+below Immortal and becomes "Enemy higher"/"Team higher" once either side
+averages Immortal+. The player's own rank (app bar, RR page, pre-match rank)
+is untouched: that is real RR from the MMR history. Averaging tier ids still
+treats Immortal 1 → 2 → 3 → Radiant as equal steps; that limit remains, as
+the data has no per-player RR to do better.

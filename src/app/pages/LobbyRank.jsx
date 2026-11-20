@@ -1,4 +1,4 @@
-import {avgLabel,avgLabelShort,lobbyTeamsChartRows,lobbyTeamsGapLabel,PARTY_LABELS,setLobbyRankPartySize,tierRR} from '@/engine/core.mjs';
+import {avgLabel,avgLabelShort,lobbyRankText,lobbyTeamsChartRows,lobbyTeamsGapLabel,PARTY_LABELS,setLobbyRankPartySize} from '@/engine/core.mjs';
 import {RANK_ICONS} from '@/engine/rank-icons.mjs';
 import {useRef,useState} from 'react';
 import {useEngine} from '@/app/hooks.js';
@@ -22,7 +22,9 @@ function LobbyTeamsSvg({data,compact}){
   const every=[1,3,6,9].find(step=>(plotRight-left)/(hi-lo)*step>=(compact?46:56))||12;
   const ticks=[];
   for(let tier=Math.ceil(lo);tier<=hi;tier++)if(!(tier%every))ticks.push(tier);
-  const rankText=v=>{const r=tierRR(v);return `${avgLabel(r.tier)} (${r.rr} RR)`;};
+  const rankText=v=>lobbyRankText(v);
+  // The gap in words: RR below Immortal, direction only from Immortal 1 up.
+  const gapText=r=>r.gap===0?'Both teams even':`${r.gap>0?'Enemy':'Your team'} ${r.gapInRR?Math.abs(r.gap)+' RR ':''}higher`;
   const scale=()=>{const box=boxRef.current?.querySelector('svg')?.getBoundingClientRect();return box?box.width/width:1;};
   const tip=active!=null?data[active]:null;
   const tipMid=tip?(compact?top+active*rowHeight+40:top+active*rowHeight+rowHeight/2):0;
@@ -42,7 +44,7 @@ function LobbyTeamsSvg({data,compact}){
         const matches=`${r.total} ${r.total===1?'match':'matches'}`;
         const detail=`${avgLabel(r.tier)} lobbies, ${matches}. `+
           `Your team: ${r.team==null?'no rated data':rankText(r.team)}. Enemy team: ${r.enemy==null?'no rated data':rankText(r.enemy)}. `+
-          (r.gap==null?'':r.gap===0?'Both teams even.':`${r.gap>0?'Enemy':'Your team'} ${Math.abs(r.gap)} RR higher.`);
+          (r.gap==null?'':gapText(r)+'.');
         const icon=RANK_ICONS[r.tier<=2?0:r.tier],size=compact?18:24,iconX=compact?2:4,textX=iconX+size+8;
         return (
           <g key={r.tier} className="row" tabIndex={0} role="img" aria-label={detail}
@@ -54,7 +56,7 @@ function LobbyTeamsSvg({data,compact}){
             {r.team!=null&&r.enemy!=null&&<line x1={x(r.team)} y1={mid} x2={x(r.enemy)} y2={mid} className="gap"/>}
             {r.team!=null&&<circle cx={x(r.team)} cy={mid} r={6} className="dot team"/>}
             {r.enemy!=null&&<circle cx={x(r.enemy)} cy={mid} r={6} className="dot enemy"/>}
-            <text x={width-4} y={compact?labelY:mid+4} textAnchor="end" className="diff">{lobbyTeamsGapLabel(r.gap)}</text>
+            <text x={width-4} y={compact?labelY:mid+4} textAnchor="end" className="diff">{lobbyTeamsGapLabel(r.gap,r.gapInRR)}</text>
           </g>
         );
       })}
@@ -64,7 +66,7 @@ function LobbyTeamsSvg({data,compact}){
         <div className="tt-muted">{avgLabel(tip.tier)} lobbies ({tip.total} {tip.total===1?'match':'matches'})</div>
         <div className="tt-row"><span className="tt-key" style={{background:'var(--series-1)'}}/><span className="tt-value">{tip.team==null?'—':rankText(tip.team)}</span> your team</div>
         <div className="tt-row"><span className="tt-key" style={{background:'var(--chart-loss)'}}/><span className="tt-value">{tip.enemy==null?'—':rankText(tip.enemy)}</span> enemy</div>
-        {tip.gap!=null&&<div className="tt-muted">{tip.gap===0?'Both teams even':`${tip.gap>0?'Enemy':'Your team'} ${Math.abs(tip.gap)} RR higher`}</div>}
+        {tip.gap!=null&&<div className="tt-muted">{gapText(tip)}</div>}
       </ChartTooltip>
     )}
     </div>
