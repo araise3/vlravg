@@ -150,14 +150,10 @@
   30%, 50%, 70% { transform: translateX(-4px); }
   40%, 60% { transform: translateX(4px); }
 }
-@keyframes search-progress {
+/* The indeterminate Progress segment (35% wide) slides fully across. */
+@keyframes progress-indeterminate {
   from { transform: translateX(-100%); }
   to { transform: translateX(300%); }
-}
-
-@keyframes indeterminate {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(250%); }
 }
 
 /* ── Hand-built SVG charts ─────────────────────────────── */

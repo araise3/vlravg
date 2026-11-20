@@ -68,8 +68,8 @@ test('tables become card lists on phones: title, headline figure, label grid and
     'Paris 4 Matches Avg Lobby Dia 2 K/D 0.90 Win rate 40%',
   ]);
   // Every column is a sort option; the current one is selected.
-  assert.deepEqual([...html.matchAll(/<option value="(\d*)"/g)].map(m=>m[1]),['','0','1','2','3','4']);
-  assert.match(html,/<select id="t-sort"/);
+  assert.deepEqual([...html.matchAll(/<option[^>]*value="(\d*)"/g)].map(m=>m[1]),['','0','1','2','3','4']);
+  assert.match(html,/<select[^>]*data-slot="native-select"[^>]*id="t-sort"/);
   // Wide (lobby) cells span two grid columns; tones and the best value carry over.
   assert.match(html,/col-span-2/);
   assert.match(html,/text-positive/);

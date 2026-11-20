@@ -102,7 +102,7 @@ export function ServersPage({active}){
           <TableSection label="Servers"><ServersTable rows={s.serverData}/></TableSection>
         </>
       )}
-      {!hasServers&&s.analysisState!=='error'&&<EmptyState>{empty}</EmptyState>}
+      {!hasServers&&s.analysisState!=='error'&&<EmptyState loading={s.analysisState==='loading'}>{empty}</EmptyState>}
       <PingMap active={active}/>
     </main>
   );

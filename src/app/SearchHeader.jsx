@@ -143,11 +143,14 @@ export function AccountBadges({info}){
       )}
       {info.region&&<span data-slot="account-pill" className={cn(SLIDE,PILL,'text-foreground [animation-delay:90ms]')} aria-label={`Region: ${info.region.toUpperCase()}`}>{info.region.toUpperCase()}</span>}
       {info.showTracker&&info.trackerHref&&(
-        <a data-slot="account-pill" href={info.trackerHref} target="_blank" rel="noopener noreferrer" aria-label={`Open ${info.riotId} on Tracker.gg`}
-          className={cn(SLIDE,PILL,'text-muted-foreground transition-colors [animation-delay:180ms] outline-none hover:bg-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 max-sm:ml-auto')}>
-          <img src="/assets/tracker-gg.svg" alt="" className="h-3 w-[67px]"/>
-          <ExternalLink className="size-3" aria-hidden="true"/>
-        </a>
+        // A Button (outline) rendered as the link, sized down to the shared pill.
+        <Button data-slot="account-pill" variant="outline" size="sm" asChild
+          className={cn(SLIDE,PILL,'text-muted-foreground [animation-delay:180ms] has-[>svg]:px-2.5 hover:text-foreground max-sm:ml-auto')}>
+          <a href={info.trackerHref} target="_blank" rel="noopener noreferrer" aria-label={`Open ${info.riotId} on Tracker.gg`}>
+            <img src="/assets/tracker-gg.svg" alt="" className="h-3 w-[67px]"/>
+            <ExternalLink className="size-3" aria-hidden="true"/>
+          </a>
+        </Button>
       )}
     </>
   );
@@ -163,11 +166,7 @@ export function StatusBar({bar=true}){
         {s.statusSpin&&<Spinner className="size-3.5"/>}
         <span>{s.statusText}</span>
       </div>
-      {bar&&s.statusSpin&&(s.progressValue==null
-        ?<div className="h-1 overflow-hidden rounded-full bg-primary/20" aria-hidden="true">
-          <div className="h-full w-[35%] rounded-full bg-primary" style={{animation:'search-progress 1.5s ease-in-out infinite'}}/>
-        </div>
-        :<Progress value={Math.min(s.progressValue||0,100)} className="h-1" aria-label="Loading matches"/>)}
+      {bar&&s.statusSpin&&<Progress value={s.progressValue==null?null:Math.min(s.progressValue||0,100)} className="h-1" indicatorClassName="rounded-full" aria-label="Loading matches"/>}
     </div>
   );
 }

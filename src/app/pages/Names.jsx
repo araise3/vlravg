@@ -2,6 +2,7 @@ import {loadNameHistory,loadOlderNames,nameHistoryActRange} from '@/engine/core.
 import {useEngine,useIsMobile} from '@/app/hooks.js';
 import {EmptyState,PageHeading,SortableTable} from '@/app/shared.jsx';
 import {Button} from '@/components/ui/button';
+import {Progress} from '@/components/ui/progress';
 
 const dateFormat=new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
 
@@ -98,7 +99,7 @@ export function NamesPage(){
               <Button variant="outline" disabled={!!backfill?.limited||s.nameBackfillStopRequested} onClick={loadOlderNames}>{buttonLabel}</Button>
             )}
             <span role="status" aria-live="polite" className="text-sm text-muted-foreground">{status}</span>
-            {s.nameBackfillBusy&&<span className="h-1 w-32 overflow-hidden rounded-full bg-muted" aria-label="Scanning available name history"><span className="block h-full w-1/3 rounded-full bg-rank" style={{animation:'indeterminate 1.4s ease-in-out infinite'}}/></span>}
+            {s.nameBackfillBusy&&<Progress value={null} className="h-1 w-32 bg-muted" indicatorClassName="rounded-full bg-rank" aria-label="Scanning available name history"/>}
           </div>
         </>
       ):(

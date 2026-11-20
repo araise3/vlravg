@@ -4,9 +4,14 @@ import {avgLabel,navigateToPage,pageHref,PARTY_LABELS,tierRR,toggleIncludeReset}
 import {useEngine,useIsMobile} from '@/app/hooks.js';
 import {Card,CardContent} from '@/components/ui/card';
 import {cn} from '@/lib/utils';
+import {Hint} from '@/app/hint.jsx';
 import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs';
 import {Switch} from '@/components/ui/switch';
 import {Label} from '@/components/ui/label';
+import {Button} from '@/components/ui/button';
+import {Empty,EmptyDescription} from '@/components/ui/empty';
+import {Separator} from '@/components/ui/separator';
+import {Skeleton} from '@/components/ui/skeleton';
 
 // Headline icons (64px+) use the 256px largeIcon PNGs; small badges stay embedded.
 export function RankIcon({tier,size=16,className}){
@@ -42,9 +47,10 @@ export function PageLink({page,className,children,...props}){
   );
 }
 
-// A thin vertical rule between inline items (the site uses no dot separators).
+// A thin vertical rule between inline items (the site uses no dot separators):
+// a shadcn Separator rendered as a span, since it sits inside text and buttons.
 export function Sep({className}){
-  return <span aria-hidden="true" className={cn('inline-block h-3 w-px shrink-0 bg-muted-foreground/40',className)}/>;
+  return <Separator asChild orientation="vertical" className={cn('inline-block bg-muted-foreground/40 data-[orientation=vertical]:h-3',className)}><span/></Separator>;
 }
 
 export function toneClass(value,neutral=1){
@@ -73,6 +79,8 @@ export function PlayerLink({href,name,tag,className}){
 // Data tables live in data-table.jsx (TanStack Table); re-exported here so
 // pages keep importing them from shared.
 export {MobileRowList,SortableTable,TablePager} from '@/app/data-table.jsx';
+// Hover/tap explanations live in hint.jsx, which the tables use too.
+export {Hint};
 
 // A table that is a section's only content: on desktop the table's own frame
 // is the card (no frame inside a frame); phones wrap the row list in a card.
@@ -87,11 +95,11 @@ export function TableSection({label,children}){
 export function ShowAllButton({expanded,total,noun,onToggle,controls}){
   return (
     <div className="flex justify-center border-t px-4 py-2" data-slot="show-all">
-      <button type="button" onClick={onToggle} aria-expanded={expanded} aria-controls={controls}
-        className="inline-flex h-8 items-center gap-1.5 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors outline-none hover:bg-accent hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50">
+      <Button type="button" variant="ghost" size="sm" onClick={onToggle} aria-expanded={expanded} aria-controls={controls}
+        className="gap-1.5 px-3 text-muted-foreground hover:text-foreground">
         {expanded?'Show fewer':`Show all ${total} ${noun}`}
-        <ChevronDown className={cn('size-4 transition-transform',expanded&&'rotate-180')} aria-hidden="true"/>
-      </button>
+        <ChevronDown className={cn('transition-transform',expanded&&'rotate-180')} aria-hidden="true"/>
+      </Button>
     </div>
   );
 }
@@ -118,10 +126,12 @@ export function PlacementToggle(){
   const count=s.overviewStats?.resetCount||0;
   if(!count)return null;
   return (
-    <div className="flex items-center gap-2" title="Include placement-week games in the lobby and teammate breakdowns.">
-      <Switch id="placements-toggle" checked={s.mhIncludeReset} onCheckedChange={toggleIncludeReset}/>
-      <Label htmlFor="placements-toggle" className="text-sm font-normal text-muted-foreground">Count placements ({count})</Label>
-    </div>
+    <Hint passive content="Include placement-week games in the lobby and teammate breakdowns.">
+      <span className="flex w-fit items-center gap-2">
+        <Switch id="placements-toggle" checked={s.mhIncludeReset} onCheckedChange={toggleIncludeReset}/>
+        <Label htmlFor="placements-toggle" className="text-sm font-normal text-muted-foreground">Count placements ({count})</Label>
+      </span>
+    </Hint>
   );
 }
 
@@ -135,8 +145,8 @@ export function StatStrip({items,label}){
   return (
     <dl className="stat-strip" aria-label={label}>
       {items.map(([name,value,className,title])=>(
-        <div key={name} title={title}>
-          <dt>{name}</dt>
+        <div key={name}>
+          <dt><Hint content={title}>{name}</Hint></dt>
           <dd className={className}>{value}</dd>
         </div>
       ))}
@@ -158,8 +168,37 @@ export function ChartTooltip({x,y,width,children}){
   );
 }
 
-export function EmptyState({children}){
-  return <div role="status" className="rounded-xl border border-dashed px-6 py-12 text-center text-sm text-muted-foreground">{children}</div>;
+// A page's empty or idle state (shadcn Empty), text only. `loading`: the
+// page's matches are still loading, so show placeholder blocks instead.
+export function EmptyState({children,loading}){
+  if(loading)return <PageSkeleton label={children}/>;
+  return (
+    <Empty role="status" className="rounded-xl border px-6 py-12 md:px-6 md:py-12">
+      <EmptyDescription>{children}</EmptyDescription>
+    </Empty>
+  );
+}
+
+// Placeholder blocks in a detail page's usual shape (a filter row, a summary
+// card, a table) while matches load; the loading line stays for screen readers.
+export function PageSkeleton({label}){
+  return (
+    <div role="status" className="flex flex-col gap-4" data-slot="page-skeleton">
+      <span className="sr-only">{label}</span>
+      <Skeleton className="h-9 w-72 max-w-full" aria-hidden="true"/>
+      <Skeleton className="h-36 rounded-xl" aria-hidden="true"/>
+      <Skeleton className="h-80 rounded-xl" aria-hidden="true"/>
+    </div>
+  );
+}
+
+// The same, as a one-line placeholder inside a card.
+export function InlineEmpty({children}){
+  return (
+    <Empty className="items-start gap-0 rounded-lg border px-3 py-2 text-left md:px-3 md:py-2">
+      <EmptyDescription className="text-sm">{children}</EmptyDescription>
+    </Empty>
+  );
 }
 
 // The page title, for screen readers only: the navigation already names the

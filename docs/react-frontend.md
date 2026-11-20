@@ -43,7 +43,11 @@ shadcn components used: Card, Table (with a sortable wrapper that keeps each
 table's sort across reloads, as `initTableSorting` did), Tabs (page
 navigation and the party size, RR range and duo stat side filters), Switch (count placements), Popover + Command
 (pro library and act picker, both keyboard navigable), Collapsible (match
-cards), Badge, Button, Input, Progress, Alert, Tooltip provider.
+cards), Badge, Button, Input, Progress, Alert, Tooltip (explanations, via
+`Hint`), ToggleGroup (RR zoom chips), NativeSelect (phone table sort), Empty,
+Item + Avatar (phone lists, replay rows), ScrollArea (duo partners),
+Separator and Skeleton. The 20 Nov 2026 pass that moved the remaining
+hand-built controls onto these is in [shadcn-components.md](shadcn-components.md).
 
 The EU ping map (`assets/ping-map/`) is still the standalone D3 script. The
 Servers page renders its exact markup and loads the scripts on first visit.

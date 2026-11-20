@@ -10,6 +10,7 @@ import {ChartFrame,ChartTooltip,EmptyState,PageHeading,PlacementToggle,RankIcon,
 import {cn} from '@/lib/utils';
 import {Card,CardContent,CardHeader,CardTitle} from '@/components/ui/card';
 import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs';
+import {ToggleGroup,ToggleGroupItem} from '@/components/ui/toggle-group';
 
 const toneOf=tone=>tone==='rank-positive'?'text-positive':tone==='rank-negative'?'text-negative':'';
 
@@ -398,17 +399,18 @@ export function RRMovementChart({matches,zoomTier}){
           </div>
           {evenText&&<p className="text-sm text-muted-foreground" data-even-point>{evenText}</p>}
           {compact&&tierGroups.length>1&&(
-            <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none]" role="group" aria-label="Zoom to a starting rank">
-              {[null,...tierGroups.map(group=>group.tier)].map(tier=>{
-                const on=(zoomTier??null)===tier;
-                return (
-                  <button key={tier??'all'} type="button" aria-pressed={on} onClick={()=>setRRMovementZoomTier(tier)}
-                    className={cn('inline-flex h-7 shrink-0 items-center gap-1 rounded-md border px-2.5 text-xs font-medium transition-colors',on?'border-foreground/30 bg-accent text-foreground':'text-muted-foreground active:bg-accent')}>
-                    {tier!=null&&<RankIcon tier={tier} size={14}/>}{tier==null?'All ranks':avgLabelShort(tier)}
-                  </button>
-                );
-              })}
-            </div>
+            // Single-choice chips: tapping the chosen rank again (an empty
+            // value) goes back to all ranks.
+            <ToggleGroup type="single" variant="outline" size="sm" spacing={1.5} value={zoomTier==null?'all':String(zoomTier)}
+              onValueChange={value=>setRRMovementZoomTier(value&&value!=='all'?Number(value):null)}
+              className="-mx-4 w-auto overflow-x-auto px-4 [scrollbar-width:none]" aria-label="Zoom to a starting rank">
+              {[null,...tierGroups.map(group=>group.tier)].map(tier=>(
+                <ToggleGroupItem key={tier??'all'} value={tier==null?'all':String(tier)}
+                  className="h-7 gap-1 px-2.5 text-xs text-muted-foreground data-[state=on]:border-foreground/30 data-[state=on]:text-foreground">
+                  {tier!=null&&<RankIcon tier={tier} size={14}/>}{tier==null?'All ranks':avgLabelShort(tier)}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
           )}
           <ChartFrame className="mt-2">
           <div className={compact?undefined:'overflow-x-auto'} role="region" aria-label="RR movement chart" tabIndex={0}>
@@ -676,7 +678,7 @@ export function RRPage(){
       )}
       {hasScores&&<ScoreMarginChart matches={matches}/>}
       {!hasRR&&!hasScores&&s.analysisState!=='error'&&(
-        <EmptyState>{s.analysisState==='loading'?'Loading this player’s matches…':ready?'No matches found for this season. Try another act.':'Search for a player above to explore their RR breakdown.'}</EmptyState>
+        <EmptyState loading={s.analysisState==='loading'}>{s.analysisState==='loading'?'Loading this player’s matches…':ready?'No matches found for this season. Try another act.':'Search for a player above to explore their RR breakdown.'}</EmptyState>
       )}
     </main>
   );

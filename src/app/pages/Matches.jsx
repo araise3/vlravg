@@ -5,7 +5,7 @@ import {
   matchCardPlayerRank,playerRouteUrl,rClass,rColor,rrSigned,tierRR,winRateLabel,
 } from '@/engine/core.mjs';
 import {useEngine,useIsMobile} from '@/app/hooks.js';
-import {EmptyState,PageHeading,PlacementToggle,RankIcon,Sep} from '@/app/shared.jsx';
+import {EmptyState,Hint,PageHeading,PlacementToggle,RankIcon,Sep} from '@/app/shared.jsx';
 import {cn} from '@/lib/utils';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
@@ -73,7 +73,7 @@ function PlayersGrid({m,me,compact}){
       {teams.map(([label,players])=>(
         <div key={label} className="text-sm">
           <div className={cn('grid border-b',cols,'px-2 pb-2 text-xs text-muted-foreground uppercase')}>
-            <span>{label}</span><span className="text-right">ACS</span><span className="text-right" title="Performance Score">PS</span><span className="text-right">KD</span><span className="text-right">Rank</span>
+            <span>{label}</span><span className="text-right">ACS</span><span className="text-right"><Hint content="Performance Score">PS</Hint></span><span className="text-right">KD</span><span className="text-right">Rank</span>
           </div>
           {players.map((p,i)=>{
             const isMe=p===me,isParty=myPartyId&&p.party_id===myPartyId;
@@ -96,12 +96,16 @@ function PlayersGrid({m,me,compact}){
   );
 }
 
+// Inside the card's toggle button, so hints open on hover only (asChild on a
+// plain span adds no focus stop); the button's aria-label carries the figures.
 function Stat({label,children,title,className,valueClassName}){
   return (
-    <span className={cn('mc-performance-stat',className)} title={title}>
-      <span className="mc-performance-lbl">{label}</span>
-      <span className={cn('mc-performance-val',valueClassName)}>{children}</span>
-    </span>
+    <Hint asChild content={title}>
+      <span className={cn('mc-performance-stat',className)}>
+        <span className="mc-performance-lbl">{label}</span>
+        <span className={cn('mc-performance-val',valueClassName)}>{children}</span>
+      </span>
+    </Hint>
   );
 }
 
@@ -136,7 +140,7 @@ export function MobileMatchCard({m,s,maps,open,onOpenChange}){
             {art&&<img src={art} alt="" loading="lazy" decoding="async" className="absolute inset-0 size-full object-cover opacity-90" onError={event=>event.currentTarget.remove()}/>}
             <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" aria-hidden="true"/>
             <span className="absolute inset-y-0 left-0 w-1 bg-[var(--result-color)]" aria-hidden="true"/>
-            {preMatchRank&&<span className="absolute right-1 bottom-1 drop-shadow-[0_2px_4px_rgb(0_0_0/.7)]" title="Your rank at the start of this match"><RankIcon tier={preMatchRank.tier} size={22}/></span>}
+            {preMatchRank&&<Hint asChild content="Your rank at the start of this match"><span className="absolute right-1 bottom-1 drop-shadow-[0_2px_4px_rgb(0_0_0/.7)]"><RankIcon tier={preMatchRank.tier} size={22}/></span></Hint>}
           </span>
           <span className="flex min-w-0 flex-1 flex-col justify-between gap-1">
             <span className="flex items-center gap-2">
@@ -145,11 +149,12 @@ export function MobileMatchCard({m,s,maps,open,onOpenChange}){
                 {myR!=null&&opR!=null?<>{myR}<span className="mx-0.5 text-sm font-normal text-zinc-500">:</span><span className="text-zinc-400">{opR}</span></>:'—'}
               </span>
               {award&&<Trophy className={cn('size-3.5 shrink-0',award==='match'?'text-[#f2cf80]':'text-slate-300')} aria-label={awardLabel}/>}
-              {m.postReset&&<Badge variant="outline" className="px-1 py-0 text-[9px] uppercase" title="Placement-week game after a total rank reset">Plac.</Badge>}
-              <span className={cn('match-rr-change ml-auto text-[15px]',myRR!=null&&(myRR>=0?'gain':'loss'),shielded&&'shielded')}
-                title={myRR==null?'No RR data for this match':shielded?'Rank Shield protected your displayed rank; this recorded RR loss still applied':'Recorded RR change for this match'}>
-                {shielded&&<Shield aria-hidden="true"/>}{myRR!=null?(myRR>=0?'+':'')+myRR:'—'}
-              </span>
+              {m.postReset&&<Hint asChild content="Placement-week game after a total rank reset"><Badge variant="outline" className="px-1 py-0 text-[9px] uppercase">Plac.</Badge></Hint>}
+              <Hint asChild content={myRR==null?'No RR data for this match':shielded?'Rank Shield protected your displayed rank; this recorded RR loss still applied':'Recorded RR change for this match'}>
+                <span className={cn('match-rr-change ml-auto text-[15px]',myRR!=null&&(myRR>=0?'gain':'loss'),shielded&&'shielded')}>
+                  {shielded&&<Shield aria-hidden="true"/>}{myRR!=null?(myRR>=0?'+':'')+myRR:'—'}
+                </span>
+              </Hint>
             </span>
             <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
               <span className="shrink-0 font-semibold text-foreground">{mapName}</span>
@@ -160,9 +165,11 @@ export function MobileMatchCard({m,s,maps,open,onOpenChange}){
               <span className="shrink-0"><span className="font-semibold text-foreground">{myStats?<>{myStats.kills}<span className="text-zinc-500">/</span><span className="text-zinc-400">{myStats.deaths}</span><span className="text-zinc-500">/</span>{myStats.assists}</>:'—'}</span></span>
               <span className="shrink-0"><span className="font-semibold text-foreground">{acs}</span> ACS</span>
               <span className="shrink-0"><span className="font-semibold text-foreground">{performanceScore}</span> PS</span>
-              <span className={cn('min-w-0 truncate font-medium',rank&&RANK_TEXT[rClass(rank.tier)])} title={rank?'Average lobby: '+avgLabel(rank.tier)+', '+rank.rr+' RR':'Lobby rank unavailable'}>
-                {rank?avgLabelShort(rank.tier):m.lowRated?'Unrated':'—'}
-              </span>
+              <Hint asChild content={rank?'Average lobby: '+avgLabel(rank.tier)+', '+rank.rr+' RR':'Lobby rank unavailable'}>
+                <span className={cn('min-w-0 truncate font-medium',rank&&RANK_TEXT[rClass(rank.tier)])}>
+                  {rank?avgLabelShort(rank.tier):m.lowRated?'Unrated':'—'}
+                </span>
+              </Hint>
             </span>
           </span>
           <ChevronDown className={cn('size-4 shrink-0 self-center text-muted-foreground transition-transform duration-200',open&&'rotate-180')} aria-hidden="true"/>
@@ -217,13 +224,15 @@ function DesktopMatchCard({m,s,maps,open,onOpenChange}){
                 {[time,duration].filter(Boolean).map(v=><span key={v}>{v}</span>)}
                 {serverName&&<span className="truncate" title={serverName}>{serverName}</span>}
               </span>
-              {preMatchRankText&&<span className="mc-map-meta-row"><span className="text-white" title="Your rank at the start of this match">{preMatchRankText}</span></span>}
+              {preMatchRankText&&<span className="mc-map-meta-row"><Hint asChild content="Your rank at the start of this match"><span className="text-white">{preMatchRankText}</span></Hint></span>}
             </span>
             {preMatchRank&&(
-              <span className="mc-player-rank-icon" title="Your rank at the start of this match"
+              <Hint asChild content="Your rank at the start of this match">
+              <span className="mc-player-rank-icon"
                 style={{filter:`drop-shadow(0 0 7px rgb(${hexToRgb(rColor(preMatchRank.tier))} / .42)) drop-shadow(0 4px 10px rgb(0 0 0 / .55))`}}>
                 <RankIcon tier={preMatchRank.tier} size={64}/>
               </span>
+              </Hint>
             )}
           </span>
           <span className="mc-body">
@@ -232,8 +241,8 @@ function DesktopMatchCard({m,s,maps,open,onOpenChange}){
                 <span className="m-result-tag">{rt}</span>
                 <span className="match-score">{myR!=null&&opR!=null?<>{myR}<span className="mc-score-divider">:</span><span className="mc-score-opponent">{opR}</span></>:'—'}</span>
               </span>
-              {award&&<span className={cn('mc-accolade',award==='match'?'mvp-match':'mvp-team')} title={'Highest ACS '+(award==='match'?'in the match':'on your team')}><Trophy aria-hidden="true"/>{awardLabel}</span>}
-              {m.postReset&&<Badge variant="outline" className="text-[10px] uppercase" title="Placement-week game after a total rank reset">Placements</Badge>}
+              {award&&<Hint asChild content={'Highest ACS '+(award==='match'?'in the match':'on your team')}><span className={cn('mc-accolade',award==='match'?'mvp-match':'mvp-team')}><Trophy aria-hidden="true"/>{awardLabel}</span></Hint>}
+              {m.postReset&&<Hint asChild content="Placement-week game after a total rank reset"><Badge variant="outline" className="text-[10px] uppercase">Placements</Badge></Hint>}
               <span className="mc-expand-icon"><span className="mc-expand-label">Details</span><ChevronDown aria-hidden="true"/></span>
             </span>
             <span className="mc-performance">
@@ -242,10 +251,11 @@ function DesktopMatchCard({m,s,maps,open,onOpenChange}){
               <Stat label="PS" title={myStats?.performanceScore==null?'Performance Score is not provided in this match’s API data':'Performance Score'}>{performanceScore}</Stat>
               <Stat label="Avg lobby" title={rankTitle}>{rankLabel}{rank?` (${rank.rr} RR)`:''}</Stat>
               <Stat label="RR change" className="mc-rr-stat">
-                <span className={cn('match-rr-change',myRR!=null&&(myRR>=0?'gain':'loss'),shielded&&'shielded')}
-                  title={myRR==null?'No RR data for this match':shielded?'Rank Shield protected your displayed rank; this recorded RR loss still applied':'Recorded RR change for this match'}>
-                  {shielded&&<Shield aria-hidden="true"/>}{myRR!=null?(myRR>=0?'+':'')+myRR:'—'}
-                </span>
+                <Hint asChild content={myRR==null?'No RR data for this match':shielded?'Rank Shield protected your displayed rank; this recorded RR loss still applied':'Recorded RR change for this match'}>
+                  <span className={cn('match-rr-change',myRR!=null&&(myRR>=0?'gain':'loss'),shielded&&'shielded')}>
+                    {shielded&&<Shield aria-hidden="true"/>}{myRR!=null?(myRR>=0?'+':'')+myRR:'—'}
+                  </span>
+                </Hint>
               </Stat>
             </span>
           </span>
@@ -278,8 +288,8 @@ function DayHeader({ms,stat,first}){
         <span className="match-day-stat"><span className="match-day-stat-label">Record</span>
           <span className="match-day-stat-value">{record.length?record.map(([text,tone],i)=><span key={text}>{i>0&&<span className="text-muted-foreground" aria-hidden="true"> – </span>}<span className={tone}>{text}</span></span>):'—'}</span></span>
         <span className="match-day-stat"><span className="match-day-stat-label">Avg lobby</span><span className={cn('match-day-stat-value',avgClass)}>{avgValue}</span></span>
-        <span className="match-day-stat" title={stat?.rrCount?`Net RR from ${stat.rrCount} of ${matchCount} matches with RR data. Rank Shield losses include their recorded loss.`:'No RR data is available for this day.'}>
-          <span className="match-day-stat-label">Net RR</span>
+        <span className="match-day-stat">
+          <span className="match-day-stat-label"><Hint content={stat?.rrCount?`Net RR from ${stat.rrCount} of ${matchCount} matches with RR data. Rank Shield losses include their recorded loss.`:'No RR data is available for this day.'}>Net RR</Hint></span>
           <span className={cn('match-day-stat-value',rrClass)}>{rrValue}</span>
           {stat?.rrCount<stat?.matches&&stat?.rrCount>0&&<span className="match-day-coverage">{stat.rrCount}/{stat.matches} covered</span>}
         </span>
@@ -341,7 +351,7 @@ export function MatchesPage(){
         </>
       )}
       {!hasMatches&&s.analysisState!=='error'&&(
-        <EmptyState>{s.analysisState==='loading'?'Loading this player’s matches…':ready?'No matches found for this season. Try another act.':'Search for a player above to explore their match history.'}</EmptyState>
+        <EmptyState loading={s.analysisState==='loading'}>{s.analysisState==='loading'?'Loading this player’s matches…':ready?'No matches found for this season. Try another act.':'Search for a player above to explore their match history.'}</EmptyState>
       )}
     </main>
   );

@@ -256,14 +256,15 @@ test('duo chemistry: partners by matches together with your K/D, the first selec
   // Desktop lists every partner in a scroll box sized to the matchup; no "Show all".
   assert.equal((html.match(/aria-pressed=/g)||[]).length,10);
   assert.match(html,/sm:\[contain:size\][^"]*" data-slot="duo-partner-list"/);
-  // The header sits above the scroll box (the scrollbar starts under it); both
-  // reserve the same scrollbar gutter and share one column template.
-  assert.match(html,/<div class="sm:pr-1 sm:\[scrollbar-gutter:stable\][^"]*sm:overflow-y-hidden" aria-hidden="true"><div class="grid grid-cols-\[minmax\(0,1fr\)_3\.5rem_3rem_2\.75rem\] gap-x-2 px-3[^"]*">.*?Teammate.*?<\/div><\/div><div class="sm:pr-1 sm:\[scrollbar-gutter:stable\][^"]*sm:overflow-y-auto" data-slot="duo-partner-scroll"><ul/);
+  // The header sits above the scroll box (a shadcn ScrollArea, so the scrollbar
+  // starts under it and overlays the padding); both share one column template.
+  assert.match(html,/<div aria-hidden="true"><div class="grid grid-cols-\[minmax\(0,1fr\)_3\.5rem_3rem_2\.75rem\] gap-x-2 px-3[^"]*">.*?Teammate.*?<\/div><\/div><div[^>]*data-slot="duo-partner-scroll"[^>]*>(<style>[^<]*<\/style>)?<div[^>]*data-slot="scroll-area-viewport"/);
+  assert.match(html,/data-slot="duo-partner-scroll"[^>]*class="[^"]*sm:min-h-0 sm:flex-1/);
   assert.doesNotMatch(html,/sm:sticky/);
   assert.match(html,/<button type="button" aria-pressed="true"[^>]*class="grid grid-cols-\[minmax\(0,1fr\)_3\.5rem_3rem_2\.75rem\] gap-x-2 px-3/);
   assert.match(html,/aria-pressed="true"[^>]*aria-label="m0#EU: 20 matches, 66\.7% win rate, no RR, your K\/D 0\.80"/);
   assert.equal((html.match(/data-slot="duo-matchup"/g)||[]).length,1);
-  assert.match(flat(html),/Teammate Win rate RR K\/D m0 #EU 20 matches 66\.7% — 0\.80 /);
+  assert.match(flat(html.replace(/<style>[^<]*<\/style>/g,'')),/Teammate Win rate RR K\/D m0 #EU 20 matches 66\.7% — 0\.80 /);
   assert.doesNotMatch(html,/Show all/);
   // No sort control: partners are listed by matches together.
   assert.doesNotMatch(html,/<select|duo-sort/);
