@@ -1,7 +1,7 @@
 import {useId,useState} from 'react';
 import {
   avgLabel,avgLabelShort,buildRRScoreRows,computeRRStats,rrDuoInfo,rrMovementRows,rrMovementXAxis,
-  rrPayoutEstimates,rrPayoutEvenPoint,rrPayoutSegments,rrPayoutTimeline,RR_PAYOUT_WINDOW,rrPositionFromElo,rrRankRows,rrReportedStats,rrSigned,rrTrendScopedMatches,
+  RR_MARGIN_REFERENCE,rrPayoutEstimates,rrPayoutEvenPoint,rrPayoutSegments,rrPayoutTimeline,RR_PAYOUT_WINDOW,rrPositionFromElo,rrRankRows,rrReportedStats,rrSigned,rrTrendScopedMatches,
   scoreMarginDistribution,setRRMovementZoomTier,setRRTrendRange,winRateLabel,winRateTone,
 } from '@/engine/core.mjs';
 import {RANK_ICONS} from '@/engine/rank-icons.mjs';
@@ -612,7 +612,7 @@ export function RRMovementChart({matches,zoomTier}){
                   })}
                   {trend.filter(e=>e.payout!=null).map(estimate=>{
                     const rangeStart=rrPositionFromElo(estimate.min,estimate.minTier).label,rangeEnd=rrPositionFromElo(estimate.max,estimate.maxTier).label;
-                    const detail=`Estimated RR / ${won?'win':'loss'}: ${won?'+':'−'}${estimate.payout.toFixed(1)} RR. ${estimate.n} nearby ${won?'wins':'losses'} from ${rangeStart} to ${rangeEnd}. Act average: ${estimate.actMean.toFixed(1)} RR.`;
+                    const detail=`Estimated RR / ${won?'win':'loss'} at a ${RR_MARGIN_REFERENCE}-round margin: ${won?'+':'−'}${estimate.payout.toFixed(1)} RR. ${estimate.n} nearby ${won?'wins':'losses'} from ${rangeStart} to ${rangeEnd}. Act average: ${estimate.actMean.toFixed(1)} RR.`;
                     return <circle key={estimate.position} cx={x(estimate.axisPosition)} cy={y(estimate.payout)} r={6} className="estimate-hit-area" tabIndex={0} role="img" aria-label={detail}/>;
                   })}
                 </g>
@@ -621,7 +621,7 @@ export function RRMovementChart({matches,zoomTier}){
             </svg>
           </div>
           </ChartFrame>
-          <p className="text-xs text-muted-foreground">Estimates use 3–5 nearby wins or losses within 30 RR, blended with the act average. Gaps mean sparse data; faint dots are individual matches.{even?' The even point comes from straight-line fits of every win and loss in range (party-penalized games left out); it usually marks where your rank met your hidden MMR this act, which Riot does not show.':''}</p>
+          <p className="text-xs text-muted-foreground">Estimates use 3–5 nearby wins or losses within 30 RR, blended with the act average, each evened out to a typical {RR_MARGIN_REFERENCE}-round margin (a bigger margin pays about a third of an RR more per round, win or loss). Gaps mean sparse data; faint dots are your actual payouts.{even?' The even point comes from straight-line fits of every win and loss in range (party-penalized games left out); it usually marks where your rank met your hidden MMR this act, which Riot does not show.':''}</p>
         </CardContent>
       </Card>
     </section>
