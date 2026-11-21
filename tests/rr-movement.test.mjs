@@ -20,7 +20,8 @@ test('separate win and loss estimates use nearby matches and the act mean',()=>{
   const losses=estimates(rows,rows,false);
   assert.equal(gains[0].n,3);
   assert.equal(gains[0].actMean,25);
-  assert.equal(gains[0].payout,(10+20+30+8*25)/11);
+  // Blended with the act mean at weight 2 (8 until 2026-11-21).
+  assert.equal(gains[0].payout,(10+20+30+2*25)/5);
   assert.equal(gains[1].payout,null);
   assert.equal(losses[0].n,3);
   assert.equal(losses[0].payout,18);

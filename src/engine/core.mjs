@@ -3560,7 +3560,7 @@ function rrMovementRows(matches){
 const RR_ESTIMATE_NEIGHBORS=5;
 const RR_ESTIMATE_MAX_SPAN=30;
 const RR_ESTIMATE_MIN_SAMPLES=3;
-const RR_ESTIMATE_PRIOR_WEIGHT=8;
+const RR_ESTIMATE_PRIOR_WEIGHT=2;
 
 function rrPayoutEstimates(visibleRows,allRows,won){
   const pool=allRows.filter(row=>row.m.won===won).sort((a,b)=>a.m.myPreRR-b.m.myPreRR);
@@ -3590,8 +3590,10 @@ function rrPayoutEstimates(visibleRows,allRows,won){
     }
     if(sample.length<RR_ESTIMATE_MIN_SAMPLES)return{position,axisPosition,payout:null};
     const localTotal=sample.reduce((sum,row)=>sum+Math.abs(row.net),0);
-    // The act mean stabilizes a small local sample; eight is the measured
-    // prior weight from leave-one-out validation against stored RR history.
+    // The act mean steadies a small local sample. Its weight was 8 until
+    // 2026-11-21; 2 draws the same points and gaps but keeps the curve's ends
+    // on the dots, 0.08 RR closer for 553 holdout corpus players (better at
+    // Immortal+, slightly worse below; docs/rr-payout-model-2026-11-20.md).
     const payout=(localTotal+RR_ESTIMATE_PRIOR_WEIGHT*actMean)/(sample.length+RR_ESTIMATE_PRIOR_WEIGHT);
     const minRow=sample.find(row=>row.m.myPreRR===min),maxRow=sample.find(row=>row.m.myPreRR===max);
     return{position,axisPosition,payout,n:sample.length,min,max,
