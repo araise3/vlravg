@@ -240,7 +240,14 @@ All hand-built charts follow one system, checked against the dataviz method:
   dot-plot rows show their own tooltip. All keep their aria-labels.
 - **Per chart**: RR trend (reworked 17 Nov 2026) labels rank bands with icon
   and name on the left, washing every other band so each rank reads as a
-  range. Immortal 2/3 and Radiant floors sit between the highest game recorded
+  range. Since 21 Nov 2026 (on request, after MIBR zekken#1515's Immortal 1 to
+  Radiant 948 RR climb looked lopsided), a chart that reaches Immortal+ drops
+  that column. Its rank thresholds are dashed lines with icon and name
+  labelled just above them (`rrTrendThresholdLabels`; the lowest rank sits
+  above the baseline, and a label under 14px from the one below is dropped).
+  The labels go at whichever end of the plot the line crosses fewer of them.
+  A ringed rank icon marks the match where each higher rank was first reached
+  (`rrTrendRankUps`). Charts below Immortal are unchanged. Immortal 2/3 and Radiant floors sit between the highest game recorded
   below that tier and the lowest recorded at or above it (no fixed Radiant
   line; tiers never recorded get no band). Immortal+ adds a dashed leaderboard
   RR scale on the right. Dates are evenly spaced, one per day at most; the end
