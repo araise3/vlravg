@@ -315,3 +315,34 @@ On araïse#5055 (e11a6, 170 games) part of the 3–4 RR
 win/loss gap near 90–120 RR into Immortal came from margins: the large losses
 there were 9–11-round blowouts and the wins mostly 2-round games; at a
 4-round margin the gap is about 3 RR instead of about 3.8.
+
+## Wider window for sparse stretches (2026-11-21, on request)
+
+A fast climber's curve was mostly gaps. MIBR zekken#1515 (NA, e11a6) went
+from Immortal 1 at 76 RR to Radiant at 948 RR in 106 games, gaining about
++30 per early win. So his wins started about 30 RR apart, a 30 RR window
+rarely held 3 of them, and the win line had no points below about 250 RR.
+His 36 losses over about 870 RR broke the loss line into short pieces. His
+RR data itself had no gap: all 106 matches had a payout, and each starting
+RR equalled the previous ending RR.
+
+Rule now: where 30 RR holds fewer than 3 games of that outcome, the
+estimate retries with a 60 RR window (`RR_ESTIMATE_WIDE_SPAN`); still fewer
+than 3 is a gap. Lines join neighbouring estimates up to the wider of their
+two windows (`rrPayoutSegments`).
+
+`scripts/adaptive_span.py` (`adaptive-span.json`) used the same clean rows,
+groups, player split and within-act 5-fold as the grids above, with raw
+payouts and prior 2:
+
+| Variant | Holdout points drawn | Points the shipped curve also draws | Extra points vs act mean alone |
+|---|---|---|---|
+| 30 RR (before) | 81% | — | — |
+| **30, else 60 RR (shipped)** | **94%** | identical (2.548 RMSE) | 2.62 vs 3.27, −0.65 [−0.77, −0.55], 5,439 points |
+| 30, else 45 RR | 90% | identical | 2.63 vs 3.21, −0.58 [−0.68, −0.49] |
+| 60 RR always | 94% | 2.532 (−0.016 [−0.024, −0.006]) | same as shipped |
+
+Players with dense games keep exactly the same curve and gaps. Sparse
+stretches gain estimates about 0.65 RR closer than the act average.
+Checked in the browser on zekken: one unbroken win line from about 120 RR
+and four loss pieces instead of about ten. araïse#5055 looked unchanged.

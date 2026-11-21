@@ -3560,6 +3560,13 @@ function rrMovementRows(matches){
 
 const RR_ESTIMATE_NEIGHBORS=5;
 const RR_ESTIMATE_MAX_SPAN=30;
+// Where 30 RR holds fewer than 3 games, the estimate retries over 60 RR. A
+// fast climber gains 20–30 RR a game, so their games start 20–30 RR apart and
+// a 30 RR window left most of the curve as gaps (2026-11-21, on request).
+// Points the 30 RR window draws are unchanged; points drawn rose from 81% to
+// 94%, and the added points were 2.62 RR from the held-out payout vs 3.27 for
+// the act mean alone (553 holdout corpus players; docs/rr-payout-model-2026-11-20.md).
+const RR_ESTIMATE_WIDE_SPAN=60;
 const RR_ESTIMATE_MIN_SAMPLES=3;
 const RR_ESTIMATE_PRIOR_WEIGHT=2;
 
@@ -3602,19 +3609,26 @@ function rrPayoutEstimates(visibleRows,allRows,won){
       if(pool[mid].m.myPreRR<position)low=mid+1;
       else high=mid;
     }
-    let before=low-1,after=low;
-    const sample=[];
-    let min=Infinity,max=-Infinity;
-    while(sample.length<RR_ESTIMATE_NEIGHBORS&&(before>=0||after<pool.length)){
-      const takeBefore=before>=0&&(after===pool.length||
-        position-pool[before].m.myPreRR<=pool[after].m.myPreRR-position);
-      const row=pool[takeBefore?before--:after++];
-      if(Math.abs(row.m.myPreRR-position)>RR_ESTIMATE_MAX_SPAN)break;
-      const candidateMin=Math.min(min,row.m.myPreRR),candidateMax=Math.max(max,row.m.myPreRR);
-      if(candidateMax-candidateMin>RR_ESTIMATE_MAX_SPAN)continue;
-      sample.push(row);
-      min=candidateMin;max=candidateMax;
-    }
+    // The nearest games of this outcome, at most `span` RR away and spanning
+    // at most `span` RR together.
+    const nearby=span=>{
+      let before=low-1,after=low,min=Infinity,max=-Infinity;
+      const sample=[];
+      while(sample.length<RR_ESTIMATE_NEIGHBORS&&(before>=0||after<pool.length)){
+        const takeBefore=before>=0&&(after===pool.length||
+          position-pool[before].m.myPreRR<=pool[after].m.myPreRR-position);
+        const row=pool[takeBefore?before--:after++];
+        if(Math.abs(row.m.myPreRR-position)>span)break;
+        const candidateMin=Math.min(min,row.m.myPreRR),candidateMax=Math.max(max,row.m.myPreRR);
+        if(candidateMax-candidateMin>span)continue;
+        sample.push(row);
+        min=candidateMin;max=candidateMax;
+      }
+      return{sample,min,max,span};
+    };
+    let local=nearby(RR_ESTIMATE_MAX_SPAN);
+    if(local.sample.length<RR_ESTIMATE_MIN_SAMPLES)local=nearby(RR_ESTIMATE_WIDE_SPAN);
+    const {sample,min,max,span}=local;
     if(sample.length<RR_ESTIMATE_MIN_SAMPLES)return{position,axisPosition,payout:null};
     const localTotal=sample.reduce((sum,row)=>sum+rrMarginAdjusted(row),0);
     // The act mean steadies a small local sample. Its weight was 8 until
@@ -3623,21 +3637,24 @@ function rrPayoutEstimates(visibleRows,allRows,won){
     // Immortal+, slightly worse below; docs/rr-payout-model-2026-11-20.md).
     const payout=(localTotal+RR_ESTIMATE_PRIOR_WEIGHT*actMean)/(sample.length+RR_ESTIMATE_PRIOR_WEIGHT);
     const minRow=sample.find(row=>row.m.myPreRR===min),maxRow=sample.find(row=>row.m.myPreRR===max);
-    return{position,axisPosition,payout,n:sample.length,min,max,
+    return{position,axisPosition,payout,n:sample.length,min,max,span,
       minTier:minRow.m.myPreTierId??minRow.m.myTierId,
       maxTier:maxRow.m.myPreTierId??maxRow.m.myTierId,actMean};
   });
 }
 
+// Lines join neighbouring estimates unless they sit further apart than the
+// wider of the two windows used (30 RR, or 60 RR where games are sparse).
 function rrPayoutSegments(estimates){
   const segments=[];
   let current=[],previous=null;
   const flush=()=>{if(current.length)segments.push(current);current=[];};
   estimates.forEach(estimate=>{
     if(estimate.payout==null){flush();previous=null;return;}
-    if(previous!=null&&estimate.position-previous>RR_ESTIMATE_MAX_SPAN)flush();
+    const reach=Math.max(estimate.span??RR_ESTIMATE_MAX_SPAN,previous?.span??RR_ESTIMATE_MAX_SPAN);
+    if(previous!=null&&estimate.position-previous.position>reach)flush();
     current.push(estimate);
-    previous=estimate.position;
+    previous=estimate;
   });
   flush();
   return segments;
