@@ -205,7 +205,9 @@ interval rule.
 On 2026-11-20 the frontend switched, on request, from `near30_k5_prior8` to a
 60 RR Gaussian-weighted curve without act-mean pull, chosen in an exploratory
 search ([rr-payout-model-2026-11-20.md](rr-payout-model-2026-11-20.md)); on
-2026-11-21, also on request, it went back to `near30_k5_prior8`. The
+2026-11-21, also on request, it went back to the nearby-games curve, now
+with an act-mean prior of 2 instead of 8 (`k5_span30_prior2_mean`; the fixed
+script's `near30_k5_prior8` baseline is unchanged). The
 pre-registration above is unchanged: its tests stay defined against
 `near30_k5_prior8` in the fixed script, and the hybrid is still not shipped.
 On the 2026-11-20 snapshot e11a6 remains the latest act, so the confirmatory
