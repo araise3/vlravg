@@ -158,11 +158,11 @@ test('the RR summary card sits above the trend chart as tiles with what each fig
   assert.match(noDraws,/<span class="text-draw">0<\/span>/);
   assert.match(html,/aria-label="2 wins, 3 losses, 1 draw" style="[^"]*"|role="img" aria-label="2 wins, 3 losses, 1 draw"/);
   assert.match(html,/data-slot="progress"[^>]*aria-label="40\.0% win rate"|aria-label="40\.0% win rate"[^>]*data-slot="progress"/);
-  // The range tabs head the summary card at the top of the page; the trend card follows.
+  // The summary card's own range menu heads it at the top of the page; the trend card follows.
   const page=readFileSync(new URL('../src/app/pages/RR.jsx',import.meta.url),'utf8');
   const body=page.slice(page.indexOf('export function RRPage('));
-  assert.ok(body.indexOf('id="rr-summary-title"')<body.indexOf('<Tabs value={range}'));
-  assert.ok(body.indexOf('<Tabs value={range}')<body.indexOf('id="rr-trend-title"'));
+  assert.ok(body.indexOf('id="rr-summary-title"')<body.indexOf('<RRRangeSelect card="summary"'));
+  assert.ok(body.indexOf('<RRRangeSelect card="summary"')<body.indexOf('id="rr-trend-title"'));
 });
 
 test('distribution renders counts with accessible exact scores independently of RR',async()=>{

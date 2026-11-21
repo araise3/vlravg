@@ -221,13 +221,18 @@ All hand-built charts follow one system, checked against the dataviz method:
   header (title, one-line description, range control on the right) (20 Nov 2026: a `CardAction` link, badge or figure is centred on the title row; `CardAction` no longer spans the description row), key
   figures, the framed chart, then notes in small muted text. The RR page
   splits its key figures off (20 Nov 2026, on request): an "RR summary" card
-  at the top holds the range tabs (they also drive the RR trend chart below)
-  and five tiles in the Act stats grid look (`RRSummary`): Net RR (with the
+  at the top holds five tiles in the Act stats grid look (`RRSummary`): Net RR (with the
   match count it sums), RR / Win and RR / Loss (with the eligible win and
   loss counts), W–L–D (draws always shown, in the draw yellow `text-draw`, even at zero; with a win/loss/draw split bar) and win rate (with a
   shadcn `Progress` bar), then the performance bonus note. Phones put Net RR
-  across the full width above two rows of two. The "RR trend" card below is
-  title and chart only. `StatStrip` and its `.stat-strip` CSS are gone.
+  across the full width above two rows of two. `StatStrip` and its
+  `.stat-strip` CSS are gone. Since 21 Nov 2026 the summary, "RR trend" and
+  "RR by session" cards each have their own match range: a small menu in the
+  card header (`RRRangeSelect`: all time with the match count, Last 50 above
+  50 matches, Last 30, Last 20). The ranges are kept per card in the engine
+  (`rrRanges`, `setRRRange(card, value)`, `rrScopedMatches`), so changing one
+  never rescopes another. Until then the summary's range tabs drove the trend
+  and session charts too, which was not wanted.
 - **Hover/focus**: one shared `ChartTooltip` (value first). RR trend uses a
   crosshair that snaps to the nearest match. The payout chart has no hover
   readout (removed on request); its curve points keep their aria-labels. The
@@ -247,8 +252,9 @@ All hand-built charts follow one system, checked against the dataviz method:
   fixture `?fixture=climb` reproduces a 106-game Immortal 1 to Radiant climb;
   since 20 Nov 2026 its payouts drift (gains about +26 to +16, losses about
   −12 to −20, oldest to newest, with jitter) so payout charts have a trend to
-  show. "RR payout over time" (`RRPayoutCard`, 20 Nov 2026, match order only) follows the RR
-  trend card; see [rr-payout-over-time.md](rr-payout-over-time.md).
+  show. "RR by session" (`RRSessionCard`, 21 Nov 2026) follows the RR trend
+  card; it replaced "RR payout over time" (20 Nov 2026). See
+  [rr-sessions.md](rr-sessions.md).
   The payout chart gets
   Win/Loss end labels, an "Even at N RR" label and a "RR per game" axis; the
   score-margin chart shows the count on top of every bar again (exact

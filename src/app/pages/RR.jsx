@@ -1,8 +1,8 @@
 import {useId,useState} from 'react';
 import {
   avgLabel,avgLabelShort,buildRRScoreRows,computeRRStats,rrDuoInfo,rrMovementRows,rrMovementXAxis,
-  RR_MARGIN_REFERENCE,rrPayoutEstimates,rrPayoutEvenPoint,rrPayoutSegments,rrPayoutTimeline,RR_PAYOUT_WINDOW,rrPositionFromElo,rrRankRows,rrReportedStats,rrSigned,rrTrendScopedMatches,
-  scoreMarginDistribution,setRRMovementZoomTier,setRRTrendRange,winRateLabel,winRateTone,
+  RR_MARGIN_REFERENCE,rrPayoutEstimates,rrPayoutEvenPoint,rrPayoutSegments,rrPositionFromElo,rrRankRows,rrReportedStats,rrSessionRows,RR_SESSION_BREAK_MS,rrScopedMatches,rrSigned,
+  scoreMarginDistribution,setRRMovementZoomTier,setRRRange,winRateLabel,winRateTone,
 } from '@/engine/core.mjs';
 import {RANK_ICONS} from '@/engine/rank-icons.mjs';
 import {useElementWidth,useEngine,useIsMobile} from '@/app/hooks.js';
@@ -10,7 +10,7 @@ import {ChartFrame,ChartTooltip,EmptyState,Hint,PageHeading,PlacementToggle,Rank
 import {cn} from '@/lib/utils';
 import {Card,CardAction,CardContent,CardHeader,CardTitle} from '@/components/ui/card';
 import {Progress} from '@/components/ui/progress';
-import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs';
+import {Select,SelectContent,SelectItem,SelectTrigger,SelectValue} from '@/components/ui/select';
 import {ToggleGroup,ToggleGroupItem} from '@/components/ui/toggle-group';
 
 const toneOf=tone=>tone==='rank-positive'?'text-positive':tone==='rank-negative'?'text-negative':'';
@@ -68,7 +68,7 @@ export function RRTrendChart({matches,range}){
   const fillId=`rr-trend-fill-${useId().replace(/[^\w-]/g,'')}`;
   const compact=useIsMobile();
   const showDuos=range!=='all';
-  const scoped=rrTrendScopedMatches(matches);
+  const scoped=rrScopedMatches(matches,range);
   const ordered=scoped.filter(m=>Number.isFinite(m.myRR)&&Number.isFinite(m.myPostRR)).sort((a,b)=>(a.startedAtMs||0)-(b.startedAtMs||0));
   if(!ordered.length)return <div ref={ref} className="py-10 text-center text-sm text-muted-foreground">No recorded rank and RR changes for matches in this act.</div>;
   const duoInfos=ordered.map(m=>showDuos?rrDuoInfo(m):null);
@@ -248,70 +248,77 @@ export function RRTrendChart({matches,range}){
   );
 }
 
-/* ── RR payout over time ───────────────────────────────── */
-// X-axis ticks: match 1, then round match numbers at least `minGap` px apart.
-export function rrPayoutXTicks(count,plotWidth,minGap){
-  const step=[1,2,5,10,20,25,50,100].find(s=>count<2||s*plotWidth/(count-1)>=minGap)||100;
-  const ticks=[1];
-  for(let k=step;k<=count;k+=step)if(k>1)ticks.push(k);
-  return ticks.map(k=>({k:k-1,label:String(k)}));
+/* ── RR by session ────────────────────────────────────── */
+// Date labels every `step` sessions so neighbouring labels stay `minGap` px apart.
+export function rrSessionLabelStep(count,slot,minGap){
+  return [1,2,3,4,5,10,20,50].find(step=>slot*step>=minGap)||50;
 }
 
-// Each eligible match's recorded payout as a dot (wins above zero in green,
-// losses below in red, draws yellow) under the trailing averages of the last
-// RR_PAYOUT_WINDOW wins and losses as solid lines, so a shrinking gain or a
-// growing loss shows up as the act goes on. Matches are spaced evenly in play
-// order (a Date axis was tried and removed on request, 20 Nov 2026).
-export function RRPayoutChart({matches}){
+// One bar per play session (rrSessionRows: a new session after a break of more
+// than 3 hours), growing up in green for a net gain and down in red for a net
+// loss from a zero line. Replaced "RR payout over time" on 21 Nov 2026: payout
+// size barely moves within an act, so that chart showed flat lines; how many
+// games are won in a sitting is what moves RR (docs/rr-sessions.md).
+export function RRSessionChart({matches}){
   const [ref,measured]=useElementWidth();
   const [active,setActive]=useState(null);
   const compact=useIsMobile();
-  const rows=rrPayoutTimeline(matches);
-  if(!rows.length)return <div ref={ref} className="py-10 text-center text-sm text-muted-foreground">No RR payouts to chart in this range.</div>;
-  const height=compact?220:260,top=12,bottom=height-26;
-  const left=compact?34:42,right=compact?8:14;
+  const rows=rrSessionRows(matches);
+  if(!rows.length)return <div ref={ref} className="py-10 text-center text-sm text-muted-foreground">No recorded RR changes in this range.</div>;
+  const height=compact?220:260,top=18,bottom=height-28;
+  const left=compact?36:44,right=compact?8:14;
   const width=Math.max(left+right+2,measured||872),plotWidth=width-left-right;
-  const values=rows.map(r=>r.rr);
-  const lo=Math.min(0,...values),hi=Math.max(0,...values);
-  const step=[5,10,20,25,50,100].find(s=>(hi-lo+10)/s<=(compact?4:6))||100;
-  const yMin=Math.floor((lo-4)/step)*step,yMax=Math.max(yMin+step,Math.ceil((hi+4)/step)*step);
+  const slot=plotWidth/rows.length,barWidth=Math.min(28,Math.max(2,slot*.66));
+  const showValues=slot>=(compact?24:28);
+  const nets=rows.map(r=>r.net);
+  const lo=Math.min(0,...nets),hi=Math.max(0,...nets);
+  const step=[5,10,20,25,50,100,200,250,500].find(s=>(hi-lo)/s<=(compact?4:5))||500;
+  // Headroom for the value labels at the bar ends.
+  const pad=showValues?(hi-lo||step)*.14:0;
+  const yMin=lo<0?Math.floor((lo-pad)/step)*step:0,yMax=Math.max(step,Math.ceil((hi+pad)/step)*step);
   const y=value=>bottom-(value-yMin)/(yMax-yMin)*(bottom-top);
   const yTicks=[];
   for(let value=yMin;value<=yMax;value+=step)yTicks.push(value);
-  const x=k=>left+(rows.length>1?k/(rows.length-1):.5)*plotWidth;
-  const spacing=rows.length>1?plotWidth/(rows.length-1):plotWidth;
-  const radius=Math.max(2.5,Math.min(4,spacing/3));
+  const cx=i=>left+(i+.5)*slot;
   const dateLabel=t=>new Date(t).toLocaleDateString(undefined,{month:'short',day:'numeric'});
-  const xTicks=rrPayoutXTicks(rows.length,plotWidth,compact?28:40).map(tick=>({...tick,x:x(tick.k)}));
-  const path=key=>rows.map((r,k)=>[k,r[key]]).filter(([,v])=>v!=null)
-    .map(([k,v],j)=>`${j?'L':'M'}${x(k).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
-  const winPath=path('winAvg'),lossPath=path('lossAvg');
-  const matchLabel=m=>[m.mapName??m.map,Number.isInteger(m.myR)&&Number.isInteger(m.opR)?`${m.myR}–${m.opR}`:null].filter(Boolean).join(', ');
-  const resultLabel={win:'Win',loss:'Loss',draw:'Draw'};
-  const avgText=r=>[r.winAvg!=null&&`wins ${rrSigned(r.winAvg,1)}`,r.lossAvg!=null&&`losses ${rrSigned(r.lossAvg,1)}`].filter(Boolean).join(', ');
+  const timeLabel=t=>new Date(t).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+  const labelStep=rrSessionLabelStep(rows.length,slot,compact?52:64);
+  const kind=net=>net>0?'win':net<0?'loss':'draw';
+  const plural=(n,one,many)=>`${n} ${n===1?one:many}`;
+  const record=r=>`${r.wins}–${r.losses}${r.draws?`–${r.draws}`:''}`;
+  const rankAfter=r=>r.postRR==null?null:rrPositionFromElo(r.postRR,r.postTierId);
+  const describe=r=>{
+    const rank=rankAfter(r);
+    return `Session ${r.i+1} of ${rows.length}, ${dateLabel(r.startMs)} ${timeLabel(r.startMs)}–${timeLabel(r.endMs)}: ${rrSigned(r.net,0)} RR over ${plural(r.games,'game','games')}, ${plural(r.wins,'win','wins')}, ${plural(r.losses,'loss','losses')}${r.draws?`, ${plural(r.draws,'draw','draws')}`:''}${rank?`; ${rank.label} after`:''}`;
+  };
+  const total=nets.reduce((a,b)=>a+b,0),average=total/rows.length;
+  const best=rows.reduce((a,b)=>b.net>a.net?b:a),worst=rows.reduce((a,b)=>b.net<a.net?b:a);
+  const winning=rows.filter(r=>r.net>0).length;
   const pointerMove=event=>{
     const bounds=event.currentTarget.getBoundingClientRect();
     const plotX=(event.clientX-bounds.left)*width/bounds.width;
-    if(plotX<left-12||plotX>width-right+12){setActive(null);return;}
-    let best=0;
-    rows.forEach((_,k)=>{if(Math.abs(x(k)-plotX)<Math.abs(x(best)-plotX))best=k;});
-    setActive(best);
+    if(plotX<left||plotX>width-right){setActive(null);return;}
+    setActive(Math.max(0,Math.min(rows.length-1,Math.floor((plotX-left)/slot))));
   };
   const tip=active!=null&&rows[active]?rows[active]:null;
-  const last=rows.at(-1);
+  const tipRank=tip&&rankAfter(tip);
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground max-sm:text-xs" aria-label="Chart legend">
-        <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-4 rounded" style={{background:'var(--chart-win)'}}/>
-          Avg win, last {RR_PAYOUT_WINDOW}{last.winAvg!=null&&<span className="font-medium text-positive tabular-nums">{rrSigned(last.winAvg,1)}</span>}</span>
-        <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-4 rounded" style={{background:'var(--chart-loss)'}}/>
-          Avg loss, last {RR_PAYOUT_WINDOW}{last.lossAvg!=null&&<span className="font-medium text-negative tabular-nums">{rrSigned(last.lossAvg,1)}</span>}</span>
-        <span className="inline-flex items-center gap-1.5"><span className="flex gap-0.5 opacity-60"><span className="size-1.5 rounded-full" style={{background:'var(--chart-win)'}}/><span className="size-1.5 rounded-full" style={{background:'var(--chart-loss)'}}/><span className="size-1.5 rounded-full" style={{background:'var(--chart-draw)'}}/></span>Each match</span>
-      </div>
+      <dl className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground max-sm:text-xs" aria-label="Session summary">
+        {[
+          ['Sessions',String(rows.length),''],
+          ['Avg per session',rrSigned(average,1),toneClass(average,0)],
+          ['Net gain in',`${winning} of ${rows.length}`,''],
+          ['Best',`${rrSigned(best.net,0)} (${dateLabel(best.startMs)})`,toneClass(best.net,0)],
+          ['Worst',`${rrSigned(worst.net,0)} (${dateLabel(worst.startMs)})`,toneClass(worst.net,0)],
+        ].map(([label,value,tone])=>(
+          <div key={label} className="flex gap-1.5"><dt>{label}</dt><dd className={cn('font-medium text-foreground tabular-nums',tone)}>{value}</dd></div>
+        ))}
+      </dl>
       <ChartFrame>
-        <div ref={ref} className="relative" role="region" aria-label="RR payout over time" tabIndex={0}>
-          <svg className={cn('chart-svg rr-payout-svg',tip&&'has-active')} width={width} height={height} viewBox={`0 0 ${width} ${height}`}
-            aria-label={`RR payout for ${rows.length} eligible matches in match order; latest averages over the last ${RR_PAYOUT_WINDOW}: ${avgText(last)||'none'}`}
+        <div ref={ref} className="relative" role="region" aria-label="Net RR by session" tabIndex={0}>
+          <svg className={cn('chart-svg rr-session-svg',tip&&'has-active')} width={width} height={height} viewBox={`0 0 ${width} ${height}`}
+            aria-label={`Net RR for ${plural(rows.length,'play session','play sessions')}: ${winning} with a net gain, average ${rrSigned(average,1)} RR per session`}
             onPointerMove={pointerMove} onPointerDown={pointerMove} onPointerLeave={()=>setActive(null)} style={{touchAction:'pan-y'}}>
             {yTicks.map(value=>(
               <g key={value} aria-hidden="true">
@@ -319,50 +326,71 @@ export function RRPayoutChart({matches}){
                 <text x={left-8} y={y(value)+4} textAnchor="end">{value>0?`+${value}`:value<0?`−${-value}`:'0'}</text>
               </g>
             ))}
-            {xTicks.map(({x:tx,label},j)=>(
-              <text key={j} x={tx} y={bottom+18} aria-hidden="true"
-                textAnchor={xTicks.length>1&&j===0?'start':xTicks.length>1&&j===xTicks.length-1?'end':'middle'}>{label}</text>
-            ))}
-            {rows.map((r,k)=>(
-              <circle key={k} className={cn('payout-point',r.result,k===active&&'active')} cx={x(k)} cy={y(r.rr)} r={k===active?radius+1.5:radius} aria-hidden="true"/>
-            ))}
-            {winPath&&<path className="avg-line win" d={winPath} aria-hidden="true"/>}
-            {lossPath&&<path className="avg-line loss" d={lossPath} aria-hidden="true"/>}
-            {tip&&<line className="hover-line" x1={x(active)} y1={top} x2={x(active)} y2={bottom} aria-hidden="true"/>}
-            {rows.map((r,k)=>(
-              <g key={k} tabIndex={0} onFocus={()=>setActive(k)} onBlur={()=>setActive(null)}
-                aria-label={`Match ${k+1} of ${rows.length}, ${Number.isFinite(r.match.startedAtMs)?dateLabel(r.match.startedAtMs):'date unavailable'}${matchLabel(r.match)?`, ${matchLabel(r.match)}`:''}, ${resultLabel[r.result]}: ${rrSigned(r.rr,0)} RR${avgText(r)?`; average of last ${RR_PAYOUT_WINDOW} ${avgText(r)}`:''}`}>
-                <circle cx={x(k)} cy={y(r.rr)} r={Math.min(10,Math.max(4,spacing/2))} fill="transparent"/>
-              </g>
+            {rows.map((r,i)=>{
+              const y0=y(0),y1=y(r.net),barTop=Math.min(y0,y1),barHeight=Math.max(2,Math.abs(y1-y0));
+              const labelY=r.net>=0?barTop-6:barTop+barHeight+13;
+              return (
+                <g key={r.startMs} tabIndex={0} role="img" aria-label={describe(r)} onFocus={()=>setActive(i)} onBlur={()=>setActive(null)}>
+                  <rect x={cx(i)-slot/2} y={top} width={slot} height={bottom-top} fill="transparent"/>
+                  <rect className={cn('bar',kind(r.net),i===active&&'active')} x={cx(i)-barWidth/2} y={r.net===0?y0-1:barTop} width={barWidth} height={barHeight}
+                    rx={Math.min(3,barWidth/3)}/>
+                  {showValues&&<text x={cx(i)} y={labelY} textAnchor="middle" className="value" aria-hidden="true">{rrSigned(r.net,0)}</text>}
+                </g>
+              );
+            })}
+            {rows.map((r,i)=>(i%labelStep===0)&&(
+              <text key={r.startMs} x={cx(i)} y={bottom+18} aria-hidden="true"
+                textAnchor={rows.length>1&&i===0&&slot<40?'start':'middle'}>{dateLabel(r.startMs)}</text>
             ))}
           </svg>
           {tip&&(
-            <ChartTooltip x={x(active)} y={Math.max(0,y(tip.rr)-40)} width={width}>
-              <div className={cn('tt-value',toneClass(tip.rr,0))}>{rrSigned(tip.rr,0)} RR</div>
-              <div className="tt-row"><span className="tt-key" style={{background:`var(--chart-${tip.result})`}}/>
-                {resultLabel[tip.result]}{matchLabel(tip.match)?` on ${matchLabel(tip.match)}`:''}</div>
-              {avgText(tip)&&<div className="tt-muted">Last {RR_PAYOUT_WINDOW} average: {avgText(tip)}</div>}
-              <div className="tt-muted">Match {active+1} of {rows.length}{Number.isFinite(tip.match.startedAtMs)?`, ${dateLabel(tip.match.startedAtMs)}`:''}</div>
+            <ChartTooltip x={cx(active)} y={Math.max(0,Math.min(y(0),y(tip.net))-40)} width={width}>
+              <div className={cn('tt-value',toneClass(tip.net,0))}>{rrSigned(tip.net,0)} RR</div>
+              <div className="tt-row">{plural(tip.games,'game','games')}, {record(tip)}</div>
+              {tipRank&&<div className="tt-row"><RankIcon tier={tipRank.tier} size={14}/>{avgLabel(tipRank.tier)}, {tipRank.rr} RR after</div>}
+              <div className="tt-muted">{dateLabel(tip.startMs)}, {timeLabel(tip.startMs)}–{timeLabel(tip.endMs)}</div>
             </ChartTooltip>
           )}
         </div>
       </ChartFrame>
-      <p className="text-xs text-muted-foreground">Eligible matches only: placements, unrated ranks and full 5-stacks are left out.</p>
+      <p className="text-xs text-muted-foreground">A new session starts after a break of more than {RR_SESSION_BREAK_MS/3600000} hours. Net RR counts every recorded change, placements and 5-stacks included.</p>
     </div>
   );
 }
 
-// The payout chart's card.
-export function RRPayoutCard({matches}){
+// The session chart's card, with its own match range.
+export function RRSessionCard({matches,range='all'}){
   return (
-    <section aria-labelledby="rr-payout-time-title">
+    <section aria-labelledby="rr-session-title">
       <Card>
         <CardHeader>
-          <CardTitle><h2 id="rr-payout-time-title">RR payout over time</h2></CardTitle>
+          <CardTitle><h2 id="rr-session-title">RR by session</h2></CardTitle>
+          <CardAction><RRRangeSelect card="sessions" value={range} total={matches.length} label="RR by session"/></CardAction>
         </CardHeader>
-        <CardContent><RRPayoutChart matches={matches}/></CardContent>
+        <CardContent><RRSessionChart matches={rrScopedMatches(matches,range)}/></CardContent>
       </Card>
     </section>
+  );
+}
+
+// A card's own match range: all time or the 50/30/20 most recent matches, as
+// a small menu in the card header. Each card keeps its own (setRRRange), so
+// changing one never rescopes another. 50 is offered only above 50 matches.
+export function rrRangeOptions(total){
+  return [['all',`All time (${total})`],...(total>50?[['50','Last 50']]:[]),['30','Last 30'],['20','Last 20']];
+}
+export function RRRangeSelect({card,value,total,label}){
+  const options=rrRangeOptions(total);
+  const current=options.find(([key])=>key===value)??options[0];
+  return (
+    <Select value={current[0]} onValueChange={next=>setRRRange(card,next)}>
+      <SelectTrigger size="sm" className="h-8 text-xs" aria-label={`Match range for ${label}`} data-rr-range={card}>
+        <SelectValue>{current[1]}</SelectValue>
+      </SelectTrigger>
+      <SelectContent position="popper" align="end">
+        {options.map(([key,text])=><SelectItem key={key} value={key} className="text-xs">{text}</SelectItem>)}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -778,8 +806,8 @@ export function RRPage(){
   const matches=s.allMatches;
   const hasRR=ready&&matches.length>0;
   const hasScores=ready&&scoreMarginDistribution(matches).total>0;
-  const range=s.rrTrendRange;
-  const scoped=rrTrendScopedMatches(matches);
+  const ranges=s.rrRanges;
+  const scoped=rrScopedMatches(matches,ranges.summary);
   const running=scoped.filter(m=>Number.isFinite(m.myRR)&&Number.isFinite(m.myPostRR)).reduce((sum,m)=>sum+m.myRR,0);
   const trendCount=scoped.filter(m=>Number.isFinite(m.myRR)&&Number.isFinite(m.myPostRR)).length;
   const anyTrend=trendCount>0;
@@ -789,22 +817,13 @@ export function RRPage(){
       {hasRR&&(
         <>
           <PlacementToggle/>
-          {/* The range's headline figures in their own card at the top; its range tabs drive the trend chart below too. */}
+          {/* The range's headline figures in their own card at the top. Its range
+              menu scopes this card only; the trend and session cards have their own. */}
           <section aria-labelledby="rr-summary-title">
             <Card className="gap-5">
-              {/* Phones: the range tabs drop under the title instead of squeezing beside it. */}
-              <CardHeader className="max-sm:grid-cols-1">
+              <CardHeader>
                 <CardTitle><h2 id="rr-summary-title">RR summary</h2></CardTitle>
-                <CardAction className="max-sm:col-start-1 max-sm:row-start-2 max-sm:justify-self-start">
-                  <Tabs value={range} onValueChange={setRRTrendRange}>
-                    <TabsList aria-label="RR match range">
-                      <TabsTrigger value="all">All time ({matches.length})</TabsTrigger>
-                      {matches.length>50&&<TabsTrigger value="50" aria-label="50 most recent matches">50</TabsTrigger>}
-                      <TabsTrigger value="30" aria-label="30 most recent matches">30</TabsTrigger>
-                      <TabsTrigger value="20" aria-label="20 most recent matches">20</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                </CardAction>
+                <CardAction><RRRangeSelect card="summary" value={ranges.summary} total={matches.length} label="RR summary"/></CardAction>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
                 <RRSummary matches={scoped} net={anyTrend?running:null} netCount={trendCount}/>
@@ -816,11 +835,12 @@ export function RRPage(){
             <Card>
               <CardHeader>
                 <CardTitle><h2 id="rr-trend-title">RR trend</h2></CardTitle>
+                <CardAction><RRRangeSelect card="trend" value={ranges.trend} total={matches.length} label="RR trend"/></CardAction>
               </CardHeader>
-              <CardContent><ChartFrame><RRTrendChart matches={matches} range={range}/></ChartFrame></CardContent>
+              <CardContent><ChartFrame><RRTrendChart matches={matches} range={ranges.trend}/></ChartFrame></CardContent>
             </Card>
           </section>
-          <RRPayoutCard matches={scoped}/>
+          <RRSessionCard matches={matches} range={ranges.sessions}/>
           <RRMovementChart matches={matches} zoomTier={s.rrMovementZoomTier}/>
           <TableSection label="RR by your rank"><RRRankTable matches={matches}/></TableSection>
           <section aria-labelledby="rr-score-title">

@@ -1,5 +1,10 @@
 # RR payout over time
 
+> **Replaced on 21 Nov 2026** by [RR by session](rr-sessions.md). Its
+> trailing averages were nearly flat because payout size barely changes within
+> an act ([rr-and-hidden-mmr.md](rr-and-hidden-mmr.md)). `rrPayoutTimeline`,
+> `RRPayoutChart` and their test were removed; this note is kept for history.
+
 Added 20 Nov 2026 on request: a chart on the RR page that shows how your RR
 payout per win and per loss moves across the act.
 

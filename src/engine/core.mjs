@@ -1238,7 +1238,7 @@ function runAnalysis(searchOverride,{fromUrl=false,initialAct=null}={}){
   _rrChangeByMatchId={};_rrDetailsByMatchId={};_preRRByMatchId={};_preTierByMatchId={};_postRRByMatchId={};_postTierByMatchId={};_refundedRRByMatchId={};_derankProtectedByMatchId={};
   allTeammates=[];allEncounters=[];serverData=[];serverPartySize=0;serverFilteredMatchCount=0;lobbyRankPartySize=0;lobbyRankFilteredMatchCount=0;rrMovementZoomTier=null;
   lobbyRankData=[];partySizeData=[];overviewStats=null;
-  rrTrendRange='all';
+  rrRanges=rrDefaultRanges();
   // If the season dropdown's prefetch already fetched this exact player (the
   // common case — it runs while the player is still typing), reuse those
   // responses instead of re-fetching account+mmr from scratch.
@@ -3058,7 +3058,8 @@ function overviewStatValues(statsPanelMatches){
 
 function renderAll(partial=false){
   analysisState='ready';
-  if(rrTrendRange==='50'&&allMatches.length<=50)rrTrendRange='all';
+  if(allMatches.length<=50&&Object.values(rrRanges).includes('50'))
+    rrRanges=Object.fromEntries(Object.entries(rrRanges).map(([card,range])=>[card,range==='50'?'all':range]));
   if(!allMatches.length){
     if(!partial)setStatus('No matches found for this season.');
     emit();
@@ -3687,33 +3688,53 @@ function setRRMovementZoomTier(tier){
   emit();
 }
 
-let rrTrendRange='all';
-function setRRTrendRange(value){
-  if(!['20','30','50','all'].includes(value)||(value==='50'&&allMatches.length<=50))return;
-  rrTrendRange=value;
+// Match range per RR page card (all time or the 50/30/20 most recent): each
+// card picks its own, so changing one never rescopes another (21 Nov 2026;
+// until then the summary's tabs drove the trend and session charts too).
+const RR_RANGE_CARDS=['summary','trend','sessions'];
+const RR_RANGES=['all','50','30','20'];
+const rrDefaultRanges=()=>Object.fromEntries(RR_RANGE_CARDS.map(card=>[card,'all']));
+let rrRanges=rrDefaultRanges();
+function setRRRange(card,value){
+  if(!RR_RANGE_CARDS.includes(card)||!RR_RANGES.includes(value)||(value==='50'&&allMatches.length<=50))return;
+  if(rrRanges[card]===value)return;
+  rrRanges={...rrRanges,[card]:value};
   emit();
 }
-function rrTrendScopedMatches(matches){
-  return rrTrendRange==='all'?matches:[...matches]
+function rrScopedMatches(matches,range){
+  return range==='all'||!RR_RANGES.includes(range)?matches:[...matches]
     .sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0))
-    .slice(0,Number(rrTrendRange));
+    .slice(0,Number(range));
 }
-// RR payout over time: every RR-eligible match (isRREligible: no placements,
-// unrated ranks or full 5-stacks) in play order with its recorded payout, plus
-// trailing averages of the last `window` win payouts and the last `window`
-// loss payouts so far (each over its own results; null until one exists).
-// Shows whether gains and losses drift as the act goes on.
-const RR_PAYOUT_WINDOW=5;
-function rrPayoutTimeline(matches,window=RR_PAYOUT_WINDOW){
-  const ordered=matches.filter(m=>isRREligible(m)&&Number.isFinite(m.myRR))
-    .sort((a,b)=>(a.startedAtMs||0)-(b.startedAtMs||0));
-  const wins=[],losses=[];
-  const mean=list=>{if(!list.length)return null;const recent=list.slice(-window);return recent.reduce((a,b)=>a+b,0)/recent.length;};
-  return ordered.map((m,i)=>{
-    const result=m.won===true?'win':m.won===false?'loss':'draw';
-    if(result==='win')wins.push(m.myRR);
-    if(result==='loss')losses.push(m.myRR);
-    return{match:m,i,result,rr:m.myRR,winAvg:mean(wins),lossAvg:mean(losses)};
+// RR by session: matches with a recorded RR change and a start time, in play
+// order, split into play sessions wherever more than RR_SESSION_BREAK_MS passes
+// between one match's end (start + duration, or RR_SESSION_MATCH_MS when the
+// duration is unknown) and the next match's start. Net RR counts every
+// recorded change, placements and 5-stacks included, like the summary's Net RR.
+// Replaced "RR payout over time" on 21 Nov 2026: payout size barely moves
+// within an act (docs/rr-and-hidden-mmr.md), the number of wins does.
+const RR_SESSION_BREAK_MS=3*3600000;
+const RR_SESSION_MATCH_MS=40*60000;
+function rrSessionRows(matches,breakMs=RR_SESSION_BREAK_MS){
+  const ordered=matches.filter(m=>Number.isFinite(m.myRR)&&Number.isFinite(m.startedAtMs))
+    .sort((a,b)=>a.startedAtMs-b.startedAtMs);
+  const sessions=[];
+  let current=null;
+  ordered.forEach(m=>{
+    const end=m.startedAtMs+(Number.isFinite(m.durationMs)&&m.durationMs>0?m.durationMs:RR_SESSION_MATCH_MS);
+    if(!current||m.startedAtMs-current.endMs>breakMs){
+      current={startMs:m.startedAtMs,endMs:end,matches:[],wins:0,losses:0,draws:0,net:0};
+      sessions.push(current);
+    }
+    current.matches.push(m);
+    current.endMs=Math.max(current.endMs,end);
+    current.net+=m.myRR;
+    if(m.won===true)current.wins++;else if(m.won===false)current.losses++;else current.draws++;
+  });
+  return sessions.map((s,i)=>{
+    const last=s.matches.at(-1);
+    return{...s,i,games:s.matches.length,
+      postRR:Number.isFinite(last.myPostRR)?last.myPostRR:null,postTierId:last.myPostTierId??null};
   });
 }
 function rrDuoInfo(match){
@@ -4018,7 +4039,7 @@ function getSnapshot(){
     lobbyRankData,partySizeData,lobbyRankPartySize,lobbyRankFilteredMatchCount,
     partySizeAvailability:{...partySizeAvailability},
     allTeammates,allEncounters,
-    rrTrendRange,rrMovementZoomTier,
+    rrRanges,rrMovementZoomTier,
     nameHistoryRows,nameHistoryState,nameHistoryBackfill,nameBackfillBusy,nameBackfillError,
     nameBackfillStopRequested,nameBackfillStopped,nameBackfillPages,
     proLibraryState,proLibraryCount:proLibraryRows.length,
@@ -4033,15 +4054,15 @@ export {
   setSearchText,submitSearch,runAnalysis,requestSeasonDropdown,selectSeasonOption,
   analyzeProAccount,proSearchResults,navigateToPage,pageHref,
   toggleIncludeReset,setServerPartySize,setLobbyRankPartySize,
-  setRRTrendRange,setRRMovementZoomTier,loadMoreMatches,loadOlderNames,loadNameHistory,
+  setRRRange,setRRMovementZoomTier,loadMoreMatches,loadOlderNames,loadNameHistory,
   syncReplayImport,uploadReplay,toggleReplaySteps,replayRowView,replayMatchRows,
   // presentation helpers
   overviewStatValues,PARTY_LABELS,PER_PAGE,MIN_RATED,RANK_MAP,rName,rColor,rClass,avgLabel,avgLabelShort,tierRR,lobbyRR,lobbyRankText,hexToRgb,
   seasonOptionCountText,playerRouteUrl,PUUID_RE,
   nameHistoryActRange,computeWintradeSignals,overviewRecentMatches,decidedWinRate,
   winRateLabel,winRateTone,rrSigned,computeRRStats,isRREligible,rrPositionFromElo,
-  rrMovementRows,rrMovementXAxis,rrPayoutEstimates,rrMarginAdjusted,RR_MARGIN_REFERENCE,rrPayoutEvenPoint,rrPayoutSegments,rrTrendScopedMatches,
-  rrDuoInfo,rrPayoutTimeline,RR_PAYOUT_WINDOW,rrReportedStats,buildRRScoreRows,rrRankRows,clutchTotals,lobbyTeamsChartRows,
+  rrMovementRows,rrMovementXAxis,rrPayoutEstimates,rrMarginAdjusted,RR_MARGIN_REFERENCE,rrPayoutEvenPoint,rrPayoutSegments,rrScopedMatches,RR_RANGES,
+  rrDuoInfo,rrSessionRows,RR_SESSION_BREAK_MS,rrReportedStats,buildRRScoreRows,rrRankRows,clutchTotals,lobbyTeamsChartRows,
   lobbyTeamsGapLabel,loadMatchMapMetadata,matchAward,matchCardPlayerRank,dayHeaderLabel,
   scoreMarginDistribution,
 };
