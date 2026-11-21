@@ -5,8 +5,9 @@ the RR page? The chart currently uses `near30_k5_prior8` (`rrPayoutEstimates`:
 up to 5 of the player's own games within a 30 RR span, shrunk toward their
 act mean with weight 8).
 
-Outcome: on request, the RR page switched to `gauss60_prior0` the same day
-(see "Shipped" below).
+Outcome: on request, the RR page switched to `gauss60_prior0` the same day,
+and on 2026-11-21, also on request, went back to `near30_k5_prior8` (see
+"Reverted" below).
 
 ## Input
 
@@ -168,3 +169,14 @@ penalties included), as is the even point. Tooltips name the games within
 This is a display choice made on exploratory evidence. The pre-registered
 hybrid test in [rr-benchmark-e11.md](rr-benchmark-e11.md) still compares
 against the fixed `near30_k5_prior8` baseline and is unaffected.
+
+## Reverted (2026-11-21, on request)
+
+The user did not like how smooth the 60 RR curve looked and asked for the
+previous display back. `rrPayoutEstimates` again draws `near30_k5_prior8`:
+up to 5 of the player's own wins (or losses) within a 30 RR span, blended with
+their act mean at a prior weight of 8, with gaps where fewer than 3 games are
+that close; `rrPayoutSegments` breaks the line across gaps over 30 RR again,
+and the tooltip and footnote describe it as before. The benchmark results
+above stand as measured; the display is a choice of look over the measured
+error difference.

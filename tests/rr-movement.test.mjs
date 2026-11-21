@@ -14,41 +14,28 @@ const {rrPayoutEstimates:estimates,rrPayoutSegments:segments,rrMovementXAxis:axi
   html.slice(start,end)+'\n({rrPayoutEstimates,rrPayoutSegments,rrMovementXAxis,rrMovementRows})',{avgLabelShort:()=>''});
 const row=(net,rr=100,won=net>0,axisRR=rr)=>({net,axisRR,m:{myPreRR:rr,won}});
 
-// Gaussian weights by starting-RR distance, σ = 60 RR, no act-mean pull
-// (docs/rr-payout-model-2026-11-20.md).
-const weighted=(points,at)=>{
-  const w=points.map(([x])=>Math.exp(-.5*((x-at)/60)**2));
-  return points.reduce((sum,[,y],i)=>sum+w[i]*y,0)/w.reduce((a,b)=>a+b,0);
-};
-
-test('separate win and loss estimates weight every game by distance, without the act mean',()=>{
+test('separate win and loss estimates use nearby matches and the act mean',()=>{
   const rows=[row(10,100),row(20,100),row(30,100),row(40,200),row(-12,100),row(-18,110),row(-24,120)];
   const gains=estimates(rows,rows,true);
   const losses=estimates(rows,rows,false);
-  const winPoints=[[100,10],[100,20],[100,30],[200,40]];
-  assert.equal(gains[0].position,100);
-  assert.ok(Math.abs(gains[0].payout-weighted(winPoints,100))<1e-9);
-  assert.ok(Math.abs(gains[0].payout-21.535)<1e-3);
-  // The game 100 RR away still counts, at about a quarter weight.
-  assert.ok(Math.abs(gains[1].payout-weighted(winPoints,200))<1e-9);
-  assert.equal(gains[0].n,4);
+  assert.equal(gains[0].n,3);
   assert.equal(gains[0].actMean,25);
-  assert.ok(Math.abs(losses[0].payout-weighted([[100,12],[110,18],[120,24]],100))<1e-9);
+  assert.equal(gains[0].payout,(10+20+30+8*25)/11);
+  assert.equal(gains[1].payout,null);
   assert.equal(losses[0].n,3);
+  assert.equal(losses[0].payout,18);
 });
 
-test('an estimate needs 3 games within 120 RR, and the curve breaks only across wider gaps',()=>{
-  const rows=[row(10,100),row(20,110),row(30,120),row(40,131),row(50,500)];
+test('local samples never span more than 30 RR and sparse points leave gaps',()=>{
+  const rows=[row(10,100),row(20,110),row(30,120),row(40,131),row(50,200)];
   const gains=estimates(rows,rows,true);
   const at100=gains.find(point=>point.position===100);
-  assert.equal(at100.n,4);
-  assert.equal(at100.max-at100.min,31);
-  assert.equal(gains.find(point=>point.position===500).payout,null);
+  assert.equal(at100.n,3);
+  assert.equal(at100.max-at100.min,20);
+  assert.equal(gains.find(point=>point.position===200).payout,null);
   assert.deepEqual(Array.from(segments(gains),part=>Array.from(part,point=>point.position)),[[100,110,120,131]]);
-  const spaced=[{position:100,payout:10},{position:200,payout:12}];
-  assert.deepEqual(Array.from(segments(spaced),part=>Array.from(part,point=>point.position)),[[100,200]]);
-  const distant=[{position:100,payout:10},{position:260,payout:12}];
-  assert.deepEqual(Array.from(segments(distant),part=>Array.from(part,point=>point.position)),[[100],[260]]);
+  const distant=[{position:100,payout:10},{position:140,payout:12}];
+  assert.deepEqual(Array.from(segments(distant),part=>Array.from(part,point=>point.position)),[[100],[140]]);
 });
 
 test('zoomed estimates keep their full-rank neighbors but plot at displayed RR',()=>{
