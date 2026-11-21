@@ -49,6 +49,35 @@ export function rrTrendRankBands(points,min,max){
   return bands;
 }
 
+// Threshold labels for charts that reach Immortal+: the lowest rank sits just
+// above the baseline, every higher rank just above its threshold line. Going
+// up, a label closer than 14px to the last one kept is dropped, as is the
+// lowest one when its band is under 14px tall.
+export function rrTrendThresholdLabels(bands,y,bottom){
+  const labels=[];
+  bands.forEach((band,index)=>{
+    const labelY=(index===0?bottom:y(band.start))-4;
+    if(index===0&&y(band.start)-y(band.end)<14)return;
+    const previous=labels.at(-1);
+    if(previous&&previous.labelY-labelY<14)return;
+    labels.push({tier:band.tier,labelY});
+  });
+  return labels;
+}
+
+// The match where each rank above the first match's rank was first reached.
+export function rrTrendRankUps(points){
+  if(!points.length)return[];
+  const tierOf=p=>rrPositionFromElo(p.value,p.match.myPostTierId).tier;
+  let highest=tierOf(points[0]);
+  const ups=[];
+  points.forEach((p,i)=>{
+    const tier=tierOf(p);
+    if(tier>highest){ups.push({i,tier});highest=tier;}
+  });
+  return ups;
+}
+
 // Evenly spaced match indices for the date axis, one label per day at most.
 export function rrTrendDateTicks(points,plotWidth,minGap,dateLabel){
   if(points.length<2)return[{i:0,label:dateLabel(points[0].match),anchor:'middle'}];
@@ -99,12 +128,20 @@ export function RRTrendChart({matches,range}){
   const rrStep=max>2100?[25,50,100,200,250,500,1000].find(step=>step*(bottom-top)/(max-min)>=(compact?30:36))??1000:null;
   const rrTicks=[];
   if(rrStep)for(let value=2100+Math.max(0,Math.ceil((min-2100)/rrStep))*rrStep;value<=max;value+=rrStep)if(value>=min)rrTicks.push(value);
-  const left=compact?58:72,right=rrTicks.length?(compact?32:44):(compact?10:16);
+  // Charts that reach Immortal+ drop the left rank column (21 Nov 2026, on
+  // request): Immortal 1–3 are thin leaderboard bands and Radiant has no top,
+  // so a big climb squeezed three labels at the bottom under one huge empty
+  // Radiant band. Each rank threshold becomes a dashed line labelled at its
+  // left end, and an icon on the line marks the match each new rank was
+  // first reached. Charts below Immortal keep their 100-RR bands.
+  const thresholdMode=max>2100;
+  const left=thresholdMode?(compact?8:12):(compact?58:72),right=rrTicks.length?(compact?32:44):(compact?10:16);
   const width=Math.max(left+right+2,measured||872),plotWidth=width-left-right;
   const x=i=>points.length===1?left+plotWidth/2:left+i*plotWidth/(points.length-1);
   const spacing=points.length>1?plotWidth/(points.length-1):plotWidth;
   const bands=rrTrendRankBands(points,min,max);
   const rankLines=bands.slice(1).map(band=>band.start);
+  const rankUps=thresholdMode?rrTrendRankUps(points):[];
   const line=points.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
   const dateLabel=m=>Number.isFinite(m.startedAtMs)?new Date(m.startedAtMs).toLocaleDateString(undefined,{month:'short',day:'numeric'}):'Date unavailable';
   const matchLabel=m=>[m.mapName??m.map,Number.isInteger(m.myR)&&Number.isInteger(m.opR)?`${m.myR}–${m.opR}`:null].filter(Boolean).join(', ');
@@ -118,6 +155,17 @@ export function RRTrendChart({matches,range}){
     const at=Math.min(points.length-1.000001,(px-left)/spacing),i=Math.floor(at);
     return y(points[i].value)+(y(points[i+1].value)-y(points[i].value))*(at-i);
   };
+  // Threshold labels sit at whichever end of the plot the line crosses fewer
+  // of their boxes: a climb's line and early rank-up icons crowd the left end.
+  const thresholdLabels=thresholdMode?rrTrendThresholdLabels(bands,y,bottom):[];
+  const labelBoxWidth=66;
+  const crossesLabel=(x0,labelY)=>{
+    for(let px=x0;px<=x0+labelBoxWidth;px+=2){const ly=lineYAt(px);if(ly>=labelY-14&&ly<=labelY+5)return true;}
+    return false;
+  };
+  const leftLabelX=left+2,rightLabelX=width-right-labelBoxWidth-4;
+  const labelX=thresholdLabels.filter(l=>crossesLabel(rightLabelX,l.labelY)).length<thresholdLabels.filter(l=>crossesLabel(leftLabelX,l.labelY)).length
+    ?rightLabelX:leftLabelX;
   const endText=`${avgLabelShort(endRank.tier)}, ${endRank.rr} RR`,endTextWidth=endText.length*6.6;
   const endY=y(end.value);
   const endLabel=[
@@ -157,10 +205,10 @@ export function RRTrendChart({matches,range}){
           </linearGradient>
         </defs>
         {/* Every other rank band carries a faint wash so each rank reads as a range. */}
-        {bands.map(({start,end},index)=>(bands.length-1-index)%2===1&&(
+        {!thresholdMode&&bands.map(({start,end},index)=>(bands.length-1-index)%2===1&&(
           <rect key={`wash-${start}`} className="rank-band" x={left} y={y(end)} width={plotWidth} height={y(start)-y(end)} aria-hidden="true"/>
         ))}
-        {bands.map(({start,end,tier})=>{
+        {!thresholdMode&&bands.map(({start,end,tier})=>{
           const bandTop=y(end),bandHeight=y(start)-bandTop;
           if(bandHeight<15)return null;
           const mid=bandTop+bandHeight/2;
@@ -178,7 +226,13 @@ export function RRTrendChart({matches,range}){
           </g>
         ))}
         {rrTicks.length>0&&<text x={width-right+6} y={top-9} className="rr-tick unit" aria-hidden="true">RR</text>}
-        {rankLines.map(value=><line key={value} className="grid rank-line" x1={left} y1={y(value)} x2={width-right} y2={y(value)}/>)}
+        {rankLines.map(value=><line key={value} className={cn('grid rank-line',thresholdMode&&'threshold')} x1={left} y1={y(value)} x2={width-right} y2={y(value)}/>)}
+        {thresholdLabels.map(({tier,labelY})=>(
+          <g key={tier} aria-hidden="true">
+            {RANK_ICONS[tier]&&<image href={RANK_ICONS[tier]} x={labelX} y={labelY-11} width={13} height={13}/>}
+            <text x={labelX+17} y={labelY} className="threshold-label">{avgLabelShort(tier)}</text>
+          </g>
+        ))}
         <line className="baseline" x1={left} y1={bottom} x2={width-right} y2={bottom}/>
         {dateTicks.map(({i,label,anchor})=><text key={i} x={x(i)} y={bottom+17} textAnchor={anchor} aria-hidden="true">{label}</text>)}
         {duoRuns.map(run=>{
@@ -191,6 +245,12 @@ export function RRTrendChart({matches,range}){
         {points.length>1&&<path className="line" d={line}/>}
         {showDots&&points.map(({match,value},i)=>(
           <circle key={i} className={`result-point ${resultClass(match)}`} cx={x(i)} cy={y(value)} r={Math.max(3,Math.min(4,spacing/3))} aria-hidden="true"/>
+        ))}
+        {rankUps.filter(({i})=>i!==last).map(({i,tier})=>(
+          <g key={`up-${tier}`} className="rank-up" aria-hidden="true">
+            <circle cx={x(i)} cy={y(points[i].value)} r={9}/>
+            {RANK_ICONS[tier]&&<image href={RANK_ICONS[tier]} x={x(i)-7} y={y(points[i].value)-7} width={14} height={14}/>}
+          </g>
         ))}
         {peak&&!tip&&(
           <g aria-hidden="true">

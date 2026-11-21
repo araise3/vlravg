@@ -48,8 +48,37 @@ test('the trend shows an Immortal+ RR scale, a peak label and the end label',asy
   assert.match(svg,/class="rr-tick"[^>]*>0</);assert.match(svg,/class="rr-tick"[^>]*>200</);
   assert.match(svg,/class="peak-label">Peak Rad, 800 RR</);
   assert.match(svg,/class="ink-strong"[^>]*>Rad, 560 RR</);
-  assert.match(svg,/class="rank-tick">Immo 3</);
+  // Immortal+ charts: dashed thresholds labelled at one end, no rank column.
+  assert.doesNotMatch(svg,/class="rank-tick"/);
+  assert.match(svg,/class="grid rank-line threshold"/);
+  assert.match(svg,/class="threshold-label">Immo 3</);
+  assert.match(svg,/class="threshold-label">Rad</);
+  // Rank-up icons where Immortal 2, Immortal 3 and Radiant were first reached.
+  assert.equal([...svg.matchAll(/class="rank-up"/g)].length,3);
   assert.match(svg,/aria-label="Match 20 of 20, [^"]*Radiant, 560 RR after −15 RR change"/);
+});
+
+test('rank-ups mark only the first match at each higher rank',async()=>{
+  const {rrTrendRankUps}=await load('/src/app/pages/RR.jsx');
+  const points=[point(2150,24),point(2210,25),point(2190,24),point(2230,25),point(2400,26),point(2380,26)];
+  assert.deepEqual(rrTrendRankUps(points),[{i:1,tier:25},{i:4,tier:26}]);
+  assert.deepEqual(rrTrendRankUps([point(2900,27),point(2950,27)]),[]);
+  assert.deepEqual(rrTrendRankUps([]),[]);
+});
+
+test('threshold labels drop when too close to the one below or the lowest band is too thin',async()=>{
+  const {rrTrendThresholdLabels}=await load('/src/app/pages/RR.jsx');
+  const y=value=>300-(value-2100);   // 1 px per RR, baseline at 300
+  const bands=[{start:2100,end:2200,tier:24},{start:2200,end:2208,tier:25},{start:2208,end:2400,tier:26},{start:2400,end:2700,tier:27}];
+  assert.deepEqual(rrTrendThresholdLabels(bands,y,300).map(l=>[l.tier,l.labelY]),[[24,296],[25,196],[27,-4]]);
+  const thin=[{start:2100,end:2110,tier:24},{start:2110,end:2400,tier:25}];
+  assert.deepEqual(rrTrendThresholdLabels(thin,y,300).map(l=>l.tier),[25]);
+});
+
+test('charts below Immortal keep the rank column and add no thresholds or rank-ups',async()=>{
+  const matches=asMatches([point(1550,18,0),point(1580,18,1),point(1620,19,2)]);
+  const svg=await renderHtml('/src/app/pages/RR.jsx','RRTrendChart',{matches,range:'all'});
+  assert.doesNotMatch(svg,/threshold-label|class="rank-up"/);
 });
 
 test('ranks below Immortal get no RR scale',async()=>{
