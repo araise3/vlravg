@@ -200,11 +200,12 @@ tuning selection and paired comparisons are identical to the runs above.
 exactly at Immortal 1, is never selected, and that pass flags follow the
 interval rule.
 
-## Note (2026-11-20)
+## Note (2026-11-20, updated 2026-11-21)
 
-The frontend no longer draws `near30_k5_prior8`: on request it switched to a
+On 2026-11-20 the frontend switched, on request, from `near30_k5_prior8` to a
 60 RR Gaussian-weighted curve without act-mean pull, chosen in an exploratory
-search ([rr-payout-model-2026-11-20.md](rr-payout-model-2026-11-20.md)). The
+search ([rr-payout-model-2026-11-20.md](rr-payout-model-2026-11-20.md)); on
+2026-11-21, also on request, it went back to `near30_k5_prior8`. The
 pre-registration above is unchanged: its tests stay defined against
 `near30_k5_prior8` in the fixed script, and the hybrid is still not shipped.
 On the 2026-11-20 snapshot e11a6 remains the latest act, so the confirmatory
