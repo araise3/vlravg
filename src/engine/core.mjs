@@ -3562,10 +3562,36 @@ const RR_ESTIMATE_MAX_SPAN=30;
 const RR_ESTIMATE_MIN_SAMPLES=3;
 const RR_ESTIMATE_PRIOR_WEIGHT=2;
 
+// Round margin moves payouts: each extra round of margin adds about a third
+// of an RR to a win and to a loss's cost. Measured 2026-11-21 within each
+// player/act on the RR corpus, controlling for starting rank, by rank group
+// of the starting tier (tuning players; holdout players agreed within 0.02;
+// docs/rr-payout-model-2026-11-20.md). The estimate moves every payout to a
+// typical RR_MARGIN_REFERENCE-round margin before averaging, so a few
+// blowouts or close games among the nearby ones do not skew the line:
+// 0.22 RR closer on 553 holdout players, better in every rank group.
+// Games without a known score keep their raw payout.
+const RR_MARGIN_REFERENCE=4;
+const RR_MARGIN_SLOPES={
+  win:{ironGold:.35,platDiamond:.38,ascendant:.32,immortal:.36,radiant:.35},
+  loss:{ironGold:.45,platDiamond:.42,ascendant:.36,immortal:.31,radiant:.33},
+};
+function rrMarginGroup(tier){
+  return tier<=14?'ironGold':tier<=20?'platDiamond':tier<=23?'ascendant':tier<=26?'immortal':'radiant';
+}
+// A row's payout magnitude at the reference margin.
+function rrMarginAdjusted(row){
+  const payout=Math.abs(row.net),m=row.m;
+  if(!Number.isInteger(m.myR)||!Number.isInteger(m.opR))return payout;
+  const tier=m.myPreTierId??m.myTierId;
+  const slope=RR_MARGIN_SLOPES[m.won?'win':'loss'][rrMarginGroup(tier)];
+  return payout-slope*(Math.abs(m.myR-m.opR)-RR_MARGIN_REFERENCE);
+}
+
 function rrPayoutEstimates(visibleRows,allRows,won){
   const pool=allRows.filter(row=>row.m.won===won).sort((a,b)=>a.m.myPreRR-b.m.myPreRR);
   if(!pool.length)return[];
-  const actMean=pool.reduce((sum,row)=>sum+Math.abs(row.net),0)/pool.length;
+  const actMean=pool.reduce((sum,row)=>sum+rrMarginAdjusted(row),0)/pool.length;
   const centers=new Map(visibleRows.filter(row=>row.m.won===won).map(row=>[row.m.myPreRR,row.axisRR]));
   return [...centers.keys()].sort((a,b)=>a-b).map(position=>{
     const axisPosition=centers.get(position);
@@ -3589,7 +3615,7 @@ function rrPayoutEstimates(visibleRows,allRows,won){
       min=candidateMin;max=candidateMax;
     }
     if(sample.length<RR_ESTIMATE_MIN_SAMPLES)return{position,axisPosition,payout:null};
-    const localTotal=sample.reduce((sum,row)=>sum+Math.abs(row.net),0);
+    const localTotal=sample.reduce((sum,row)=>sum+rrMarginAdjusted(row),0);
     // The act mean steadies a small local sample. Its weight was 8 until
     // 2026-11-21; 2 draws the same points and gaps but keeps the curve's ends
     // on the dots, 0.08 RR closer for 553 holdout corpus players (better at
@@ -4014,7 +4040,7 @@ export {
   seasonOptionCountText,playerRouteUrl,PUUID_RE,
   nameHistoryActRange,computeWintradeSignals,overviewRecentMatches,decidedWinRate,
   winRateLabel,winRateTone,rrSigned,computeRRStats,isRREligible,rrPositionFromElo,
-  rrMovementRows,rrMovementXAxis,rrPayoutEstimates,rrPayoutEvenPoint,rrPayoutSegments,rrTrendScopedMatches,
+  rrMovementRows,rrMovementXAxis,rrPayoutEstimates,rrMarginAdjusted,RR_MARGIN_REFERENCE,rrPayoutEvenPoint,rrPayoutSegments,rrTrendScopedMatches,
   rrDuoInfo,rrPayoutTimeline,RR_PAYOUT_WINDOW,rrReportedStats,buildRRScoreRows,rrRankRows,clutchTotals,lobbyTeamsChartRows,
   lobbyTeamsGapLabel,loadMatchMapMetadata,matchAward,matchCardPlayerRank,dayHeaderLabel,
   scoreMarginDistribution,

@@ -10,8 +10,8 @@ const html=readFileSync(new URL('../src/engine/core.mjs',import.meta.url),'utf8'
 const start=html.indexOf('function isRREligible(');
 const end=html.indexOf('\nfunction setRRMovementZoomTier(',start);
 assert.ok(start>0&&end>start);
-const {rrPayoutEstimates:estimates,rrPayoutSegments:segments,rrMovementXAxis:axis,rrMovementRows}=runInNewContext(
-  html.slice(start,end)+'\n({rrPayoutEstimates,rrPayoutSegments,rrMovementXAxis,rrMovementRows})',{avgLabelShort:()=>''});
+const {rrPayoutEstimates:estimates,rrPayoutSegments:segments,rrMovementXAxis:axis,rrMovementRows,rrMarginAdjusted:adjusted,RR_MARGIN_REFERENCE}=runInNewContext(
+  html.slice(start,end)+'\n({rrPayoutEstimates,rrPayoutSegments,rrMovementXAxis,rrMovementRows,rrMarginAdjusted,RR_MARGIN_REFERENCE})',{avgLabelShort:()=>''});
 const row=(net,rr=100,won=net>0,axisRR=rr)=>({net,axisRR,m:{myPreRR:rr,won}});
 
 test('separate win and loss estimates use nearby matches and the act mean',()=>{
@@ -25,6 +25,27 @@ test('separate win and loss estimates use nearby matches and the act mean',()=>{
   assert.equal(gains[1].payout,null);
   assert.equal(losses[0].n,3);
   assert.equal(losses[0].payout,18);
+});
+
+test('payouts are evened out to a 4-round margin by outcome and rank group before averaging',()=>{
+  assert.equal(RR_MARGIN_REFERENCE,4);
+  const scored=(net,myR,opR,tier,rr=100)=>({net,axisRR:rr,m:{myPreRR:rr,won:net>0,myR,opR,myPreTierId:tier}});
+  const near=(actual,expected)=>assert.ok(Math.abs(actual-expected)<1e-9,`${actual} vs ${expected}`);
+  // Immortal win 13-3 (margin 10): 6 rounds over the reference at 0.36 RR each.
+  near(adjusted(scored(24,13,3,25)),24-.36*6);
+  // Ascendant loss 11-13 (margin 2): 2 rounds under, so the cost is raised by 2 x 0.36.
+  near(adjusted(scored(-17,11,13,22)),17+.36*2);
+  // Iron-Gold loss 3-13 costs 0.45 per round; Radiant win 13-9 is at the reference.
+  near(adjusted(scored(-25,3,13,12)),25-.45*6);
+  near(adjusted(scored(20,13,9,27)),20);
+  // No known score: the raw payout.
+  near(adjusted(row(18)),18);
+  // The curve averages adjusted payouts: three blowout wins and two close wins at one spot.
+  const rows=[scored(24,13,3,25),scored(24,13,3,25),scored(24,13,3,25),scored(16,13,11,25),scored(16,13,11,25)];
+  const [point]=estimates(rows,rows,true);
+  const values=rows.map(adjusted),mean=values.reduce((a,b)=>a+b,0)/values.length;
+  near(point.payout,(values.reduce((a,b)=>a+b,0)+2*mean)/(values.length+2));
+  near(point.actMean,mean);
 });
 
 test('local samples never span more than 30 RR and sparse points leave gaps',()=>{
@@ -122,6 +143,9 @@ test('chart draws the even line with its explanation, and hides it when zoomed t
   const matches=fixture.games.map(([pre,net,tier])=>({myPreRR:pre,myPreTierId:tier,myTierId:tier,myRR:net,partySize:1,won:net>0?true:net<0?false:null}));
   const svg=await renderHtml('/src/app/pages/RR.jsx','RRMovementChart',{matches,zoomTier:null});
   assert.match(svg,/class="even-line"/);
+  // Tooltips and the footnote say the line is at a typical 4-round margin; the dots stay actual payouts.
+  assert.match(svg,/aria-label="Estimated RR \/ (win|loss) at a 4-round margin: /);
+  assert.match(svg,/evened out to a typical 4-round margin[^<]*faint dots are your actual payouts\./);
   assert.match(svg,/Estimated even point/);
   // The explanation is the even line's accessible label; no paragraph above the chart (removed on request).
   assert.match(svg,/aria-label="Wins and losses pay about the same from a starting rank of [^"]*, 676 RR/);

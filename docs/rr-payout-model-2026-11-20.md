@@ -6,8 +6,9 @@ up to 5 of the player's own games within a 30 RR span, shrunk toward their
 act mean with weight 8).
 
 Outcome: on request, the RR page switched to `gauss60_prior0` the same day,
-and on 2026-11-21, also on request, went back to `near30_k5_prior8` (see
-"Reverted" below).
+and on 2026-11-21, also on request, went back to the nearby-games curve (see
+"Reverted" below), then lowered its act-mean pull from 8 to 2 (see the last
+section).
 
 ## Input
 
@@ -180,3 +181,137 @@ that close; `rrPayoutSegments` breaks the line across gaps over 30 RR again,
 and the tooltip and footnote describe it as before. The benchmark results
 above stand as measured; the display is a choice of look over the measured
 error difference.
+
+## Data-shaped variants of the current curve (2026-11-21, exploratory)
+
+After the revert, the user named what they like about the current curve: it
+looks like data, not a model (local, jagged, with gaps where games are
+sparse). Variants that keep that rule were benchmarked
+(`.local/rr-corpus/benchmark/full-2026-11-20/scripts/local_grid.py`, results
+`local-grid.json` and `local-k5-prior2.json`): at most `k` nearest games
+(3/5/8) within a `span` (30/45/60 RR), a gap with fewer than 3, act-mean pull
+0/2/4/8, mean or median. Same clean rows, groups, player split and within-act
+5-fold as the grid search above; errors on the points each variant draws,
+paired comparisons on the points both draw; a variant qualified only if it
+did not draw fewer points than the current curve (81% of holdout points).
+
+- Best on tuning players: `k8_span60_prior2_mean`, holdout −0.12 RR vs the
+  current curve [−0.15, −0.09]. It draws 94% of points and averages up to 8
+  games over 60 RR, so it is visibly smoother with far fewer gaps, which is
+  against the stated preference.
+- Same look, lighter pull: `k5_span30_prior2_mean` (the current curve with the
+  act-mean weight cut from 8 to 2) draws exactly the same points and gaps.
+  Holdout vs current: −0.08 RR [−0.11, −0.05] overall; Immortal+ −0.28
+  [−0.33, −0.23]; below Immortal +0.04 [+0.01, +0.06] (slightly worse).
+  Removing the pull entirely (`prior0`) is not measurably better than now
+  (−0.02 [−0.07, +0.02]).
+- On sample player A the lighter pull moves the curve's ends onto the dots
+  (early losses about 10 instead of 13 RR); on player B the two are nearly
+  identical.
+
+Shipped on request on 2026-11-21: `RR_ESTIMATE_PRIOR_WEIGHT` is now 2, so the
+frontend draws `k5_span30_prior2_mean` (same window, games and gaps as before).
+
+## Games × window grid at prior 2 (2026-11-21, exploratory)
+
+On request, every combination of up to 3, 4, 5, 6, 7, 8, 10, 12 or 15
+nearby games and a 10, 15, 20, 25, 30, 40, 50, 60, 80 or 100 RR window was
+run on the same local archive (the 2026-11-20 snapshot's clean rows; no new
+D1 export), all at the shipped act-mean prior of 2
+(`scripts/games_window_grid.py`, `games-window-grid.json`). Each is compared
+with the shipped 5 games / 30 RR on the holdout points both draw (RR, 95%
+player bootstrap; negative is better):
+
+| Games \ window | 10 | 15 | 20 | 25 | 30 | 40 | 50 | 60 | 80 | 100 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 3 | +0.05 | +0.06 | +0.04 | +0.04 | +0.03 | +0.03 | +0.03 | +0.03 | +0.03 | +0.03 |
+| 4 | +0.04 | +0.03 | +0.02 | +0.02 | +0.01 | +0.01 | +0.01 | 0.00 | 0.00 | 0.00 |
+| 5 | +0.04 | +0.03 | +0.01 | +0.01 | 0 (shipped) | −0.01 | −0.01 | −0.02 | −0.01 | −0.01 |
+| 8 | +0.04 | +0.02 | +0.01 | −0.01 | −0.02 | −0.03 | −0.04 | −0.04 | −0.04 | −0.04 |
+| 10 | +0.04 | +0.02 | 0.00 | −0.01 | −0.02 | −0.04 | −0.05 | −0.05 | −0.06 | −0.06 |
+| 15 | +0.04 | +0.02 | 0.00 | −0.01 | −0.02 | −0.04 | −0.05 | −0.06 | −0.06 | −0.06 |
+| Points drawn | 43% | 56% | 70% | 77% | 81% | 88% | 91% | 94% | 97% | 98% |
+
+(6, 7 and 12 games sit between their neighbours.) The share of points drawn
+depends only on the window, since a point needs 3 games inside it.
+
+- Every difference is small next to the typical error of about 2.5 RR: the
+  best (10–15 games over 80–100 RR, −0.06) draws 97–98% of points and is the
+  smoothest, against the stated preference.
+- With the shipped gaps (30 RR), up to 8 games is −0.02 RR [−0.02, −0.01],
+  better in both rank bands; 10, 12 and 15 games add almost nothing more.
+- Windows under 25 RR and fewer than 5 games are worse, and narrow windows
+  leave many more gaps.
+
+## Detailed accuracy (2026-11-21)
+
+`scripts/accuracy_detail.py` scored all 90 combinations above on 44,443
+holdout points (prior 2), each on the points it and the shipped 5 games /
+30 RR both draw; full results in `accuracy-detail.json` and
+`accuracy-detail.csv`. Errors are estimate minus actual payout, in RR.
+
+| Games / window | Drawn | RMSE | Mean abs. | Median abs. | Bias | Within 1 | Within 2 | Within 3 |
+|---|---|---|---|---|---|---|---|---|
+| 3 / 30 | 81% | 2.58 | 1.65 | 1.20 | +0.05 | 43.3% | 71.0% | 85.3% |
+| **5 / 30 (shipped)** | 81% | 2.55 | 1.61 | 1.16 | +0.04 | 44.1% | 72.1% | 85.8% |
+| 8 / 30 | 81% | 2.53 | 1.60 | 1.15 | +0.03 | 44.9% | 72.6% | 86.1% |
+| 15 / 30 | 81% | 2.53 | 1.59 | 1.14 | +0.03 | 44.9% | 72.8% | 86.2% |
+| 5 / 60 | 94% | 2.53 | 1.60 | 1.14 | +0.04 | 44.5% | 72.4% | 86.0% |
+| 8 / 60 | 94% | 2.51 | 1.57 | 1.11 | +0.03 | 45.9% | 73.2% | 86.4% |
+| 15 / 100 | 98% | 2.49 | 1.56 | 1.12 | +0.03 | 45.7% | 73.6% | 86.5% |
+
+Shipped curve by group (points, RMSE, mean abs., within 2 RR): wins 18,826,
+2.15, 1.49, 74.2%; losses 17,369, 2.71, 1.75, 69.8%; Iron–Gold 4,177, 4.20,
+3.32, 37.3%; Platinum–Diamond 4,556, 2.33, 1.88, 61.0%; Ascendant 4,469,
+1.51, 1.10, 84.4%; Immortal 12,551, 1.97, 1.28, 80.5%; Radiant 10,442, 1.93,
+1.43, 75.5%. Bias stays within ±0.1 RR in every group. 8 / 30 improves every
+group by 0.01–0.02 RMSE and 0.4–1.1 points within 2 RR.
+
+Windows under 30 RR are scored only on the denser points they draw, so their
+hit rates look better than they are; their RMSE on comparable points is in
+the grid above.
+
+## Round margin (2026-11-21, exploratory)
+
+Riot names round margin as a payout factor. `scripts/margin_effect.py`
+(`margin-effect.json`) joined each clean payout to its match's rounds won and
+lost (151,481 rows with both; margins 2–13) and measured, within each
+player/act/outcome group (20+ games) and rank group, the slope of payout
+magnitude on absolute round margin, controlling for starting position.
+Player-bootstrap 95% intervals; tuning and holdout players separately.
+
+| RR per extra round of margin | Wins (tuning / holdout) | Losses (tuning / holdout) |
+|---|---|---|
+| Iron–Gold | +0.35 / +0.35 | +0.45 / +0.45 |
+| Platinum–Diamond | +0.38 / +0.38 | +0.42 / +0.44 |
+| Ascendant | +0.32 / +0.33 | +0.36 / +0.37 |
+| Immortal | +0.36 / +0.37 | +0.31 / +0.31 |
+| Radiant | +0.35 / +0.33 | +0.33 / +0.33 |
+
+Every interval is about ±0.02–0.05 and excludes zero; tuning and holdout
+agree. A 13–3 win (margin 10) pays about 2.5–3 RR more than a 13–11 win, and
+a 3–13 loss costs about 2.5–3.5 RR more than an 11–13 loss.
+
+Display test: the shipped curve (5 games within 30 RR, prior 2) computed on
+payouts moved to a 4-round margin with the tuning slopes, then the held-out
+game's own margin added back, against the shipped curve on the same holdout
+points: RMSE 2.32 vs 2.55, −0.22 RR [−0.25, −0.20]; better in every rank
+group (Iron–Gold −0.18, Platinum–Diamond −0.32, Ascendant −0.34, Immortal
+−0.18, Radiant −0.25) and for wins (−0.24) and losses (−0.23). That is about
+ten times the gain of any games/window setting above.
+
+Shipped on request on 2026-11-21: `rrMarginAdjusted` in `src/engine/core.mjs`
+moves each chart payout to a 4-round margin with the tuning slopes rounded to
+two decimals (`RR_MARGIN_SLOPES`, by outcome and the starting tier's rank
+group) before the 5-games / 30 RR average and its act mean; games without a
+known score keep their raw payout. The dots stay actual payouts; tooltips and
+the footnote say the line is at a typical 4-round margin. The even point
+still uses raw payouts. Asked whether margins "balance out" with enough games:
+over a whole act they largely do (the act mean barely moves), but each point
+averages at most 5 nearby games, where one blowout shifts it by about 0.5 RR;
+the holdout gain above is measured at that scale.
+
+On araïse#5055 (e11a6, 170 games) part of the 3–4 RR
+win/loss gap near 90–120 RR into Immortal came from margins: the large losses
+there were 9–11-round blowouts and the wins mostly 2-round games; at a
+4-round margin the gap is about 3 RR instead of about 3.8.
