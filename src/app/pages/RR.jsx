@@ -649,7 +649,7 @@ export function RRMovementChart({matches,zoomTier}){
             </svg>
           </div>
           </ChartFrame>
-          <p className="text-xs text-muted-foreground">Estimates use 3–5 nearby wins or losses within 30 RR, blended with the act average, each evened out to a typical {RR_MARGIN_REFERENCE}-round margin (a bigger margin pays about a third of an RR more per round, win or loss). Gaps mean sparse data; faint dots are your actual payouts.{even?' The even point comes from straight-line fits of every win and loss in range (party-penalized games left out); it usually marks where your rank met your hidden MMR this act, which Riot does not show.':''}</p>
+          <p className="text-xs text-muted-foreground">Estimates use 3–5 nearby wins or losses within 30 RR (60 RR where games are sparse, as in a fast climb), blended with the act average, each evened out to a typical {RR_MARGIN_REFERENCE}-round margin (a bigger margin pays about a third of an RR more per round, win or loss). Gaps mean sparse data; faint dots are your actual payouts.{even?' The even point comes from straight-line fits of every win and loss in range (party-penalized games left out); it usually marks where your rank met your hidden MMR this act, which Riot does not show.':''}</p>
         </CardContent>
       </Card>
     </section>

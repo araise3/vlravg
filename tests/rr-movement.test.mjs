@@ -60,6 +60,24 @@ test('local samples never span more than 30 RR and sparse points leave gaps',()=
   assert.deepEqual(Array.from(segments(distant),part=>Array.from(part,point=>point.position)),[[100],[140]]);
 });
 
+test('where 30 RR holds fewer than 3 games the window widens to 60 RR and lines reach that far',()=>{
+  // A fast climber: wins start about 25 RR apart, so 30 RR never holds three.
+  const rows=[row(30,100),row(29,125),row(28,150),row(27,175),row(26,200)];
+  const gains=estimates(rows,rows,true);
+  assert.ok(gains.every(point=>point.payout!=null));
+  assert.ok(gains.every(point=>point.span===60&&point.max-point.min<=60));
+  assert.deepEqual(Array.from(gains,point=>point.n),[3,3,3,3,3]);
+  assert.deepEqual(Array.from(segments(gains),part=>part.length),[5]);
+  // Dense spots keep the 30 RR window and its sample.
+  const dense=[row(10,100),row(20,110),row(30,120),row(40,300),row(50,325),row(60,350)];
+  const mixed=estimates(dense,dense,true);
+  assert.deepEqual(Array.from(mixed,point=>point.span),[30,30,30,60,60,60]);
+  // Still a gap beyond 60 RR, and lines do not bridge it.
+  assert.deepEqual(Array.from(segments(mixed),part=>Array.from(part,point=>point.position)),[[100,110,120],[300,325,350]]);
+  const lone=estimates([row(10,100),row(20,110),row(30,500)],[row(10,100),row(20,110),row(30,500)],true);
+  assert.ok(lone.every(point=>point.payout==null));
+});
+
 test('zoomed estimates keep their full-rank neighbors but plot at displayed RR',()=>{
   const all=[row(12,2110,true,10),row(18,2120,true,20),row(24,2130,true,30),row(30,2140,true,40)];
   const [point]=estimates([all[1]],all,true);
