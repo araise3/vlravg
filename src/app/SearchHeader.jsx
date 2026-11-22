@@ -62,7 +62,10 @@ function ProLibraryPanel({onPick}){
         </div>
         <span className="shrink-0 text-xs text-muted-foreground tabular-nums" aria-live="polite">{count}</span>
       </div>
-      <CommandInput placeholder="Search player, team or PUUID" value={query} onValueChange={setQuery} autoFocus className="max-sm:text-base"/>
+      {/* A bordered box like the main search bar (the shadcn default is only a
+          bottom rule, which left the field with no visible outline). */}
+      <CommandInput placeholder="Search player, team or PUUID" value={query} onValueChange={setQuery} autoFocus className="h-9 py-2 max-sm:text-base"
+        wrapperClassName="mx-1.5 rounded-md border border-input bg-input/30 shadow-xs transition-[color,border-color,box-shadow] has-[[data-slot=command-input]:focus-visible]:border-ring has-[[data-slot=command-input]:focus-visible]:ring-1 has-[[data-slot=command-input]:focus-visible]:ring-ring/50"/>
       {ready&&<ProRegionFilter value={region} onChange={setRegion} counts={proRegionCounts(all)} className="px-1.5 pt-2"/>}
       <CommandList className="max-h-[min(56vh,520px)] min-h-0 flex-1 scrollbar-thin">
         {s.proLibraryState==='loading'&&<div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground"><Spinner/>Loading pro players…</div>}
