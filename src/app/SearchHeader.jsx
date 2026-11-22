@@ -58,7 +58,7 @@ function ProLibraryPanel({onPick}){
       <div className="flex items-baseline justify-between gap-3 px-2.5 pt-2 pb-2">
         <div className="min-w-0">
           <div className="text-sm font-semibold">Pro players</div>
-          <div className="text-xs text-muted-foreground">VCT 2026 rosters. Opens the player’s current account.</div>
+          <div className="text-xs text-muted-foreground">Partnered teams from Rostermania’s rosters. Opens the player’s current account.</div>
         </div>
         <span className="shrink-0 text-xs text-muted-foreground tabular-nums" aria-live="polite">{count}</span>
       </div>
@@ -70,9 +70,10 @@ function ProLibraryPanel({onPick}){
         {ready&&<CommandEmpty>No pro players match that search{region!=='all'?` in ${region}`:''}.</CommandEmpty>}
         {groups.map(group=>(
           <CommandGroup key={group.key} heading={<ProGroupHeading group={group}/>}
-            className="[&_[cmdk-group-items]]:grid [&_[cmdk-group-items]]:gap-0.5 @min-[520px]/pro:[&_[cmdk-group-items]]:grid-cols-2">
+            className="border-border not-first:border-t [&_[cmdk-group-items]]:grid [&_[cmdk-group-items]]:gap-0.5 @min-[520px]/pro:[&_[cmdk-group-items]]:grid-cols-2">
             {group.rows.map(row=>(
-              <CommandItem key={row.puuid} value={row.puuid} onSelect={()=>onPick(row)} aria-label={proAccountLabel(row)} className="min-w-0 gap-2.5 py-2">
+              <CommandItem key={row.puuid} value={row.puuid} onSelect={()=>onPick(row)} aria-label={proAccountLabel(row)}
+                className="min-w-0 gap-2.5 py-2 data-[selected=true]:bg-foreground/10">
                 <ProAccount row={row} flat={group.flat} query={query}/>
               </CommandItem>
             ))}

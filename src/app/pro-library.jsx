@@ -14,7 +14,25 @@ import {cn} from '@/lib/utils';
 // it; it stays in the row's accessible name.
 
 export const PRO_REGIONS=['Americas','EMEA','Pacific','China'];
-const NO_TEAM='No team listed';
+
+// The VCT league marks and their colours (22 Nov 2026, on request). Logos are
+// Liquipedia's copies of Riot's league icons (VCT 2023 Americas League,
+// VCT 2024 EMEA League dark mode, VCT 2023 Pacific League, VCT China),
+// trimmed and shrunk to 64px in assets/regions/. Colours are each logo's own
+// fill, read from the files.
+export const PRO_REGION_STYLE={
+  Americas:{color:'#ff570c',logo:'/assets/regions/americas.png'},
+  EMEA:{color:'#d3ff1e',logo:'/assets/regions/emea.png'},
+  Pacific:{color:'#01d2d7',logo:'/assets/regions/pacific.png'},
+  China:{color:'#fd2659',logo:'/assets/regions/china.png'},
+};
+const regionVar=region=>PRO_REGION_STYLE[region]?{'--region':PRO_REGION_STYLE[region].color}:undefined;
+
+export function RegionLogo({region,className}){
+  const style=PRO_REGION_STYLE[region];
+  if(!style)return null;
+  return <img src={style.logo} alt="" aria-hidden="true" width={64} height={64} loading="lazy" decoding="async" className={cn('size-3.5 shrink-0 object-contain',className)}/>;
+}
 
 let regionNames=null;
 function countryName(code){
@@ -35,29 +53,49 @@ export function filterProRegion(rows,region){
   return region&&region!=='all'?rows.filter(row=>row.region===region):rows;
 }
 
-// No search: one group per team, teams A–Z with "No team listed" last,
-// players A–Z and each player's main account before their alts. A search:
-// one flat group in match order (proSearchResults already ranks it).
+// Teams come from rostermania's partnered rosters (22 Nov 2026, on request,
+// via scripts/build-pro-player-library.mjs): only partnered teams get a
+// heading; pros on no partnered roster are "Other players", listed last.
+export const OTHER_PLAYERS='Other players';
+
+// No search: one group per partnered team, teams A–Z with "Other players"
+// last, players A–Z and each player's main account before their alts. A
+// search: one flat group in match order (proSearchResults already ranks it).
 export function proGroups(rows,query){
   if(query.trim())return rows.length?[{key:'results',heading:`${rows.length} ${rows.length===1?'result':'results'}`,rows,flat:true}]:[];
   const teams=new Map();
   for(const row of rows){
-    const team=row.team||NO_TEAM;
-    if(!teams.has(team))teams.set(team,[]);
-    teams.get(team).push(row);
+    const key=row.teamCode&&row.team?row.teamCode:OTHER_PLAYERS;
+    if(!teams.has(key))teams.set(key,[]);
+    teams.get(key).push(row);
   }
   const byName=(a,b)=>a.localeCompare(b,'en',{sensitivity:'base'});
   return [...teams.entries()]
-    .sort(([a],[b])=>(a===NO_TEAM)-(b===NO_TEAM)||byName(a,b))
-    .map(([team,list])=>({key:team,heading:team,region:list.find(row=>row.region)?.region??null,flat:false,
-      rows:list.slice().sort((a,b)=>byName(a.handle,b.handle)||a.accountIndex-b.accountIndex)}));
+    .map(([key,list])=>key===OTHER_PLAYERS
+      ?{key,heading:OTHER_PLAYERS,teamCode:null,region:null,flat:false,rows:list}
+      :{key,heading:list[0].team,teamCode:key,region:list[0].region??null,flat:false,rows:list})
+    .sort((a,b)=>(a.key===OTHER_PLAYERS)-(b.key===OTHER_PLAYERS)||byName(a.heading,b.heading))
+    .map(group=>({...group,rows:group.rows.slice().sort((a,b)=>byName(a.handle,b.handle)||a.accountIndex-b.accountIndex)}));
+}
+
+export function TeamLogo({code,className}){
+  if(!code)return null;
+  return <img src={`/assets/teams/${code.toLowerCase()}.png`} alt="" aria-hidden="true" width={48} height={48} loading="lazy" decoding="async"
+    onError={event=>event.currentTarget.remove()} className={cn('size-4 shrink-0 object-contain',className)}/>;
 }
 
 export function ProGroupHeading({group}){
   return (
     <span className="flex items-baseline justify-between gap-3">
-      <span className="truncate">{group.heading}</span>
-      {group.region&&<span className="shrink-0 font-normal text-muted-foreground/70">{group.region}</span>}
+      <span className="flex min-w-0 items-center gap-2 self-center">
+        <TeamLogo code={group.teamCode}/>
+        <span className="truncate font-semibold text-foreground">{group.heading}</span>
+      </span>
+      {group.region&&(
+        <span className="flex shrink-0 items-center gap-1.5 self-center font-medium text-(--region)" style={regionVar(group.region)}>
+          <RegionLogo region={group.region}/>{group.region}
+        </span>
+      )}
     </span>
   );
 }
@@ -67,10 +105,15 @@ export function ProRegionFilter({value,onChange,counts,className}){
     <ToggleGroup type="single" variant="outline" size="sm" value={value} aria-label="Filter pro players by region"
       onValueChange={next=>onChange(next||'all')} className={cn('w-full',className)}>
       {['all',...PRO_REGIONS].map(region=>(
-        <ToggleGroupItem key={region} value={region} disabled={!counts[region]} className="flex-1 gap-1 px-2 text-xs"
+        <ToggleGroupItem key={region} value={region} disabled={!counts[region]} style={regionVar(region)}
+          className={cn('flex-1 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground',region==='all'
+            ?'data-[state=on]:bg-foreground data-[state=on]:text-background data-[state=on]:hover:bg-foreground/90'
+            // A region's chip lights up in its league colour: tinted fill, coloured border and text.
+            :'data-[state=on]:z-10 data-[state=on]:border-(--region) data-[state=on]:bg-[color-mix(in_oklab,var(--region)_18%,transparent)] data-[state=on]:text-(--region) data-[state=on]:hover:bg-[color-mix(in_oklab,var(--region)_26%,transparent)]')}
           aria-label={`${region==='all'?'All regions':region}, ${counts[region]} accounts`}>
+          {region!=='all'&&<RegionLogo region={region} className="max-[380px]:hidden"/>}
           {region==='all'?'All':region}
-          <span className="text-[10px] text-muted-foreground tabular-nums max-[420px]:hidden">{counts[region]}</span>
+          <span className="text-[10px] tabular-nums opacity-70 max-[420px]:hidden">{counts[region]}</span>
         </ToggleGroupItem>
       ))}
     </ToggleGroup>
@@ -86,8 +129,11 @@ export function ProAccount({row,flat,query,size='default'}){
   const parts=puuidHit?[row.puuid]:[flat?row.team:null,countryName(row.countryCode)].filter(Boolean);
   return (
     <>
-      <Avatar className={size==='lg'?'size-9':'size-8'} aria-hidden="true">
-        <AvatarFallback className={cn('font-semibold text-muted-foreground uppercase',size==='lg'?'text-sm':'text-xs')}>{row.handle.slice(0,1)}</AvatarFallback>
+      {/* Tinted in the player's league colour; pros without a region stay grey. */}
+      <Avatar className={size==='lg'?'size-9':'size-8'} aria-hidden="true" style={regionVar(row.region)}>
+        <AvatarFallback className={cn('font-semibold uppercase ring-1 ring-inset',PRO_REGION_STYLE[row.region]
+          ?'bg-[color-mix(in_oklab,var(--region)_16%,var(--popover))] text-(--region) ring-[color-mix(in_oklab,var(--region)_45%,transparent)]'
+          :'bg-zinc-700/70 text-zinc-100 ring-white/10',size==='lg'?'text-sm':'text-xs')}>{row.handle.slice(0,1)}</AvatarFallback>
       </Avatar>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="flex min-w-0 items-center gap-1.5">

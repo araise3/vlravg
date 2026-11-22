@@ -113,12 +113,12 @@ export function MobileSearchSheet({open,onOpenChange}){
             </p>
           )}
           {groups.map(group=>(
-            <section key={group.key} aria-label={group.flat?'Search results':group.heading} className="pb-1">
-              <h3 className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground"><ProGroupHeading group={group}/></h3>
+            <section key={group.key} aria-label={group.flat?'Search results':group.heading} className="border-border pb-1 not-first-of-type:border-t">
+              <h3 className="px-2 pt-2.5 pb-1 text-xs"><ProGroupHeading group={group}/></h3>
               <ul className="flex flex-col">
                 {group.rows.map(row=>(
                   <li key={row.puuid}>
-                    <Item asChild size="sm" className="w-full min-w-0 flex-nowrap gap-3 rounded-lg px-2 py-2.5 text-left text-base hover:bg-accent/60 active:bg-accent">
+                    <Item asChild size="sm" className="w-full min-w-0 flex-nowrap gap-3 rounded-lg px-2 py-2.5 text-left text-base hover:bg-foreground/10 active:bg-foreground/15">
                       <button type="button" onClick={()=>{submitted.current=false;onOpenChange(false);analyzeProAccount(row);}} aria-label={proAccountLabel(row)}>
                         <ProAccount row={row} flat={group.flat} query={query} size="lg"/>
                         <ItemActions><ChevronRight className="size-4 text-muted-foreground/60" aria-hidden="true"/></ItemActions>
