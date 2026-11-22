@@ -212,10 +212,8 @@
 .rr-trend-svg .duo-band-label { fill: var(--chart-ink); font-size: 10px; font-weight: 600; text-anchor: middle; }
 .rr-trend-svg .rank-tick { fill: var(--chart-ink); font-weight: 600; }
 .rr-trend-svg .rank-band { fill: rgb(255 255 255 / .022); }
-/* Immortal+ charts: dashed rank thresholds labelled at their left end, and an icon where each rank was first reached. */
+/* Immortal+ charts: dashed, unlabelled rank thresholds. */
 .rr-trend-svg .rank-line.threshold { stroke-dasharray: 3 4; }
-.rr-trend-svg .threshold-label { fill: var(--chart-ink); font-size: 11px; font-weight: 600; paint-order: stroke; stroke: var(--card); stroke-width: 4px; stroke-linejoin: round; }
-.rr-trend-svg .rank-up circle { fill: var(--card); stroke: var(--series-1); stroke-width: 1.5; }
 .rr-trend-svg .grid.minor { stroke-opacity: .45; stroke-dasharray: 2 4; }
 .rr-trend-svg .rr-tick { font-size: 10px; font-variant-numeric: tabular-nums; }
 .rr-trend-svg .rr-tick.unit { font-weight: 600; }
