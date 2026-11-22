@@ -278,10 +278,10 @@ test('teammates: a plain sortable table of shared results and the teammate\'s ow
   // Both Duos tables use the same fixed column widths, so they line up.
   const {STAT_TABLE_WIDTHS}=await load('/src/app/shared.jsx');
   assert.equal(STAT_TABLE_WIDTHS.length,8);
-  assert.match(html,/<table[^>]*class="[^"]*table-fixed[^"]*"[^>]*>.*?<colgroup><col style="width:15%"\/><col style="width:11%"\/><col style="width:20%"\/>/);
+  assert.match(html,/<table[^>]*class="[^"]*table-fixed[^"]*"[^>]*>.*?<colgroup><col style="width:20%"\/><col style="width:10%"\/><col style="width:20%"\/>/);
   const party=await renderHtml('/src/app/pages/Duos.jsx','PerformanceTable',{id:'p',party:true,rows:[{tier:2,label:'Duo',total:3,totalKills:3,totalDeaths:3,acsSum:0,acsCount:0,performanceSum:0,performanceCount:0,wins:1,decided:2,lobbySum:0,lobbyCount:0,rrCount:0,rrTotal:0}]});
   assert.deepEqual([...party.matchAll(/aria-label="([^"]+): sort/g)].map(m=>m[1]),['Party size','Matches','Avg Lobby','K/D','ACS','PS','Win rate','Total RR']);
-  assert.match(party,/<colgroup><col style="width:15%"\/>/);
+  assert.match(party,/<colgroup><col style="width:20%"\/>/);
   // Default order: most matches together first; ten rows on the first page.
   const names=[...table.matchAll(/scope="row"[^>]*>.*?title="([^"#]+)#EU"/g)].map(m=>m[1]);
   assert.deepEqual(names,['m3','m0','m1','m2','m4','m5','m6','m7','m8','m9']);
@@ -304,7 +304,8 @@ test('servers: the Duos column order and widths, plus your net RR on each server
   const server=(name,extra)=>({name,games:4,share:50,lobbySum:72,lobbyCount:4,avgLobby:18,kd:1.2,acs:230,performanceScore:240,performanceCount:4,winRate:50,rrTotal:0,rrCount:0,...extra});
   const html=await renderHtml('/src/app/pages/Servers.jsx','ServersTable',{rows:[server('Frankfurt',{rrTotal:42,rrCount:4}),server('Paris',{rrTotal:-15,rrCount:3}),server('London')]});
   assert.deepEqual([...html.matchAll(/aria-label="([^"]+): sort/g)].map(m=>m[1]),['Server','Matches','Avg Lobby','K/D','ACS','PS','Win rate','Total RR']);
-  assert.match(html,/table-fixed[^"]*"[^>]*>.*?<colgroup><col style="width:15%"\/><col style="width:11%"\/><col style="width:20%"\/>/);
+  // The server column fits "US West (N. California)" at full width.
+  assert.match(html,/table-fixed[^"]*"[^>]*>.*?<colgroup><col style="width:20%"\/><col style="width:10%"\/><col style="width:20%"\/>/);
   assert.match(html,/class="[^"]*text-positive[^"]*" title="4 of 4 matches have a recorded RR change"[^>]*>\+42</);
   assert.match(html,/class="[^"]*text-negative[^"]*" title="3 of 4 matches have a recorded RR change"[^>]*>−15</);
   assert.match(html,/title="0 of 4 matches have a recorded RR change"[^>]*>—</);

@@ -70,8 +70,10 @@ export function LobbyRankText({tier,className,children}){
 // Fixed column widths for the stat tables that share the site's column order
 // (name, Matches, Avg Lobby, K/D, ACS, PS, Win rate, Total RR): the Duos
 // party-size and teammates tables and the Servers table (22 Nov 2026), so
-// they look the same and line up where they stack.
-export const STAT_TABLE_WIDTHS=['15%','11%','20%','9%','9%','9%','12%','15%'];
+// they look the same and line up where they stack. The name column fits the
+// longest server name, "US West (N. California)", at the full 910px card
+// (about 175px with padding); Total RR gave up the room (22 Nov 2026).
+export const STAT_TABLE_WIDTHS=['20%','10%','20%','9%','9%','9%','12%','11%'];
 
 export function LobbyValue({sum,count}){
   if(!count)return '—';
