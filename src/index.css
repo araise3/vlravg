@@ -364,7 +364,7 @@
    aligned from card to card. The map splash is a faded backdrop on the
    right; the result colours the left edge and a faint wash behind the tile. */
 .mc-row { position: relative; isolation: isolate; display: grid; width: 100%; padding: 10px 16px 10px 14px; text-align: left; cursor: pointer;
-  --mc-gap: 32px; grid-template-columns: minmax(0, 140px) minmax(84px, .7fr) minmax(196px, 2fr) minmax(64px, .85fr) minmax(70px, .8fr) minmax(40px, .5fr) 16px; align-items: center; column-gap: 0;
+  --mc-gap: 32px; grid-template-columns: minmax(0, 140px) minmax(84px, .65fr) minmax(calc(228px + var(--mc-gap)), 1.75fr) minmax(0, 1.25fr) minmax(108px, .75fr) minmax(40px, .45fr) 16px; align-items: center; column-gap: 0;
   border-left: 3px solid var(--result-color); background: linear-gradient(90deg, color-mix(in oklab, var(--result-color) 10%, transparent), transparent 34%); }
 .mc-row:focus-visible { outline: 2px solid var(--brand); outline-offset: -3px; border-radius: 11px; }
 .mc-backdrop { position: absolute; inset: 0 0 0 auto; z-index: -1; width: min(64%, 560px); overflow: hidden; pointer-events: none; }
@@ -404,25 +404,33 @@
 .mc-outcome .m-result-tag { font-size: 9.5px; }
 .mc-rr { align-items: flex-end; }
 .mc-lobby-val { font-size: 14px; font-weight: 600; }
+/* Server names run up to "US West (N. California)" (about 152px here). Its
+   column is the one that gives way: the other columns' minimums fit their
+   longest values (K/D/A, PS with place, "Ascendant 3"), and at the widest
+   card (910px) the server column has room for the longest name; narrower
+   cards cut it with an ellipsis and keep the full name in the tooltip. */
 .mc-server-val { display: block; overflow: hidden; text-overflow: ellipsis; font-size: 14px; font-weight: 600; }
 .mc-tile-rank { position: absolute; right: -6px; bottom: -6px; display: flex; filter: drop-shadow(0 2px 3px rgb(0 0 0 / .75)); }
 .mc-rr .match-rr-change { font-size: 17px; line-height: 1.25; }
 .mc-chevron { width: 16px; height: 16px; color: #71717a; transition: transform .2s; }
 .match-card[data-state="open"] .mc-chevron { transform: rotate(180deg); }
-@container (max-width: 760px) {
-  .mc-row { --mc-gap: 18px; } .mc-outcome { margin-left: 12px; } .mc-perf { column-gap: 10px; }
-}
-/* The narrowest desktop cards (640px windows) drop the server column; it is
-   still in the opened card. */
-@container (max-width: 640px) {
-  .mc-row { --mc-gap: 14px; grid-template-columns: minmax(0, 1fr) minmax(76px, .7fr) minmax(196px, 2fr) minmax(70px, .8fr) minmax(40px, .5fr) 16px; }
+/* Cards narrower than 800px drop the server column rather than show a sliver
+   of it (under 80px); it is still in the opened card. */
+@container (max-width: 800px) {
+  .mc-row { grid-template-columns: minmax(0, 140px) minmax(84px, .65fr) minmax(calc(228px + var(--mc-gap)), 1.75fr) minmax(108px, .75fr) minmax(40px, .45fr) 16px; }
   .mc-lobby { margin-left: var(--mc-gap); }
   .mc-server { display: none; }
   .match-card .mc-info-server { display: flex; }
   .match-card .mc-stat-tile.mc-info-server { display: flex; }
 }
+@container (max-width: 760px) {
+  .mc-row { --mc-gap: 18px; } .mc-outcome { margin-left: 12px; } .mc-perf { column-gap: 10px; }
+}
+@container (max-width: 640px) {
+  .mc-row { --mc-gap: 14px; grid-template-columns: minmax(0, 1fr) minmax(76px, .7fr) minmax(196px, 2fr) minmax(70px, .8fr) minmax(40px, .5fr) 16px; }
+}
 /* The opened card repeats nothing from the closed row: its server shows only
-   where the row above hides it (the 640px rule above; phone cards are always
+   where the row above hides it (the 800px rule above; phone cards are always
    narrower). */
 .mc-info-server, .mc-stat-tile.mc-info-server { display: none; }
 .m-result-tag { color: var(--result-color); font-size: 10px; font-weight: 750; text-transform: uppercase; letter-spacing: .1em; }
