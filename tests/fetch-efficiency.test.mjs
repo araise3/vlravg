@@ -5,6 +5,7 @@ import { runInNewContext } from 'node:vm';
 import { DatabaseSync } from 'node:sqlite';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { onRequestGet } from '../functions/api/[[path]].js';
+import { memoryBucket } from './helpers/r2-memory.mjs';
 
 const html=readFileSync(new URL('../src/engine/core.mjs',import.meta.url),'utf8');
 const extract=(a,b)=>{
@@ -53,6 +54,13 @@ for(const status of [429,503]){
   });
 }
 
+test('a storage 503 is not retried because the proxy already spent the upstream call',async()=>{
+  let calls=0;
+  const client=transport(async()=>{calls++;return Response.json({error:'RR corpus could not be saved',storage:'unavailable'},{status:503});});
+  await assert.rejects(client.apiGet('/api/example',{quiet:true}),/API 503/);
+  assert.equal(calls,1);
+});
+
 test('the timeout covers a stalled JSON body as well as a stalled connection',async()=>{
   const client=transport(async(_url,{signal})=>({ok:true,json:()=>abortingFetch('',{signal})}));
   await assert.rejects(client.fetchApiJson('/api/example',{timeoutMs:10}),{name:'TimeoutError'});
@@ -76,22 +84,27 @@ test('the request pool caps concurrency and removes cancelled queued work',async
   const release4=await pool.acquire();release4();
 });
 
-async function archiveDb(matches){
+// Payloads live in R2 with an empty D1 payload; inline:true keeps the
+// pre-R2 layout, which must stay readable until the migration finishes.
+async function archiveDb(matches,{inline=false}={}){
   const db=new DatabaseSync(':memory:');
-  db.exec('CREATE TABLE match_archive (puuid TEXT,season_id TEXT,match_id TEXT,started_at TEXT,payload BLOB)');
+  db.exec('CREATE TABLE match_archive (puuid TEXT,season_id TEXT,match_id TEXT,started_at TEXT,payload BLOB,bytes INTEGER)');
   db.exec('CREATE INDEX archive_order ON match_archive(puuid,season_id,started_at DESC,match_id DESC)');
-  const insert=db.prepare('INSERT INTO match_archive VALUES (?,?,?,?,?)');
+  const insert=db.prepare('INSERT INTO match_archive VALUES (?,?,?,?,?,?)');
+  const bucket=memoryBucket();
   for(const [i,match] of matches.entries()){
     const stream=new Blob([JSON.stringify(match)]).stream().pipeThrough(new CompressionStream('gzip'));
     const payload=new Uint8Array(await new Response(stream).arrayBuffer());
-    insert.run(puuid,season,String(i).padStart(4,'0'),new Date(2000000000000-i*1000).toISOString(),payload);
+    const id=String(i).padStart(4,'0');
+    if(!inline)await bucket.put(`matches/${id}.json.gz`,payload);
+    insert.run(puuid,season,id,new Date(2000000000000-i*1000).toISOString(),inline?payload:new Uint8Array(0),inline?null:payload.byteLength);
   }
-  return{db,binding:{prepare(sql){return{bind(...args){return{async all(){return{results:db.prepare(sql).all(...args)};}};}};}}};
+  return{db,bucket,binding:{bucket,prepare(sql){return{bind(...args){return{async all(){return{results:db.prepare(sql).all(...args)};}};}};}}};
 }
 
 async function archiveRequest(binding,query){
   return onRequestGet({request:new Request(`https://example.test/api/match-archive/${puuid}/${season}${query}`),
-    env:{APP_DB:binding},waitUntil(){}});
+    env:{APP_DB:binding,MATCH_BUCKET:binding.bucket},waitUntil(){}});
 }
 
 test('a 200-match archive loads in four requests and publishes each page immediately',async t=>{
@@ -134,6 +147,14 @@ test('a single oversized compressed row makes progress without loading the rest'
   const second=await (await archiveRequest(binding,'?start=1&size=50')).json();
   assert.equal(second.data[0].id,1);
   assert.equal(second.nextStart,null);
+});
+
+test('pre-R2 inline payloads still read until the migration empties them',async t=>{
+  const {db,binding}=await archiveDb(Array.from({length:3},(_,id)=>({id})),{inline:true});
+  t.after(()=>db.close());
+  const page=await (await archiveRequest(binding,'?start=0&size=50')).json();
+  assert.deepEqual(page.data.map(row=>row.id),[0,1,2]);
+  assert.equal(binding.bucket.stats.gets,0);
 });
 
 test('archive pagination preserves old clients and validates page sizes',async t=>{

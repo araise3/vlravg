@@ -29,7 +29,7 @@ test('D1 feature plan skips saved evidence and prioritizes archives over upstrea
   const {sql,db}=database(t);
   await collectRR(db,payload(['saved','archived','waiting','ready'].map(id=>entry(id))),{puuid,region:'eu',platform:'pc'});
   sql.prepare('INSERT INTO rr_match_features VALUES (?,?,?,?,?,?)').run(puuid,'saved',season,null,'{}',new Date().toISOString());
-  sql.prepare('INSERT INTO match_archive VALUES (?,?,?,?,?)').run(puuid,season,'archived',null,new Uint8Array([1]));
+  sql.prepare('INSERT INTO match_archive (puuid,season_id,match_id,started_at,payload) VALUES (?,?,?,?,?)').run(puuid,season,'archived',null,new Uint8Array([1]));
   for(const id of ['archived','waiting'])sql.prepare('INSERT INTO rr_feature_retry VALUES (?,?,1,?)').run(puuid,id,'2099-01-01');
   sql.prepare('INSERT INTO rr_history VALUES (?,?,?,?)').run('unknown','no-region','{}',entry().date);
   const query=async(_env,text,params=[]) => (await db.prepare(text).bind(...params).all()).results;
@@ -293,6 +293,8 @@ test('collector storage failure returns 503 instead of an apparent saved payout'
   const response=await onRequestGet({request:new Request(`https://test/api/rr-collect/eu/pc/${puuid}`),
     env:{APP_DB:{...db,batch:async()=>{throw new Error('D1 full');}},HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});
   await Promise.all(jobs);assert.equal(response.status,503);
+  // The upstream call is already spent: the workflow must not retry it.
+  assert.equal((await response.json()).storage,'unavailable');
 });
 
 test('profile account lookups enrol visitors on cache misses and hits without ranked games',async t=>{
@@ -404,21 +406,39 @@ test('empty public RR windows enrol accounts and checkpoint successful checks',a
   assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_history').get().n,0);await Promise.all(jobs);
 });
 
-test('profile persistence failures return 503 without caching success or committing partial RR',async t=>{
-  const {db,sql}=database(t),oldFetch=globalThis.fetch,oldCaches=globalThis.caches;let cachePuts=0;
+test('profile persistence failures serve the fresh upstream body uncached without committing partial RR',async t=>{
+  const {db,sql}=database(t),oldFetch=globalThis.fetch,oldCaches=globalThis.caches;let cachePuts=0,upstreamCalls=0;
   globalThis.caches={default:{async match(){return null;},async put(){cachePuts++;}}};
-  globalThis.fetch=async url=>url.includes('/account/')?Response.json({data:{puuid,name:'Alpha',tag:'EU',region:'eu'}}):Response.json(payload([entry()]));
+  globalThis.fetch=async url=>{upstreamCalls++;return url.includes('/account/')?Response.json({data:{puuid,name:'Alpha',tag:'EU',region:'eu'}}):Response.json(payload([entry()]));};
   t.after(()=>{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;});
   const broken={...db,prepare(query){if(query.startsWith('INSERT OR IGNORE INTO rr_players'))throw new Error('storage full');return db.prepare(query);},
     async batch(){throw new Error('storage full');}};
+  // A full database must not turn a paid upstream call into a 503 the
+  // browser retries against upstream again (each retry is another call).
   for(const path of ['account/Alpha/EU','mmr-history/eu/pc/Alpha/EU']){
     const jobs=[];
     const response=await onRequestGet({request:new Request(`https://test/api/${path}`),env:{APP_DB:broken,HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});
-    assert.equal(response.status,503);await Promise.all(jobs);
+    assert.equal(response.status,200);assert.equal(response.headers.get('Cache-Control'),'no-store');
+    const body=await response.json();
+    if(path.startsWith('account'))assert.equal(body.data.puuid,puuid);
+    else assert.deepEqual(body.data.history.map(h=>h.match_id),[mid]);
+    await Promise.all(jobs);
   }
+  assert.equal(upstreamCalls,2);
   assert.equal(cachePuts,0);assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_players').get().n,0);
   assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_history').get().n,0);
   assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_collection').get().n,0);
+});
+
+test('a cached account response still answers when enrolment cannot be saved',async t=>{
+  const {db}=database(t),oldFetch=globalThis.fetch,oldCaches=globalThis.caches;
+  const account={puuid,name:'Alpha',tag:'EU',region:'eu'};
+  globalThis.caches={default:{async match(){return Response.json({data:account});},async put(){}}};
+  globalThis.fetch=async()=>{throw new Error('cache hits must not reach upstream');};
+  t.after(()=>{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;});
+  const broken={...db,prepare(query){if(query.startsWith('INSERT OR IGNORE INTO rr_players'))throw new Error('storage full');return db.prepare(query);}};
+  const response=await onRequestGet({request:new Request('https://test/api/account/Alpha/EU'),env:{APP_DB:broken,HENRIK_KEY:'test'},waitUntil(){}});
+  assert.equal(response.status,200);assert.equal((await response.json()).data.puuid,puuid);
 });
 
 test('public PUUID lookup rejects mismatched upstream identity before saving evidence',async t=>{
@@ -461,6 +481,8 @@ test('a failure to persist the missing-match retry remains an actual storage err
   const response=await onRequestGet({request:new Request(`https://test/api/rr-feature/eu/${puuid}/${mid}`),
     env:{APP_DB:broken,HENRIK_KEY:'test'},waitUntil:p=>jobs.push(p)});
   await Promise.all(jobs);assert.equal(response.status,503);
+  // The upstream call is already spent: the workflow must not retry it.
+  assert.equal((await response.json()).storage,'unavailable');
 });
 
 test('feature sweep separates saved details, upstream deferrals and malformed errors',async()=>{

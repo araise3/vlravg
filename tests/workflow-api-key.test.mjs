@@ -5,7 +5,9 @@ import {readFileSync} from 'node:fs';
 import {onRequestGet} from '../functions/api/[[path]].js';
 import {PUBLIC_BORROW_RESERVE} from '../lib/upstream-pacing.mjs';
 import {createRequestScheduler} from '../.github/scripts/request-scheduler.mjs';
-import {main as refresh,requestJSON} from '../.github/scripts/refresh-rr-history.mjs';
+import {main as refresh,requestJSON,createStorageBreaker} from '../.github/scripts/refresh-rr-history.mjs';
+import {assertD1Headroom} from '../.github/scripts/d1-query.mjs';
+import {rowidRanges,migrateRange} from '../.github/scripts/migrate-match-archive.mjs';
 import {main as collect,collectPlayers} from '../.github/scripts/collect-rr-corpus.mjs';
 import {main as backfill} from '../.github/scripts/backfill-all-names.mjs';
 
@@ -288,4 +290,50 @@ test('HTTP retry waits stop at the collection deadline',async()=>{
 test('all Henrik workflows require the new secret before doing any network work',async()=>{
   const env={CF_API_TOKEN:'fixture',CF_ACCOUNT_ID:'fixture',CF_D1_DATABASE_ID:'fixture'};
   for(const main of [refresh,collect,backfill])await assert.rejects(main(env),/Missing required secret: HENRIK_WORKFLOW_KEY/);
+});
+
+test('storage 503s are not retried and a run of them stops the collector',async()=>{
+  let calls=0;
+  const full=async()=>{calls++;return Response.json({error:'RR corpus could not be saved',storage:'unavailable'},{status:503});};
+  const ok=async()=>Response.json({data:{ok:true}});
+  const breaker=createStorageBreaker(3);
+  const first=await requestJSON('https://test/api/rr-collect',full,async()=>{},{storageBreaker:breaker});
+  assert.equal(calls,1);assert.equal(first.ok,false);assert.equal(first.retryable,true);
+  // A success in between resets the streak: one D1 hiccup must not end a run.
+  assert.equal((await requestJSON('https://test/api/rr-collect',ok,async()=>{},{storageBreaker:breaker})).ok,true);
+  await requestJSON('https://test/api/rr-collect',full,async()=>{},{storageBreaker:breaker});
+  await requestJSON('https://test/api/rr-collect',full,async()=>{},{storageBreaker:breaker});
+  await assert.rejects(requestJSON('https://test/api/rr-collect',full,async()=>{},{storageBreaker:breaker}),
+    error=>error.code==='WORKFLOW_STORAGE');
+  assert.equal(calls,4);
+});
+
+test('the D1 headroom check reads the database size and refuses a nearly full database',async()=>{
+  const env={CF_API_TOKEN:'t',CF_ACCOUNT_ID:'a',CF_D1_DATABASE_ID:'d'};
+  const sized=size=>async()=>Response.json({success:true,result:[{success:true,results:[{1:1}],meta:{size_after:size}}]});
+  assert.equal(await assertD1Headroom(env,{fetchImpl:sized(5e9)}),5e9);
+  await assert.rejects(assertD1Headroom(env,{fetchImpl:sized(9999998976)}),error=>error.code==='WORKFLOW_STORAGE'&&/10 GB limit/.test(error.message));
+  // An API that omits the size cannot block collection on a guess.
+  assert.equal(await assertD1Headroom(env,{fetchImpl:sized(undefined)}),null);
+});
+
+test('archive migration ranges cover every rowid once and a range resumes from the last row',async()=>{
+  for(const [max,workers] of [[1,4],[10,4],[245454,4],[7,7]]){
+    const ranges=rowidRanges(max,workers),seen=[];
+    for(const r of ranges)for(let id=r.after+1;id<r.before;id++)seen.push(id);
+    assert.deepEqual(seen,Array.from({length:max},(_,i)=>i+1),`${max}/${workers}`);
+  }
+  assert.deepEqual(rowidRanges(0,4),[]);
+  const calls=[];let fail=1;
+  const fetchImpl=async url=>{
+    const u=new URL(url);calls.push(u.searchParams.get('after'));
+    if(fail-->0)return Response.json({error:'D1 overloaded'},{status:503});
+    const after=Number(u.searchParams.get('after'));
+    return Response.json({data:{moved:2,skipped:0,last:after+2,done:after+2>=6}});
+  };
+  const result=await migrateRange({after:0,before:7},{origin:'https://site',key:'k',fetchImpl,sleepImpl:async()=>{},log(){}});
+  assert.deepEqual(calls,['0','0','2','4']);
+  assert.deepEqual(result,{after:0,before:7,moved:6,last:6,done:true});
+  await assert.rejects(migrateRange({after:0,before:7},{origin:'https://site',key:'k',sleepImpl:async()=>{},
+    fetchImpl:async()=>Response.json({error:'Unauthorized'},{status:401})}),/refused the workflow key/);
 });

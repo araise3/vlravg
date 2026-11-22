@@ -41,7 +41,17 @@ export function mergeTrackedPlayers(tracked, pros) {
   return [...players.values()];
 }
 
-export async function requestJSON(url, fetchImpl = fetch, sleepImpl = sleep, {deadline=Infinity,now=Date.now}={}) {
+// Consecutive proxy responses whose D1 write failed after the upstream call.
+// One can be a transient D1 hiccup; a run of them (a full database) stops the
+// collector instead of spending its whole budget on unsaved payloads.
+export const STORAGE_FAILURE_LIMIT = 5;
+export function createStorageBreaker(limit = STORAGE_FAILURE_LIMIT) {
+  let streak = 0;
+  return { fail: () => ++streak >= limit, ok: () => { streak = 0; }, get streak() { return streak; } };
+}
+const defaultStorageBreaker = createStorageBreaker();
+
+export async function requestJSON(url, fetchImpl = fetch, sleepImpl = sleep, {deadline=Infinity,now=Date.now,storageBreaker=defaultStorageBreaker}={}) {
   let transientAttempts = 0, rateLimitAttempts = 0;
   const pause=ms=>sleepImpl(Math.max(0,Math.min(ms,deadline-now())));
   for (;;) {
@@ -55,6 +65,16 @@ export async function requestJSON(url, fetchImpl = fetch, sleepImpl = sleep, {de
         await pause(Number.isFinite(retry) ? Math.max(1000, Math.min(retry, 120000)) : 60000);
         continue;
       }
+      if (res.status === 503 && body?.storage === 'unavailable') {
+        // The proxy spent the upstream call, then D1 refused the write.
+        // Retrying spends quota for nothing; let the run's breaker decide.
+        if (storageBreaker.fail()) {
+          const error = new Error('D1 storage keeps rejecting writes; stopping before more upstream quota is spent');
+          error.code = 'WORKFLOW_STORAGE';
+          throw error;
+        }
+        return { ok: false, reason: 'storage unavailable', retryable: true, storage: false };
+      }
       if (res.status >= 500) {
         if (++transientAttempts < 3) {
           await pause(2500 * 2 ** (transientAttempts - 1));
@@ -64,9 +84,10 @@ export async function requestJSON(url, fetchImpl = fetch, sleepImpl = sleep, {de
       }
       if (!res.ok) return { ok: false, reason: `http ${res.status}`, status:res.status };
       if (!body?.data) return { ok: false, reason: 'invalid JSON response' };
+      storageBreaker.ok();
       return { ok: true, data: body.data };
     } catch (error) {
-      if(error?.code==='WORKFLOW_CONFIGURATION'||error?.code==='WORKFLOW_BUDGET')throw error;
+      if(['WORKFLOW_CONFIGURATION','WORKFLOW_BUDGET','WORKFLOW_STORAGE'].includes(error?.code))throw error;
       if (++transientAttempts >= 3) return { ok: false, reason: 'network error or timeout', retryable: true };
       await pause(2500 * 2 ** (transientAttempts - 1));
     }

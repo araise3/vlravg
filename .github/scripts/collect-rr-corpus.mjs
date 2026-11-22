@@ -2,7 +2,7 @@ import {pathToFileURL} from 'node:url';
 import {mkdir,writeFile,appendFile} from 'node:fs/promises';
 import {listPlayers,refreshPlayer,requestJSON} from './refresh-rr-history.mjs';
 import {createRequestScheduler} from './request-scheduler.mjs';
-import {d1Query,retryOnD1Overload} from './d1-query.mjs';
+import {d1Query,retryOnD1Overload,assertD1Headroom} from './d1-query.mjs';
 import {randomUUID} from 'node:crypto';
 import {readQuotaAudit,quotaCheckReport} from './workflow-quota-check.mjs';
 import {loadActivity,loadCandidates} from './rr-activity-query.mjs';
@@ -57,7 +57,7 @@ export async function collectPlayers(players,{origin,fetchImpl,log=console.log,c
         checked++;gaps+=result.data.possible_gap?1:0;
         if(checked%50===0)log(`RR committed: ${checked}/${players.length}`);
       }catch(error){
-        if(error?.code==='WORKFLOW_CONFIGURATION')throw error;
+        if(error?.code==='WORKFLOW_CONFIGURATION'||error?.code==='WORKFLOW_STORAGE')throw error;
         if(error?.code==='WORKFLOW_BUDGET')break;
         failures.push({puuid:player.puuid,reason:error.message,retryable:Boolean(error.retryable)});log(`RR FAILED ${player.puuid}: ${error.message}`);
       }
@@ -207,6 +207,9 @@ export async function main(env=process.env){
   if(!Number.isSafeInteger(limit)||limit<0||limit>5000)throw new Error('Invalid DETAIL_LIMIT');
   const runtime=Number(env.RUNTIME_MINUTES||180);
   if(!Number.isSafeInteger(runtime)||runtime<10||runtime>210)throw new Error('RUNTIME_MINUTES must be between 10 and 210');
+  // A full database rejects every save after the upstream call has spent
+  // quota (shared with site visitors via borrowed slots), so do not start.
+  await assertD1Headroom(env);
   const started=Date.now();
   const deadline=Date.now()+(runtime-5)*60000; // Reserve time for the report; the next queued run starts afterwards.
   const tracked=await loadActivity(env,await listPlayers(env));

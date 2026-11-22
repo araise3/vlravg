@@ -1413,6 +1413,9 @@ async function apiGet(url,opts={},_attempt=0,_rl=0){
 
   // 2) Maintenance (the proxy's switch, lib/site-flags.mjs): not transient, say so once.
   if(r.status===503&&j?.maintenance)throw new Error(j.error||'vlravg is offline for maintenance. Please try again later.');
+  // The proxy already spent an upstream call and then could not save it.
+  // Retrying would spend another call for the same failed write.
+  if(r.status===503&&j?.storage==='unavailable')throw new Error(parseApiError(r,j));
 
   // 3) Transient server errors — exponential backoff.
   if([500,502,503,504].includes(r.status)){

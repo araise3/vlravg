@@ -1,0 +1,39 @@
+name: Move match archive to R2
+
+# One-off: moves match_archive payloads out of D1 into the MATCH_BUCKET R2
+# bucket (docs/match-archive-r2.md). Safe to re-run; moved rows are skipped.
+on:
+  workflow_dispatch:
+    inputs:
+      workers:
+        description: 'Parallel rowid ranges (1-8)'
+        default: '4'
+      runtime_minutes:
+        description: 'Run budget in minutes'
+        default: '330'
+
+concurrency:
+  group: migrate-match-archive
+  cancel-in-progress: false
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Move payloads
+        env:
+          HENRIK_WORKFLOW_KEY: ${{ secrets.HENRIK_WORKFLOW_KEY }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_D1_DATABASE_ID: ${{ secrets.CF_D1_DATABASE_ID }}
+          SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg1.pages.dev' }}
+          WORKERS: ${{ inputs.workers }}
+          RUNTIME_MINUTES: ${{ inputs.runtime_minutes }}
+        run: node .github/scripts/migrate-match-archive.mjs

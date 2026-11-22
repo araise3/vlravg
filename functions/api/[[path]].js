@@ -89,6 +89,7 @@ import { collectRR, mergeRRUpdate, saveFeatures, trackRRAccount } from "../../li
 import { discoverMatchPlayers } from "../../lib/rr-activity.mjs";
 import { workflowAuthorized } from "../../lib/workflow-auth.mjs";
 import { maintenance } from "../../lib/site-flags.mjs";
+import { matchKey, hasInlinePayload, readArchivedPayload, mapLimit } from "../../lib/match-store.mjs";
 import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, observePublicQuota, acquireBorrowedPublicPermit } from "../../lib/upstream-pacing.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
@@ -132,8 +133,54 @@ async function gunzipMatch(payload) {
   return JSON.parse(await new Response(stream).text());
 }
 
+// Copy Performance Scores a fresh copy reports onto a saved match without
+// replacing its stats. Returns null when nothing would change.
+function mergePerformance(saved, fresh) {
+  const reported = new Map((fresh.players || []).filter(p => p.puuid && Object.hasOwn(p, 'performance'))
+    .map(p => [p.puuid.toLowerCase(), p.performance]));
+  let changed = false;
+  const players = (saved.players || []).map(p => {
+    const key = p.puuid?.toLowerCase();
+    if (!reported.has(key) || Number.isFinite(p.performance?.score)) return p;
+    const performance = reported.get(key);
+    if (Object.hasOwn(p, 'performance') && !Number.isFinite(performance?.score)) return p;
+    changed = true;
+    return { ...p, performance };
+  });
+  return changed ? { ...saved, players } : null;
+}
+
+// Merge copies of one match into its shared R2 object, creating it if absent.
+// The first copy is the base when nothing is stored; later copies only add
+// scores. Conditional writes make a concurrent newer update win: a lost race
+// re-reads and merges onto it. Returns the stored size, or null if unusable.
+async function storeMatchPayload(env, matchId, copies) {
+  let key;
+  try { key = matchKey(matchId); } catch { return null; }
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const stored = await env.MATCH_BUCKET.get(key);
+    let match = stored ? await gunzipMatch(await stored.arrayBuffer()) : null;
+    let changed = false;
+    for (const copy of copies) {
+      if (!match) { match = copy; changed = true; continue; }
+      const merged = mergePerformance(match, copy);
+      if (merged) { match = merged; changed = true; }
+    }
+    if (!changed) return stored.size;
+    const payload = await gzipMatch(match);
+    const put = await env.MATCH_BUCKET.put(key, payload, {
+      onlyIf: stored ? { etagMatches: stored.etag } : new Headers({ 'If-None-Match': '*' }),
+      httpMetadata: { contentType: 'application/gzip' },
+    });
+    if (put) return put.size ?? payload.byteLength;
+  }
+  return (await env.MATCH_BUCKET.head(key))?.size ?? null;
+}
+
 async function saveMatchArchivePage(env, bodyText, puuid) {
-  if (!env.APP_DB || !puuid) return;
+  // Payloads go to R2 only. Without the bucket nothing is archived, so the
+  // D1 database cannot fill up again (docs/d1-storage-full-2026-11.md).
+  if (!env.APP_DB || !env.MATCH_BUCKET || !puuid) return;
   let rows;
   try { rows = JSON.parse(bodyText)?.data; } catch { return; }
   if (!Array.isArray(rows)) return;
@@ -146,68 +193,76 @@ async function saveMatchArchivePage(env, bodyText, puuid) {
   const { results: existing } = await env.APP_DB.prepare(
     `SELECT match_id, payload FROM match_archive WHERE puuid=? AND match_id IN (${placeholders})`
   ).bind(puuid, ...ids).all();
-  const known = new Map((existing || []).map(row => [row.match_id, row.payload]));
+  const indexed = new Map((existing || []).map(row => [row.match_id, row.payload]));
   const seen = new Set();
   const statements = [];
   for (const row of eligible) {
-    const meta = row?.metadata;
-    const matchId = meta?.match_id;
-    const seasonId = meta?.season?.id || meta?.season_id;
+    const meta = row.metadata;
+    const matchId = meta.match_id;
+    const seasonId = meta.season?.id || meta.season_id;
     if (seen.has(matchId)) continue;
     seen.add(matchId);
-    let enriched = row;
-    const previousPayload = known.get(matchId);
-    if (previousPayload) {
-      const saved = await gunzipMatch(previousPayload);
-      const fresh = new Map(row.players.filter(p => p.puuid && Object.hasOwn(p, 'performance'))
-        .map(p => [p.puuid.toLowerCase(), p.performance]));
-      let changed = false;
-      const players = (saved.players || []).map(p => {
-        const key = p.puuid?.toLowerCase();
-        if (!fresh.has(key) || Number.isFinite(p.performance?.score)) return p;
-        const performance = fresh.get(key);
-        if (Object.hasOwn(p, 'performance') && !Number.isFinite(performance?.score)) return p;
-        changed = true;
-        return { ...p, performance };
-      });
-      if (!changed) continue;
-      enriched = { ...saved, players };
-    }
-    const payload = await gzipMatch(enriched);
-    // D1 caps a row at 2 MB. An oversized match still reaches the caller.
-    if (payload.byteLength >= 1900000) continue;
-    if (previousPayload) {
-      // Compare-and-swap prevents concurrent refreshes from erasing newer PS.
+    const legacy = indexed.get(matchId);
+    // A pre-R2 copy of this row keeps its stats; the fresh row adds scores.
+    const copies = hasInlinePayload(legacy) ? [await gunzipMatch(legacy), row] : [row];
+    const bytes = await storeMatchPayload(env, matchId, copies);
+    if (bytes == null) continue;
+    if (!indexed.has(matchId)) {
       statements.push(env.APP_DB.prepare(
-        'UPDATE match_archive SET payload=?1 WHERE puuid=?2 AND match_id=?3 AND payload=?4'
-      ).bind(payload, puuid, matchId, previousPayload));
-    } else {
+        "INSERT OR IGNORE INTO match_archive (puuid,season_id,match_id,started_at,payload,bytes) VALUES (?1,?2,?3,?4,X'',?5)"
+      ).bind(puuid, seasonId.toLowerCase(), matchId, meta.started_at || null, bytes));
+    } else if (hasInlinePayload(legacy)) {
+      // Now in R2: empty the D1 copy. Compare-and-swap keeps a concurrent
+      // migration or refresh from being undone.
       statements.push(env.APP_DB.prepare(
-        'INSERT OR IGNORE INTO match_archive (puuid,season_id,match_id,started_at,payload) VALUES (?1,?2,?3,?4,?5)'
-      ).bind(puuid, seasonId.toLowerCase(), matchId, meta.started_at || null, payload));
+        "UPDATE match_archive SET payload=X'',bytes=?1 WHERE puuid=?2 AND match_id=?3 AND payload=?4"
+      ).bind(bytes, puuid, matchId, legacy));
     }
   }
   if (statements.length) await env.APP_DB.batch(statements);
+}
+
+// One migration step (POST /api/match-archive-migrate, workflow key only):
+// move inline D1 payloads with after < rowid < before into R2 and empty
+// them in D1. R2 writes run a few at a time; D1 gets one batch per step.
+async function migrateMatchArchive(env, after, limit, before = Number.MAX_SAFE_INTEGER) {
+  const { results } = await env.APP_DB.prepare(
+    'SELECT rowid AS id, match_id, payload FROM match_archive WHERE rowid>?1 AND rowid<?3 ORDER BY rowid LIMIT ?2'
+  ).bind(after, limit, before).all();
+  const rows = results || [];
+  const sizes = await mapLimit(rows, 8, async row => hasInlinePayload(row.payload)
+    ? storeMatchPayload(env, row.match_id, [await gunzipMatch(row.payload)]) : null);
+  // Compare-and-swap: a row a concurrent visit already changed is left alone.
+  const statements = rows.flatMap((row, i) => sizes[i] == null ? [] : [env.APP_DB.prepare(
+    "UPDATE match_archive SET payload=X'',bytes=?1 WHERE rowid=?2 AND payload=?3").bind(sizes[i], row.id, row.payload)]);
+  if (statements.length) await env.APP_DB.batch(statements);
+  return { moved: statements.length, skipped: rows.length - statements.length,
+    last: rows.at(-1)?.id ?? after, done: rows.length < limit };
 }
 
 async function readMatchArchive(env, puuid, seasonId, start, size) {
   if (!env.APP_DB) return json({ error: 'Match archive unavailable' }, 503);
   try {
     const { results } = await env.APP_DB.prepare(
-      'WITH candidates AS (SELECT payload, started_at, match_id FROM match_archive '
+      'WITH candidates AS (SELECT match_id, payload, bytes, started_at FROM match_archive '
       + 'WHERE puuid=?1 AND season_id=?2 ORDER BY started_at DESC, match_id DESC LIMIT ?3 OFFSET ?4), '
-      + 'page AS (SELECT payload, ROW_NUMBER() OVER (ORDER BY started_at DESC, match_id DESC) AS n, '
-      + 'COUNT(*) OVER () AS total, SUM(length(payload)) OVER '
-      + '(ORDER BY started_at DESC, match_id DESC ROWS UNBOUNDED PRECEDING) AS bytes FROM candidates) '
-      + 'SELECT payload, total FROM page WHERE n<=?5 AND (bytes<=?6 OR n=1) ORDER BY n'
+      + 'page AS (SELECT match_id, payload, ROW_NUMBER() OVER (ORDER BY started_at DESC, match_id DESC) AS n, '
+      + 'COUNT(*) OVER () AS total, SUM(CASE WHEN length(payload)>0 THEN length(payload) ELSE COALESCE(bytes,0) END) OVER '
+      + '(ORDER BY started_at DESC, match_id DESC ROWS UNBOUNDED PRECEDING) AS size FROM candidates) '
+      + 'SELECT match_id, payload, total FROM page WHERE n<=?5 AND (size<=?6 OR n=1) ORDER BY n'
     ).bind(puuid, seasonId, size + 1, start, size,
       size === MATCH_ARCHIVE_PAGE_SIZE ? Number.MAX_SAFE_INTEGER : MATCH_ARCHIVE_COMPRESSED_BUDGET).all();
+    const rows = results || [];
+    // Fetch a few R2 objects at a time; decode sequentially below.
+    const stored = await mapLimit(rows, 6, row => readArchivedPayload(env, row));
     const matches = [];
-    let jsonBytes = 0;
+    let jsonBytes = 0, consumed = 0;
     // Decode sequentially: 50 large kill feeds must not all inflate at once.
     // The first row always makes progress even if it exceeds the page budget.
-    for (const row of results || []) {
-      const match = await gunzipMatch(row.payload);
+    for (let i = 0; i < rows.length; i++) {
+      // A missing object (bucket unbound) is skipped, never invented.
+      if (!stored[i]) { consumed++; continue; }
+      const match = await gunzipMatch(stored[i]);
       // Missing property means a pre-4.10 payload; explicit null means the
       // current API checked this player and has no score to supply.
       match._performanceRefreshNeeded = (match.players || []).some(p => !Object.hasOwn(p, 'performance'));
@@ -215,8 +270,9 @@ async function readMatchArchive(env, puuid, seasonId, start, size) {
       if (size !== MATCH_ARCHIVE_PAGE_SIZE && matches.length && jsonBytes + bytes > MATCH_ARCHIVE_JSON_BUDGET) break;
       matches.push(match);
       jsonBytes += bytes;
+      consumed++;
     }
-    const nextStart = matches.length < (results?.[0]?.total || 0) ? start + matches.length : null;
+    const nextStart = consumed < (rows[0]?.total || 0) ? start + consumed : null;
     const res = json({ data: matches, nextStart }, 200);
     res.headers.set('Cache-Control', 'no-store');
     return res;
@@ -962,9 +1018,10 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
         match.discoveryScope={puuid:match[2],region:known.region,platform:known.platform};
         const saved=await env.APP_DB.prepare('SELECT match_id FROM rr_match_features WHERE puuid=?1 AND match_id=?2').bind(match[2],match[3]).first();
         if(saved&&!match.discover)return json({data:{puuid:match[2],match_id:match[3],saved:true}},200);
-        const archived=await env.APP_DB.prepare('SELECT payload FROM match_archive WHERE puuid=?1 AND match_id=?2').bind(match[2],match[3]).first();
+        const archivedRow=await env.APP_DB.prepare('SELECT match_id,payload FROM match_archive WHERE puuid=?1 AND match_id=?2').bind(match[2],match[3]).first();
+        const archived=await readArchivedPayload(env,archivedRow);
         if(archived){
-          const record=await gunzipMatch(archived.payload);
+          const record=await gunzipMatch(archived);
           await saveFeatures(env.APP_DB,record,match[2]);
           if(match.discover)await discoverMatchPlayers(env.APP_DB,record,match.discoveryScope);
           return json({data:{puuid:match[2],match_id:match[3],saved:true}},200);
@@ -1066,8 +1123,10 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
     ? null : await cache.match(cacheKey);
   if (cached) {
     if(route.trackAccount){
+      // Corpus enrolment is a side effect; a failed write must not block a search.
       try{await trackAccountResponse(env,await cached.clone().text(),route,match);}
-      catch{return json({error:'RR account could not be tracked'},503);}
+      catch(e){if(e?.message==='Wrong account')return json({error:'RR account could not be tracked'},503);
+        console.error('RR account enrolment failed');}
     }
     if(scanId){
       try{await observeCoverageResponse(env,scanId,route,match,url,await cached.clone().text());}
@@ -1153,7 +1212,7 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
   if(route.rrCollect&&[400,403,404].includes(upstream.status)){
     try{await env.APP_DB.prepare('INSERT INTO rr_candidate_checks(puuid,platform,checked_at) VALUES(?1,?2,?3) ON CONFLICT(puuid,platform) DO UPDATE SET checked_at=excluded.checked_at')
       .bind(match[3],match[2],new Date().toISOString()).run();}
-    catch{return json({error:'RR discovery retry could not be saved'},503);}
+    catch{return storageFailure('RR discovery retry could not be saved');}
   }
   if(route.rrFeature&&upstream.status===404){
     try{
@@ -1164,7 +1223,7 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
         reason:'upstream_match_not_found',retry_at:deferred.next_attempt_at}},200);
       res.headers.set('Cache-Control','no-store');return res;
     }
-    catch{return json({error:'RR retry could not be saved'},503);}
+    catch{return storageFailure('RR retry could not be saved');}
   }
 
   if (route.nameHistory && upstream.status >= 500 && storedNameHistory.history.length) {
@@ -1181,7 +1240,7 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
       res.headers.set('Cache-Control','no-store');return res;
     } catch {
       console.error('Unavailable stored history could not be completed');
-      return json({error:'Name backfill page unavailable'},503);
+      return storageFailure('Name backfill page unavailable');
     }
   }
 
@@ -1201,7 +1260,7 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
       res.headers.set('Cache-Control','no-store');return res;
     } catch {
       console.error('Name backfill page could not be saved');
-      return json({error:'Name backfill page unavailable'},503);
+      return storageFailure('Name backfill page unavailable');
     }
   }
 
@@ -1218,7 +1277,7 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
     } catch {
       // Do not report a successful daily check if the observation wasn't saved.
       console.error('Name history persistence failed');
-      return json({ error: "Name history storage unavailable" }, 503);
+      return storageFailure("Name history storage unavailable");
     }
   }
 
@@ -1238,20 +1297,30 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
     catch{/* Match fetching remains available; failed evidence cannot certify coverage. */}
   }
 
+  // Set when a D1 side effect failed but the upstream body is still served:
+  // that body must not be edge-cached in place of the merged/tracked one.
+  let unsaved = false;
   if (upstream.status === 200 && route.persistRRHistory) {
     try{
       bodyText = await mergeRRHistory(env, bodyText, {
         region: match[1], platform: match[2],puuid:route.byPuuid?match[3].toLowerCase():null,
       });
-    }catch{
+    }catch(e){
+      if(e?.message==='Wrong RR account')return json({error:'RR corpus could not be saved'},503);
+      // The quota is already spent: serve the fresh upstream window unmerged
+      // rather than a 503 the browser would retry against upstream again.
       console.error('Profile RR corpus persistence failed');
-      return json({error:'RR corpus could not be saved'},503);
+      unsaved = true;
     }
   }
 
   if(upstream.status===200&&route.trackAccount){
     try{await trackAccountResponse(env,bodyText,route,match);}
-    catch{return json({error:'RR account could not be tracked'},503);}
+    catch(e){
+      if(e?.message==='Wrong account')return json({error:'RR account could not be tracked'},503);
+      console.error('RR account enrolment failed');
+      unsaved = true;
+    }
   }
 
   if(upstream.status===200&&(route.rrCollect||route.rrFeature)){
@@ -1268,7 +1337,7 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
       const res=json({data},200);res.headers.set('Cache-Control','no-store');return res;
     }catch{
       console.error('RR corpus persistence failed');
-      return json({error:'RR corpus could not be saved'},503);
+      return storageFailure('RR corpus could not be saved');
     }
   }
 
@@ -1277,12 +1346,12 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
     headers: { "Content-Type": contentType },
   });
   res.headers.set("X-Proxy-Cache", "MISS");
-  if (workflow || route.nameHistory || route.nameBackfill) res.headers.set('Cache-Control','no-store');
+  if (workflow || unsaved || route.nameHistory || route.nameBackfill) res.headers.set('Cache-Control','no-store');
   // Deliberately no rate-limit headers of any kind on the response — that's
   // the whole point of this rewrite. The client only ever sees success or a
   // 429 with retryAfterMs in the body.
 
-  if (upstream.status === 200 && !workflow && !route.nameBackfill && !route.rrCollect && !route.rrFeature) {
+  if (upstream.status === 200 && !workflow && !unsaved && !route.nameBackfill && !route.rrCollect && !route.rrFeature) {
     const cacheRes = new Response(bodyText, {
       status: 200,
       headers: {
@@ -1297,7 +1366,25 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
 }
 
 export async function onRequestPost({request,env}){
-  const match=new URL(request.url).pathname.slice(PREFIX.length).match(MATCH_COVERAGE_ROUTE);
+  const postUrl=new URL(request.url);
+  if(postUrl.pathname.slice(PREFIX.length)==='/match-archive-migrate'){
+    // Moves already-trusted D1 payloads to R2; nothing is read from the body.
+    if(!env.HENRIK_WORKFLOW_KEY||!await workflowAuthorized(request,env.HENRIK_WORKFLOW_KEY))
+      return json({error:'Unauthorized workflow request'},401);
+    if(!env.APP_DB||!env.MATCH_BUCKET)return json({error:'Match archive storage unavailable'},503);
+    const param=(name,fallback)=>Number(postUrl.searchParams.get(name)??fallback);
+    const after=param('after',0),limit=param('limit',40),before=param('before',Number.MAX_SAFE_INTEGER);
+    if(![after,limit,before].every(Number.isSafeInteger)||after<0||before<=after||limit<1||limit>100)
+      return json({error:'Invalid migration request'},400);
+    try{
+      const res=json({data:await migrateMatchArchive(env,after,limit,before)},200);
+      res.headers.set('Cache-Control','no-store');return res;
+    }catch(error){
+      console.error('Match archive migration step failed');
+      return json({error:'Match archive migration step failed',detail:String(error?.message||error).slice(0,200)},503);
+    }
+  }
+  const match=postUrl.pathname.slice(PREFIX.length).match(MATCH_COVERAGE_ROUTE);
   if(!match)return json({error:'Unknown route'},404);
   if(!env.APP_DB)return json({error:'Coverage storage unavailable'},503);
   let body;
@@ -1332,4 +1419,13 @@ function json(obj, status) {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+// A D1 write that failed after the upstream call already spent quota (for
+// example when the database is at its size limit). Retrying cannot succeed
+// sooner and spends another upstream call, so callers are told not to.
+function storageFailure(error) {
+  const res = json({ error, storage: "unavailable" }, 503);
+  res.headers.set("Cache-Control", "no-store");
+  return res;
 }

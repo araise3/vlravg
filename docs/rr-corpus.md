@@ -15,8 +15,12 @@ the same atomic collector as scheduled capture: they save raw payouts,
 witnessed predecessors and the collection checkpoint before returning success
 or populating the edge cache. The browser still receives all saved RR history.
 Cached accumulated histories are never treated as fresh upstream windows;
-their database neighbours do not prove match adjacency. Storage failures with
-APP_DB bound return 503 and are not cached. Local development without the
+their database neighbours do not prove match adjacency. If the save fails after
+the upstream call, the fresh upstream window is still returned, unmerged, with
+`Cache-Control: no-store` and no edge-cache entry, and nothing is reported as
+collected. A 503 there only made the browser retry and spend more quota (see
+[d1-storage-full-2026-11.md](d1-storage-full-2026-11.md)). Account enrolment
+failures likewise no longer block a search. Local development without the
 dashboard binding continues to show upstream data.
 
 The existing collection job includes these visitor-discovered accounts under
@@ -126,7 +130,10 @@ cannot be recovered from ordinary match history. The collector records the last
 successful check, overlapping IDs and possible window gaps. An entire replaced
 window is a warning, not a count of lost games; season changes can also cause it.
 Collection succeeds only after the D1 writes commit; storage failures produce
-503s and failed accounts make the workflow fail visibly.
+503s marked `storage: "unavailable"` and failed accounts make the workflow fail
+visibly. The collector does not retry those (the upstream call was already
+spent), stops after 5 in a row, and refuses to start when D1 is within 200 MB
+of its 10 GB size limit.
 
 Apply `migrations/0005_rr_corpus.sql`, `migrations/0006_rr_activity.sql` and
 `migrations/0010_rr_history_activity_indexes.sql` to the existing APP_DB

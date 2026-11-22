@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { onRequestGet,onRequestPost } from '../functions/api/[[path]].js';
+import { memoryBucket } from './helpers/r2-memory.mjs';
 
 const puuid='11111111-1111-4111-8111-111111111111';
 const season='22222222-2222-4222-8222-222222222222';
@@ -28,7 +29,7 @@ function fixture(t,{live=Array.from({length:23},(_,n)=>row(n)),stored=live}={}){
     try{const result=statements.map(stmt=>stmt.execute());db.exec('COMMIT');return result;}
     catch(e){db.exec('ROLLBACK');throw e;}
   }};
-  const cache=new Map(),upstreamCalls=[];
+  const cache=new Map(),upstreamCalls=[],bucket=memoryBucket();
   const savedFetch=globalThis.fetch,savedCaches=globalThis.caches;
   const state={live,stored,failWrites:false};
   globalThis.caches={default:{async match(key){return cache.get(key.url)?.clone();},async put(key,response){cache.set(key.url,response.clone());}}};
@@ -53,7 +54,7 @@ function fixture(t,{live=Array.from({length:23},(_,n)=>row(n)),stored=live}={}){
   const request=async(route,{body,failWrites=false}={})=>{
     // This fixture tests archive coverage; admission timing has its own tests.
     db.prepare('UPDATE rate_quota SET last_request_at=0,next_start_at=0 WHERE id=1').run();
-    const env={APP_DB:failWrites?{...binding,batch:async()=>{throw new Error('Write failed');}}:binding,HENRIK_KEY:'test'};
+    const env={APP_DB:failWrites?{...binding,batch:async()=>{throw new Error('Write failed');}}:binding,HENRIK_KEY:'test',MATCH_BUCKET:bucket};
     const jobs=[];
     const request=new Request('https://example.test/api/'+route,body===undefined?{}:
       {method:'POST',headers:{'Content-Type':'application/json'},body:typeof body==='string'?body:JSON.stringify(body)});
@@ -187,4 +188,15 @@ test('a slower concurrent scan cannot erase matches another visitor verified',as
   assert.deepEqual(await f.finish(fast),{verified:true});
   assert.deepEqual(await f.finish(slow),{verified:true});
   assert.equal((await f.begin()).coverage.matchIds.length,21);
+});
+
+test('the archive migration route needs the workflow key, storage and a valid range',async()=>{
+  const req=(query,headers={})=>new Request(`https://example.test/api/match-archive-migrate${query}`,{method:'POST',headers});
+  const env={HENRIK_WORKFLOW_KEY:'key'};
+  assert.equal((await onRequestPost({request:req('?after=0'),env})).status,401);
+  assert.equal((await onRequestPost({request:req('?after=0',{'X-Workflow-Key':'wrong'}),env})).status,401);
+  assert.equal((await onRequestPost({request:req('?after=0',{'X-Workflow-Key':'key'}),env})).status,503);
+  const ready={...env,APP_DB:{},MATCH_BUCKET:memoryBucket()};
+  for(const query of ['?after=-1','?limit=0','?limit=101','?after=5&before=5','?after=x'])
+    assert.equal((await onRequestPost({request:req(query,{'X-Workflow-Key':'key'}),env:ready})).status,400,query);
 });

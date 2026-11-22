@@ -9,11 +9,12 @@ const source=readFileSync(new URL('../.github/scripts/collect-rr-corpus.mjs',imp
 const mainSource=source.slice(source.indexOf('export async function main('),source.indexOf('\nif(process.argv'))
   .replace('export ','')+'\nmain';
 const player={puuid:'11111111-1111-4111-8111-111111111111',region:'eu',platform:'pc'};
-function fixture({capture,coverageFailure=false,detailQueryFailure=false}={}){
+function fixture({capture,coverageFailure=false,detailQueryFailure=false,databaseFull=false}={}){
   const writes=[],events=[],outputs=[],process={exitCode:0};
   const context={process,Date,URL,JSON,Number,console:{log(){},error(){},warn(){}},randomUUID:()=> 'test-run',
     readQuotaAudit:async()=>({available:true,calls:0}),quotaCheckReport:()=>({status:'insufficient_evidence'}),
-    listPlayers:async()=>[player],loadActivity:async(_env,players)=>players,
+    assertD1Headroom:async()=>{events.push('headroom');if(databaseFull){const e=new Error('D1 database is full');e.code='WORKFLOW_STORAGE';throw e;}},
+    listPlayers:async()=>{events.push('list');return [player];},loadActivity:async(_env,players)=>players,
     selectPollingPlayers:players=>players,loadCandidates:async()=>[player],selectDiscoveryCandidates:players=>players,
     createRequestScheduler:()=>()=>{},pollingPolicy:()=>({cohort:'frequent'}),
     collectPlayers:async players=>{events.push('capture');return players.length&&capture?capture:{players:players.length,checked:players.length,failures:[],deferred:0};},
@@ -89,4 +90,11 @@ test('collection failures still report the chain decision to the workflow',async
   const idle=fixture();
   await idle.run({...env,GITHUB_OUTPUT:'github-output'});
   assert.deepEqual(idle.outputs,['chain=false\n']);
+});
+
+test('a full database stops the run before any player is listed or any upstream call is made',async()=>{
+  const f=fixture({databaseFull:true});
+  await assert.rejects(f.run(env),{code:'WORKFLOW_STORAGE'});
+  assert.deepEqual(f.events,['headroom']);
+  assert.equal(f.outputs.length,0); // no chain to a next run
 });

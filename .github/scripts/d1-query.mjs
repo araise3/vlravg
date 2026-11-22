@@ -26,3 +26,26 @@ export function retryOnD1Overload(query,{delays=[15000,30000,60000],
     }
   };
 }
+
+// D1's per-database size limit (10 GB on Workers Paid). Every query result
+// reports the database size, so a trivial read is enough to check it.
+export const D1_SIZE_LIMIT_BYTES=10e9;
+export const D1_HEADROOM_BYTES=200e6;
+export async function d1DatabaseSize(env,fetchImpl=fetch){
+  for(const key of ['CF_API_TOKEN','CF_ACCOUNT_ID','CF_D1_DATABASE_ID'])if(!env[key])throw new Error(`Missing ${key}`);
+  const endpoint=`https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/d1/database/${env.CF_D1_DATABASE_ID}/query`;
+  const response=await fetchImpl(endpoint,{method:'POST',headers:{Authorization:`Bearer ${env.CF_API_TOKEN}`,'Content-Type':'application/json'},
+    body:JSON.stringify({sql:'SELECT 1',params:[]}),signal:AbortSignal.timeout(60000)});
+  const body=await response.json();
+  if(!response.ok||!body.success||!body.result?.[0]?.success)throw new Error(`D1 query failed (${response.status}): ${JSON.stringify(body.errors||[])}`);
+  const size=body.result[0].meta?.size_after;
+  return Number.isFinite(size)?size:null;
+}
+export async function assertD1Headroom(env,{fetchImpl=fetch,limit=D1_SIZE_LIMIT_BYTES,headroom=D1_HEADROOM_BYTES}={}){
+  const size=await d1DatabaseSize(env,fetchImpl);
+  if(size!=null&&size>=limit-headroom){
+    const error=new Error(`D1 database is ${(size/1e9).toFixed(2)} GB of its ${(limit/1e9).toFixed(0)} GB limit; free space before collecting`);
+    error.code='WORKFLOW_STORAGE';throw error;
+  }
+  return size;
+}

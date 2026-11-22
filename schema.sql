@@ -65,7 +65,9 @@ CREATE TABLE IF NOT EXISTS match_archive (
   season_id TEXT NOT NULL,
   match_id TEXT NOT NULL,
   started_at TEXT,
+  -- Empty once the payload lives in R2 (MATCH_BUCKET, docs/match-archive-r2.md).
   payload BLOB NOT NULL,
+  bytes INTEGER, -- compressed size of the R2 object
   PRIMARY KEY (puuid, match_id)
 );
 CREATE INDEX IF NOT EXISTS idx_match_archive_player_season
