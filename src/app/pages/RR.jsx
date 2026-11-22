@@ -706,8 +706,8 @@ export function RRRankTable({matches}){
   const values=rows.map(({tier,stats:s})=>[tier,s.n,s.kd,s.acs,s.performanceScore,s.winRate,s.avgGain,s.avgLoss==null?null:-s.avgLoss]);
   return (
     <SortableTable id="rr-rank-table" standalone rows={tableRows} values={values} caption={`Matches grouped by your rank in each match. ${RR_SCOPE}`}
-      columns={[{label:'Player rank'},{label:'Games',title:'All matches in this act, including games without RR payouts'},{label:'K/D'},{label:'ACS',title:'Average combat score'},
-        {label:'PS',title:'Avg PS across matches with available data'},{label:'WR%',title:'Wins divided by wins plus losses across all games; draws excluded'},
+      columns={[{label:'Player rank'},{label:'Matches',title:'All matches in this act, including games without RR payouts'},{label:'K/D'},{label:'ACS',title:'Average combat score'},
+        {label:'PS',title:'Avg PS across matches with available data'},{label:'Win rate',title:'Wins divided by wins plus losses across all games; draws excluded'},
         {label:'RR / Win',title:'Average recorded RR from eligible wins; excludes placements, unrated ranks and full 5-stacks'},
         {label:'RR / Loss',title:'Average recorded RR from eligible losses; excludes placements, unrated ranks and full 5-stacks'}]}
       maxima={[{column:2,label:'K/D'},{column:3,label:'ACS'},{column:4,label:'Avg PS'},{column:5,label:'win rate'},{column:6,label:'RR per win'}]}/>

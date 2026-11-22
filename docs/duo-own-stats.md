@@ -20,9 +20,15 @@ card or card title around it (`TableSection` labelled "Teammates", standalone
 table frame). This came after a same-day round of alternatives the user turned
 down:
 
-- **Columns**: teammate, matches together, win rate (W–L–D record in its
-  tooltip), your net RR together, avg lobby, and the teammate's own K/D, ACS
-  and PS in your shared matches (coverage counts in the tooltips). Default
+- **Columns**, in the site's table order (name, Matches, Avg Lobby, K/D, ACS,
+  PS, Win rate, Total RR; set the same day on request): teammate, matches
+  together, avg lobby, the teammate's own K/D, ACS and PS in your shared
+  matches (coverage counts in the tooltips), win rate (W–L–D record in its
+  tooltip) and your net RR together. The party-size table above uses the same
+  order, and both pass `DUO_TABLE_WIDTHS` to `SortableTable`'s `widths`
+  (fixed table layout), so their columns line up. Elsewhere the RR-by-rank
+  table now says Matches and Win rate (was Games and WR%), and Wintrading
+  signals shows K/D, ACS, PS in that order. Default
   order is matches together; every column sorts; ten rows per page with the
   10/25/50 picker. Phones get the shared card list, as other tables do.
 - **Not shown**: your own stats with each teammate. The highlight tiles, the

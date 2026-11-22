@@ -14,6 +14,12 @@ const rrTone=(count,total)=>!count||total===0?'':total>0?'text-positive':'text-n
 // Encounters and wintrade signals show this many rows per page.
 export const TABLE_PAGE_SIZE=10;
 
+// The site's table column order (22 Nov 2026, on request): the row's name,
+// Matches, Avg Lobby, K/D, ACS, PS, Win rate, then RR. The party-size and
+// teammates tables stack on the Duos page, so they also share fixed column
+// widths and line up column for column.
+export const DUO_TABLE_WIDTHS=['17%','9%','20%','9%','9%','9%','12%','15%'];
+
 // Your performance grouped by lobby rank (party=false) or by party size.
 export function PerformanceTable({id,rows,party}){
   if(!rows.length)return null;
@@ -58,7 +64,7 @@ export function PerformanceTable({id,rows,party}){
     ?[{column:2,label:'average lobby rank'},{column:3,label:'K/D'},{column:4,label:'average ACS'},{column:5,label:'Avg PS'},{column:6,label:'win rate'}]
     :[{column:2,label:'K/D'},{column:3,label:'average ACS'},{column:4,label:'Avg PS'},{column:5,label:'win rate'}];
   return (
-    <SortableTable id={id} rows={tableRows} values={values} columns={columns} maxima={maxima} standalone
+    <SortableTable id={id} rows={tableRows} values={values} columns={columns} maxima={maxima} standalone widths={party?DUO_TABLE_WIDTHS:undefined}
       caption={`Your performance grouped by ${party?'party size, including your total recorded RR change':'average lobby rank'}`}/>
   );
 }
@@ -92,31 +98,30 @@ export function DuoRoster({teammates}){
     return {key:t.key,cells:[
       <PlayerLink href={playerRouteUrl(t.name,t.tag)} name={t.name} tag={t.tag} className="max-w-40"/>,
       t.games,
-      winRateLabel(t.wr),
-      t.rrCount?rrSigned(t.rrTotal,0):'—',
       <LobbyValue sum={t.rankSum} count={t.rankCount}/>,
       t.kd.toFixed(2),
       t.acs==null?'—':Math.round(t.acs),
       t.performanceScore==null?'—':Math.round(t.performanceScore),
-    ],cellProps:[null,null,
-      {title:`${t.wins}W ${losses}L${draws?` ${draws}D`:''}; wins divided by wins plus losses, draws excluded`},
-      {className:rrTone(t.rrCount,t.rrTotal),title:`Your net RR change together; ${t.rrCount} of ${t.games} shared matches have a recorded change`},
-      null,
+      winRateLabel(t.wr),
+      t.rrCount?rrSigned(t.rrTotal,0):'—',
+    ],cellProps:[null,null,null,
       {title:`${t.name}’s ${t.kills} kills / ${t.deaths} deaths in your shared matches`},
       {title:`${t.acsCount} of ${t.games} shared matches have ACS`},
       {title:`${t.performanceCount} of ${t.games} shared matches have Performance Score data`},
+      {title:`${t.wins}W ${losses}L${draws?` ${draws}D`:''}; wins divided by wins plus losses, draws excluded`},
+      {className:rrTone(t.rrCount,t.rrTotal),title:`Your net RR change together; ${t.rrCount} of ${t.games} shared matches have a recorded change`},
     ]};
   });
-  const values=rows.map(t=>[`${t.name}#${t.tag}`,t.games,t.wr,t.rrCount?t.rrTotal:null,t.lobby,t.kd,t.acs,t.performanceScore]);
+  const values=rows.map(t=>[`${t.name}#${t.tag}`,t.games,t.lobby,t.kd,t.acs,t.performanceScore,t.wr,t.rrCount?t.rrTotal:null]);
   return (
     // Just the table, like the party-size table above it: no card around it.
     <TableSection label="Teammates">
-      <SortableTable id="teammates-list" rows={tableRows} values={values} noun="teammates" standalone
+      <SortableTable id="teammates-list" rows={tableRows} values={values} noun="teammates" standalone widths={DUO_TABLE_WIDTHS}
         pageSize={TEAMMATE_PAGE_SIZES[0]} pageSizes={TEAMMATE_PAGE_SIZES}
-        columns={[{label:'Teammate'},{label:'Matches'},{label:'Win rate'},{label:'RR',title:'Your net RR change in matches together'},
-          {label:'Avg lobby',wide:true,align:'left'},{label:'K/D',title:'Their K/D in your shared matches'},
-          {label:'ACS',title:'Their average ACS in your shared matches'},{label:'PS',title:'Their average Performance Score in your shared matches'}]}
-        maxima={[{column:1,label:'matches together'},{column:2,label:'win rate'}]}
+        columns={[{label:'Teammate'},{label:'Matches'},{label:'Avg Lobby',wide:true,align:'left'},{label:'K/D',title:'Their K/D in your shared matches'},
+          {label:'ACS',title:'Their average ACS in your shared matches'},{label:'PS',title:'Their average Performance Score in your shared matches'},
+          {label:'Win rate'},{label:'Total RR',title:'Your net RR change in matches together'}]}
+        maxima={[{column:1,label:'matches together'},{column:6,label:'win rate'}]}
         caption="Party teammates this act, by matches together, with their stats in the matches you shared"/>
     </TableSection>
   );
@@ -168,16 +173,17 @@ function WintradeTable({s}){
   if(!rows.length)return <div className="max-sm:px-4"><InlineEmpty>No repeated opponents with unusually low combat stats in these matches.</InlineEmpty></div>;
   const tableRows=rows.map(r=>({key:r.key,cells:[
     <PlayerLink href={playerRouteUrl(r.name,r.tag,'overview',s.TARGET_SEASON)} name={r.name} tag={r.tag}/>,
-    r.score+'%',r.encounters,`${r.lowGames}/${r.measuredGames}`,r.avgAcs==null?'—':Math.round(r.avgAcs),
-    r.performanceScore==null?'—':Math.round(r.performanceScore),r.kd==null?'—':r.kd.toFixed(2),`${r.wins}/${r.decided}`,r.partyGames,
+    r.score+'%',r.encounters,`${r.lowGames}/${r.measuredGames}`,r.kd==null?'—':r.kd.toFixed(2),r.avgAcs==null?'—':Math.round(r.avgAcs),
+    r.performanceScore==null?'—':Math.round(r.performanceScore),`${r.wins}/${r.decided}`,r.partyGames,
   ],cellProps:[null,
     {className:r.score>=70?'font-semibold text-negative':r.score>=40?'font-semibold text-amber-400':'',title:'Heuristic signal strength, not a measured chance of cheating'},
-    null,null,null,{title:`${r.performanceCount} of ${r.encounters} enemy matches have Performance Score data`},
+    null,null,null,null,{title:`${r.performanceCount} of ${r.encounters} enemy matches have Performance Score data`},
   ]}));
-  const values=rows.map(r=>[`${r.name}#${r.tag}`,r.score,r.encounters,r.lowGames,r.avgAcs,r.performanceScore,r.kd,r.wins,r.partyGames]);
+  // K/D, ACS, PS in the site's usual order.
+  const values=rows.map(r=>[`${r.name}#${r.tag}`,r.score,r.encounters,r.lowGames,r.kd,r.avgAcs,r.performanceScore,r.wins,r.partyGames]);
   return (
     <SortableTable id="wintrade-list" rows={tableRows} values={values}
-      columns={[{label:'Opponent'},{label:'Likelihood signal'},{label:'Enemy games'},{label:'Low games'},{label:'ACS'},{label:'PS',title:'Avg PS across matches with available data'},{label:'K/D'},{label:'Your wins'},{label:'Party games'}]}
+      columns={[{label:'Opponent'},{label:'Likelihood signal'},{label:'Enemy games'},{label:'Low games'},{label:'K/D'},{label:'ACS'},{label:'PS',title:'Avg PS across matches with available data'},{label:'Your wins'},{label:'Party games'}]}
       caption="Heuristic wintrading signals; percentages are not calibrated probabilities" pageSize={TABLE_PAGE_SIZE} noun="opponents"/>
   );
 }

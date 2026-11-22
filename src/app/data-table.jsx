@@ -176,7 +176,10 @@ export function TablePager({page,pageSize,total,noun,onPrevious,onNext,canPrevio
 // search on, and `detail(index)` makes rows expandable: a chevron in the row
 // header opens that row's detail in a full-width row under it (on phones, a
 // toggle under the card). `emptyText` is shown inside the frame when no rows are passed.
-export function SortableTable({id,caption,columns,rows,values,maxima=[],className,pageSize,pageSizes,noun='rows',searchable=!!pageSize&&rows.length>pageSize,standalone=false,tools,detail,detailLabel,emptyText}){
+// `widths` (22 Nov 2026) fixes the column widths (CSS lengths, one per column)
+// with table-layout: fixed, so tables stacked on one page line up column for
+// column; without it columns size to their content.
+export function SortableTable({id,caption,columns,rows,values,maxima=[],className,pageSize,pageSizes,noun='rows',searchable=!!pageSize&&rows.length>pageSize,standalone=false,tools,detail,detailLabel,emptyText,widths}){
   const mobile=useIsMobile();
   const [expanded,setExpanded]=useState(()=>new Set());
   const toggle=key=>setExpanded(previous=>{const next=new Set(previous);if(next.has(key))next.delete(key);else next.add(key);return next;});
@@ -245,8 +248,9 @@ export function SortableTable({id,caption,columns,rows,values,maxima=[],classNam
       {toolbar}
       {(
         <div className={cn(TABLE_FRAME,standalone?'rounded-[12px]':'rounded-lg')}>
-          <Table id={id}>
+          <Table id={id} className={widths&&'table-fixed'}>
             <caption className="sr-only">{caption}</caption>
+            {widths&&<colgroup>{widths.map((width,index)=><col key={index} style={{width}}/>)}</colgroup>}
             <TableHeader>
               <TableRow className={TABLE_HEAD_ROW}>
                 {table.getAllLeafColumns().map(column=>{
