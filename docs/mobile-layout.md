@@ -54,9 +54,9 @@ only the chrome around them and the way some data is drawn differ.
   2026; it was three lines with a 72px map thumbnail): a 40px agent tile with
   your starting rank as an icon badge, the
   result-coloured left edge and the map splash as a faded backdrop, then
-  result, score, MVP trophy, the average lobby (short rank in its colour, back on
-  the closed card since 22 Nov 2026) and RR change on one line and map,
-  K/D/A and PS with your place in brackets ("(MVP)" for first) on the next;
+  result, score, the average lobby (full rank name in its colour since 22 Nov
+  2026, short before) and RR change on one line and map, your place ("MVP"
+  in gold for first, else "3rd"), K/D/A and PS on the next;
   older matches without PS show ACS there instead. ACS left this line on 22
   Nov 2026 to make room for the place; it is still in the roster. Desktop shows the same lobby as a "Lobby"
   cell between Server and RR. The agent (as a 48px tile with its name), start time, length

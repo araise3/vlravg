@@ -122,7 +122,7 @@ function Stat({label,children,title,className,valueClassName}){
 // this strip at the top of the opened card; the starting rank is already in
 // the RR details under it. The average lobby came back to the closed card
 // (22 Nov 2026, on request) as a short rank.
-function matchView(m,s){
+export function matchView(m,s){
   const {mapName,startedAt,startedAtMs,won,myR,opR,avgRank,myStats,myRR,myDerankProtected}=m;
   const award=matchAward(m,s.PUUID);
   const rank=avgRank!=null?tierRR(avgRank):null;
@@ -132,19 +132,19 @@ function matchView(m,s){
   const performanceScore=Number.isFinite(myStats?.performanceScore)?Math.round(myStats.performanceScore):'—';
   const rt=won===true?'Win':won===false?'Loss':'Draw';
   const awardLabel=award==='match'?'Match MVP':award==='team'?'Team MVP':'';
-  // The MVP is marked on the score that decided it: Performance Score since
-  // Patch 13.06, ACS for older matches (see pickMvps).
-  const awardOn=award?(m.mvpBasis==='acs'?'acs':'ps'):null;
-  // Your place in the match by that same score, shown in brackets after it
-  // ("MVP" for first; requested 22 Nov 2026).
+  // Your place in the match by the score that decides the MVP (Performance
+  // Score since Patch 13.06, ACS for older matches; see pickMvps), shown where
+  // the agent name was: "MVP" for first, else "3rd" (22 Nov 2026, on request).
   const me=m.players.find(p=>s.PUUID?p.puuid===s.PUUID:p.name?.toLowerCase()===s.PLAYER.toLowerCase()&&p.tag?.toLowerCase()===s.TAG.toLowerCase());
   const place=m.mvpBasis?m.scorePlaces?.get(me?.puuid)??null:null;
-  const placeOn=place!=null?(m.mvpBasis==='acs'?'acs':'ps'):null;
-  const awardHint=award?`${awardLabel}: highest ${awardOn==='acs'?'ACS':'Performance Score'} ${award==='match'?'in the match':'on your team'}`:null;
+  const basis=m.mvpBasis==='acs'?'ACS':'Performance Score';
+  const placeHint=place==null?null:place===1
+    ?`Match MVP: highest ${basis} in the match`
+    :`${placeText(place)} by ${basis} in the match`+(award==='team'?`; Team MVP: highest ${basis} on your team`:'');
   const kda=myStats?[myStats.kills,myStats.deaths,myStats.assists].join(' / '):'—';
   const score=myR!=null&&opR!=null?myR+'–'+opR:'—';
   return {
-    rt,result:won===true?'win':won===false?'loss':'draw',award,awardLabel,awardOn,awardHint,place,placeOn,rank,myRank,performanceScore,acs:myAcs,
+    rt,result:won===true?'win':won===false?'loss':'draw',award,awardLabel,place,placeHint,rank,myRank,performanceScore,acs:myAcs,
     shielded:!!myDerankProtected&&myRR<0,
     time:startedAtMs!=null?new Date(startedAtMs).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):startedAt,
     duration:matchLengthText(m.durationMs),
@@ -172,7 +172,7 @@ function TileRank({rank}){
   );
 }
 
-// The average lobby on the closed card: the short rank in its colour, no
+// The average lobby on the closed card: the full rank name in its colour, no
 // icon (removed on request, 22 Nov 2026).
 // The RR part (shown only below Immortal 1) and the unrated reason are in
 // the hint, so the cell stays narrow.
@@ -184,24 +184,22 @@ function LobbyRank({m,rank,className}){
   }
   return (
     <Hint asChild content={'Average lobby: '+lobbyRankText(m.avgRank)}>
-      <span className={cn(RANK_TEXT[rClass(rank.tier)],className)} data-slot="lobby-rank">{avgLabelShort(rank.tier)}</span>
+      <span className={cn(RANK_TEXT[rClass(rank.tier)],className)} data-slot="lobby-rank">{avgLabel(rank.tier)}</span>
     </Hint>
   );
 }
 
-// A score that won the MVP: the number in gold (Match MVP) or silver (Team
-// MVP), no icon; the hint names the award. Redesigned 22 Nov 2026 (on
-// request) from a trophy-and-text accolade beside the result; still quiet,
-// no badge, and no trophy (removed on request).
-function MvpValue({v,value,className}){
-  return <span className={cn('mc-mvp',v.award==='match'?'mvp-match':'mvp-team',className)}>{value}</span>;
-}
-
-// The deciding score (PS, or ACS on older matches) with your place after it.
-function ScoreValue({v,on,value,className}){
-  const shown=v.awardOn===on?<MvpValue v={v} value={value} className={className}/>:<span className={className}>{value}</span>;
-  if(v.placeOn!==on)return shown;
-  return <>{shown}<span className={cn('mc-place',v.place===1&&'mvp-match')}>({placeText(v.place)})</span></>;
+// Your place in the match by the deciding score: "MVP" in gold for first,
+// otherwise "2nd" … "10th" in muted text; the hint says what it ranks by and
+// names a Team MVP. The scores themselves stay plain (22 Nov 2026, on
+// request: no gold or silver number, no place in brackets after PS).
+function PlaceTag({v,className}){
+  if(v.place==null)return null;
+  return (
+    <Hint asChild content={v.placeHint}>
+      <span className={cn('mc-place',v.place===1&&'mvp-match',className)} data-slot="match-place">{placeText(v.place)}</span>
+    </Hint>
+  );
 }
 
 function KdaValue({stats}){
@@ -230,7 +228,7 @@ function MatchInfo({m,v,agents}){
     ['Length',v.duration||'—'],
     ['Server',m.serverName||'—'],
     ['Avg lobby',rank
-      ?<Hint asChild content={'Average lobby: '+lobbyRankText(m.avgRank)}><span className={cn('inline-flex items-center gap-1.5',RANK_TEXT[rClass(rank.tier)])}>{rank.tier>=3&&<RankIcon tier={rank.tier} size={16}/>}{avgLabelShort(rank.tier)}{lobbyRR(rank)!=null?<span className="text-xs font-normal text-muted-foreground">{rank.rr} RR</span>:null}</span></Hint>
+      ?<Hint asChild content={'Average lobby: '+lobbyRankText(m.avgRank)}><span className={cn('inline-flex items-center gap-1.5',RANK_TEXT[rClass(rank.tier)])}>{rank.tier>=3&&<RankIcon tier={rank.tier} size={16}/>}{avgLabel(rank.tier)}{lobbyRR(rank)!=null?<span className="text-xs font-normal text-muted-foreground">{rank.rr} RR</span>:null}</span></Hint>
       :m.lowRated?<Hint asChild content={'Only '+m.ratedCount+' players were rated; excluded from stats'}><span className="text-muted-foreground">Unrated</span></Hint>:'—'],
   ];
   return (
@@ -279,10 +277,11 @@ export function MobileMatchCard({m,s,maps,agents,open,onOpenChange}){
             </span>
             <span className="flex min-w-0 items-center gap-x-3 text-xs tabular-nums text-muted-foreground">
               <span className="min-w-0 truncate font-semibold text-foreground">{m.mapName}</span>
+              <PlaceTag v={v} className="shrink-0"/>
               <span className="shrink-0 font-semibold text-foreground"><KdaValue stats={m.myStats}/></span>
               {m.mvpBasis==='acs'
-                ?<span className="shrink-0"><ScoreValue v={v} on="acs" value={v.acs} className={cn('font-semibold',v.awardOn!=='acs'&&'text-foreground')}/> ACS</span>
-                :<span className="shrink-0"><ScoreValue v={v} on="ps" value={v.performanceScore} className={cn('font-semibold',v.awardOn!=='ps'&&'text-foreground')}/> PS</span>}
+                ?<span className="shrink-0"><span className="font-semibold text-foreground">{v.acs}</span> ACS</span>
+                :<span className="shrink-0"><span className="font-semibold text-foreground">{v.performanceScore}</span> PS</span>}
             </span>
           </span>
           <ChevronDown className={cn('size-4 shrink-0 text-muted-foreground transition-transform duration-200',open&&'rotate-180')} aria-hidden="true"/>
@@ -333,7 +332,7 @@ function DesktopMatchCard({m,s,maps,agents,open,onOpenChange}){
           <span className="mc-cell mc-identity">
             <span className="match-map">{m.mapName}</span>
             <span className="mc-sub">
-              {m.myAgent&&<span className="truncate" style={agentTint(agents,m.myAgent,m.myAgentId)?{color:agentTint(agents,m.myAgent,m.myAgentId)}:undefined}>{m.myAgent}</span>}
+              <PlaceTag v={v}/>
               {m.postReset&&<Hint asChild content="Placement-week game after a total rank reset"><Badge variant="outline" className="px-1 py-0 text-[9px] uppercase">Placements</Badge></Hint>}
             </span>
           </span>
@@ -344,8 +343,8 @@ function DesktopMatchCard({m,s,maps,agents,open,onOpenChange}){
           </span>
           <span className="mc-perf">
             <Stat label="K / D / A" className="mc-cell mc-kda"><KdaValue stats={m.myStats}/></Stat>
-            <Stat label="ACS" className="mc-cell mc-acs" title={v.awardOn==='acs'?v.awardHint:undefined}><ScoreValue v={v} on="acs" value={v.acs}/></Stat>
-            <Stat label="PS" className="mc-cell mc-ps" title={v.awardOn==='ps'?v.awardHint:m.myStats?.performanceScore==null?'Performance Score is not provided in this match’s API data':'Performance Score'}><ScoreValue v={v} on="ps" value={v.performanceScore}/></Stat>
+            <Stat label="ACS" className="mc-cell mc-acs">{v.acs}</Stat>
+            <Stat label="PS" className="mc-cell mc-ps" title={m.myStats?.performanceScore==null?'Performance Score is not provided in this match’s API data':'Performance Score'}>{v.performanceScore}</Stat>
           </span>
           <span className="mc-cell mc-server">
             <span className="mc-performance-lbl">Server</span>
@@ -375,7 +374,7 @@ function DayHeader({ms,stat,first}){
   let avgValue='—',avgClass='',rrValue='—',rrClass='';
   if(stat&&stat.count>0){
     const {tier}=tierRR(stat.sum/stat.count);
-    avgValue=lobbyRankText(stat.sum/stat.count,true);avgClass=RANK_TEXT[rClass(tier)];
+    avgValue=lobbyRankText(stat.sum/stat.count);avgClass=RANK_TEXT[rClass(tier)];
   }
   if(stat&&stat.rrCount>0){rrValue=`${stat.rrTotal>=0?'+':''}${stat.rrTotal} RR`;rrClass=stat.rrTotal>=0?'text-positive':'text-negative';}
   const matchCount=stat?.matches??0;

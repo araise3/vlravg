@@ -425,13 +425,10 @@
 .match-score .mc-score-opponent { color: #a1a1aa; }
 /* MVP: the deciding score (PS, or ACS on older matches) in gold for Match
    MVP or silver for Team MVP, no icon. */
-.mc-mvp { white-space: nowrap; }
 /* Your place by that score, in brackets after it: small and muted, gold
    "(MVP)" for first. */
-.mc-place { margin-left: 4px; font-size: 11px; font-weight: 600; color: #a1a1aa; white-space: nowrap; }
+.mc-place { font-weight: 600; color: #a1a1aa; white-space: nowrap; }
 .mc-place.mvp-match { color: #f2cf80; }
-.mc-mvp.mvp-match { color: #f2cf80; }
-.mc-mvp.mvp-team { color: #cbd5e1; }
 .match-rr-change { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .match-rr-change.gain { color: #4ade80; }
 .match-rr-change.loss { color: #f87171; }

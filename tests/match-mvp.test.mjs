@@ -1,7 +1,7 @@
 import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import {pickMvps,placeText} from '../src/engine/core.mjs';
-import {closeRenderer,renderHtml} from './helpers/react-render.mjs';
+import {closeRenderer,load,renderHtml} from './helpers/react-render.mjs';
 
 after(closeRenderer);
 
@@ -52,51 +52,56 @@ const match={matchId:'m1',mapName:'Abyss',won:false,myR:8,opR:13,myRR:-20,server
 // One labelled cell of the desktop row, up to the next cell.
 const cell=(html,cls)=>{const from=html.indexOf(`mc-cell ${cls}`);return html.slice(from,html.indexOf('mc-cell ',from+8));};
 
-test('the desktop card marks the MVP on the score that decided it, not beside the result',async()=>{
-  const html=await renderHtml(PAGE,'MatchCard',{m:match,s,maps:null,agents:null,open:false,onOpenChange(){}});
-  assert.match(cell(html,'mc-ps'),/<span class="mc-mvp mvp-match">230<\/span>/);
-  assert.doesNotMatch(cell(html,'mc-acs'),/mc-mvp/);
-  assert.doesNotMatch(html.slice(html.indexOf('mc-outcome'),html.indexOf('mc-perf')),/trophy|MVP/i);
-  assert.match(html,/aria-label="Loss on Abyss, 8–13\. Played Jett\. Match MVP\./);
-  const team=await renderHtml(PAGE,'MatchCard',{m:{...match,matchMvpPuuid:'x'},s,maps:null,agents:null,open:false,onOpenChange(){}});
-  assert.match(cell(team,'mc-ps'),/<span class="mc-mvp mvp-team">230</);
-  const older=await renderHtml(PAGE,'MatchCard',{m:{...match,mvpBasis:'acs'},s,maps:null,agents:null,open:false,onOpenChange(){}});
-  assert.match(cell(older,'mc-acs'),/<span class="mc-mvp mvp-match">240<\/span>/);
-  assert.doesNotMatch(cell(older,'mc-ps'),/mc-mvp/);
-  const none=await renderHtml(PAGE,'MatchCard',{m:{...match,matchMvpPuuid:'x',teamMvpPuuids:new Set()},s,maps:null,agents:null,open:false,onOpenChange(){}});
-  assert.doesNotMatch(none,/mc-mvp|lucide-trophy/);
+test('the desktop card shows your place where the agent name was: MVP in gold for first, else 3rd',async()=>{
+  const card=m=>renderHtml(PAGE,'MatchCard',{m,s,maps:null,agents:null,open:false,onOpenChange(){}});
+  const sub=html=>html.slice(html.indexOf('class="mc-sub"'),html.indexOf('mc-cell mc-outcome'));
+  const first=await card({...match,scorePlaces:new Map([['p1',1]])});
+  assert.match(sub(first),/<span class="mc-place mvp-match" data-slot="match-place"[^>]*>MVP<\/span>/);
+  // The agent name is gone from the row (it stays in the label and the opened card).
+  assert.doesNotMatch(sub(first),/Jett/);
+  assert.match(first,/aria-label="Loss on Abyss, 8–13\. Played Jett\. Match MVP\./);
+  const places=new Map([['x',1],['p1',3]]);
+  const third=await card({...match,matchMvpPuuid:'x',teamMvpPuuids:new Set(),scorePlaces:places});
+  assert.match(sub(third),/<span class="mc-place" data-slot="match-place"[^>]*>3rd<\/span>/);
+  // No scores, no place.
+  const none=await card({...match,mvpBasis:null,scorePlaces:new Map()});
+  assert.doesNotMatch(none,/match-place/);
 });
 
-test('your place by the deciding score follows it in brackets, MVP for first',async()=>{
+test('PS and ACS are plain numbers: no gold or silver MVP colour and no place after them',async()=>{
+  const card=m=>renderHtml(PAGE,'MatchCard',{m,s,maps:null,agents:null,open:false,onOpenChange(){}});
+  for(const m of [{...match,scorePlaces:new Map([['p1',1]])},{...match,matchMvpPuuid:'x',scorePlaces:new Map([['x',1],['p1',2]])},{...match,mvpBasis:'acs',scorePlaces:new Map([['p1',1]])}]){
+    const html=await card(m);
+    assert.match(cell(html,'mc-ps'),/<span class="mc-performance-val">230<\/span>/);
+    assert.match(cell(html,'mc-acs'),/<span class="mc-performance-val">240<\/span>/);
+    assert.doesNotMatch(cell(html,'mc-ps')+cell(html,'mc-acs'),/mc-mvp|mvp-match|mvp-team|mc-place|\(/);
+  }
+});
+
+test('the place hint names the deciding score and a Team MVP',async()=>{
+  const {matchView}=await load(PAGE);
+  assert.equal(matchView({...match,scorePlaces:new Map([['p1',1]])},s).placeHint,'Match MVP: highest Performance Score in the match');
+  assert.equal(matchView({...match,matchMvpPuuid:'x',scorePlaces:new Map([['p1',2]])},s).placeHint,
+    '2nd by Performance Score in the match; Team MVP: highest Performance Score on your team');
+  assert.equal(matchView({...match,mvpBasis:'acs',matchMvpPuuid:'x',teamMvpPuuids:new Set(),scorePlaces:new Map([['p1',4]])},s).placeHint,'4th by ACS in the match');
+});
+
+test('the phone card shows the place after the map and a plain PS (ACS on older matches)',async()=>{
+  const phoneCard=m=>renderHtml(PAGE,'MobileMatchCard',{m,s,maps:null,agents:null,open:false,onOpenChange(){}});
   const places=new Map([['x',1],['p1',3]]);
-  const third=await renderHtml(PAGE,'MatchCard',{m:{...match,matchMvpPuuid:'x',teamMvpPuuids:new Set(),scorePlaces:places},s,maps:null,agents:null,open:false,onOpenChange(){}});
-  assert.match(cell(third,'mc-ps'),/<span class="mc-performance-val"><span>230<\/span><span class="mc-place">\(3rd\)<\/span><\/span>/);
-  assert.doesNotMatch(cell(third,'mc-acs'),/mc-place/);
-  const first=await renderHtml(PAGE,'MatchCard',{m:{...match,scorePlaces:new Map([['p1',1]])},s,maps:null,agents:null,open:false,onOpenChange(){}});
-  assert.match(cell(first,'mc-ps'),/<span class="mc-mvp mvp-match">230<\/span><span class="mc-place mvp-match">\(MVP\)<\/span>/);
-  // Older matches rank by ACS, so the place follows ACS.
-  const older=await renderHtml(PAGE,'MatchCard',{m:{...match,mvpBasis:'acs',matchMvpPuuid:'x',teamMvpPuuids:new Set(),scorePlaces:places},s,maps:null,agents:null,open:false,onOpenChange(){}});
-  assert.match(cell(older,'mc-acs'),/240<\/span><span class="mc-place">\(3rd\)/);
-  assert.doesNotMatch(cell(older,'mc-ps'),/mc-place/);
-  // No scores, no place.
-  const none=await renderHtml(PAGE,'MatchCard',{m:{...match,mvpBasis:null,scorePlaces:new Map()},s,maps:null,agents:null,open:false,onOpenChange(){}});
-  assert.doesNotMatch(none,/mc-place/);
-  const phone=await renderHtml(PAGE,'MobileMatchCard',{m:{...match,matchMvpPuuid:'x',teamMvpPuuids:new Set(),scorePlaces:places},s,maps:null,agents:null,open:false,onOpenChange(){}});
-  assert.match(phone,/>230<\/span><span class="mc-place">\(3rd\)<\/span> PS/);
-  // Phones show one score: PS, or ACS on older matches ranked by ACS.
+  const phone=await phoneCard({...match,matchMvpPuuid:'x',teamMvpPuuids:new Set(),scorePlaces:places});
+  assert.match(phone,/>Abyss<\/span><span class="mc-place shrink-0" data-slot="match-place"[^>]*>3rd<\/span>/);
+  assert.match(phone,/<span class="font-semibold text-foreground">230<\/span> PS/);
   const visible=html=>html.replace(/aria-label="[^"]*"/g,'');
-  assert.doesNotMatch(visible(phone),/ ACS/);
-  const olderPhone=await renderHtml(PAGE,'MobileMatchCard',{m:{...match,mvpBasis:'acs',matchMvpPuuid:'x',teamMvpPuuids:new Set(),scorePlaces:places},s,maps:null,agents:null,open:false,onOpenChange(){}});
-  assert.match(olderPhone,/>240<\/span><span class="mc-place">\(3rd\)<\/span> ACS/);
+  assert.doesNotMatch(visible(phone),/ ACS|mc-mvp/);
+  const mvp=await phoneCard({...match,scorePlaces:new Map([['p1',1]])});
+  assert.match(mvp,/class="mc-place mvp-match shrink-0" data-slot="match-place"[^>]*>MVP</);
+  const olderPhone=await phoneCard({...match,mvpBasis:'acs',matchMvpPuuid:'x',teamMvpPuuids:new Set(),scorePlaces:places});
+  assert.match(olderPhone,/<span class="font-semibold text-foreground">240<\/span> ACS/);
   assert.doesNotMatch(visible(olderPhone),/ PS/);
 });
 
-test('the phone card marks the MVP on its PS figure instead of after the score',async()=>{
-  const html=await renderHtml(PAGE,'MobileMatchCard',{m:match,s,maps:null,agents:null,open:false,onOpenChange(){}});
-  assert.match(html,/<span class="mc-mvp mvp-match font-semibold">230<\/span> PS/);
-});
-
-test('the MVP mark is the coloured number alone, with no trophy icon',async()=>{
+test('the MVP mark has no trophy icon',async()=>{
   for(const name of ['MatchCard','MobileMatchCard']){
     const html=await renderHtml(PAGE,name,{m:match,s,maps:null,agents:null,open:false,onOpenChange(){}});
     assert.doesNotMatch(html,/lucide-trophy/);

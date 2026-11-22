@@ -35,7 +35,21 @@ reprocessed, so their MVP moves to the PS rule then.
 
 ## Display
 
-The match card marks the MVP on the score that decided it: the PS cell, or the
+Since 22 Nov 2026 (on request): the closed card shows your place by the
+deciding score where the agent name was, under the map: "MVP" in gold for
+first, otherwise "2nd" … "10th" in muted text (`placeText`, `PlaceTag` in
+`src/app/pages/Matches.jsx`). Its hint says what it ranks by ("Match MVP:
+highest Performance Score in the match", "3rd by ACS in the match") and adds
+"Team MVP" when you led your team. PS and ACS are plain numbers again: no gold
+or silver colour and no place in brackets after them. The phone card has no
+agent name, so the place follows the map name there. The agent is still in
+the card's label, its tile and the opened card.
+
+The same day the average lobby in match history switched to the full rank
+name ("Diamond 2", was "Dia 2") on the closed card, the opened card and the
+day header.
+
+Before that (same day), the card marked the MVP on the score that decided it: the PS cell, or the
 ACS cell for older matches. The number is gold for Match MVP and silver for
 Team MVP, with no icon (a trophy was tried and removed on request); the hint
 names the award and the rule ("Match MVP: highest Performance

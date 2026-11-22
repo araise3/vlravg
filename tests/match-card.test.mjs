@@ -17,14 +17,14 @@ const match={matchId:'m1',mapName:'Abyss',won:true,myR:13,opR:7,myRR:24,startedA
   players:[player('p1','Player','red','Jett'),player('p2','Mate','red','Omen'),player('p3','Foe','blue','Sova')]};
 const s={PUUID:'p1',PLAYER:'Player',TAG:'EU',mhIncludeReset:false};
 
-test('the closed desktop card is one short row of labelled cells: agent, map over agent name, result over score, K/D/A, ACS and PS as one group, server, average lobby and RR, with your rank as a badge on the agent tile',async()=>{
+test('the closed desktop card is one short row of labelled cells: agent, map over your place, result over score, K/D/A, ACS and PS as one group, server, average lobby and RR, with your rank as a badge on the agent tile',async()=>{
   const html=await renderHtml(PAGE,'MatchCard',{m:match,s,maps:null,agents,open:false,onOpenChange(){}});
   assert.match(html,/class="match-card win"/);
   assert.match(html,/data-agent="Jett"[^>]*style="[^"]*width:44px[^"]*background:#25607a/);
   assert.match(html,/<img src="https:\/\/media\.valorant-api\.com\/jett\.png" alt=""/);
-  assert.equal(text(html),'Abyss Jett Win 13 : 7 K / D / A 18 / 12 / 8 ACS 240 PS 230 Server Frankfurt Lobby Dia 2 RR +24');
-  // The average lobby is the short rank in the rank colour, without an icon, between server and RR.
-  assert.match(html,/<span class="mc-cell mc-lobby">[^]*?<span class="text-fuchsia-300" data-slot="lobby-rank"[^>]*>Dia 2<\/span>/);
+  assert.equal(text(html),'Abyss Win 13 : 7 K / D / A 18 / 12 / 8 ACS 240 PS 230 Server Frankfurt Lobby Diamond 2 RR +24');
+  // The average lobby is the full rank name in the rank colour, without an icon, between server and RR.
+  assert.match(html,/<span class="mc-cell mc-lobby">[^]*?<span class="text-fuchsia-300" data-slot="lobby-rank"[^>]*>Diamond 2<\/span>/);
   assert.doesNotMatch(html.slice(html.indexOf('mc-lobby'),html.indexOf('mc-rr')),/<img/);
   assert.match(html,/mc-server[^]*mc-lobby[^]*mc-rr/);
   // Agent and map share one lead cell; K/D/A, ACS and PS share the performance group.

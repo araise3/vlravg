@@ -138,8 +138,9 @@ end of `src/index.css` (they outrank Tailwind's utility layer):
   fractional grid columns, so they fill the row and line up from card to
   card: a 44px agent tile (agent colour and icon, see
   [clutches-page.md](clutches-page.md) for the agent art) with your starting
-  rank as an icon-only badge (name and RR in its hint), the map over the
-  agent name (and the placements badge), the result tag with the quiet MVP
+  rank as an icon-only badge (name and RR in its hint), the map over your
+  place in the match (agent name until 22 Nov 2026; see
+  [match-mvp.md](match-mvp.md)) and the placements badge, the result tag with the quiet MVP
   accolade beside it (trophy only below 760px of card width) over the score,
   K/D/A, ACS and PS, server and the RR change. Spacing follows how related
   the cells are: agent and map share one lead cell (12px), capped at 140px
