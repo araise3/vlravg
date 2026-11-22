@@ -54,7 +54,8 @@ test('the lobby spread has one bar per division from the lowest lobby to the hig
   const html=await renderHtml(PAGE,'LobbyRankCard',{s:{...state([[1,15,2],[1,17,6],[2,18,4]]),overviewStats:{overall:avg,overallRR:tierRR(avg)}}});
   const spread=html.slice(html.indexOf('data-slot="lobby-spread"'));
   assert.match(spread,/aria-label="Rated lobbies by rank: Platinum 1 2, Platinum 3 6, Diamond 1 4"/);
-  assert.match(text(spread),/Lobby spread Plat 1 – Dia 1/);
+  // No rank range beside the heading (removed on request, 22 Nov 2026).
+  assert.match(text(spread),/> Lobby spread Plat 1 Plat 2/);
   // The average's division is lit, the others dimmed; the empty division is a muted stub.
   const bars=[...spread.matchAll(/title="([^"]+)"><div class="([^"]*)" style="([^"]*)"/g)].map(m=>({title:m[1],lit:/opacity:1(;|$)/.test(m[3]),empty:/bg-muted/.test(m[2])}));
   assert.deepEqual(bars.map(b=>b.title),['Platinum 1: 2 lobbies','Platinum 2: 0 lobbies','Platinum 3: 6 lobbies','Diamond 1: 4 lobbies']);

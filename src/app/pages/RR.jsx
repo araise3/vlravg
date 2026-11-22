@@ -207,7 +207,6 @@ export function RRTrendChart({matches,range}){
         )}
         {!tip&&(
           <g aria-hidden="true">
-            <circle className="end-point" cx={x(last)} cy={y(end.value)} r={4.5}/>
             <text x={points.length===1?x(last):endLabel.x} y={endLabel.y} textAnchor={points.length===1?'middle':'end'} className="ink-strong">{endText}</text>
           </g>
         )}

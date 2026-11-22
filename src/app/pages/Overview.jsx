@@ -58,13 +58,8 @@ export function lobbySpread(rated){
 const lobbiesText=n=>`${n} ${n===1?'lobby':'lobbies'}`;
 
 // A small uppercase section label inside the lobby rank card.
-function SectionLabel({children,aside}){
-  return (
-    <div className="flex items-baseline justify-between gap-3 text-xs">
-      <span className="font-medium tracking-wide text-muted-foreground uppercase">{children}</span>
-      {aside&&<span className="text-muted-foreground tabular-nums">{aside}</span>}
-    </div>
-  );
+function SectionLabel({children}){
+  return <div className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{children}</div>;
 }
 
 // One slim bar per division between the lowest and highest lobby, each in its
@@ -75,10 +70,9 @@ function SectionLabel({children,aside}){
 function LobbySpread({spread,avgTier}){
   const max=Math.max(...spread.map(d=>d.count));
   const labelAll=spread.length<=8;
-  const lowest=spread[0].tier,highest=spread[spread.length-1].tier;
   return (
     <div className="flex flex-col gap-3" data-slot="lobby-spread">
-      <SectionLabel aside={lowest!==highest&&`${avgLabelShort(lowest)} – ${avgLabelShort(highest)}`}>Lobby spread</SectionLabel>
+      <SectionLabel>Lobby spread</SectionLabel>
       <div className="flex flex-col gap-1.5">
         <div className="flex h-14 items-end gap-1.5" role="img"
           aria-label={'Rated lobbies by rank: '+spread.filter(d=>d.count).map(d=>`${avgLabel(d.tier)} ${d.count}`).join(', ')}>

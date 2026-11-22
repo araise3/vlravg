@@ -154,8 +154,8 @@ pickers, and every toggle.
   a shadcn `Progress` bar (0–100 RR) in the rank colour (both left out when
   the average is Immortal 1 or higher; see "Lobby RR at Immortal+"), and the rated-lobby
   count (a hint explains the 7-rated-player rule). A shadcn `Separator` then
-  splits off two uppercase-labelled sections. "Lobby spread" (`lobbySpread`)
-  appears when the lobbies cover more than one division: one slim rounded bar
+  splits off two uppercase-labelled sections. "Lobby spread" (`lobbySpread`;
+  no rank range beside the heading since 22 Nov 2026, on request) appears when the lobbies cover more than one division: one slim rounded bar
   per division from the lowest to the highest, empty divisions as stubs, each
   in its own division's rank colour with only the average's division solid
   (one shared hue was tried and dropped on 20 Nov 2026: an Immortal average
@@ -251,7 +251,7 @@ All hand-built charts follow one system, checked against the dataviz method:
   below that tier and the lowest recorded at or above it (no fixed Radiant
   line; tiers never recorded get no band). Immortal+ adds a dashed leaderboard
   RR scale on the right. Dates are evenly spaced, one per day at most; the end
-  label takes the first spot (above, left, below) the line does not cross, and
+  has no dot (removed on request, 22 Nov 2026), and its label takes the first spot (above, left, below) the line does not cross, and
   a "Peak" label marks a higher earlier point. Result dots show whenever
   matches are at least 8px apart, the hover point takes its result colour, and
   the area uses the gradient wash of the overview line. A range with no

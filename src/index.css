@@ -207,7 +207,7 @@
 .rr-trend-svg .result-point.win { fill: var(--chart-win); }
 .rr-trend-svg .result-point.loss { fill: var(--chart-loss); }
 .rr-trend-svg .result-point.draw { fill: var(--chart-draw); }
-.rr-trend-svg .end-point, .rr-trend-svg .cursor-point { fill: var(--series-1); stroke: var(--card); stroke-width: 2; }
+.rr-trend-svg .cursor-point { fill: var(--series-1); stroke: var(--card); stroke-width: 2; }
 .rr-trend-svg .duo-band { fill: rgb(255 255 255 / .035); }
 .rr-trend-svg .duo-band-label { fill: var(--chart-ink); font-size: 10px; font-weight: 600; text-anchor: middle; }
 .rr-trend-svg .rank-tick { fill: var(--chart-ink); font-weight: 600; }
