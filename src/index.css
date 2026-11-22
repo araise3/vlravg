@@ -364,7 +364,7 @@
    aligned from card to card. The map splash is a faded backdrop on the
    right; the result colours the left edge and a faint wash behind the tile. */
 .mc-row { position: relative; isolation: isolate; display: grid; width: 100%; padding: 10px 16px 10px 14px; text-align: left; cursor: pointer;
-  --mc-gap: 32px; grid-template-columns: minmax(0, 140px) minmax(84px, .7fr) minmax(196px, 2fr) minmax(64px, .85fr) minmax(40px, .5fr) 16px; align-items: center; column-gap: 0;
+  --mc-gap: 32px; grid-template-columns: minmax(0, 140px) minmax(84px, .7fr) minmax(196px, 2fr) minmax(64px, .85fr) minmax(70px, .8fr) minmax(40px, .5fr) 16px; align-items: center; column-gap: 0;
   border-left: 3px solid var(--result-color); background: linear-gradient(90deg, color-mix(in oklab, var(--result-color) 10%, transparent), transparent 34%); }
 .mc-row:focus-visible { outline: 2px solid var(--brand); outline-offset: -3px; border-radius: 11px; }
 .mc-backdrop { position: absolute; inset: 0 0 0 auto; z-index: -1; width: min(64%, 560px); overflow: hidden; pointer-events: none; }
@@ -373,20 +373,23 @@
 .match-card:hover .mc-backdrop img, .match-card[data-state="open"] .mc-backdrop img { opacity: .3; }
 /* Spacing follows how related cells are: agent and map sit together (12px),
    K/D/A, ACS and PS form one performance group (14px apart), and the groups
-   (who and where, result, performance, server, RR) are 32px apart. */
+   (who and where, result, performance, server, RR) are 32px apart; the
+   average lobby sits 16px after the server. */
 .mc-lead { display: flex; align-items: center; gap: 12px; min-width: 0; }
 /* The result belongs with the map, so it follows the lead cell 16px later;
    the other groups are --mc-gap apart. The lead column is capped at 140px,
    enough for the tile plus the longest map ("Fracture") and agent
    ("Brimstone") names, so the result sits close instead of after an empty
-   stretch. The MVP accolade sits beside the result tag. */
+   stretch. */
 .mc-outcome { margin-left: 16px; }
 .mc-outcome-tag { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; }
-.mc-outcome-tag .mc-accolade { padding-left: 7px; font-size: 9.5px; }
 .mc-perf, .mc-server { margin-left: var(--mc-gap); }
+.mc-lobby { margin-left: 16px; }
 .mc-rr { margin-left: 12px; }
 .mc-chevron { margin-left: 14px; }
-.mc-perf { display: grid; grid-template-columns: minmax(94px, 1.25fr) minmax(34px, .75fr) minmax(34px, .75fr); column-gap: 14px; min-width: 0; }
+/* PS carries your place after it ("230 (MVP)", "199 (10th)"), so its
+   column is wider than ACS. */
+.mc-perf { display: grid; grid-template-columns: minmax(94px, 1.25fr) minmax(34px, .75fr) minmax(72px, 1.1fr); column-gap: 14px; min-width: 0; }
 /* Minimum widths keep K/D/A (up to 20 / 22 / 14), scores and RR whole; the
    map column gives way first. */
 .mc-cell { display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 0; }
@@ -400,28 +403,35 @@
 .mc-kda-separator { font-size: 11px; color: #71717a; font-weight: 400; }
 .mc-outcome .m-result-tag { font-size: 9.5px; }
 .mc-rr { align-items: flex-end; }
+.mc-lobby-val { font-size: 14px; font-weight: 600; }
 .mc-server-val { display: block; overflow: hidden; text-overflow: ellipsis; font-size: 14px; font-weight: 600; }
 .mc-tile-rank { position: absolute; right: -6px; bottom: -6px; display: flex; filter: drop-shadow(0 2px 3px rgb(0 0 0 / .75)); }
 .mc-rr .match-rr-change { font-size: 17px; line-height: 1.25; }
 .mc-chevron { width: 16px; height: 16px; color: #71717a; transition: transform .2s; }
 .match-card[data-state="open"] .mc-chevron { transform: rotate(180deg); }
 @container (max-width: 760px) {
-  .mc-row { --mc-gap: 18px; } .mc-outcome { margin-left: 12px; } .mc-perf { column-gap: 10px; } .mc-accolade-text { display: none; }
+  .mc-row { --mc-gap: 18px; } .mc-outcome { margin-left: 12px; } .mc-perf { column-gap: 10px; }
 }
 /* The narrowest desktop cards (640px windows) drop the server column; it is
    still in the opened card. */
 @container (max-width: 640px) {
-  .mc-row { --mc-gap: 14px; grid-template-columns: minmax(0, 1fr) minmax(76px, .7fr) minmax(196px, 2fr) minmax(40px, .5fr) 16px; }
+  .mc-row { --mc-gap: 14px; grid-template-columns: minmax(0, 1fr) minmax(76px, .7fr) minmax(196px, 2fr) minmax(70px, .8fr) minmax(40px, .5fr) 16px; }
+  .mc-lobby { margin-left: var(--mc-gap); }
   .mc-server { display: none; }
 }
 .m-result-tag { color: var(--result-color); font-size: 10px; font-weight: 750; text-transform: uppercase; letter-spacing: .1em; }
 .match-score { display: flex; align-items: baseline; gap: 5px; font-size: 17px; font-weight: 750; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1.25; }
 .match-score .mc-score-divider { font-size: 14px; color: #71717a; font-weight: 400; }
 .match-score .mc-score-opponent { color: #a1a1aa; }
-.mc-accolade { display: inline-flex; align-items: center; gap: 4px; padding-left: 8px; border-left: 1px solid #3f3f46; font-size: 10px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
-.mc-accolade svg { width: 12px; height: 12px; flex-shrink: 0; }
-.mc-accolade.mvp-match { color: #f2cf80; }
-.mc-accolade.mvp-team { color: #cbd5e1; }
+/* MVP: the deciding score (PS, or ACS on older matches) in gold for Match
+   MVP or silver for Team MVP, no icon. */
+.mc-mvp { white-space: nowrap; }
+/* Your place by that score, in brackets after it: small and muted, gold
+   "(MVP)" for first. */
+.mc-place { margin-left: 4px; font-size: 11px; font-weight: 600; color: #a1a1aa; white-space: nowrap; }
+.mc-place.mvp-match { color: #f2cf80; }
+.mc-mvp.mvp-match { color: #f2cf80; }
+.mc-mvp.mvp-team { color: #cbd5e1; }
 .match-rr-change { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .match-rr-change.gain { color: #4ade80; }
 .match-rr-change.loss { color: #f87171; }

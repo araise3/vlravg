@@ -17,21 +17,33 @@ const match={matchId:'m1',mapName:'Abyss',won:true,myR:13,opR:7,myRR:24,startedA
   players:[player('p1','Player','red','Jett'),player('p2','Mate','red','Omen'),player('p3','Foe','blue','Sova')]};
 const s={PUUID:'p1',PLAYER:'Player',TAG:'EU',mhIncludeReset:false};
 
-test('the closed desktop card is one short row of labelled cells: agent, map over agent name, result over score, K/D/A, ACS and PS as one group, server and RR, with your rank as a badge on the agent tile',async()=>{
+test('the closed desktop card is one short row of labelled cells: agent, map over agent name, result over score, K/D/A, ACS and PS as one group, server, average lobby and RR, with your rank as a badge on the agent tile',async()=>{
   const html=await renderHtml(PAGE,'MatchCard',{m:match,s,maps:null,agents,open:false,onOpenChange(){}});
   assert.match(html,/class="match-card win"/);
   assert.match(html,/data-agent="Jett"[^>]*style="[^"]*width:44px[^"]*background:#25607a/);
   assert.match(html,/<img src="https:\/\/media\.valorant-api\.com\/jett\.png" alt=""/);
-  assert.equal(text(html),'Abyss Jett Win 13 : 7 K / D / A 18 / 12 / 8 ACS 240 PS 230 Server Frankfurt RR +24');
+  assert.equal(text(html),'Abyss Jett Win 13 : 7 K / D / A 18 / 12 / 8 ACS 240 PS 230 Server Frankfurt Lobby Dia 2 RR +24');
+  // The average lobby is the short rank in the rank colour, without an icon, between server and RR.
+  assert.match(html,/<span class="mc-cell mc-lobby">[^]*?<span class="text-fuchsia-300" data-slot="lobby-rank"[^>]*>Dia 2<\/span>/);
+  assert.doesNotMatch(html.slice(html.indexOf('mc-lobby'),html.indexOf('mc-rr')),/<img/);
+  assert.match(html,/mc-server[^]*mc-lobby[^]*mc-rr/);
   // Agent and map share one lead cell; K/D/A, ACS and PS share the performance group.
   assert.match(html,/<span class="mc-lead">[^]*data-agent="Jett"[^]*class="match-map">Abyss</);
   assert.match(html,/<span class="mc-perf">[^]*K \/ D \/ A[^]*ACS[^]*>PS</);
   // Rank is the icon alone, on the tile; its name and RR are in the hint.
   assert.match(html,/<span class="relative flex shrink-0"><span[^>]*data-agent="Jett"[^]*?<\/span><span class="mc-tile-rank"[^>]*><img src="data:image\//);
-  assert.match(html,/aria-label="Win on Abyss, 13–7\. Played Jett\. 18 \/ 12 \/ 8 KDA, 240 ACS, 230 Performance Score\. Show match details and roster"/);
+  assert.match(html,/aria-label="Win on Abyss, 13–7\. Played Jett\. 18 \/ 12 \/ 8 KDA, 240 ACS, 230 Performance Score\. Average lobby Diamond 2 \(0 RR\)\. Show match details and roster"/);
   assert.match(html,/<span class="mc-backdrop" aria-hidden="true"><\/span>/);
-  // In the opened card only: time, length and lobby.
+  // In the opened card only: time and length.
   assert.doesNotMatch(text(html),/35 min|Avg lobby/);
+});
+
+test('a closed card without a lobby average shows a dash, with the rated count in the hint for low-rated lobbies',async()=>{
+  const lowRated=await renderHtml(PAGE,'MatchCard',{m:{...match,avgRank:null,lowRated:true,ratedCount:5},s,maps:null,agents,open:false,onOpenChange(){}});
+  assert.match(text(lowRated),/Server Frankfurt Lobby — RR \+24$/);
+  assert.doesNotMatch(lowRated,/data-slot="lobby-rank"|Average lobby/);
+  const mobile=await renderHtml(PAGE,'MobileMatchCard',{m:{...match,avgRank:null},s,maps:null,agents,open:false,onOpenChange(){}});
+  assert.match(text(mobile),/^Win 13 : 7 — \+24 Abyss/);
 });
 
 test('the opened card starts with the match info the closed row leaves out, then RR details and the roster with agent icons',async()=>{

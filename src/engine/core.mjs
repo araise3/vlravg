@@ -2132,14 +2132,8 @@ function processMatch(m){
   const avgTeamRank=ratedTeamRank(playersOut,myTeamId,true);
   const avgEnemyRank=ratedTeamRank(playersOut,myTeamId,false);
 
-  // MVP: highest ACS in the match; team MVP: highest ACS per team
+  const {mvpBasis,matchMvpPuuid,teamMvpPuuids,scorePlaces}=pickMvps(playersOut);
   const acsPlayers=playersOut.filter(p=>p._acs!=null);
-  const matchMvpPuuid=acsPlayers.length?acsPlayers.reduce((a,b)=>b._acs>a._acs?b:a).puuid:null;
-  const teams=[...new Set(playersOut.map(p=>p.team_id))];
-  const teamMvpPuuids=new Set(teams.map(tid=>{
-    const tp=acsPlayers.filter(p=>p.team_id===tid);
-    return tp.length?tp.reduce((a,b)=>b._acs>a._acs?b:a).puuid:null;
-  }).filter(Boolean));
 
   // ACS placement within the match (1 = highest ACS), assigned once here so
   // render-time code (the teammates list) can read it directly instead of
@@ -2183,7 +2177,7 @@ function processMatch(m){
   // Whether Rank Shield absorbed this match's loss (badge didn't drop even
   // though myRR above still carries the normal negative payout).
   const myDerankProtected=_derankProtectedByMatchId[matchId]??false;
-  return{mapName,serverName,startedAt,startedAtMs,durationMs:durationMs||myRRDetails?.duration||durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,avgTeamRank,avgEnemyRank,lowRated,ratedCount,myStats,players:playersOut,myTierId,myRankKnown,myTierName,myRR,myRRDetails,myPreRR,myPreTierId,myPostRR,myPostTierId,myRefundedRR,myDerankProtected,myPartyPenalty,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids,myClutchAll,myClutches,myAgent:me?.agent?.name??null,myAgentId:me?.agent?.id??null,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
+  return{mvpBasis,scorePlaces,mapName,serverName,startedAt,startedAtMs,durationMs:durationMs||myRRDetails?.duration||durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,avgTeamRank,avgEnemyRank,lowRated,ratedCount,myStats,players:playersOut,myTierId,myRankKnown,myTierName,myRR,myRRDetails,myPreRR,myPreTierId,myPostRR,myPostTierId,myRefundedRR,myDerankProtected,myPartyPenalty,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids,myClutchAll,myClutches,myAgent:me?.agent?.name??null,myAgentId:me?.agent?.id??null,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
 }
 
 // Per-round stats for one player, from the v4 rounds[] and kills[] arrays.
@@ -4037,8 +4031,39 @@ function loadAgentMetadata(){
     .then(parseAgentMetadata).catch(()=>new Map());
   return agentMetadataPromise;
 }
-function matchAward(m){
-  const myPuuid=PUUID||m.players?.find(p=>p.name?.toLowerCase()===PLAYER.toLowerCase()&&p.tag?.toLowerCase()===TAG.toLowerCase())?.puuid;
+// Match MVP is the highest score in the match, Team MVP the highest on each
+// team. Since Patch 13.06 (22 Sep 2026) Riot picks the MVP by Performance
+// Score, which replaced ACS (support.riotgames.com/valorant/gameplay/
+// performance-score). So the score is Performance Score when every player
+// has one, and ACS for older matches without it; a partly reported match
+// also falls back to ACS rather than mix the two. Riot does not publish its
+// tie-break or Team MVP rules: ties keep the first player listed, and each
+// team's top player is that team's MVP (an inference from the old ACS rule).
+// scorePlaces ranks every scored player by the same score (1 = MVP), ties in
+// list order, matching the MVP pick.
+function pickMvps(players){
+  const withPs=players.filter(p=>Number.isFinite(p._performanceScore));
+  const mvpBasis=withPs.length&&withPs.length===players.length?'ps':'acs';
+  const score=mvpBasis==='ps'?p=>p._performanceScore:p=>p._acs;
+  const scored=mvpBasis==='ps'?withPs:players.filter(p=>p._acs!=null);
+  const top=list=>list.length?list.reduce((a,b)=>score(b)>score(a)?b:a).puuid:null;
+  const teams=[...new Set(players.map(p=>p.team_id))];
+  return{
+    mvpBasis:scored.length?mvpBasis:null,
+    matchMvpPuuid:top(scored),
+    teamMvpPuuids:new Set(teams.map(tid=>top(scored.filter(p=>p.team_id===tid))).filter(Boolean)),
+    scorePlaces:new Map([...scored].sort((a,b)=>score(b)-score(a)).map((p,i)=>[p.puuid,i+1])),
+  };
+}
+// A match place as the card writes it: "MVP" for first, otherwise "2nd" …
+// "10th".
+function placeText(place){
+  if(place===1)return 'MVP';
+  const tens=place%100,suffix=tens>=11&&tens<=13?'th':({1:'st',2:'nd',3:'rd'})[place%10]||'th';
+  return place+suffix;
+}
+function matchAward(m,puuid){
+  const myPuuid=puuid||PUUID||m.players?.find(p=>p.name?.toLowerCase()===PLAYER.toLowerCase()&&p.tag?.toLowerCase()===TAG.toLowerCase())?.puuid;
   if(!myPuuid)return null;
   if(m.matchMvpPuuid===myPuuid)return 'match';
   if(m.teamMvpPuuids?.has(myPuuid))return 'team';
@@ -4189,6 +4214,6 @@ export {
   winRateLabel,winRateTone,rrSigned,computeRRStats,isRREligible,rrPositionFromElo,
   rrMovementRows,rrMovementXAxis,rrPayoutEstimates,rrMarginAdjusted,RR_MARGIN_REFERENCE,rrPayoutEvenPoint,rrPayoutSegments,rrScopedMatches,RR_RANGES,
   rrDuoInfo,rrSessionRows,RR_SESSION_BREAK_MS,rrReportedStats,buildRRScoreRows,rrRankRows,clutchTotals,clutchBreakdown,roundAttackers,lobbyTeamsChartRows,
-  lobbyTeamsGapLabel,loadMatchMapMetadata,loadAgentMetadata,parseAgentMetadata,matchAward,matchCardPlayerRank,dayHeaderLabel,
+  lobbyTeamsGapLabel,loadMatchMapMetadata,loadAgentMetadata,parseAgentMetadata,matchAward,pickMvps,placeText,matchCardPlayerRank,dayHeaderLabel,
   scoreMarginDistribution,
 };

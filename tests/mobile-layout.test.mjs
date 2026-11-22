@@ -90,9 +90,12 @@ test('the phone match card keeps result, score, RR change, stats and the roster 
   const html=await renderHtml('/src/app/pages/Matches.jsx','MobileMatchCard',{m,s,maps:null,open:false,onOpenChange(){}});
   assert.match(html,/class="match-card mobile win"/);
   const t=text(html);
-  // Two lines since 22 Nov 2026: time, length, server and lobby are in the opened card.
-  assert.match(t,/^Win 13 : 7 \+24 Abyss 18 \/ 12 \/ 8 240 ACS 230 PS$/);
-  assert.match(html,/aria-label="Win on Abyss, 13–7\. 18 \/ 12 \/ 8 KDA, 240 ACS, 230 Performance Score\. Show match details and roster"/);
+  // Two lines since 22 Nov 2026: time, length and server are in the opened
+  // card; the average lobby (short rank, no icon) sits before the RR change.
+  // ACS left the phone line for your place after PS (22 Nov 2026); it is in the roster.
+  assert.equal(t,`Win 13 : 7 ${avgLabelShort(tierRR(18.5).tier)} +24 Abyss 18 / 12 / 8 230 PS`);
+  assert.match(html,/data-slot="lobby-rank"[^>]*>Dia 2<\/span>/);
+  assert.match(html,/aria-label="Win on Abyss, 13–7\. 18 \/ 12 \/ 8 KDA, 240 ACS, 230 Performance Score\. Average lobby [^"]+\. Show match details and roster"/);
   const opened=text(await renderHtml('/src/app/pages/Matches.jsx','MobileMatchCard',{m,s,maps:null,open:true,onOpenChange(){}}));
   assert.match(opened,new RegExp(`Length 35 min Server Frankfurt Avg lobby ${avgLabelShort(tierRR(18.5).tier)}`));
 });
