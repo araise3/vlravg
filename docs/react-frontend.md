@@ -129,7 +129,9 @@ end of `src/index.css` (they outrank Tailwind's utility layer):
   (a chevron in the row header opens a full-width detail row; on phones a
   toggle under the card).
 - Overview: rebuilt as a shadcn dashboard (see "Overview dashboard" below).
-- Match History: one summary strip, one-line day headers, and the old match
+- Match History: the "RR by session" card at the top (moved from the RR
+  Breakdown on 22 Nov 2026, on request, replacing the matches / win rate /
+  MVP summary strip), one-line day headers, and the old match
   card (210 px map-art panel, 25 px scoreline, uppercase result tag, bold
   stats, deaths in grey rather than red). On phones the stats use the old
   two-column layout, which also fixes the cut-off average lobby.
@@ -257,8 +259,9 @@ All hand-built charts follow one system, checked against the dataviz method:
   fixture `?fixture=climb` reproduces a 106-game Immortal 1 to Radiant climb;
   since 20 Nov 2026 its payouts drift (gains about +26 to +16, losses about
   −12 to −20, oldest to newest, with jitter) so payout charts have a trend to
-  show. "RR by session" (`RRSessionCard`, 21 Nov 2026) follows the RR trend
-  card; it replaced "RR payout over time" (20 Nov 2026). See
+  show. "RR by session" (`RRSessionCard`, 21 Nov 2026) followed the RR trend
+  card, replacing "RR payout over time" (20 Nov 2026); since 22 Nov 2026 it
+  sits at the top of Match History instead. See
   [rr-sessions.md](rr-sessions.md).
   The payout chart gets
   Win/Loss end labels, an "Even at N RR" label and a "RR per game" axis; the

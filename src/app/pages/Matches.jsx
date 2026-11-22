@@ -1,11 +1,12 @@
 import {Fragment,useEffect,useState} from 'react';
 import {ChevronDown,Shield,Trophy} from 'lucide-react';
 import {
-  avgLabel,avgLabelShort,dayHeaderLabel,decidedWinRate,hexToRgb,loadMatchMapMetadata,loadMoreMatches,matchAward,
-  lobbyRankText,lobbyRR,matchCardPlayerRank,playerRouteUrl,rClass,rColor,rrSigned,tierRR,winRateLabel,
+  avgLabel,avgLabelShort,dayHeaderLabel,hexToRgb,loadMatchMapMetadata,loadMoreMatches,matchAward,
+  lobbyRankText,lobbyRR,matchCardPlayerRank,playerRouteUrl,rClass,rColor,rrSigned,tierRR,
 } from '@/engine/core.mjs';
 import {useEngine,useIsMobile} from '@/app/hooks.js';
 import {EmptyState,Hint,PageHeading,PlacementToggle,RankIcon,Sep} from '@/app/shared.jsx';
+import {RRSessionCard} from '@/app/pages/RR.jsx';
 import {cn} from '@/lib/utils';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
@@ -305,10 +306,6 @@ export function MatchesPage(){
   const ready=s.analysisState==='ready';
   const hasMatches=ready&&s.allMatches.length>0;
   const data=s.mhData;
-  const n=data.length,wins=data.filter(m=>m.won===true).length;
-  const decided=data.filter(m=>m.won===true||m.won===false).length;
-  let matchMvps=0,teamMvps=0;
-  for(const m of data){const award=matchAward(m);if(award==='match')matchMvps++;else if(award==='team')teamMvps++;}
   const slice=data.slice(0,s.mhVisible);
   const remaining=Math.max(0,data.length-s.mhVisible);
   let lastDay=null;
@@ -318,14 +315,9 @@ export function MatchesPage(){
       {hasMatches&&(
         <>
           <PlacementToggle/>
-          <div className="mh-summary" aria-label="Match history summary">
-            {[[n.toLocaleString(),'Matches',''],[winRateLabel(decidedWinRate(wins,decided)),'Win rate',''],[matchMvps,'Match MVP','mvp-match'],[teamMvps,'Team MVP','mvp-team']].map(([value,label,tone])=>(
-              <div key={label} className={cn('mh-summary-item',tone)}>
-                <span className="mh-summary-value">{value}</span>
-                <span className="mh-summary-label">{label}</span>
-              </div>
-            ))}
-          </div>
+          {/* RR by session moved here from the RR Breakdown (22 Nov 2026, on
+              request), replacing the matches / win rate / MVP summary strip. */}
+          <RRSessionCard matches={s.allMatches} range={s.rrRanges.sessions}/>
           <div className="mh-list-heading">
             <span>Match log</span>
             <span>Newest first. Select a match for RR details and roster.</span>

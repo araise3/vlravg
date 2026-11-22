@@ -825,7 +825,7 @@ export function RRPage(){
         <>
           <PlacementToggle/>
           {/* The range's headline figures in their own card at the top. Its range
-              menu scopes this card only; the trend and session cards have their own. */}
+              menu scopes this card only; the trend card has its own. */}
           <section aria-labelledby="rr-summary-title">
             <Card className="gap-5">
               <CardHeader>
@@ -847,7 +847,6 @@ export function RRPage(){
               <CardContent><ChartFrame><RRTrendChart matches={matches} range={ranges.trend}/></ChartFrame></CardContent>
             </Card>
           </section>
-          <RRSessionCard matches={matches} range={ranges.sessions}/>
           <RRMovementChart matches={matches} zoomTier={s.rrMovementZoomTier}/>
           <TableSection label="RR by your rank"><RRRankTable matches={matches}/></TableSection>
           <section aria-labelledby="rr-score-title">

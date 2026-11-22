@@ -337,12 +337,6 @@
    Tailwind/shadcn classes; the old .rank-table look was removed 20 Nov 2026. */
 
 /* Match History */
-.mh-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: #222; border: 1px solid #222; border-radius: 12px; overflow: hidden; }
-.mh-summary-item { display: flex; flex-direction: column; gap: 7px; padding: 20px 22px; background: #121214; }
-.mh-summary-value { font-size: 26px; font-weight: 750; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
-.mh-summary-label { font-size: 10px; color: #a1a1aa; letter-spacing: .09em; text-transform: uppercase; }
-.mh-summary-item.mvp-match .mh-summary-value { color: #f2cf80; }
-.mh-summary-item.mvp-team .mh-summary-value { color: #cbd5e1; }
 .mh-list-heading { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; color: #a1a1aa; }
 .mh-list-heading > span:first-child { font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: #e4e4e7; }
 .match-day-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 20px; padding: 12px 0; border-bottom: 1px solid #222; }
@@ -407,7 +401,6 @@
   .match-day-stat { flex-direction: column; gap: 3px; }
 }
 @media (max-width: 600px) {
-  .mh-summary-item { padding: 16px 12px; } .mh-summary-value { font-size: 23px; } .mh-summary-label { font-size: 10px; letter-spacing: .03em; }
   .mh-list-heading { flex-direction: column; gap: 5px; }
   .match-row { grid-template-columns: minmax(0, 1fr); }
   .mc-map-panel { min-height: 110px; padding: 16px; } .mc-map-image { object-position: center 45%; }

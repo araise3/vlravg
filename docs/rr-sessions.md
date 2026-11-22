@@ -21,7 +21,9 @@ so the new chart shows the net result of each sitting.
   minutes when the duration is unknown. Each session carries its start and end,
   its matches, W–L–D, its net RR (every recorded change, placements and
   5-stacks included, like the summary's Net RR) and the rank after its last match.
-- **Chart** (`RRSessionChart`/`RRSessionCard` in `src/app/pages/RR.jsx`): one
+- **Chart** (`RRSessionChart`/`RRSessionCard` in `src/app/pages/RR.jsx`; since
+  22 Nov 2026 the card is shown at the top of Match History, not the RR
+  Breakdown): one
   bar per session from a zero line, green up for a net gain and red down for a
   net loss (a zero session is a thin yellow mark). Above the chart:
   - number of sessions

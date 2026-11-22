@@ -50,7 +50,6 @@ test('the summary, trend and session cards each carry their own range menu',asyn
   assert.match(body,/<RRRangeSelect card="summary" value=\{ranges\.summary\}/);
   assert.match(body,/<RRRangeSelect card="trend" value=\{ranges\.trend\}/);
   assert.match(body,/<RRTrendChart matches=\{matches\} range=\{ranges\.trend\}\/>/);
-  assert.match(body,/<RRSessionCard matches=\{matches\} range=\{ranges\.sessions\}\/>/);
   const card=await renderHtml(PAGE,'RRSessionCard',{matches:[m(1),m(30)],range:'20'});
   assert.match(card,/aria-label="Match range for RR by session"/);
 });

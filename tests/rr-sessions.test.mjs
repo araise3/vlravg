@@ -58,12 +58,17 @@ test('the session chart draws one bar per session, a summary and accessible labe
   assert.match(empty,/No recorded RR changes in this range\./);
 });
 
-test('the session card replaces RR payout over time after the RR trend card',async()=>{
+test('the session card sits on Match History, not the RR Breakdown',async()=>{
   const card=await renderHtml(PAGE,'RRSessionCard',{matches:[m('a',0,24,true)]});
   assert.match(card,/<h2 id="rr-session-title">RR by session<\/h2>/);
   const page=readFileSync(new URL('../src/app/pages/RR.jsx',import.meta.url),'utf8');
   assert.doesNotMatch(page,/RRPayoutCard|RRPayoutChart|rrPayoutTimeline|>RR payout over time</);
   const body=page.slice(page.indexOf('export function RRPage('));
-  assert.ok(body.indexOf('id="rr-trend-title"')<body.indexOf('<RRSessionCard matches={matches} range={ranges.sessions}/>'));
-  assert.ok(body.indexOf('<RRSessionCard matches={matches} range={ranges.sessions}/>')<body.indexOf('<RRMovementChart'));
+  assert.doesNotMatch(body,/<RRSessionCard/);
+  const history=readFileSync(new URL('../src/app/pages/Matches.jsx',import.meta.url),'utf8');
+  const historyBody=history.slice(history.indexOf('export function MatchesPage('));
+  assert.match(historyBody,/<RRSessionCard matches=\{s\.allMatches\} range=\{s\.rrRanges\.sessions\}\/>/);
+  assert.ok(historyBody.indexOf('<RRSessionCard')<historyBody.indexOf('Match log'));
+  // The matches / win rate / MVP summary strip is gone.
+  assert.doesNotMatch(history,/mh-summary|Match history summary/);
 });
