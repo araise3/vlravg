@@ -32,14 +32,16 @@ test('team headings carry the region logo in its colour; avatars take the player
   assert.match(none,/bg-zinc-700\/70/);
 });
 
-test('the region filter shows each league logo and makes the chosen chip white',async()=>{
+test('the region filter is the site Tabs with each league logo, the chosen label in its colour',async()=>{
   const html=await renderHtml('/src/app/pro-library.jsx','ProRegionFilter',{value:'Pacific',onChange(){},counts:{all:4,Americas:1,EMEA:1,Pacific:1,China:1}});
+  assert.match(html,/data-slot="tabs-list"[^>]*aria-label="Filter pro players by region"|aria-label="Filter pro players by region"[^>]*data-slot="tabs-list"/);
+  assert.match(html,/data-slot="tabs-indicator"/);
+  assert.doesNotMatch(html,/data-slot="toggle-group"/);
   assert.equal((html.match(/<img src="\/assets\/regions\//g)||[]).length,4);
-  // The chosen chip turns white with dark text.
-  const chip=html.match(/<button[^>]*aria-label="Pacific, 1 accounts"[^>]*>/)[0];
-  assert.match(chip,/data-state="on"/);
-  assert.match(chip,/data-\[state=on\]:bg-white/);
-  assert.match(chip,/data-\[state=on\]:text-zinc-950/);
+  const tab=html.match(/<button[^>]*aria-label="Pacific, 1 accounts"[^>]*>/)[0];
+  assert.match(tab,/data-state="active"/);
+  assert.match(tab,/style="--region:#01d2d7"/);
+  assert.match(tab,/data-\[state=active\]:text-\(--region\)/);
 });
 
 test('rumored moves count like announced ones, with no marker',async()=>{

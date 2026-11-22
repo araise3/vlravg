@@ -43,7 +43,7 @@ Redesigned with shadcn parts on request; shared by the desktop popover and the
 phone search sheet (`src/app/pro-library.jsx`). Until then each row was the
 handle over its full PUUID in one alphabetical list.
 
-- A region filter (ToggleGroup: All, Americas, EMEA, Pacific, China) with
+- A region filter (Tabs: All, Americas, EMEA, Pacific, China) with
   account counts for the current search. Five pros with no region show under
   All only.
 - No search: players grouped under their partnered team with its logo (teams
@@ -60,8 +60,11 @@ handle over its full PUUID in one alphabetical list.
 On request, each VCT region carries its league logo and colour
 (`PRO_REGION_STYLE`; files and sources in `assets/regions/SOURCES.md`):
 Americas `#ff570c`, EMEA `#d3ff1e`, Pacific `#01d2d7`, China `#fd2659`.
-The region filter shows each logo; the chosen chip is white with dark text
-(on request), outlined in the region colour as before. Team
+The region filter uses the site's Tabs (on request), like the other filters: a
+sliding indicator marks the chosen region, whose label takes the league colour;
+each tab shows its logo. It was first a ToggleGroup; a white chosen chip and a
+coloured outline were tried there and dropped (the joined chips share borders,
+so the outline showed open on the left). Team
 headings show the region's logo and name in its colour, and each player's
 avatar is tinted in their region's colour. Pros without a region keep a grey
 avatar. On phones narrower than 380px the filter drops the logos to fit.

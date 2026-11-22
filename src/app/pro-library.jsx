@@ -1,6 +1,6 @@
 import {Avatar,AvatarFallback} from '@/components/ui/avatar';
 import {Badge} from '@/components/ui/badge';
-import {ToggleGroup,ToggleGroupItem} from '@/components/ui/toggle-group';
+import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs';
 import {Sep} from '@/app/shared.jsx';
 import {cn} from '@/lib/utils';
 
@@ -8,7 +8,7 @@ import {cn} from '@/lib/utils';
 // Until then each row was the handle over its full PUUID, in one long
 // alphabetical list. pro-players.json already carried each pro's team, VCT
 // region and country, so the list now browses the way pros are known: a
-// region filter (ToggleGroup), players under their team's heading, each row
+// region filter (Tabs), players under their team's heading, each row
 // an Avatar with the handle, Main/Alt badge and country. A search lists
 // matches flat with their team. The PUUID shows only when the search matched
 // it; it stays in the row's accessible name.
@@ -103,24 +103,25 @@ export function ProGroupHeading({group,size='default'}){
   );
 }
 
+// The site's Tabs, like the other filters (on request, 22 Nov 2026; it was a
+// ToggleGroup, whose joined chips share borders, so a coloured outline on the
+// chosen chip showed open on the left). The sliding indicator marks the
+// chosen region; its label takes the league colour, the logo stays in colour.
 export function ProRegionFilter({value,onChange,counts,className}){
   return (
-    <ToggleGroup type="single" variant="outline" size="sm" value={value} aria-label="Filter pro players by region"
-      onValueChange={next=>onChange(next||'all')} className={cn('w-full',className)}>
-      {['all',...PRO_REGIONS].map(region=>(
-        <ToggleGroupItem key={region} value={region} disabled={!counts[region]} style={regionVar(region)}
-          // The chosen chip is white with dark text, its league logo in colour
-          // on it (on request, 22 Nov 2026; until then a tint of the region
-          // colour). It keeps the earlier outline in its region colour.
-          className={cn('flex-1 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground data-[state=on]:z-10 data-[state=on]:bg-white data-[state=on]:font-semibold data-[state=on]:text-zinc-950 data-[state=on]:hover:bg-white/90 data-[state=on]:hover:text-zinc-950',
-            region!=='all'&&'data-[state=on]:border-(--region)')}
-          aria-label={`${region==='all'?'All regions':region}, ${counts[region]} accounts`}>
-          {region!=='all'&&<RegionLogo region={region} className="max-[380px]:hidden"/>}
-          {region==='all'?'All':region}
-          <span className="text-[10px] tabular-nums opacity-70 max-[420px]:hidden">{counts[region]}</span>
-        </ToggleGroupItem>
-      ))}
-    </ToggleGroup>
+    <Tabs value={value} onValueChange={next=>onChange(next||'all')} className={cn('w-full',className)}>
+      <TabsList aria-label="Filter pro players by region" className="w-full">
+        {['all',...PRO_REGIONS].map(region=>(
+          <TabsTrigger key={region} value={region} disabled={!counts[region]} style={regionVar(region)}
+            className={cn('gap-1.5 px-2 text-xs',region!=='all'&&'dark:data-[state=active]:text-(--region) data-[state=active]:text-(--region)')}
+            aria-label={`${region==='all'?'All regions':region}, ${counts[region]} accounts`}>
+            {region!=='all'&&<RegionLogo region={region} className="max-[380px]:hidden"/>}
+            {region==='all'?'All':region}
+            <span className="text-[10px] tabular-nums opacity-70 max-[420px]:hidden">{counts[region]}</span>
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   );
 }
 
