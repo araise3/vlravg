@@ -13,7 +13,8 @@ node scripts/build-pro-player-library.mjs [vct-2026-data-analysis] [rostermania]
 - **Teams** come from `rostermania` (`data/rostermania.json`, the VCT 2027
   off-season tracker; on request, 22 Nov 2026). A pro gets a team, team code and
   region only when they are on a **partnered** team's current roster there
-  (status stay, join or open, confirmed or rumored). Everyone else has no team,
+  (status stay, join or open; rumored moves count like announced ones and are
+  not marked, on request). Everyone else has no team,
   keeps their 2026 region (`baseRegion`) and is listed under "Other players".
   Rostermania's spelling of the name replaces the handle when they match. The run
   lists partnered-roster players without a known PUUID; they cannot be opened, so
@@ -59,8 +60,8 @@ handle over its full PUUID in one alphabetical list.
 On request, each VCT region carries its league logo and colour
 (`PRO_REGION_STYLE`; files and sources in `assets/regions/SOURCES.md`):
 Americas `#ff570c`, EMEA `#d3ff1e`, Pacific `#01d2d7`, China `#fd2659`.
-The region filter shows each logo and lights the chosen region in its colour
-(tinted fill, coloured border and text; "All" stays light on dark). Team
+The region filter shows each logo; the chosen chip is white with dark text
+(on request), outlined in the region colour as before. Team
 headings show the region's logo and name in its colour, and each player's
 avatar is tinted in their region's colour. Pros without a region keep a grey
 avatar. On phones narrower than 380px the filter drops the logos to fit.

@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 // (data/rostermania.json, the VCT 2027 off-season tracker), on request
 // (22 Nov 2026): a pro gets a team only when they are on a **partnered**
 // team's current roster there (status stay, join or open, confirmed or
-// rumored). Everyone else has no team and the library lists them under
+// rumored; rumored moves count like announced ones, unmarked, on request). Everyone else has no team and the library lists them under
 // "Other players", keeping their 2026 region for the region filter.
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
@@ -51,7 +51,8 @@ async function loadAccountBase() {
   const current = JSON.parse(await readFile(outputPath, 'utf8'));
   return {
     source: current.source,
-    players: current.players.map(player => ({ ...player, region: player.baseRegion ?? player.region ?? null })),
+    // Rebuilds start from each pro's own 2026 region, not the team region a previous run set.
+    players: current.players.map(player => ({ ...player, region: 'baseRegion' in player ? player.baseRegion : player.region ?? null })),
   };
 }
 

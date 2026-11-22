@@ -32,10 +32,24 @@ test('team headings carry the region logo in its colour; avatars take the player
   assert.match(none,/bg-zinc-700\/70/);
 });
 
-test('the region filter shows each league logo and lights the chosen region in its colour',async()=>{
+test('the region filter shows each league logo and makes the chosen chip white',async()=>{
   const html=await renderHtml('/src/app/pro-library.jsx','ProRegionFilter',{value:'Pacific',onChange(){},counts:{all:4,Americas:1,EMEA:1,Pacific:1,China:1}});
   assert.equal((html.match(/<img src="\/assets\/regions\//g)||[]).length,4);
-  assert.match(html,/aria-checked="true"[^>]*style="--region:#01d2d7"|style="--region:#01d2d7"[^>]*aria-checked="true"/);
+  // The chosen chip turns white with dark text.
+  const chip=html.match(/<button[^>]*aria-label="Pacific, 1 accounts"[^>]*>/)[0];
+  assert.match(chip,/data-state="on"/);
+  assert.match(chip,/data-\[state=on\]:bg-white/);
+  assert.match(chip,/data-\[state=on\]:text-zinc-950/);
+});
+
+test('rumored moves count like announced ones, with no marker',async()=>{
+  // zekken's move to NRG is rumored on Rostermania (22 Nov 2026); he is listed under NRG.
+  const {readFileSync}=await import('node:fs');
+  const data=JSON.parse(readFileSync(new URL('../pro-players.json',import.meta.url),'utf8'));
+  assert.equal(data.players.find(p=>p.handle.toLowerCase()==='zekken')?.teamCode,'NRG');
+  assert.ok(data.players.every(p=>!('rumored' in p)));
+  const html=await renderHtml('/src/app/pro-library.jsx','ProAccount',{row:row('zekken','NRG','Americas',{teamCode:'NRG'}),flat:false,query:''});
+  assert.doesNotMatch(html,/[Rr]umou?red/);
 });
 
 test('only partnered teams get a heading; everyone else is under Other players, last',async()=>{

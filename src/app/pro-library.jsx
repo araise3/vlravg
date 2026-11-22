@@ -106,10 +106,11 @@ export function ProRegionFilter({value,onChange,counts,className}){
       onValueChange={next=>onChange(next||'all')} className={cn('w-full',className)}>
       {['all',...PRO_REGIONS].map(region=>(
         <ToggleGroupItem key={region} value={region} disabled={!counts[region]} style={regionVar(region)}
-          className={cn('flex-1 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground',region==='all'
-            ?'data-[state=on]:bg-foreground data-[state=on]:text-background data-[state=on]:hover:bg-foreground/90'
-            // A region's chip lights up in its league colour: tinted fill, coloured border and text.
-            :'data-[state=on]:z-10 data-[state=on]:border-(--region) data-[state=on]:bg-[color-mix(in_oklab,var(--region)_18%,transparent)] data-[state=on]:text-(--region) data-[state=on]:hover:bg-[color-mix(in_oklab,var(--region)_26%,transparent)]')}
+          // The chosen chip is white with dark text, its league logo in colour
+          // on it (on request, 22 Nov 2026; until then a tint of the region
+          // colour). It keeps the earlier outline in its region colour.
+          className={cn('flex-1 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground data-[state=on]:z-10 data-[state=on]:bg-white data-[state=on]:font-semibold data-[state=on]:text-zinc-950 data-[state=on]:hover:bg-white/90 data-[state=on]:hover:text-zinc-950',
+            region!=='all'&&'data-[state=on]:border-(--region)')}
           aria-label={`${region==='all'?'All regions':region}, ${counts[region]} accounts`}>
           {region!=='all'&&<RegionLogo region={region} className="max-[380px]:hidden"/>}
           {region==='all'?'All':region}
@@ -138,8 +139,7 @@ export function ProAccount({row,flat,query,size='default'}){
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="flex min-w-0 items-center gap-1.5">
           <span className={cn('truncate font-medium text-foreground',size==='lg'&&'text-base')}>{row.handle}</span>
-          {row.accountCount>1&&<Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-[10px]">{row.accountIndex===0?'Main':`Alt ${row.accountIndex}`}</Badge>}
-        </span>
+          {row.accountCount>1&&<Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-[10px]">{row.accountIndex===0?'Main':`Alt ${row.accountIndex}`}</Badge>}        </span>
         {parts.length>0&&(
           <span className={cn('flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground',puuidHit&&'font-mono text-[11px]')} data-slot="pro-detail">
             {parts.map((part,i)=><span key={i} className={cn('flex min-w-0 items-center gap-1.5',i===parts.length-1&&'shrink-0')}>{i>0&&<Sep/>}<span className="truncate">{part}</span></span>)}
