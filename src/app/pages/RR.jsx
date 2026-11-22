@@ -1,7 +1,7 @@
-import {useId,useState} from 'react';
+import {Fragment,useId,useState} from 'react';
 import {
   avgLabel,avgLabelShort,buildRRScoreRows,computeRRStats,rrDuoInfo,rrMovementRows,rrMovementXAxis,
-  RR_MARGIN_REFERENCE,rrPayoutEstimates,rrPayoutEvenPoint,rrPayoutSegments,rrPositionFromElo,rrRankRows,rrReportedStats,rrSessionRows,RR_SESSION_BREAK_MS,rrScopedMatches,rrSigned,
+  RR_MARGIN_REFERENCE,rrPayoutEstimates,rrPayoutEvenPoint,rrPayoutSegments,rrPositionFromElo,rrRankRows,rrReportedStats,rrAdjustmentStats,rrDodgesInRange,rrSessionRows,RR_SESSION_BREAK_MS,rrScopedMatches,rrSigned,
   scoreMarginDistribution,setRRMovementZoomTier,setRRRange,winRateLabel,winRateTone,
 } from '@/engine/core.mjs';
 import {RANK_ICONS} from '@/engine/rank-icons.mjs';
@@ -400,14 +400,34 @@ export function RRRangeSelect({card,value,total,label}){
   );
 }
 
-// The range's five headline figures as tiles in the Act stats grid look:
+// The RR penalties tooltip: each kind with its RR and count. Party penalties
+// are a share of the payout, not RR, so only their games are counted.
+export function RRPenaltyBreakdown({adjust}){
+  const rrText=x=>x?`${rrSigned(x,0)} RR`:'0 RR';
+  const rows=[
+    ['Dodges',`${rrText(adjust.dodgeRR)} (${adjust.dodges})`],
+    ['AFK penalties',adjust.afkCovered?`${rrText(-adjust.afkRR)} (${adjust.afkMatches})`:'No data'],
+    ['Party penalties',`${adjust.partyMatches} ${adjust.partyMatches===1?'game':'games'}`],
+  ];
+  return (
+    <dl className="grid grid-cols-[auto_auto] gap-x-4 gap-y-0.5 tabular-nums" data-slot="rr-penalty-breakdown">
+      {rows.map(([label,value])=><Fragment key={label}><dt>{label}</dt><dd className="text-right">{value}</dd></Fragment>)}
+    </dl>
+  );
+}
+
+// The range's seven headline figures as tiles in the Act stats grid look:
 // value first, then a quiet line or mini bar that says what it is built from.
-// Phones put Net RR across the full width above two rows of two.
-export function RRSummary({matches,net,netCount}){
+// Net RR spans two columns: three rows of two below it on phones, two rows of
+// four from tablets up (the card is capped near 860px, too narrow for seven).
+export function RRSummary({matches,net,netCount,dodges=[]}){
   const summary=computeRRStats(matches);
+  const adjust=rrAdjustmentStats(matches,dodges);
   const {wins,losses,draws}=summary;
   const games=wins+losses+draws;
   const plural=(n,one,many)=>`${n} ${n===1?one:many}`;
+  const penaltyCount=adjust.dodges+adjust.afkMatches;
+  const penaltyBreakdown=<RRPenaltyBreakdown adjust={adjust}/>;
   const recordTitle=`${plural(wins,'win','wins')}, ${plural(losses,'loss','losses')}, ${plural(draws,'draw','draws')}`;
   const dash=<span className="text-muted-foreground/60">–</span>;
   const tiles=[
@@ -431,11 +451,23 @@ export function RRSummary({matches,net,netCount}){
     {label:'Win rate',value:winRateLabel(summary.winRate),tone:toneOf(winRateTone(summary.winRate)),
       title:'Wins divided by wins plus losses; draws excluded',
       foot:summary.winRate==null?'No decided matches':<Progress value={summary.winRate} className="h-1.5 bg-muted" indicatorClassName="rounded-full bg-foreground/70" aria-label={`${winRateLabel(summary.winRate)} win rate`}/>},
+    // Dodges plus reported AFK penalties; the value's tooltip breaks them down
+    // and counts party penalties, a fraction rather than RR (rrAdjustmentStats).
+    {label:'RR penalties',
+      value:<Hint content={penaltyBreakdown}>{adjust.penaltyRR?rrSigned(adjust.penaltyRR,0):'0'}</Hint>,
+      tone:adjust.penaltyRR?'text-negative':'text-muted-foreground',
+      title:'RR lost to queue dodges and reported AFK penalties in this range. Dodges are not part of Net RR. AFK penalties are shown as reported and may already be inside the match payout. Remakes leave no separate record and are not shown. Hover or tap the number for the breakdown.',
+      foot:penaltyCount?plural(penaltyCount,'penalty','penalties'):'None in this range'},
+    {label:'Refunds',
+      value:adjust.refundRR?rrSigned(adjust.refundRR,0):'0',
+      tone:adjust.refundRR?toneClass(adjust.refundRR,0):'text-muted-foreground',
+      title:'RR that Riot gave back in this range, for example when a player in that match was later banned. Refunds are added on top of the match payout, so they are not part of Net RR.',
+      foot:adjust.refunds?plural(adjust.refunds,'refunded match','refunded matches'):'No refunds'},
   ];
   return (
-    <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-5" aria-label="RR summary for selected match range" data-slot="rr-summary">
+    <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-4" aria-label="RR summary for selected match range" data-slot="rr-summary">
       {tiles.map(({label,value,tone,title,foot,wide})=>(
-        <div key={label} className={cn('flex min-w-0 flex-col gap-2 bg-card px-4 py-3.5 max-sm:px-3.5 max-sm:py-3',wide&&'max-sm:col-span-2')}>
+        <div key={label} className={cn('flex min-w-0 flex-col gap-2 bg-card px-4 py-3.5 max-sm:px-3.5 max-sm:py-3',wide&&'col-span-2')}>
           <dt className="text-xs text-muted-foreground"><Hint content={title}>{label}</Hint></dt>
           <dd className={cn('text-2xl leading-none font-semibold tracking-tight whitespace-nowrap tabular-nums max-sm:text-xl',tone)}>{value}</dd>
           <dd className="mt-auto flex min-h-1.5 flex-col justify-end text-xs text-muted-foreground tabular-nums">{foot}</dd>
@@ -832,7 +864,7 @@ export function RRPage(){
                 <CardAction><RRRangeSelect card="summary" value={ranges.summary} total={matches.length} label="RR summary"/></CardAction>
               </CardHeader>
               <CardContent className="flex flex-col gap-4">
-                <RRSummary matches={scoped} net={anyTrend?running:null} netCount={trendCount}/>
+                <RRSummary matches={scoped} net={anyTrend?running:null} netCount={trendCount} dodges={rrDodgesInRange(s.rrDodges,scoped,ranges.summary)}/>
                 <RRBonusNote matches={scoped}/>
               </CardContent>
             </Card>

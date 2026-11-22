@@ -146,11 +146,11 @@ test('the RR summary card sits above the trend chart as tiles with what each fig
   const matches=[m(20,true),m(18,true),m(-15,false),m(-21,false),m(-17,false),m(0,undefined),m(30,true,{partySize:5})];
   const html=await renderHtml('/src/app/pages/RR.jsx','RRSummary',{matches,net:15,netCount:7});
   const tiles=[...html.matchAll(/<dt[^>]*>([\s\S]*?)<\/dt>/g)].map(t=>t[1].replace(/<[^>]+>/g,''));
-  assert.deepEqual(tiles,['Net RR','RR / Win','RR / Loss','W–L–D','Win rate']);
+  assert.deepEqual(tiles,['Net RR','RR / Win','RR / Loss','W–L–D','Win rate','RR penalties','Refunds']);
   const text=html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
   // The 5-stack win counts toward Net RR only; averages and the record use eligible matches.
-  assert.match(text,/Net RR \+15 across 7 matches RR \/ Win \+19\.0 2 wins RR \/ Loss −17\.7 3 losses W–L–D 2 – 3 – 1 Win rate 40.0% /);
-  assert.match(html,/max-sm:col-span-2/);
+  assert.match(text,/Net RR \+15 across 7 matches RR \/ Win \+19\.0 2 wins RR \/ Loss −17\.7 3 losses W–L–D 2 – 3 – 1 Win rate 40.0% RR penalties 0 None in this range Refunds 0 No refunds/);
+  assert.match(html,/class="[^"]* col-span-2[ "]/);
   // Draws always show, yellow, even at zero.
   assert.match(html,/<span class="text-draw">1<\/span>/);
   const noDraws=await renderHtml('/src/app/pages/RR.jsx','RRSummary',{matches:matches.filter(x=>x.won!==undefined),net:15,netCount:6});
@@ -158,6 +158,24 @@ test('the RR summary card sits above the trend chart as tiles with what each fig
   assert.match(noDraws,/<span class="text-draw">0<\/span>/);
   assert.match(html,/aria-label="2 wins, 3 losses, 1 draw" style="[^"]*"|role="img" aria-label="2 wins, 3 losses, 1 draw"/);
   assert.match(html,/data-slot="progress"[^>]*aria-label="40\.0% win rate"|aria-label="40\.0% win rate"[^>]*data-slot="progress"/);
+  // RR penalties: dodges plus the reported AFK total, with a count below and the
+  // breakdown in a tooltip; refunds get their own tile.
+  const details=afk=>({afkPenalty:afk,penalty:null});
+  const withPenalties=[...matches,m(-25,false,{myRRDetails:details(8)}),m(15,true,{myRRDetails:details(0),myPartyPenalty:.25,myRefundedRR:12})];
+  const dodges=[{change:-6},{change:-10}];
+  const penalisedHtml=await renderHtml('/src/app/pages/RR.jsx','RRSummary',{matches:withPenalties,net:5,netCount:9,dodges});
+  const penalised=penalisedHtml.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+  assert.match(penalised,/RR penalties −24 3 penalties Refunds \+12 1 refunded match /);
+  // The value is the tooltip trigger; the cases are not listed in the tile.
+  assert.match(penalisedHtml,/data-slot="hint"[^>]*>−24</);
+  assert.doesNotMatch(penalised,/dodges|AFK penalt|party/i);
+  const engine=await load('/src/engine/core.mjs');
+  const breakdown=(await renderHtml('/src/app/pages/RR.jsx','RRPenaltyBreakdown',{adjust:engine.rrAdjustmentStats(withPenalties,dodges)}))
+    .replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+  assert.match(breakdown,/Dodges −16 RR \(2\) AFK penalties −8 RR \(1\) Party penalties 1 game/);
+  const none=(await renderHtml('/src/app/pages/RR.jsx','RRPenaltyBreakdown',{adjust:engine.rrAdjustmentStats(matches,[])}))
+    .replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+  assert.match(none,/Dodges 0 RR \(0\) AFK penalties No data Party penalties 0 games/);
   // The summary card's own range menu heads it at the top of the page; the trend card follows.
   const page=readFileSync(new URL('../src/app/pages/RR.jsx',import.meta.url),'utf8');
   const body=page.slice(page.indexOf('export function RRPage('));

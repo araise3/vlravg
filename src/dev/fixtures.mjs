@@ -16,7 +16,7 @@ export function loadFixture(stressCase='demo'){
   if(stressCase==='malformed'){stressNames[5]='👩🏽‍💻 Priya';stressNames[6]='J';stressNames[7]='Jo';stressNames[9]='A&B <3';}
   const stressPuuid='00000000-0000-4000-8000-000000000001';
   const tag=stressWorst?'WWWWW':'EUW';
-  const rr={change:{},pre:{},post:{},preTier:{},postTier:{},protected:{},details:{}};
+  const rr={change:{},pre:{},post:{},preTier:{},postTier:{},protected:{},details:{},refunded:{},dodges:[]};
   // climb: index 0 is the newest match; the oldest starts at Immortal 1, 0 RR.
   const climbCount=106,climbWon=i=>(i*7)%3!==0||i%11===0;
   // Payouts drift like a real climb: gains shrink from about +26 to +16 and
@@ -103,6 +103,12 @@ export function loadFixture(stressCase='demo'){
   }
   const count=['empty','loading','error'].includes(stressCase)?0:stressCase==='one'?1:climb?climbCount:/^\d+$/.test(stressCase)?Number(stressCase):stressWorst?30:12;
   const raw=Array.from({length:count},(_,i)=>stressRawMatch(i));
+  // demo: two queue dodges (MMR-history entries with match_length 0 and no match) and a refund.
+  if(demo){
+    rr.dodges=[[-6,1],[-10,5]].map(([change,after],k)=>({match_id:'fixture-dodge-'+k,match_length:0,last_change:change,
+      date:new Date(Date.UTC(2026,10,15,22,30)-after*7200000+1800000).toISOString(),season:{short:'e10a6',id:'fixture-act'}}));
+    rr.refunded['fixture-3']=12;
+  }
   const names=stressCase==='empty'?[]:stressNames.map((name,i)=>({name,tag,first_seen:stressCase==='malformed'&&i===3?null:new Date(Date.UTC(2026,8,1+i)).toISOString(),last_seen:new Date(Date.UTC(2026,9,1+i)).toISOString(),ended_at:i?new Date(Date.UTC(2026,9,1+i)).toISOString():null}));
   loadFixtureAnalysis({
     player:stressNames[0],tag,puuid:stressPuuid,season:'fixture-act',

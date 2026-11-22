@@ -274,6 +274,23 @@ let _preTierByMatchId={};
 // match payout, so it is rendered as a separate segment instead of being
 // silently folded into last_change.
 let _refundedRRByMatchId={};
+// Queue dodges from the same MMR history: entries with match_length 0. In D1
+// (Nov 2026), none of 2,004 such entries had a fetchable match and every
+// last_change was −6, −10, −16 or −20 RR. With no match they never reach
+// processMatch, so they are kept here for the RR summary. Older records
+// without match_length cannot be told apart and are not counted.
+let _rrDodges=[];
+function rrDodgeEntry(h){
+  if(h?.match_length!==0||!Number.isFinite(h.last_change))return null;
+  const atMs=Date.parse(h.date);
+  return {matchId:h.match_id,atMs:Number.isFinite(atMs)?atMs:null,change:h.last_change,
+    seasonId:typeof h.season?.id==='string'?h.season.id:null};
+}
+// The selected act's dodges (all of them before an act is known).
+function rrActDodges(){
+  const act=TARGET_SEASON.toLowerCase();
+  return _rrDodges.filter(d=>!act||d.seasonId?.toLowerCase()===act);
+}
 // match_id -> was_derank_protected from the same /api/mmr-history entries.
 // Riot's Rank Shield: last_change still applies its normal negative payout
 // on a protected loss, but the displayed tier/RR doesn't drop — so a player
@@ -1235,7 +1252,7 @@ function runAnalysis(searchOverride,{fromUrl=false,initialAct=null}={}){
   CURRENT_TIER_ID=null;
   CURRENT_RR=null;
   allMatches=[];statMatches=[];mhVisible=PER_PAGE;mhData=[];mhDayStats={};replayImport.status.clear();replayImport.notes.clear();
-  _rrChangeByMatchId={};_rrDetailsByMatchId={};_preRRByMatchId={};_preTierByMatchId={};_postRRByMatchId={};_postTierByMatchId={};_refundedRRByMatchId={};_derankProtectedByMatchId={};
+  _rrChangeByMatchId={};_rrDetailsByMatchId={};_preRRByMatchId={};_preTierByMatchId={};_postRRByMatchId={};_postTierByMatchId={};_refundedRRByMatchId={};_derankProtectedByMatchId={};_rrDodges=[];
   allTeammates=[];allEncounters=[];serverData=[];serverPartySize=0;serverFilteredMatchCount=0;lobbyRankPartySize=0;lobbyRankFilteredMatchCount=0;rrMovementZoomTier=null;
   lobbyRankData=[];partySizeData=[];overviewStats=null;
   rrRanges=rrDefaultRanges();
@@ -2729,6 +2746,8 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
           const details=parseRRDetails(h);
           _rrDetailsByMatchId[h.match_id]=details;
           _refundedRRByMatchId[h.match_id]=refundedRR;
+          const dodge=rrDodgeEntry(h);
+          if(dodge)_rrDodges.push(dodge);
           _derankProtectedByMatchId[h.match_id]=derankProtected;
           // Pre-match RR: the previous entry's elo is the exact value when the
           // season hasn't changed. Across a season boundary (or for the first
@@ -2768,6 +2787,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
         // No RR-change data this run — matches just fall back to myRR===null.
       }
       if(myGen===_analysisGen&&rawMatches.size)publishMatches([],true); // attach RR to saved matches
+      if(myGen===_analysisGen)emit(); // dodges have no match to publish
     })();
 
     // Step 1: fetch v3/mmr (or reuse the prefetch) for rank and act selection.
@@ -3804,6 +3824,41 @@ function rrReportedStats(matches){
     bonusTotal:covered.reduce((sum,m)=>sum+m.myRRDetails.bonus,0)};
 }
 
+// Act dodges inside an RR range: every one for "all", otherwise those on or
+// after the oldest scoped match's start (dodges have no match to count).
+function rrDodgesInRange(dodges,scoped,range){
+  if(range==='all'||!RR_RANGES.includes(range))return dodges;
+  const starts=scoped.map(m=>m.startedAtMs).filter(Number.isFinite);
+  if(!starts.length)return [];
+  const from=Math.min(...starts);
+  return dodges.filter(d=>d.atMs!=null&&d.atMs>=from);
+}
+
+// RR moved outside the normal match payout, for the RR summary's
+// "RR penalties" (dodges + AFK) and "Refunds" tiles, over every match in the
+// range (like Net RR):
+// - dodges: their exact last_change; no match exists, so Net RR lacks them.
+// - refunds: refunded_rr, applied on top of last_change, so Net RR lacks them.
+// - AFK penalties: afk_penalty summed as reported; its magnitude is used
+//   because only positive values have been observed and the schema documents
+//   no sign. It may already be inside last_change (undocumented).
+// rr_penalty (and the match's party penalty) is a fraction of the payout, not
+// RR, so those games are counted, never converted. Remakes leave no separate
+// record in either API response and are not detected.
+function rrAdjustmentStats(matches,dodges=[]){
+  const covered=matches.filter(m=>Number.isFinite(m.myRRDetails?.afkPenalty));
+  const afk=covered.filter(m=>m.myRRDetails.afkPenalty!==0);
+  const refunds=matches.filter(m=>Number.isFinite(m.myRefundedRR)&&m.myRefundedRR!==0);
+  const party=matches.filter(m=>m.myRRDetails?.penalty>0||m.myPartyPenalty>0);
+  const dodgeRR=dodges.reduce((sum,d)=>sum+d.change,0);
+  const refundRR=refunds.reduce((sum,m)=>sum+m.myRefundedRR,0);
+  const afkRR=afk.reduce((sum,m)=>sum+Math.abs(m.myRRDetails.afkPenalty),0);
+  return {total:matches.length,dodges:dodges.length,dodgeRR,
+    refunds:refunds.length,refundRR,
+    afkCovered:covered.length,afkMatches:afk.length,afkRR,
+    partyMatches:party.length,penaltyRR:dodgeRR-afkRR};
+}
+
 function buildRRScoreRows(matches){
   const groups=new Map();
   matches.filter(m=>isRREligible(m)&&Number.isFinite(m.myRR)).forEach(m=>{
@@ -4161,6 +4216,7 @@ function loadFixtureAnalysis({player,tag,puuid,season,current,rr,raw,names,mode}
   Object.assign(_rrChangeByMatchId,rr.change);Object.assign(_preRRByMatchId,rr.pre);
   Object.assign(_postRRByMatchId,rr.post);Object.assign(_preTierByMatchId,rr.preTier);
   Object.assign(_postTierByMatchId,rr.postTier);Object.assign(_derankProtectedByMatchId,rr.protected);
+  Object.assign(_refundedRRByMatchId,rr.refunded||{});_rrDodges.push(...(rr.dodges||[]).map(rrDodgeEntry).filter(Boolean));
   for(const [id,details] of Object.entries(rr.details))_rrDetailsByMatchId[id]=parseRRDetails(details);
   finalizeHeader(current);
   allMatches=raw.map(processMatch);
@@ -4190,7 +4246,7 @@ function getSnapshot(){
     lobbyRankData,partySizeData,lobbyRankPartySize,lobbyRankFilteredMatchCount,
     partySizeAvailability:{...partySizeAvailability},
     allTeammates,allEncounters,
-    rrRanges,rrMovementZoomTier,
+    rrRanges,rrMovementZoomTier,rrDodges:rrActDodges(),
     nameHistoryRows,nameHistoryState,nameHistoryBackfill,nameBackfillBusy,nameBackfillError,
     nameBackfillStopRequested,nameBackfillStopped,nameBackfillPages,
     proLibraryState,proLibraryCount:proLibraryRows.length,
@@ -4213,7 +4269,7 @@ export {
   nameHistoryActRange,computeWintradeSignals,overviewRecentMatches,decidedWinRate,
   winRateLabel,winRateTone,rrSigned,computeRRStats,isRREligible,rrPositionFromElo,
   rrMovementRows,rrMovementXAxis,rrPayoutEstimates,rrMarginAdjusted,RR_MARGIN_REFERENCE,rrPayoutEvenPoint,rrPayoutSegments,rrScopedMatches,RR_RANGES,
-  rrDuoInfo,rrSessionRows,RR_SESSION_BREAK_MS,rrReportedStats,buildRRScoreRows,rrRankRows,clutchTotals,clutchBreakdown,roundAttackers,lobbyTeamsChartRows,
+  rrDuoInfo,rrSessionRows,RR_SESSION_BREAK_MS,rrReportedStats,rrAdjustmentStats,rrDodgesInRange,rrDodgeEntry,buildRRScoreRows,rrRankRows,clutchTotals,clutchBreakdown,roundAttackers,lobbyTeamsChartRows,
   lobbyTeamsGapLabel,loadMatchMapMetadata,loadAgentMetadata,parseAgentMetadata,matchAward,pickMvps,placeText,matchCardPlayerRank,dayHeaderLabel,
   scoreMarginDistribution,
 };
