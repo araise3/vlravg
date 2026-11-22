@@ -6,7 +6,7 @@ import {
 } from '@/engine/core.mjs';
 import {useElementWidth,useEngine,useIsMobile} from '@/app/hooks.js';
 import {TABLE_CELL,TABLE_FRAME,TABLE_HEAD,TABLE_HEAD_ROW} from '@/app/data-table.jsx';
-import {ChartTooltip,Hint,InlineEmpty,PageHeading,PageLink,PartyIcon,PlacementToggle,RankIcon,toneClass} from '@/app/shared.jsx';
+import {ChartTooltip,Hint,InlineEmpty,LobbyRankText,PageHeading,PageLink,PartyIcon,PlacementToggle,RankIcon,toneClass} from '@/app/shared.jsx';
 import {useMapArt} from '@/app/pages/Matches.jsx';
 import {cn} from '@/lib/utils';
 import {Badge} from '@/components/ui/badge';
@@ -163,10 +163,9 @@ export function LobbyRankCard({s}){
                         <span className="block text-xs @min-[19rem]:hidden">{lobbiesText(count)}</span>
                       </TableCell>
                                             <TableCell className={cn(TABLE_CELL,'w-full max-w-0 font-medium')}>
-                        <span className="flex min-w-0 items-center gap-2">
-                          <RankIcon tier={r.tier} size={18}/>
+                        <LobbyRankText tier={r.tier} className="flex min-w-0">
                           <span className="truncate @max-[19rem]:hidden">{avgLabel(r.tier)}</span><span className="truncate @min-[19rem]:hidden">{avgLabelShort(r.tier)}</span>
-                        </span>
+                        </LobbyRankText>
                       </TableCell>
                       <TableCell className={cn(TABLE_CELL,'text-right text-muted-foreground @max-[19rem]:hidden')}>{count}</TableCell>
                     </TableRow>
@@ -464,7 +463,10 @@ function clutchSummary(matches){
 // purple. Tiles without situations stay neutral.
 export const CLUTCH_COLORS={1:'#22c55e',2:'#14b8a6',3:'#3b82f6',4:'#6366f1',5:'#a855f7'};
 
-export function ClutchCard({matches}){
+// Shown on the Overview (linking to the Clutches page) and at the top of the
+// Clutches page itself (no link). Both pages stay mounted, so each passes its
+// own heading id.
+export function ClutchCard({matches,link=true,titleId='overview-clutch-title',detail=null}){
   const {totals,win,loss,save,total}=clutchSummary(matches);
   if(!total)return null;
   const pct=c=>Math.round(c/total*100);
@@ -472,11 +474,16 @@ export function ClutchCard({matches}){
     ['Lost',loss,'var(--chart-loss)','Lost the round and the gun with it — died contesting it, or died to the spike'],
     ['Saved',save,'var(--chart-save)','Lost the round but survived, keeping the weapon for the next one — exit frags along the way still count as a save']];
   return (
-    <Card className="gap-5" aria-labelledby="overview-clutch-title">
+    <Card className="gap-5" aria-labelledby={titleId}>
       <CardHeader>
-        <CardTitle><h2 id="overview-clutch-title">Clutch stats</h2></CardTitle>
-        <CardDescription>{win} won of {total} opportunities</CardDescription>
-        <CardAction><Hint content="Won or lost while contesting, rather than saved"><Badge variant="outline" className="tabular-nums">{pct(win+loss)}% attempted</Badge></Hint></CardAction>
+        <CardTitle><h2 id={titleId}>Clutch stats</h2></CardTitle>
+        {/* Phones with the link: the attempted share moves into this line so the
+            header keeps the title on one line beside the button. */}
+        <CardDescription>{win} won of {total} opportunities{detail&&`, ${detail}`}{link&&<span className="sm:hidden">, {pct(win+loss)}% attempted</span>}</CardDescription>
+        <CardAction className="flex items-center gap-2">
+          <Hint content="Won or lost while contesting, rather than saved" className={link?'max-sm:hidden':undefined}><Badge variant="outline" className="tabular-nums">{pct(win+loss)}% attempted</Badge></Hint>
+          {link&&<ViewLink page="clutches">Clutches</ViewLink>}
+        </CardAction>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         <dl className="grid grid-cols-5 gap-1.5 sm:gap-2" aria-label="Clutch win rate by situation" data-slot="clutch-tiles">

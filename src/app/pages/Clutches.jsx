@@ -1,7 +1,7 @@
 import {clutchBreakdown,winRateLabel} from '@/engine/core.mjs';
 import {useEngine} from '@/app/hooks.js';
 import {EmptyState,Hint,PageHeading,SortableTable,pageEmptyText} from '@/app/shared.jsx';
-import {CLUTCH_COLORS} from '@/app/pages/Overview.jsx';
+import {CLUTCH_COLORS,ClutchCard} from '@/app/pages/Overview.jsx';
 import {AgentIcon,agentTint,useAgentArt} from '@/app/agent-icon.jsx';
 import {cn} from '@/lib/utils';
 import {Badge} from '@/components/ui/badge';
@@ -9,9 +9,10 @@ import {Card,CardContent,CardDescription,CardHeader,CardTitle} from '@/component
 
 // The Clutches page (22 Nov 2026, on request, contents left to us): the
 // act's 1vX situations from the same detection as the Overview's clutch card
-// (processMatch → myClutches), broken down by situation, by side and spike
-// state, by map and by agent, plus the hardest clutches won. Every figure
-// uses won ÷ situations, as the Overview card does.
+// (processMatch → myClutches): that card itself, then breakdowns by side and
+// spike state, by map and by agent, plus the hardest clutches won. Every
+// figure uses won ÷ situations, as the Overview card does. Nothing on the
+// page repeats a figure the card already shows.
 
 const OUTCOMES=[
   ['win','Won','var(--chart-win)','Won the round: killed everyone, defused, or both'],
@@ -60,50 +61,6 @@ function OutcomeLegend(){
 
 function SituationChip({type}){
   return <span className="inline-flex h-5 w-9 shrink-0 items-center justify-center rounded text-xs font-semibold text-white" style={{background:CLUTCH_COLORS[type]}}>1v{type}</span>;
-}
-
-function SummaryTiles({d,agents}){
-  const hardest=d.highlights[0];
-  const tiles=[
-    ['Situations',d.total,`${plural(d.covered,'match','matches')} with round data`],
-    ['Won',`${d.win} (${pct(d.winRate)})`,`${d.loss} lost, ${d.save} saved`],
-    ['Clutch kills',d.kills,d.total?`${(d.kills/d.total).toFixed(1)} per situation`:null],
-    ['Hardest won',hardest?`1v${hardest.type}`:'—',hardest?[hardest.mapName,hardest.agent].filter(Boolean).join(', '):'No 1v2 or harder won yet',
-      hardest?.agent?<AgentIcon agents={agents} name={hardest.agent} id={hardest.agentId} size={20}/>:null],
-  ];
-  return (
-    <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4 max-sm:gap-px max-sm:overflow-hidden max-sm:rounded-xl max-sm:border max-sm:bg-border" aria-label="Clutch summary" data-slot="clutch-summary">
-      {tiles.map(([label,value,note,icon])=>(
-        <Card key={label} className="gap-1 py-4 max-sm:rounded-none max-sm:border-0 max-sm:py-3">
-          <dt className="px-4 text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</dt>
-          <dd className="truncate px-4 text-xl font-semibold tabular-nums">{value}</dd>
-          {note&&<small className="flex min-w-0 items-center gap-1.5 px-4 text-xs text-muted-foreground" title={note}>{icon}<span className="truncate">{note}</span></small>}
-        </Card>
-      ))}
-    </dl>
-  );
-}
-
-function SituationCard({d}){
-  const scale=Math.max(...d.byType.map(t=>t.total));
-  return (
-    <section aria-labelledby="clutch-situation-title">
-      <Card className="gap-5">
-        <CardHeader>
-          <CardTitle><h2 id="clutch-situation-title">By situation</h2></CardTitle>
-          <CardDescription>How many enemies were alive when your last teammate died</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <ul className="flex flex-col gap-3" data-slot="clutch-situations">
-            {d.byType.map(t=>(
-              <OutcomeRow key={t.type} label={t.total?`${(t.kills/t.total).toFixed(1)} kills per try`:'No situations'} chip={<SituationChip type={t.type}/>} t={t} scale={scale}/>
-            ))}
-          </ul>
-          <OutcomeLegend/>
-        </CardContent>
-      </Card>
-    </section>
-  );
 }
 
 function SpikeCard({d}){
@@ -208,11 +165,13 @@ export function ClutchesPage(){
       <PageHeading id="clutches-title" title="Clutches"/>
       {has&&(
         <>
-          <SummaryTiles d={d} agents={agents}/>
-          <div className="grid gap-6 lg:grid-cols-2">
-            <SituationCard d={d}/>
-            <SpikeCard d={d}/>
-          </div>
+          {/* The Overview's clutch card heads the page (on request, 22 Nov 2026).
+              It replaced what it repeats: the Situations and Won tiles and the
+              By situation card; Hardest won was the first Best clutches row.
+              Clutch kills, shown nowhere else, joins its description. */}
+          <ClutchCard matches={s.allMatches} link={false} titleId="clutches-clutch-title"
+            detail={`${d.kills} clutch ${d.kills===1?'kill':'kills'} (${(d.kills/d.total).toFixed(1)} per situation)`}/>
+          <SpikeCard d={d}/>
           <HighlightsCard d={d} agents={agents}/>
           {/* Stacked, not two-up: the page is width-capped, so a half-width
               card (~390px) cannot hold these five columns without scrolling. */}

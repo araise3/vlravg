@@ -69,18 +69,20 @@ test('the breakdown groups by situation, side and spike, map and agent, and rank
   assert.equal(clutchBreakdown([]).total,0);
 });
 
-test('the Clutches page shows the summary, breakdowns, best clutches and tables',async()=>{
+test('the Clutches page shows the clutch card, side and spike, best clutches and tables, each figure once',async()=>{
   const fixtures=await load('/src/dev/fixtures.mjs');
   fixtures.loadFixture('demo');
   await settle();
   const html=await renderHtml(PAGE,'ClutchesPage');
   const body=text(html);
   assert.match(html,/<h1 id="clutches-title"[^>]*>Clutches<\/h1>/);
-  assert.match(body,/Situations 82 12 matches with round data/);
-  assert.match(body,/Won 42 \(51%\) 21 lost, 19 saved/);
-  // The agent tile renders its initial here: no agent art is loaded in tests.
-  assert.match(body,/Hardest won 1v5 J Abyss, Jett/);
-  assert.equal([...html.matchAll(/data-slot="clutch-situations"/g)].length,1);
+  // The Overview's clutch card heads the page, under its own id, without a link to itself,
+  // and with clutch kills (shown nowhere else) in its description.
+  assert.match(body,/Clutch stats 42 won of 82 opportunities, 121 clutch kills \(1\.5 per situation\) 77% attempted 1v1 /);
+  assert.doesNotMatch(html,/overview-clutch-title|href="[^"]*clutches"/);
+  // What the card already shows is not repeated: no summary tiles, no By situation card.
+  assert.doesNotMatch(html,/data-slot="clutch-summary"|data-slot="clutch-situations"|Hardest won/);
+  assert.ok(html.indexOf('id="clutches-clutch-title"')<html.indexOf('id="clutch-spike-title"'));
   assert.match(html,/aria-label="Attack, spike down: 7 won, 0 lost, 5 saved"/);
   assert.equal([...html.slice(html.indexOf('data-slot="clutch-highlights"')).matchAll(/<li /g)].length,8);
   assert.match(html,/id="clutch-maps"/);assert.match(html,/id="clutch-agents"/);
@@ -92,7 +94,7 @@ test('without round data the page says why instead of showing empty cards',async
   await settle();
   const html=await renderHtml(PAGE,'ClutchesPage');
   assert.match(text(html),/These matches came without round-by-round data, so clutches cannot be found\./);
-  assert.doesNotMatch(html,/clutch-summary/);
+  assert.doesNotMatch(html,/clutches-clutch-title|clutch-spike-title/);
 });
 
 test('agent art keeps https valorant-api icons and hex colours, keyed by name and UUID',()=>{

@@ -40,6 +40,16 @@ the Overview card: a save counts as a situation that was not won.
 
 ## Page
 
+- **Clutch stats** (22 Nov 2026, on request): the Overview's clutch card
+  (`ClutchCard`) heads the page, without its link to this page and under its
+  own heading id (`clutches-clutch-title`), since both pages stay mounted.
+  Its description adds clutch kills ("121 clutch kills (1.5 per situation)"),
+  the one summary figure shown nowhere else.
+- **Removed as duplicates** the same day, on request ("remove what is
+  redundant"): the Situations and Won tiles (the card's header and outcome
+  bar), the By situation card (the card's 1v1–1v5 tiles; its per-situation
+  kills per try went with it) and the Hardest won tile (the first Best
+  clutches row). The list below describes the original page.
 - Four summary tiles: situations (with the matches covered), won (win rate,
   lost and saved), clutch kills (per situation) and the hardest clutch won.
 - **By situation**: 1v1–1v5 rows in the Overview's tile colours, each with a

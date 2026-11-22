@@ -262,76 +262,34 @@ const duoMate=(key,extra={})=>({key,name:key,tag:'EU',games:3,wins:2,decided:3,k
   myKills:24,myDeaths:30,myAcsSum:540,myAcsCount:3,myPerformanceSum:750,myPerformanceCount:3,...extra});
 const flat=html=>html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
 
-test('duo chemistry: your act baseline is computed like the per-teammate figures',async()=>{
-  const {duoBaseline,duoRows}=await load('/src/app/pages/Duos.jsx');
-  const matches=[{myStats:{kills:20,deaths:10,acs:250,performanceScore:300}},{myStats:{kills:10,deaths:20,acs:150}},{}];
-  assert.deepEqual(duoBaseline(matches),{kd:1,acs:200,ps:300});
-  const [row]=duoRows([duoMate('Friend')],{acs:200});
-  assert.equal(row.myAcs,180);assert.equal(row.myKd,0.8);
-});
-
-test('duo comparison: your figures mirror the teammate\'s on one scale, with your act-average deltas',async()=>{
-  const {duoRows}=await load('/src/app/pages/Duos.jsx');
-  const base={kd:1,acs:200,ps:300};
-  const [t]=duoRows([duoMate('Friend')],base);
-  const html=await renderHtml('/src/app/pages/Duos.jsx','DuoComparison',{t,base,scales:{kd:2,acs:250,ps:400}});
-  const text=flat(html);
-  // Rows read: your value, your delta vs your act average, stat, their value.
-  assert.match(text,/0\.80 −0\.20 vs avg K\/D 1\.50 180 −20 vs avg ACS 200 250 −50 vs avg PS — /);
-  const rows=[...html.matchAll(/data-slot="tape-row">(.*?)(?=<div class="grid[^"]*" role="row" data-slot="tape-row"|<\/div><p)/g)].map(m=>m[1]);
-  assert.equal(rows.length,3);
-  // Bars are shadcn Progress on the passed scale: your K/D 0.80 of 2 is 40% (your bar turned
-  // around so it grows leftward), theirs 1.50 is 75%; the trailing side is faded.
-  assert.match(rows[0],/data-slot="progress" class="[^"]*rotate-180[^"]*" aria-hidden="true"><div data-state="loading" data-value="40"[^>]*class="[^"]*bg-\(--series-1\) opacity-45" style="transform:translateX\(-60%\)"/);
-  assert.match(rows[0],/data-value="75"[^>]*class="[^"]*bg-foreground\/70" style="transform:translateX\(-25%\)"/);
-  assert.match(rows[0],/font-semibold text-foreground" role="cell">1\.50/);
-});
-
-test('teammate highlights: most matches, best RR together, best win rate over three or more decided matches',async()=>{
-  const {duoRows,duoHighlights,DUO_HIGHLIGHT_MIN_DECIDED}=await load('/src/app/pages/Duos.jsx');
-  assert.equal(DUO_HIGHLIGHT_MIN_DECIDED,3);
-  const rows=duoRows([
-    duoMate('Busy',{games:20,wins:10,decided:20,rrTotal:-15,rrCount:18}),
-    duoMate('Lucky',{games:2,wins:2,decided:2,rrTotal:40,rrCount:2}),
-    duoMate('Steady',{games:6,wins:5,decided:6,rrTotal:30,rrCount:6}),
-    duoMate('NoRR',{games:4,wins:1,decided:4,rrTotal:0,rrCount:0}),
-  ]);
-  const tiles=duoHighlights(rows);
-  assert.deepEqual(tiles.map(t=>[t.key,t.t.name,t.value]),[['most','Busy','20'],['rr','Lucky','+40'],['wr','Steady','83.3%']]);
-  assert.equal(tiles[1].tone,'text-positive');
-  // Without RR or enough decided matches, those tiles drop out.
-  assert.deepEqual(duoHighlights(duoRows([duoMate('A',{rrCount:0,decided:2}),duoMate('B',{rrCount:0,decided:1})])).map(t=>t.key),['most']);
-});
-
-test('teammates: highlight tiles above a sortable table by matches together, rows open a comparison, only RR coloured',async()=>{
+test('teammates: a plain sortable table of shared results and the teammate\'s own stats, none of yours, only RR coloured',async()=>{
   const {TEAMMATE_PAGE_SIZES}=await load('/src/app/pages/Duos.jsx');
   assert.deepEqual(TEAMMATE_PAGE_SIZES,[10,25,50]);
-  const teammates=Array.from({length:12},(_,i)=>duoMate('m'+i,{games:i===3?30:20-i,rrCount:i===0?0:3}));
-  const matches=[{myStats:{kills:1,deaths:1,acs:170,performanceScore:250}}];
-  const html=await renderHtml('/src/app/pages/Duos.jsx','DuoRoster',{teammates,matches});
-  assert.match(html,/<h2 id="teammates-title">Teammates<\/h2>/);
-  assert.match(html,/data-slot="duo-highlights"/);
-  assert.match(flat(html),/Most matches together m3 #EU 30 matches Best RR together/);
+  const teammates=Array.from({length:12},(_,i)=>duoMate('m'+i,{games:i===3?30:20-i,rrCount:i===0?0:3,performanceSum:i===1?600:0,performanceCount:i===1?3:0}));
+  const html=await renderHtml('/src/app/pages/Duos.jsx','DuoRoster',{teammates});
+  // Just the table, like the party-size table: no card, no card title around it.
+  assert.match(html,/^<section aria-label="Teammates">/);
+  assert.doesNotMatch(html,/data-slot="card|<h2/);
+  assert.match(html,/rounded-\[12px\]/);
   const table=html.slice(html.indexOf('id="teammates-list"'));
   const heads=[...table.matchAll(/aria-label="([^"]+): sort/g)].map(m=>m[1]);
-  assert.deepEqual(heads,['Teammate','Matches','Win rate','RR','Avg lobby','Your K/D','Their K/D']);
+  assert.deepEqual(heads,['Teammate','Matches','Win rate','RR','Avg lobby','K/D','ACS','PS']);
   // Default order: most matches together first; ten rows on the first page.
   const names=[...table.matchAll(/scope="row"[^>]*>.*?title="([^"#]+)#EU"/g)].map(m=>m[1]);
   assert.deepEqual(names,['m3','m0','m1','m2','m4','m5','m6','m7','m8','m9']);
-  // Every row opens its comparison from a chevron in the row header; none open on load.
-  assert.equal((table.match(/aria-expanded="false"[^>]*aria-controls="teammates-list-detail-\d+"[^>]*aria-label="Compare stats"/g)||[]).length,10);
-  assert.doesNotMatch(table,/data-slot="row-detail"/);
-  // Twelve teammates page at ten, with a rows-per-page picker of 10, 25 and 50.
+  // Their figures: K/D 30/20, ACS 600/3, PS only where reported.
+  assert.match(flat(table),/m1 #EU 19 66\.7% \+12 — 1\.50 200 200 /);
+  assert.match(flat(table),/m3 #EU 30 66\.7% \+12 — 1\.50 200 — /);
+  // No expanding rows, panels, highlight tiles or your own stats.
+  assert.doesNotMatch(html,/Compare stats|duo-matchup|duo-highlights|Your K\/D|aria-pressed/);
+  // One teammates section: no separate card for your own stats with each teammate.
+  const source=readFileSync(new URL('../src/app/pages/Duos.jsx',import.meta.url),'utf8');
+  assert.doesNotMatch(source,/DuoForm|duo-form|duoBaseline|DuoComparison|DuoMatchup|myKd|myAcs/);
   assert.match(table,/1–10 of 12 teammates/);
-  assert.match(table,/<label for="teammates-list-page-size"[^>]*>Rows per page<\/label>/);
   assert.deepEqual([...table.matchAll(/<option[^>]*value="(\d+)"/g)].map(m=>m[1]),['10','25','50']);
-  // Colour is kept for RR only: win rate and K/D stay neutral.
+  // Colour is kept for RR only.
   assert.doesNotMatch(table.slice(0,table.indexOf('data-slot="table-pager"')),/text-positive[^"]*"[^>]*>\d+\.\d%|text-negative[^"]*"[^>]*>\d+\.\d%/);
   assert.match(table,/class="[^"]*text-positive[^"]*"[^>]*>\+12</);
-  const source=readFileSync(new URL('../src/app/pages/Duos.jsx',import.meta.url),'utf8');
-  assert.doesNotMatch(source,/DuoChemistry|PartnerButton|duoStatsView|setDuoStatsView|TabsTrigger/);
-  // A lone teammate gets no highlight tiles.
-  assert.doesNotMatch(await renderHtml('/src/app/pages/Duos.jsx','DuoRoster',{teammates:[duoMate('Solo')],matches}),/duo-highlights/);
 });
 
 test('encounters: a database-style table with search, a same-team / opposing filter, team share and rows per page',async()=>{
@@ -362,9 +320,17 @@ test('data tables: an outside filter that leaves no rows shows its empty text in
   assert.match(html,/<td[^>]*colspan="2"[^>]*role="status">Nothing here\.<\/td>/i);
 });
 
-test('variable-width lobby cells are left-aligned flex rows so the rank sits level with the other cells',async()=>{
+test('table lobby cells show the average lobby rank as text in its rank colour, no icon, left-aligned',async()=>{
   const html=await renderHtml('/src/app/shared.jsx','LobbyValue',{sum:22,count:1});
-  assert.match(html,/^<span class="flex items-center gap-2 whitespace-nowrap"/);
+  // Ascendant 2 in the engine's rank colour (RANK_COLORS, the --rank palette), then the RR in muted text.
+  assert.match(html,/^<span class="whitespace-nowrap" title="Ascendant 2 \(50 RR\)"><span class="font-medium" style="color:#2db87a" data-slot="lobby-rank-text">Ascendant 2<\/span>/);
+  assert.doesNotMatch(html,/<img/);
+  // Immortal and up show no RR.
+  assert.doesNotMatch(await renderHtml('/src/app/shared.jsx','LobbyValue',{sum:25,count:1}),/ RR\)/);
+  // The performance-by-lobby-rank table labels its rows the same way; the party-size table keeps its party icons.
+  const byRank=await renderHtml('/src/app/pages/Duos.jsx','PerformanceTable',{id:'t',rows:[{tier:15,total:2,totalKills:4,totalDeaths:2,acsSum:0,acsCount:0,performanceSum:0,performanceCount:0,wins:1,decided:2}]});
+  assert.match(byRank,/style="color:#36b5c0" data-slot="lobby-rank-text">Platinum 1</);
+  assert.doesNotMatch(byRank,/<img/);
   for(const file of ['Duos.jsx','Servers.jsx']){
     const source=readFileSync(new URL('../src/app/pages/'+file,import.meta.url),'utf8');
     assert.match(source,/label:'Avg Lobby',wide:true,align:'left'/,file);

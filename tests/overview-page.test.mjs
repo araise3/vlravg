@@ -42,6 +42,9 @@ test('the lobby rank card leads with the rank-coloured average, then the spread 
   const table=single.slice(single.indexOf('data-slot="lobby-party-table"'),single.indexOf('overview-duos-title'));
   assert.doesNotMatch(table,/>RR</);
   assert.doesNotMatch(table,/title="[^"]* RR /);
+  // The table's lobby rank is text in its rank colour, no icon (the hero above keeps its badge).
+  assert.match(table,/style="color:#c07de0" data-slot="lobby-rank-text"><span class="truncate[^"]*">Diamond 2</);
+  assert.doesNotMatch(table,/<img/);
   assert.equal(avgLabel(18),'Diamond 1');
 });
 
@@ -111,6 +114,16 @@ test('clutch stats show every situation, attempt share and the outcome split, an
   assert.match(html,/1v5 — None/);
   assert.match(html,/Won 5 \(56%\) Lost 3 \(33%\) Saved 1 \(11%\)/);
   assert.equal(await renderHtml(PAGE,'ClutchCard',{matches:[{}]}),'');
+  // Like the other overview cards, it links to its page.
+  const raw=await renderHtml(PAGE,'ClutchCard',{matches});
+  assert.match(html,/Clutch stats 5 won of 9 opportunities ?, 89% attempted 89% attempted Clutches 1v1/);
+  // Phones: the share sits in the description and the badge hides, so the title keeps one line.
+  assert.match(raw,/<span class="sm:hidden">, (<!-- -->)?89(<!-- -->)?% attempted<\/span>/);
+  assert.match(raw,/data-slot="hint" class="[^"]*max-sm:hidden/);
+  const own=await renderHtml(PAGE,'ClutchCard',{matches,link:false,titleId:'x'});
+  assert.doesNotMatch(own,/% attempted<\/span><\/div>|max-sm:hidden" data-state|<a /);
+  assert.match(raw,/<a href="[^"]*\/clutches"[^>]*>Clutches<svg/);
+  assert.match(raw,/aria-labelledby="overview-clutch-title"/);
 });
 
 test('recent matches show result, score, K/D/A and RR per row',async()=>{
@@ -204,5 +217,5 @@ test('cards whose title says it all carry no description line',async()=>{
   const duos=read('Duos.jsx');
   assert.match(duos,/<CardDescription>Players you met in at least two counted matches/);
   assert.match(duos,/<CardDescription>Repeated opponents with unusually low combat stats/);
-  assert.match(overview,/<CardDescription>\{win\} won of \{total\} opportunities<\/CardDescription>/);
+  assert.match(overview,/<CardDescription>\{win\} won of \{total\} opportunities[{<]/);
 });

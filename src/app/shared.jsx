@@ -1,6 +1,6 @@
 import {ChevronDown} from 'lucide-react';
 import {RANK_ICONS} from '@/engine/rank-icons.mjs';
-import {avgLabel,lobbyRankText,lobbyRR,navigateToPage,pageHref,PARTY_LABELS,tierRR,toggleIncludeReset} from '@/engine/core.mjs';
+import {avgLabel,lobbyRankText,lobbyRR,navigateToPage,pageHref,PARTY_LABELS,rColor,tierRR,toggleIncludeReset} from '@/engine/core.mjs';
 import {useEngine,useIsMobile} from '@/app/hooks.js';
 import {Card,CardContent} from '@/components/ui/card';
 import {cn} from '@/lib/utils';
@@ -58,12 +58,20 @@ export function toneClass(value,neutral=1){
   return value>neutral?'text-positive':'text-negative';
 }
 
+// An average lobby rank in a table cell: the rank name in its rank colour
+// (the engine's RANK_COLORS, the same palette as the --rank accent), no icon
+// (22 Nov 2026, on request). Every table that shows an average lobby rank
+// uses this, so the look is the same site-wide.
+export function LobbyRankText({tier,className,children}){
+  return <span className={cn('font-medium',className)} style={{color:rColor(tier)}} data-slot="lobby-rank-text">{children??avgLabel(tier)}</span>;
+}
+
 export function LobbyValue({sum,count}){
   if(!count)return '—';
   const lobby=tierRR(sum/count),rr=lobbyRR(lobby);
   return (
-    <span className="flex items-center gap-2 whitespace-nowrap" title={lobbyRankText(sum/count)}>
-      <RankIcon tier={lobby.tier} size={22}/>{avgLabel(lobby.tier)}{rr!=null&&<> <span className="text-muted-foreground">({rr} RR)</span></>}
+    <span className="whitespace-nowrap" title={lobbyRankText(sum/count)}>
+      <LobbyRankText tier={lobby.tier}/>{rr!=null&&<> <span className="text-muted-foreground">({rr} RR)</span></>}
     </span>
   );
 }

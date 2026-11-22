@@ -1,6 +1,6 @@
 # Your stats with each duo
 
-The Duos page shows each party teammate's K/D, average ACS and Avg PS beside the searched player's own figures in the matches they shared. Both come from the same set of shared matches.
+Since 22 Nov 2026 the Duos page shows only each party teammate's own K/D, average ACS and Avg PS in the matches you shared, not the searched player's figures beside them (see "Current display"). The engine still collects your own figures per teammate, as described below; nothing on the page reads them now.
 
 ## What is counted
 
@@ -12,7 +12,35 @@ The Duos page shows each party teammate's K/D, average ACS and Avg PS beside the
 
 Matches without `myStats` are still skipped for the whole row, as before, so the teammate figures and yours share one match set.
 
-## Display: teammates table (20 Nov 2026)
+## Current display: one teammates table (22 Nov 2026)
+
+On request Teammates is one plain sortable table (`DuoRoster` in
+`src/app/pages/Duos.jsx`), shown bare like the party-size table above it: no
+card or card title around it (`TableSection` labelled "Teammates", standalone
+table frame). This came after a same-day round of alternatives the user turned
+down:
+
+- **Columns**: teammate, matches together, win rate (W–L–D record in its
+  tooltip), your net RR together, avg lobby, and the teammate's own K/D, ACS
+  and PS in your shared matches (coverage counts in the tooltips). Default
+  order is matches together; every column sorts; ten rows per page with the
+  10/25/50 picker. Phones get the shared card list, as other tables do.
+- **Not shown**: your own stats with each teammate. The highlight tiles, the
+  expandable you-vs-them comparison rows (`DuoComparison`) and the act
+  baseline (`duoBaseline`) were removed.
+- **Colour**: only RR is green or red.
+
+Tried and dropped on 22 Nov 2026, in order:
+
+- A list + detail panel (the user's pick from teammate cards, list + detail
+  panel and a flat table), restoring the 17 Nov duo chemistry layout below.
+  The user then asked for "a normal list with only the duos stats".
+- That table plus a separate "Your form by teammate" card: your K/D, ACS or PS
+  with each teammate minus your act average, as diverging bars sorted best
+  first, with small samples faded. The user asked to drop it and keep one
+  teammates table.
+
+## Earlier display: teammates table with highlights (20 Nov 2026, replaced 22 Nov 2026)
 
 On request the Teammates card was redesigned from scratch (`DuoRoster` in
 `src/app/pages/Duos.jsx`), replacing the pick-a-partner "duo chemistry"

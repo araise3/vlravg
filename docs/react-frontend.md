@@ -211,6 +211,10 @@ pickers, and every toggle.
   won/lost/saved split as one segmented bar. The tiles have the pre-React
   colours again (`CLUTCH_COLORS`: 1v1 green `#22c55e`, teal, blue, indigo,
   1v5 purple `#a855f7`, white text); a tile with no situations stays neutral.
+  Like the cards above, it links to its full page (Clutches, beside the
+  attempted badge); the Clutches page shows the same card at the top without
+  the link (22 Nov 2026). On phones the attempted share moves from the badge
+  into the description line, so the title stays on one line beside the link.
 - RR trend, last 20 matches (`RecentRRCard`), replacing the full trend chart
   on request (17 Nov 2026), in the style of compact tracker cards: net RR in
   the header, a cumulative RR line from 0 with one dot per match coloured by
@@ -224,6 +228,14 @@ pickers, and every toggle.
 
 `RankIcon` keeps each icon's aspect ratio (`object-contain`; the embedded
 Immortal 3 icon is 40×37) and switches to the 256px PNG from 32px up.
+
+Average lobby ranks in tables (22 Nov 2026, on request) show no rank icon:
+the rank name is coloured with its rank colour instead, through one shared
+`LobbyRankText` in `src/app/shared.jsx` (`rColor`, the engine's `RANK_COLORS`,
+the same palette as the `--rank` accent). It covers `LobbyValue` (the Party
+size, Teammates and Servers tables), the Performance by lobby rank table and
+the Overview lobby card's party table. Rank icons outside tables (the lobby
+card hero, the header, match cards, charts) are unchanged.
 
 Removed: the "Most-played lobbies" preview, the scrolling recent-match list,
 the "Net RR (last 20)" KPI card and the full RR trend chart (both folded
