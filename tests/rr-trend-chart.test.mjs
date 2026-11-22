@@ -56,6 +56,25 @@ test('the trend shows an Immortal+ RR scale, a peak label and the end label',asy
   assert.match(svg,/aria-label="Match 20 of 20, [^"]*Radiant, 560 RR after −15 RR change"/);
 });
 
+test('the end label moves clear of a nearby peak and its dots instead of sitting on them',async()=>{
+  const {placeEndLabel}=await load('/src/app/pages/RR.jsx');
+  // The reported shape: the line peaks ~45px left of the end, 20px higher, with a dip just before the end.
+  const ys=[160,150,140,130,120,110,103,98,92,87,95,100,112,118,107];
+  const x=i=>700+i*10,textWidth='Rad, 370 RR'.length*6.6,dotRadius=4;
+  const spot=placeEndLabel({ys,x,left:12,top:22,bottom:264,textWidth,dotRadius});
+  assert.equal(spot.x,x(ys.length-1));
+  // No dot (centre ± radius) touches the label's box (13px above the baseline to 4px below, plus the halo).
+  ys.forEach((py,i)=>{
+    const inX=x(i)+dotRadius>=spot.x-textWidth&&x(i)-dotRadius<=spot.x;
+    assert.ok(!(inX&&py+dotRadius>=spot.y-15&&py-dotRadius<=spot.y+6),`dot ${i} at y ${py} overlaps a label at y ${spot.y}`);
+  });
+  // The old pick (12px above the end) sat on the peak; the nearest clear spot is just under the dip.
+  assert.notEqual(spot.y,95);
+  assert.equal(spot.y,139);
+  // An open end keeps the first spot, 12px above the end point.
+  assert.deepEqual(placeEndLabel({ys:[200,190,180,170,160],x,left:12,top:22,bottom:264,textWidth,dotRadius}),{x:x(4),y:148});
+});
+
 test('charts below Immortal keep the rank column and add no thresholds',async()=>{
   const matches=asMatches([point(1550,18,0),point(1580,18,1),point(1620,19,2)]);
   const svg=await renderHtml('/src/app/pages/RR.jsx','RRTrendChart',{matches,range:'all'});

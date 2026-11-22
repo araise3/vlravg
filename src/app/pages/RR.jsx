@@ -62,6 +62,51 @@ export function rrTrendDateTicks(points,plotWidth,minGap,dateLabel){
   return ticks.map((tick,k)=>({...tick,anchor:k===0?'start':tick.i===points.length-1?'end':'middle'}));
 }
 
+// One dot per match while they stay apart; dense ranges show the line alone.
+function showDotsFor(spacing){return spacing>=8;}
+
+// The end label (right-aligned to the last point) takes the nearest spot whose
+// box the line and its dots stay clear of: above, left of, then below the end
+// point, then further up or down in 4px steps. The old check tested the bare
+// line only and fell back to "above" when that was blocked, so a label could
+// sit on a nearby peak's dots (22 Nov 2026, on request). `ys` are the points'
+// plotted y values; `x(i)` places point i. Text boxes run from 13px above the
+// baseline to 4px below it; the line, the dots and the label's halo add `pad`.
+export function placeEndLabel({ys,x,left,top,bottom,textWidth,dotRadius=0}){
+  const last=ys.length-1,ex=x(last),ey=ys[last];
+  const clampY=value=>Math.max(top+2,Math.min(bottom-4,value));
+  if(last<1)return{x:ex,y:clampY(ey-12)};
+  const spacing=(x(last)-x(0))/last,pad=Math.max(3,dotRadius+3);
+  const lineYAt=px=>{
+    if(px<=x(0))return ys[0];
+    if(px>=ex)return ey;
+    const at=(px-x(0))/spacing,i=Math.floor(at);
+    return ys[i]+(ys[i+1]-ys[i])*(at-i);
+  };
+  const hits=spot=>{
+    const boxTop=spot.y-13-pad,boxBottom=spot.y+4+pad;
+    let count=0;
+    for(let px=Math.max(left,spot.x-textWidth-pad);px<=spot.x+pad;px+=2){const ly=lineYAt(px);if(ly>=boxTop&&ly<=boxBottom)count++;}
+    return count;
+  };
+  // Further spots go by how far the box's middle (4.5px above the baseline)
+  // moves from the end point, so the label stays as close as it can.
+  const further=[];
+  for(let d=4;ey-12-d>=top+2||ey+20+d<=bottom-4;d+=4){
+    if(ey-12-d>=top+2)further.push({x:ex,y:ey-12-d});
+    if(ey+20+d<=bottom-4)further.push({x:ex,y:ey+20+d});
+  }
+  further.sort((a,b)=>Math.abs(a.y-4.5-ey)-Math.abs(b.y-4.5-ey));
+  const placed=[{x:ex,y:ey-12},{x:ex-10,y:ey+4},{x:ex,y:ey+20},...further].map(spot=>({...spot,y:clampY(spot.y)}));
+  let best=null,bestHits=Infinity;
+  for(const spot of placed){
+    const count=hits(spot);
+    if(count===0)return spot;
+    if(count<bestHits){best=spot;bestHits=count;}
+  }
+  return best;
+}
+
 export function RRTrendChart({matches,range}){
   const [ref,measured]=useElementWidth();
   const [active,setActive]=useState(null);
@@ -118,29 +163,14 @@ export function RRTrendChart({matches,range}){
   const dateTicks=rrTrendDateTicks(points,plotWidth,compact?76:104,dateLabel);
   const resultClass=m=>m.won===true?'win':m.won===false?'loss':'draw';
   const last=points.length-1,end=points[last],endRank=rrPositionFromElo(end.value,end.match.myPostTierId);
-  // The end label takes the first spot (above, left of, then below the end
-  // point) whose box the line does not cross.
-  const lineYAt=px=>{
-    if(points.length===1||px<=left)return y(points[0].value);
-    const at=Math.min(points.length-1.000001,(px-left)/spacing),i=Math.floor(at);
-    return y(points[i].value)+(y(points[i+1].value)-y(points[i].value))*(at-i);
-  };
-  const endText=`${avgLabelShort(endRank.tier)}, ${endRank.rr} RR`,endTextWidth=endText.length*6.6;
-  const endY=y(end.value);
-  const endLabel=[
-    {x:x(last),y:endY-12},{x:x(last)-10,y:endY+4},{x:x(last),y:endY+20},
-  ].map(spot=>({...spot,y:Math.max(top+2,Math.min(bottom-4,spot.y))})).find(spot=>{
-    const x0=Math.max(left,spot.x-endTextWidth),boxTop=spot.y-13,boxBottom=spot.y+4;
-    for(let px=x0;px<=spot.x;px+=2){const ly=lineYAt(px);if(ly>=boxTop&&ly<=boxBottom)return false;}
-    return true;
-  })??{x:x(last),y:endY-12};
+  const endText=`${avgLabelShort(endRank.tier)}, ${endRank.rr} RR`;
+  const endLabel=placeEndLabel({ys:points.map(p=>y(p.value)),x,left,top,bottom,textWidth:endText.length*6.6,dotRadius:showDotsFor(spacing)?Math.max(3,Math.min(4,spacing/3)):0});
   // The range's peak gets its own label when it is clearly above the end and
   // far enough left of the end label not to collide with it.
   const peakIndex=values.lastIndexOf(high);
   const peak=peakIndex!==last&&high-end.value>=20&&x(last)-x(peakIndex)>(compact?130:160)
     ?{i:peakIndex,rank:rrPositionFromElo(high,points[peakIndex].match.myPostTierId)}:null;
-  // One dot per match while they stay apart; dense ranges show the line alone.
-  const showDots=spacing>=8;
+  const showDots=showDotsFor(spacing);
   const tip=active!=null?(()=>{
     const {match,value}=points[active],rank=rrPositionFromElo(value,match.myPostTierId);
     const duo=duoInfos[active],run=duoRunAt[active];
