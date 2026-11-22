@@ -28,6 +28,40 @@ export function loadFixture(stressCase='demo'){
   const climbPre=[];
   for(let i=climbCount-1,elo=2100;i>=0;i--){climbPre[i]=elo;elo+=climbDelta(i);}
   const climbTier=elo=>elo<2190?24:elo<2310?25:elo<2560?26:27;
+  // demo and climb: round-by-round kills and plants with a few clutch rounds
+  // per match, for the Clutches page and the Overview clutch card. Red (the
+  // searched player's team) attacks rounds 1–12. Agents avoid Sage and Clove
+  // so no revive logic applies.
+  const clutchAgents=['Jett','Omen','Sova','Killjoy','Raze','Breach','Cypher','Reyna','Skye','Viper'];
+  function clutchRounds(i,players,myRounds,enemyRounds){
+    const total=myRounds+enemyRounds,red=players.slice(0,5),blue=players.slice(5);
+    const order=Array.from({length:total},(_,r)=>r).sort((a,b)=>(a*7919+i*31)%total-(b*7919+i*31)%total);
+    const winners=[];order.forEach((r,n)=>{winners[r]=n<myRounds?'Red':'Blue';});
+    const ref=(p,team)=>({puuid:p.puuid,name:p.name,tag:p.tag,team});
+    const rounds=[],kills=[];
+    for(let r=0;r<total;r++){
+      const attack=r<12||r>=24&&r%2===0?'Red':'Blue';
+      const round={winning_team:winners[r],result:'Elimination',plant:null,defuse:null,
+        stats:players.map((p,j)=>({player:ref(p,j<5?'Red':'Blue'),received_penalty:false,was_afk:false}))};
+      const kill=(t,killer,killerTeam,victim,victimTeam)=>kills.push({round:r,time_in_round_in_ms:t,killer:ref(killer,killerTeam),victim:ref(victim,victimTeam)});
+      if((r+i)%3===0){
+        const type=(r+i)%13===0?5:1+(r*7+i)%4;
+        const alive=blue.slice(5-type);
+        blue.slice(0,5-type).forEach((enemy,n)=>kill(10000+n*1000,red[1+n%4],'Red',enemy,'Blue'));
+        red.slice(1).forEach((mate,n)=>kill(30000+n*1000,alive[0],'Blue',mate,'Red'));
+        // Spike down before the clutch began (25s) or after it (40s).
+        if(r%4===0)round.plant={round_time_in_ms:attack==='Red'?40000:25000,player:ref(attack==='Red'?red[0]:alive[0],attack)};
+        if(r%4===2)round.plant={round_time_in_ms:25000,player:ref(attack==='Red'?red[1]:alive[0],attack)};
+        if(winners[r]==='Red')alive.forEach((enemy,n)=>kill(45000+n*1500,red[0],'Red',enemy,'Blue'));
+        else if(r%2){if(type>1)kill(45000,red[0],'Red',alive[1],'Blue');kill(50000,alive[0],'Blue',red[0],'Red');}
+      }else{
+        const losers=winners[r]==='Red'?blue:red,team=winners[r]==='Red'?'Blue':'Red',side=winners[r]==='Red'?red:blue;
+        losers.forEach((victim,n)=>kill(12000+n*2000,side[n%5],winners[r],victim,team));
+      }
+      rounds.push(round);
+    }
+    return{rounds,kills};
+  }
   function stressRawMatch(i){
     const overtime=stressWorst&&stressCase!=='draws'&&i%5===0,draw=stressCase==='draws'||stressWorst&&i%5===2;
     const lost=climb?!climbWon(i):i%2;
@@ -42,6 +76,7 @@ export function loadFixture(stressCase='demo'){
         :{id:demo&&j?demoLobbyTier(i,j):18,patched:demo&&j?undefined:'Diamond 1'},
       stats:stressWorst&&i%5===3&&j===0?{}:{kills:j===0&&overtime?72:j===0&&stressWorst&&i%5===1?0:18-j,deaths:j===0&&stressWorst&&i%5===1?0:12+j,assists:8,score:(j===0&&overtime?450:stressWorst&&i%5===2&&j===5?480:stressWorst&&i%5===4&&j===1?480:240-j*12)*rounds,rounds_played:rounds,damage:{dealt:(j===0&&overtime?300:160)*rounds},shots:{head:30,body:60,leg:10}},
       performance:{score:stressWorst&&i%5===3?null:230-j*10},
+      agent:{name:clutchAgents[(j+i%4)%clutchAgents.length]},
     }));
     const matchId='fixture-'+i;
     if(!(stressWorst&&i%5===3)){
@@ -63,7 +98,8 @@ export function loadFixture(stressCase='demo'){
         };
       }
     }
-    return{metadata:{match_id:matchId,map:{name:['Abyss','Ascent','Sunset','Lotus','Breeze'][i%5]},cluster:stressWorst?'Singapore':'Frankfurt',started_at:new Date(Date.UTC(2026,10,15,22,30)-i*(climb?27000000:7200000)).toISOString(),game_length_in_ms:(overtime?105:35)*60000,season:{short:'e10a6',id:'fixture-act'}},players,teams:[{team_id:'Red',rounds:{won:myRounds}},{team_id:'Blue',rounds:{won:enemyRounds}}]};
+    const roundData=demo||climb?clutchRounds(i,players,myRounds,enemyRounds):{};
+    return{...roundData,metadata:{match_id:matchId,map:{name:['Abyss','Ascent','Sunset','Lotus','Breeze'][i%5]},cluster:stressWorst?'Singapore':'Frankfurt',started_at:new Date(Date.UTC(2026,10,15,22,30)-i*(climb?27000000:7200000)).toISOString(),game_length_in_ms:(overtime?105:35)*60000,season:{short:'e10a6',id:'fixture-act'}},players,teams:[{team_id:'Red',rounds:{won:myRounds}},{team_id:'Blue',rounds:{won:enemyRounds}}]};
   }
   const count=['empty','loading','error'].includes(stressCase)?0:stressCase==='one'?1:climb?climbCount:/^\d+$/.test(stressCase)?Number(stressCase):stressWorst?30:12;
   const raw=Array.from({length:count},(_,i)=>stressRawMatch(i));

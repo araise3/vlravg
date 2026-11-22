@@ -11,6 +11,7 @@ import {LobbyRankPage} from '@/app/pages/LobbyRank.jsx';
 import {ServersPage} from '@/app/pages/Servers.jsx';
 import {RRPage} from '@/app/pages/RR.jsx';
 import {MatchesPage} from '@/app/pages/Matches.jsx';
+import {ClutchesPage} from '@/app/pages/Clutches.jsx';
 import {NamesPage} from '@/app/pages/Names.jsx';
 import {ReplaysPage} from '@/app/pages/Replays.jsx';
 import {Alert,AlertDescription,AlertTitle} from '@/components/ui/alert';
@@ -20,7 +21,7 @@ import {cn} from '@/lib/utils';
 
 const NAV=[
   ['overview','Overview'],['duos','Duos'],['lobby-rank','Lobby Rank'],['servers','Servers'],
-  ['rr','RR Breakdown'],['matches','Match History'],['names','Name History'],['replays','Replays'],
+  ['rr','RR Breakdown'],['clutches','Clutches'],['matches','Match History'],['names','Name History'],['replays','Replays'],
 ];
 
 // shadcn Tabs as page navigation. Each trigger is a real link (new-tab and
@@ -105,6 +106,7 @@ export default function App(){
           <div hidden={page!=='lobby-rank'}><LobbyRankPage/></div>
           <div hidden={page!=='servers'}><ServersPage active={page==='servers'}/></div>
           <div hidden={page!=='rr'}><RRPage/></div>
+          <div hidden={page!=='clutches'}><ClutchesPage/></div>
           <div hidden={page!=='matches'}><MatchesPage/></div>
           <div hidden={page!=='names'}><NamesPage/></div>
           <div hidden={page!=='replays'}><ReplaysPage active={page==='replays'}/></div>

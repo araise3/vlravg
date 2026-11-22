@@ -135,6 +135,7 @@ end of `src/index.css` (they outrank Tailwind's utility layer):
   card (210 px map-art panel, 25 px scoreline, uppercase result tag, bold
   stats, deaths in grey rather than red). On phones the stats use the old
   two-column layout, which also fixes the cut-off average lobby.
+- Clutches (22 Nov 2026): see [clutches-page.md](clutches-page.md).
 - Name History marks the current Riot ID in blue text.
 
 Kept from the rewrite: the larger team and enemy rank chart, keyboard

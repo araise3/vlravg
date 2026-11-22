@@ -829,7 +829,7 @@ async function uploadReplay(matchId,file,host){
   scheduleReplayPoll();
 }
 
-const PAGE_SLUGS={overview:'',duos:'duos',matches:'matches','lobby-rank':'lobbyrank',servers:'servers',rr:'rr',names:'names',replays:'replays'};
+const PAGE_SLUGS={overview:'',duos:'duos',matches:'matches','lobby-rank':'lobbyrank',servers:'servers',rr:'rr',clutches:'clutches',names:'names',replays:'replays'};
 function playerRouteUrl(name,tag,page='overview',act=''){
   const base=`/player/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`;
   const suffix=PAGE_SLUGS[page];
@@ -872,8 +872,8 @@ function loadPlayerFromRoute(){
   runAnalysis(undefined,{fromUrl:true,initialAct:route.act});
 }
 
-const PAGE_TITLES={overview:'vlravg — Average Lobby Rank & Valorant Stats',duos:'Duos — vlravg',matches:'Match History — vlravg','lobby-rank':'Lobby Rank — vlravg',servers:'Servers — vlravg',rr:'RR Breakdown — vlravg',names:'Name History — vlravg',replays:'Replay Import — vlravg'};
-const PROFILE_TITLES={overview:'Overview',duos:'Duos',matches:'Match History','lobby-rank':'Lobby Rank',servers:'Servers',rr:'RR Breakdown',names:'Name History',replays:'Replay Import'};
+const PAGE_TITLES={overview:'vlravg — Average Lobby Rank & Valorant Stats',duos:'Duos — vlravg',matches:'Match History — vlravg','lobby-rank':'Lobby Rank — vlravg',servers:'Servers — vlravg',rr:'RR Breakdown — vlravg',clutches:'Clutches — vlravg',names:'Name History — vlravg',replays:'Replay Import — vlravg'};
+const PROFILE_TITLES={overview:'Overview',duos:'Duos',matches:'Match History','lobby-rank':'Lobby Rank',servers:'Servers',rr:'RR Breakdown',clutches:'Clutches',names:'Name History',replays:'Replay Import'};
 let playerRoute=null;
 function applyPage(focus=false){
   playerRoute=parsePlayerRoute();
@@ -884,7 +884,7 @@ function applyPage(focus=false){
     path='/lobbyrank';
     history.replaceState(history.state,'',path+location.search+location.hash);
   }
-  activePage=playerRoute?.page||(path==='/duos'?'duos':path==='/matches'?'matches':path==='/lobbyrank'?'lobby-rank':path==='/servers'?'servers':path==='/rr'?'rr':path==='/names'?'names':path==='/replays'?'replays':'overview');
+  activePage=playerRoute?.page||(path==='/duos'?'duos':path==='/matches'?'matches':path==='/lobbyrank'?'lobby-rank':path==='/servers'?'servers':path==='/rr'?'rr':path==='/clutches'?'clutches':path==='/names'?'names':path==='/replays'?'replays':'overview');
   document.title=playerRoute?`${playerRoute.name}#${playerRoute.tag} — ${PROFILE_TITLES[activePage]} — vlravg`:PAGE_TITLES[activePage];
   if(focus)pageFocusSignal++;
   emit();
@@ -1900,6 +1900,26 @@ function classifyClutchOutcome({won,deathMs}){
   return deathMs==null?'save':'loss';
 }
 
+// Which team attacked each round ('red'/'blue'), for the Clutches page.
+// Only planting rounds say so directly (the planter's team). The other rounds
+// follow the regular-time side pattern: one team attacks rounds 1–12, the
+// other 13–24, then sides swap every overtime round. Which team starts on
+// attack is not assumed: both orientations are tried against the plants, and
+// the pattern is used only when at least one plant exists and every plant
+// agrees with it. Otherwise only planting rounds get a side; the rest stay
+// null (unknown) rather than guessed.
+function roundAttackers(rounds){
+  if(!Array.isArray(rounds))return[];
+  const planted=rounds.map(r=>r?.plant?.player?.team?.toLowerCase()||null);
+  const other=team=>team==='red'?'blue':'red';
+  const pattern=first=>rounds.map((_,i)=>i<12?first:i<24?other(first):i%2===0?first:other(first));
+  const fits=first=>{const sides=pattern(first);return planted.every((team,i)=>!team||team===sides[i]);};
+  const anyPlant=planted.some(Boolean);
+  const first=anyPlant?(fits('red')?'red':fits('blue')?'blue':null):null;
+  const sides=first?pattern(first):[];
+  return rounds.map((_,i)=>planted[i]||sides[i]||null);
+}
+
 /* ── PROCESS MATCH ──────────────────────────────────────── */
 function ratedTeamRank(players,myTeamId,ownTeam){
   if(!myTeamId)return null;
@@ -1940,7 +1960,12 @@ function processMatch(m){
   // sourced game definitions, and for why the old fourth outcome, EXIT,
   // was dropped.
   const clutchAllByPuuid=new Map();
+  // The searched player's counted clutches one by one, for the Clutches
+  // page: null when the match has no round data, [] when it has no clutch.
+  let myClutches=null;
   if(Array.isArray(m.kills)&&Array.isArray(m.rounds)){
+    const attackers=roundAttackers(m.rounds);
+    if(me)myClutches=[];
     const killsByRound=[];
     m.kills.forEach(k=>{(killsByRound[k.round]??=[]).push(k);});
     killsByRound.forEach(arr=>arr.sort((a,b)=>(a.time_in_round_in_ms??0)-(b.time_in_round_in_ms??0)));
@@ -2004,6 +2029,16 @@ function processMatch(m){
           countThis=detectedAlt!=null&&detectedAlt.clutchType===clutchType&&outcomeAlt===outcome;
         }
         if(countThis)byType[clutchType][outcome]++;
+        if(countThis&&me&&p.puuid===me.puuid){
+          const attacker=attackers[r];
+          const plantMs=roundData.plant?.round_time_in_ms;
+          myClutches.push({
+            round:r+1,type:clutchType,outcome,kills:detected.killsAfterClutch,
+            side:attacker?(attacker===pTeam?'attack':'defense'):null,
+            // Spike already down when the last teammate died.
+            spikeDown:Number.isFinite(plantMs)&&Number.isFinite(detected.clutchStartMs)?plantMs<=detected.clutchStartMs:Number.isFinite(plantMs)?null:false,
+          });
+        }
       }
       if(Object.values(byType).some(t=>t.win||t.loss||t.save))clutchAllByPuuid.set(p.puuid,byType);
     }
@@ -2147,7 +2182,7 @@ function processMatch(m){
   // Whether Rank Shield absorbed this match's loss (badge didn't drop even
   // though myRR above still carries the normal negative payout).
   const myDerankProtected=_derankProtectedByMatchId[matchId]??false;
-  return{mapName,serverName,startedAt,startedAtMs,durationMs:durationMs||myRRDetails?.duration||durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,avgTeamRank,avgEnemyRank,lowRated,ratedCount,myStats,players:playersOut,myTierId,myRankKnown,myTierName,myRR,myRRDetails,myPreRR,myPreTierId,myPostRR,myPostTierId,myRefundedRR,myDerankProtected,myPartyPenalty,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids,myClutchAll,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
+  return{mapName,serverName,startedAt,startedAtMs,durationMs:durationMs||myRRDetails?.duration||durationMs,won,myR,opR,avgRank,avgRankRaw:rawAvg,avgTeamRank,avgEnemyRank,lowRated,ratedCount,myStats,players:playersOut,myTierId,myRankKnown,myTierName,myRR,myRRDetails,myPreRR,myPreTierId,myPostRR,myPostTierId,myRefundedRR,myDerankProtected,myPartyPenalty,partySize,myPartyId,matchMvpPuuid,teamMvpPuuids,myClutchAll,myClutches,myAgent:me?.agent?.name??null,myAgentId:me?.agent?.id??null,matchId,seasonShort:meta.season?.short??null,seasonId:meta.season?.id??null};
 }
 
 // Per-round stats for one player, from the v4 rounds[] and kills[] arrays.
@@ -3835,6 +3870,50 @@ function clutchTotals(matches){
   return totals;
 }
 
+// Everything the Clutches page shows, from each match's myClutches. Win rate
+// here is won ÷ situations, as on the Overview's clutch card (a save is a
+// situation that was not won). Matches without round data are counted
+// separately so the page can say how much it covers.
+const CLUTCH_SPIKE_STATES=[
+  ['attack',true,'Attack, spike down','Your team planted before you were left alone: hold the spike'],
+  ['attack',false,'Attack, before the plant','No spike down yet: plant or clear the site'],
+  ['defense',true,'Defense, spike down','The spike was down: retake and defuse'],
+  ['defense',false,'Defense, before the plant','No spike down yet: stop the plant'],
+];
+function clutchBreakdown(matches){
+  const tally=()=>({total:0,win:0,loss:0,save:0,kills:0});
+  const add=(t,c)=>{t.total++;t[c.outcome]++;t.kills+=c.kills;};
+  const all=tally(),byType={1:tally(),2:tally(),3:tally(),4:tally(),5:tally()};
+  const spike=new Map(CLUTCH_SPIKE_STATES.map(([side,down])=>[`${side}:${down}`,tally()]));
+  const unknownSpike=tally();
+  const byMap=new Map(),byAgent=new Map(),highlights=[];
+  let covered=0;
+  const group=(map,key,c)=>{if(!key)return;if(!map.has(key))map.set(key,tally());add(map.get(key),c);};
+  matches.forEach(m=>{
+    if(!Array.isArray(m.myClutches))return;
+    covered++;
+    m.myClutches.forEach(c=>{
+      add(all,c);add(byType[c.type],c);
+      const state=c.side&&c.spikeDown!=null?spike.get(`${c.side}:${c.spikeDown}`):null;
+      add(state||unknownSpike,c);
+      group(byMap,m.mapName??m.map,c);group(byAgent,m.myAgent,c);
+      if(c.outcome==='win'&&c.type>=2)highlights.push({...c,matchId:m.matchId,mapName:m.mapName??m.map??null,agent:m.myAgent??null,agentId:m.myAgentId??null,
+        startedAtMs:m.startedAtMs??null,myR:m.myR??null,opR:m.opR??null,matchWon:m.won});
+    });
+  });
+  const rate=t=>t.total?t.win/t.total*100:null;
+  const rows=map=>[...map].map(([name,t])=>({name,...t,winRate:rate(t)})).sort((a,b)=>b.total-a.total||collatorCompare(a.name,b.name));
+  highlights.sort((a,b)=>b.type-a.type||b.kills-a.kills||(b.startedAtMs??0)-(a.startedAtMs??0));
+  return{
+    matches:matches.length,covered,...all,winRate:rate(all),
+    byType:[1,2,3,4,5].map(type=>({type,...byType[type],winRate:rate(byType[type])})),
+    bySpike:CLUTCH_SPIKE_STATES.map(([side,down,label,note])=>{const t=spike.get(`${side}:${down}`);return{side,spikeDown:down,label,note,...t,winRate:rate(t)};}),
+    unknownSpike:unknownSpike.total,
+    byMap:rows(byMap),byAgent:rows(byAgent),highlights,
+  };
+}
+function collatorCompare(a,b){return String(a).localeCompare(String(b));}
+
 /* ── LOBBY RANK ──────────────────────────────────────────── */
 function renderRankByRankCard(){
   const available=new Set(statMatches.filter(m=>m.myStats&&m.avgRank!=null&&Math.round(m.avgRank)>=3)
@@ -3927,6 +4006,35 @@ function loadMatchMapMetadata(){
       }).catch(()=>new Map());
   }
   return matchMapMetadataPromise;
+}
+// Agent icons and colours, optional like the map art (22 Nov 2026, for the
+// Clutches page). Keyed by lower-case name and UUID. The colour is the first
+// of valorant-api's backgroundGradientColors (RRGGBBAA): the dark tint the
+// game puts behind the agent, used here as the icon tile's background. Only
+// https media.valorant-api.com icons and plain hex colours are kept.
+function parseAgentMetadata(j){
+  const agents=new Map();
+  for(const agent of Array.isArray(j?.data)?j.data:[]){
+    if(agent?.isPlayableCharacter===false)continue;
+    let icon=null;
+    try{
+      const url=new URL(agent.displayIconSmall||agent.displayIcon);
+      if(url.protocol==='https:'&&url.hostname==='media.valorant-api.com')icon=url.href;
+    }catch(_){}
+    const hex=agent.backgroundGradientColors?.[0];
+    const color=typeof hex==='string'&&/^[0-9a-f]{6}([0-9a-f]{2})?$/i.test(hex)?`#${hex.slice(0,6).toLowerCase()}`:null;
+    if(!icon&&!color)continue;
+    const art={name:agent.displayName,icon,color};
+    for(const key of [agent.displayName,agent.uuid])if(typeof key==='string')agents.set(key.toLowerCase(),art);
+  }
+  return agents;
+}
+let agentMetadataPromise=null;
+function loadAgentMetadata(){
+  agentMetadataPromise??=fetch('https://valorant-api.com/v1/agents?isPlayableCharacter=true',{signal:AbortSignal.timeout(10000)})
+    .then(r=>{if(!r.ok)throw new Error('Agent metadata unavailable');return r.json();})
+    .then(parseAgentMetadata).catch(()=>new Map());
+  return agentMetadataPromise;
 }
 function matchAward(m){
   const myPuuid=PUUID||m.players?.find(p=>p.name?.toLowerCase()===PLAYER.toLowerCase()&&p.tag?.toLowerCase()===TAG.toLowerCase())?.puuid;
@@ -4079,7 +4187,7 @@ export {
   nameHistoryActRange,computeWintradeSignals,overviewRecentMatches,decidedWinRate,
   winRateLabel,winRateTone,rrSigned,computeRRStats,isRREligible,rrPositionFromElo,
   rrMovementRows,rrMovementXAxis,rrPayoutEstimates,rrMarginAdjusted,RR_MARGIN_REFERENCE,rrPayoutEvenPoint,rrPayoutSegments,rrScopedMatches,RR_RANGES,
-  rrDuoInfo,rrSessionRows,RR_SESSION_BREAK_MS,rrReportedStats,buildRRScoreRows,rrRankRows,clutchTotals,lobbyTeamsChartRows,
-  lobbyTeamsGapLabel,loadMatchMapMetadata,matchAward,matchCardPlayerRank,dayHeaderLabel,
+  rrDuoInfo,rrSessionRows,RR_SESSION_BREAK_MS,rrReportedStats,buildRRScoreRows,rrRankRows,clutchTotals,clutchBreakdown,roundAttackers,lobbyTeamsChartRows,
+  lobbyTeamsGapLabel,loadMatchMapMetadata,loadAgentMetadata,parseAgentMetadata,matchAward,matchCardPlayerRank,dayHeaderLabel,
   scoreMarginDistribution,
 };

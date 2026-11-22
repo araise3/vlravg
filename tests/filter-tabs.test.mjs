@@ -60,7 +60,7 @@ test('pages have no visible title or description; the title stays for screen rea
     }
   }
   // App.jsx focuses `${page}-title` after navigation; every page keeps one.
-  assert.deepEqual(ids.sort(),['duos-title','lobby-rank-title','matches-title','names-title','overview-title','replays-title','rr-title','servers-title']);
+  assert.deepEqual(ids.sort(),['clutches-title','duos-title','lobby-rank-title','matches-title','names-title','overview-title','replays-title','rr-title','servers-title']);
 });
 
 test('the site uses no dot separators in visible text, labels or status lines',async()=>{
