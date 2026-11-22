@@ -306,7 +306,8 @@ two decimals (`RR_MARGIN_SLOPES`, by outcome and the starting tier's rank
 group) before the 5-games / 30 RR average and its act mean; games without a
 known score keep their raw payout. The dots stay actual payouts; tooltips and
 the footnote say the line is at a typical 4-round margin. The even point
-still uses raw payouts. Asked whether margins "balance out" with enough games:
+used raw payouts until 22 Nov 2026, when it became a sustained stretch of
+even play on margin-adjusted payouts (docs/rr-even-point.md). Asked whether margins "balance out" with enough games:
 over a whole act they largely do (the act mean barely moves), but each point
 averages at most 5 nearby games, where one blowout shifts it by about 0.5 RR;
 the holdout gain above is measured at that scale.

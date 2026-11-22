@@ -3728,44 +3728,73 @@ function rrPayoutSegments(estimates){
   return segments;
 }
 
-// Even point: the starting rank where RR per win and RR per loss meet. Riot
-// pays more for wins than it takes for losses while hidden MMR sits above the
-// displayed rank, and the reverse above it, so a player whose payouts trend
-// with rank shows a falling win line and a rising loss line that cross.
-// Straight-line fits of win payout and loss magnitude against starting RR;
-// the point is shown only when the gap's slope is clearly negative
-// (t ≤ −RR_EVEN_MIN_T, from each fit's slope standard error) and the
-// crossing lies inside the observed starting ranks. Party-penalized games
-// are left out, since their payout is scaled down. Held out on 400 corpus
-// players (docs/rr-even-point.md): games within 40 RR of a point fitted on
-// the other half of a player's games had a median win−loss gap of −0.4 RR,
-// against +8.5 below and −3.7 above it.
-const RR_EVEN_MIN_SIDE=8;
-const RR_EVEN_MIN_T=3;
-function rrLineFit(points){
-  const n=points.length;
-  if(n<3)return null;
-  const mx=points.reduce((s,p)=>s+p[0],0)/n,my=points.reduce((s,p)=>s+p[1],0)/n;
-  const sxx=points.reduce((s,p)=>s+(p[0]-mx)**2,0);
-  if(!(sxx>0))return null;
-  const slope=points.reduce((s,p)=>s+(p[0]-mx)*(p[1]-my),0)/sxx,intercept=my-slope*mx;
-  const residual=points.reduce((s,p)=>s+(p[1]-(slope*p[0]+intercept))**2,0);
-  return{n,slope,intercept,se:Math.sqrt(residual/(n-2)/sxx)};
-}
+// Even point (redefined 22 Nov 2026, on request): a sustained stretch of play
+// where RR per win and RR per loss are equal. Riot pays more for wins than it
+// takes for losses while hidden MMR sits above the displayed rank and the
+// reverse above it, so wins and losses paying the same game after game
+// usually means the rank has met hidden MMR. Until 22 Nov this was the
+// crossing of two straight lines fitted against starting rank over the whole
+// act; that drew "Even" where the lines met by extrapolation while the games
+// there were still apart (Ethan#FARM: 2.2–2.9 RR apart at the top of the act,
+// marked "Even at 380 RR").
+// Games in play order, party-penalized ones left out (their payout is scaled
+// down), each payout evened out to the reference margin like the curves.
+// A window of RR_EVEN_WINDOW consecutive games with at least
+// RR_EVEN_MIN_SIDE wins and losses is even when its average win and average
+// loss are within RR_EVEN_MAX_GAP RR. Consecutive even windows form a stretch,
+// trimmed until each half of it is even too; the longest stretch of at least
+// RR_EVEN_MIN_GAMES games is the even point,
+// placed at its games' median starting RR. Thresholds were set on two
+// players (docs/rr-even-point.md), not validated on the corpus.
+const RR_EVEN_WINDOW=16;
+const RR_EVEN_MIN_SIDE=4;
+const RR_EVEN_MAX_GAP=1.5;
+const RR_EVEN_MIN_GAMES=20;
 function rrPayoutEvenPoint(rows){
-  const usable=rows.filter(row=>!(row.penalty>0)&&Number.isFinite(row.net)&&row.net!==0&&Number.isFinite(row.m.myPreRR));
-  const win=rrLineFit(usable.filter(row=>row.m.won===true&&row.net>0).map(row=>[row.m.myPreRR,row.net]));
-  const loss=rrLineFit(usable.filter(row=>row.m.won===false&&row.net<0).map(row=>[row.m.myPreRR,-row.net]));
-  if(!win||!loss||win.n<RR_EVEN_MIN_SIDE||loss.n<RR_EVEN_MIN_SIDE)return null;
-  const gapSlope=win.slope-loss.slope,gapSe=Math.hypot(win.se,loss.se);
-  const t=gapSe>0?gapSlope/gapSe:-Infinity;
-  if(!(t<=-RR_EVEN_MIN_T))return null;
-  const position=(loss.intercept-win.intercept)/gapSlope;
-  const starts=usable.map(row=>row.m.myPreRR);
-  if(!(position>=Math.min(...starts)&&position<=Math.max(...starts)))return null;
-  const nearest=usable.reduce((a,b)=>Math.abs(b.m.myPreRR-position)<Math.abs(a.m.myPreRR-position)?b:a);
-  return{position,payout:win.slope*position+win.intercept,t,wins:win.n,losses:loss.n,
-    winSlope:win.slope,lossSlope:loss.slope,tier:nearest.m.myPreTierId??nearest.m.myTierId};
+  const games=rows
+    .filter(row=>!(row.penalty>0)&&Number.isFinite(row.net)&&row.net!==0&&Number.isFinite(row.m.myPreRR)&&(row.m.won===true||row.m.won===false))
+    .map((row,index)=>({row,index,won:row.net>0,payout:rrMarginAdjusted(row)}))
+    .sort((a,b)=>(a.row.m.startedAtMs||0)-(b.row.m.startedAtMs||0)||a.index-b.index);
+  if(games.length<Math.max(RR_EVEN_WINDOW,RR_EVEN_MIN_GAMES))return null;
+  const mean=list=>list.reduce((sum,game)=>sum+game.payout,0)/list.length;
+  const even=[];
+  for(let i=0;i+RR_EVEN_WINDOW<=games.length;i++){
+    const window=games.slice(i,i+RR_EVEN_WINDOW),wins=window.filter(game=>game.won),losses=window.filter(game=>!game.won);
+    even.push(wins.length>=RR_EVEN_MIN_SIDE&&losses.length>=RR_EVEN_MIN_SIDE&&Math.abs(mean(wins)-mean(losses))<=RR_EVEN_MAX_GAP);
+  }
+  // Windows that overlap a stretch's edges can pull in a few games just
+  // outside it, so each half of a stretch must also be even on its own; the
+  // edge whose half is further apart loses a game until both halves are.
+  const gapOf=list=>{
+    const wins=list.filter(game=>game.won),losses=list.filter(game=>!game.won);
+    return wins.length&&losses.length?mean(wins)-mean(losses):Infinity;
+  };
+  const trim=(first,last)=>{
+    while(last-first+1>=RR_EVEN_MIN_GAMES){
+      const mid=first+((last-first+1)>>1);
+      const head=Math.abs(gapOf(games.slice(first,mid))),tail=Math.abs(gapOf(games.slice(mid,last+1)));
+      if(head<=RR_EVEN_MAX_GAP&&tail<=RR_EVEN_MAX_GAP)return{first,last};
+      if(head>=tail)first++;else last--;
+    }
+    return null;
+  };
+  let best=null;
+  for(let i=0;i<even.length;){
+    if(!even[i]){i++;continue;}
+    let j=i;
+    while(j+1<even.length&&even[j+1])j++;
+    const found=trim(i,j+RR_EVEN_WINDOW-1);
+    if(found&&(!best||found.last-found.first>=best.last-best.first))best=found;
+    i=j+1;
+  }
+  if(!best)return null;
+  const stretch=games.slice(best.first,best.last+1),wins=stretch.filter(game=>game.won),losses=stretch.filter(game=>!game.won);
+  const byStart=stretch.map(game=>game.row.m).sort((a,b)=>a.myPreRR-b.myPreRR),starts=byStart.map(m=>m.myPreRR);
+  const mid=starts.length>>1,position=starts.length%2?starts[mid]:(starts[mid-1]+starts[mid])/2;
+  const nearest=stretch.reduce((a,b)=>Math.abs(b.row.m.myPreRR-position)<Math.abs(a.row.m.myPreRR-position)?b:a).row.m;
+  return{position,games:stretch.length,wins:wins.length,losses:losses.length,winPayout:mean(wins),lossPayout:mean(losses),
+    minRR:starts[0],maxRR:starts.at(-1),minTier:byStart[0].myPreTierId??byStart[0].myTierId,maxTier:byStart.at(-1).myPreTierId??byStart.at(-1).myTierId,startMs:stretch[0].row.m.startedAtMs??null,endMs:stretch.at(-1).row.m.startedAtMs??null,
+    tier:nearest.myPreTierId??nearest.myTierId};
 }
 
 function setRRMovementZoomTier(tier){

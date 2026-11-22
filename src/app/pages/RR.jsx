@@ -548,7 +548,8 @@ export function RRMovementChart({matches,zoomTier}){
   const gainTrend=rrPayoutEstimates(rows,allRows,true),lossTrend=rrPayoutEstimates(rows,allRows,false);
   const even=rrPayoutEvenPoint(allRows);
   const evenLabel=even?rrPositionFromElo(even.position,even.tier).label:null;
-  const evenText=even?`Wins and losses pay about the same from a starting rank of ${evenLabel} (about ${even.payout.toFixed(1)} RR each). Below it wins pay more than losses cost; above it losses cost more. Each 100 RR higher, wins pay ${Math.abs(even.winSlope*100).toFixed(1)} RR ${even.winSlope<0?'less':'more'} and losses cost ${Math.abs(even.lossSlope*100).toFixed(1)} RR ${even.lossSlope>0?'more':'less'}. Fitted on ${even.wins} wins and ${even.losses} losses.`:null;
+  const evenDate=m=>new Date(m).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+  const evenText=even?`Wins and losses paid about the same over ${even.games} games in a row (${even.wins} wins at +${even.winPayout.toFixed(1)} RR, ${even.losses} losses at −${even.lossPayout.toFixed(1)} RR, evened out to a ${RR_MARGIN_REFERENCE}-round margin)${Number.isFinite(even.startMs)&&Number.isFinite(even.endMs)?`, ${evenDate(even.startMs)} to ${evenDate(even.endMs)}`:''}, starting between ${rrPositionFromElo(even.minRR,even.minTier).label} and ${rrPositionFromElo(even.maxRR,even.maxTier).label}. The line is at the stretch's middle starting rank, ${evenLabel}. Wins and losses paying the same for that long usually means your rank had met your hidden MMR.`:null;
   const penalties=rows.filter(row=>row.penalty>0).length;
   const count=[zoomTier!=null?`${avgLabel(zoomTier)} only`:null,`${rows.length} covered ${rows.length===1?'match':'matches'}`,
     penalties?`${penalties} penalized`:null,zoomTier!=null?'double-click to reset':null].filter(Boolean).join(', ');
@@ -717,7 +718,7 @@ export function RRMovementChart({matches,zoomTier}){
             </svg>
           </div>
           </ChartFrame>
-          <p className="text-xs text-muted-foreground">Estimates use 3–5 nearby wins or losses within 30 RR (60 RR where games are sparse, as in a fast climb), blended with the act average, each evened out to a typical {RR_MARGIN_REFERENCE}-round margin (a bigger margin pays about a third of an RR more per round, win or loss). Gaps mean sparse data; faint dots are your actual payouts.{even?' The even point comes from straight-line fits of every win and loss in range (party-penalized games left out); it usually marks where your rank met your hidden MMR this act, which Riot does not show.':''}</p>
+          <p className="text-xs text-muted-foreground">Estimates average your nearby wins and losses, evened out to a {RR_MARGIN_REFERENCE}-round margin. Faint dots are your actual payouts; gaps mean too few games.{even?' The even point marks a stretch of games where wins and losses paid the same, which usually means your rank met your hidden MMR.':''}</p>
         </CardContent>
       </Card>
     </section>

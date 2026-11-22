@@ -126,34 +126,42 @@ test('zooming a rank keeps only that rank and labels its RR from zero',async()=>
 const {rrPayoutEvenPoint:evenPoint}=runInNewContext(html.slice(start,end)+'\n({rrPayoutEvenPoint})',{avgLabelShort:()=>''});
 const fixture=JSON.parse(readFileSync(new URL('./fixtures/rr-even-point-player.json',import.meta.url),'utf8'));
 const fixtureRows=fixture.games.map(([pre,net,tier])=>({net,penalty:0,m:{myPreRR:pre,myPreTierId:tier,won:net>0?true:net<0?false:null}}));
-const sloped=(n=12,{penalty=0}={})=>Array.from({length:n},(_,i)=>{const pre=2200+i*50;
-  return [{net:30-i*2.5,penalty,m:{myPreRR:pre,won:true}},{net:-(8+i*2.5),penalty,m:{myPreRR:pre+5,won:false}}];}).flat();
+const apart=JSON.parse(readFileSync(new URL('./fixtures/rr-even-point-apart.json',import.meta.url),'utf8'));
+const apartRows=apart.games.map(([pre,net,tier,myR,opR,penalty,minutes])=>({net,penalty,m:{myPreRR:pre,myPreTierId:tier,myR,opR,won:net>0,startedAtMs:minutes*60000}}));
+// Games in play order: `gap` RR between wins and losses, alternating win/loss.
+const stretch=(n,gap,{penalty=0,from=2300}={})=>Array.from({length:n},(_,i)=>({net:i%2?-(18+(i%4===1?.5:-.5)):18+gap,penalty,m:{myPreRR:from+i*2,won:!(i%2),startedAtMs:i*3600000}}));
 
-test('even point: a real act where wins shrink and losses grow with rank crosses where both pay about 18 RR',()=>{
+test('even point: a real act where wins and losses paid the same for a stretch of games',()=>{
   const even=evenPoint(fixtureRows);
   assert.ok(even);
-  assert.equal(Math.round(even.position),2776);
-  assert.ok(Math.abs(even.payout-18)<1,'about 18 RR either way at the crossing');
-  assert.ok(even.winSlope<0&&even.lossSlope>0);
-  assert.ok(even.t<=-3);
-  const near=fixtureRows.filter(r=>Math.abs(r.m.myPreRR-even.position)<=40&&r.net!==0);
-  const avg=a=>a.reduce((s,v)=>s+v,0)/a.length;
-  assert.ok(Math.abs(avg(near.filter(r=>r.net>0).map(r=>r.net))-avg(near.filter(r=>r.net<0).map(r=>-r.net)))<1,'games near the line pay evenly');
+  // The stretch: 34 games from 588 to 774 RR, wins +18.9 and losses −18.7 on average; the line sits at its middle.
+  assert.equal(even.games,34);
+  assert.equal(even.position-2100,670);
+  assert.deepEqual([even.minRR-2100,even.maxRR-2100],[588,774]);
+  assert.ok(Math.abs(even.winPayout-even.lossPayout)<=1.5);
 });
 
-test('even point: none for flat payouts, a crossing outside the observed ranks, or too few games',()=>{
-  const flat=Array.from({length:20},(_,i)=>({net:i%2?18+(i%3):-(18+(i%4)),penalty:0,m:{myPreRR:2200+i*10,won:!!(i%2)}}));
-  assert.equal(evenPoint(flat),null);
-  const outside=Array.from({length:12},(_,i)=>[{net:30-i*.5,penalty:0,m:{myPreRR:2200+i*20,won:true}},{net:-(8+i*.5),penalty:0,m:{myPreRR:2205+i*20,won:false}}]).flat();
-  assert.equal(evenPoint(outside),null,'lines would only meet far above the highest starting rank');
-  assert.equal(evenPoint(sloped(7)),null,'7 wins and 7 losses are not enough');
-  assert.ok(evenPoint(sloped(8)));
+test('even point: none where wins and losses close in but stay apart, as the old line fit claimed',()=>{
+  // The old fit drew "Even at 380 RR" for this player; in play order the gap never got under 2.2 RR.
+  assert.equal(evenPoint(apartRows),null);
+});
+
+test('even point: needs a sustained stretch, not a few even games',()=>{
+  assert.ok(evenPoint(stretch(24,0)),'24 even games in a row');
+  assert.equal(evenPoint(stretch(24,3)),null,'3 RR apart throughout');
+  assert.equal(evenPoint(stretch(19,0)),null,'19 games is too short a stretch');
+  // A short even patch between apart games is not enough. (Windows overlapping its edges can
+  // stretch a patch by a few games, so this one is well short of 20.)
+  const patch=[...stretch(12,6),...stretch(10,0,{from:2330}).map(r=>({...r,m:{...r.m,startedAtMs:r.m.startedAtMs+12*3600000}})),...stretch(12,6,{from:2370}).map(r=>({...r,m:{...r.m,startedAtMs:r.m.startedAtMs+30*3600000}}))];
+  assert.equal(evenPoint(patch),null);
+  // Order is play order, not rank order.
+  assert.equal(evenPoint([...stretch(24,0)].reverse()).games,24);
 });
 
 test('even point leaves party-penalized games out',()=>{
-  assert.equal(evenPoint(sloped(12,{penalty:.25})),null);
-  const clean=evenPoint(sloped(12));
-  const mixed=evenPoint([...sloped(12),{net:2,penalty:.5,m:{myPreRR:2300,won:true}}]);
+  assert.equal(evenPoint(stretch(24,0,{penalty:.25})),null);
+  const clean=evenPoint(stretch(24,0));
+  const mixed=evenPoint([...stretch(24,0),{net:2,penalty:.5,m:{myPreRR:2310,won:true,startedAtMs:5}}]);
   assert.equal(mixed.position,clean.position);
 });
 
@@ -163,14 +171,15 @@ test('chart draws the even line with its explanation, and hides it when zoomed t
   assert.match(svg,/class="even-line"/);
   // Tooltips and the footnote say the line is at a typical 4-round margin; the dots stay actual payouts.
   assert.match(svg,/aria-label="Estimated RR \/ (win|loss) at a 4-round margin: /);
-  assert.match(svg,/evened out to a typical 4-round margin[^<]*faint dots are your actual payouts\./);
+  assert.match(svg,/evened out to a 4-round margin\. Faint dots are your actual payouts; gaps mean too few games\. The even point marks a stretch of games where wins and losses paid the same/);
   assert.match(svg,/Estimated even point/);
+  assert.match(svg,/>Even at 670 RR</);
   // The explanation is the even line's accessible label; no paragraph above the chart (removed on request).
-  assert.match(svg,/aria-label="Wins and losses pay about the same from a starting rank of [^"]*, 676 RR/);
+  assert.match(svg,/aria-label="Wins and losses paid about the same over 34 games in a row \(20 wins at \+18\.9 RR, 14 losses at −18\.7 RR, evened out to a 4-round margin\), starting between [^"]*588 RR and [^"]*774 RR\. The line is at the stretch&#x27;s middle starting rank, [^"]*670 RR\./);
   assert.doesNotMatch(svg,/data-even-point/);
-  const evenTier=fixture.games.reduce((a,b)=>Math.abs(b[0]-2776)<Math.abs(a[0]-2776)?b:a)[2];
+  const evenTier=fixture.games.reduce((a,b)=>Math.abs(b[0]-2770)<Math.abs(a[0]-2770)?b:a)[2];
   assert.match(await renderHtml('/src/app/pages/RR.jsx','RRMovementChart',{matches,zoomTier:evenTier}),/class="even-line"/);
   assert.doesNotMatch(await renderHtml('/src/app/pages/RR.jsx','RRMovementChart',{matches,zoomTier:25}),/class="even-line"/);
-  const flat=matches.map(m=>({...m,myRR:m.won?18:-18}));
-  assert.doesNotMatch(await renderHtml('/src/app/pages/RR.jsx','RRMovementChart',{matches:flat,zoomTier:null}),/even-line|Estimated even point/);
+  const apartMatches=apartRows.map(row=>({...row.m,myTierId:row.m.myPreTierId,myRR:row.net,partySize:1}));
+  assert.doesNotMatch(await renderHtml('/src/app/pages/RR.jsx','RRMovementChart',{matches:apartMatches,zoomTier:null}),/even-line|Estimated even point/);
 });
