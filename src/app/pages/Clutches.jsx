@@ -214,7 +214,9 @@ export function ClutchesPage(){
             <SpikeCard d={d}/>
           </div>
           <HighlightsCard d={d} agents={agents}/>
-          <div className="grid gap-6 lg:grid-cols-2">
+          {/* Stacked, not two-up: the page is width-capped, so a half-width
+              card (~390px) cannot hold these five columns without scrolling. */}
+          <div className="grid gap-6">
             <GroupTable id="clutch-maps" title="By map" label="Map" rows={d.byMap}/>
             <GroupTable id="clutch-agents" title="By agent" label="Agent" rows={d.byAgent} icon={name=><AgentIcon agents={agents} name={name} size={22}/>} tint={name=>agentTint(agents,name)}/>
           </div>
