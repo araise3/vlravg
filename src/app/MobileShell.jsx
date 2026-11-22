@@ -114,7 +114,7 @@ export function MobileSearchSheet({open,onOpenChange}){
           )}
           {groups.map(group=>(
             <section key={group.key} aria-label={group.flat?'Search results':group.heading} className="border-border pb-1 not-first-of-type:border-t">
-              <h3 className="px-2 pt-2.5 pb-1 text-xs"><ProGroupHeading group={group}/></h3>
+              <h3 className="px-[9px] pt-2.5 pb-1 text-xs"><ProGroupHeading group={group} size="lg"/></h3>
               <ul className="flex flex-col">
                 {group.rows.map(row=>(
                   <li key={row.puuid}>

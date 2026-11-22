@@ -84,11 +84,14 @@ export function TeamLogo({code,className}){
     onError={event=>event.currentTarget.remove()} className={cn('size-4 shrink-0 object-contain',className)}/>;
 }
 
-export function ProGroupHeading({group}){
+// The team logo sits centred in a column as wide as the player avatars below,
+// with the same gap, so the logo lines up with the avatars and the team name
+// with the player names (22 Nov 2026, on request). `size` matches ProAccount.
+export function ProGroupHeading({group,size='default'}){
   return (
     <span className="flex items-baseline justify-between gap-3">
-      <span className="flex min-w-0 items-center gap-2 self-center">
-        <TeamLogo code={group.teamCode}/>
+      <span className={cn('flex min-w-0 items-center self-center',size==='lg'?'gap-3':'gap-2.5')}>
+        {group.teamCode&&<span className={cn('flex shrink-0 justify-center',size==='lg'?'w-9':'w-8')}><TeamLogo code={group.teamCode}/></span>}
         <span className="truncate font-semibold text-foreground">{group.heading}</span>
       </span>
       {group.region&&(
