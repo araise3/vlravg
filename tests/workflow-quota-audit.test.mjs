@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
-import {classifyQuotaObservation,recordQuotaObservation} from '../lib/workflow-quota-audit.mjs';
+import {classifyQuotaObservation,recordQuotaObservation,SITE_NAME_LOOKUP_RUN} from '../lib/workflow-quota-audit.mjs';
 import {readQuotaAudit,quotaCheckReport} from '../.github/scripts/workflow-quota-check.mjs';
 import {acquireWorkflowPermit,observeWorkflowQuota} from '../lib/upstream-pacing.mjs';
 
@@ -61,4 +61,13 @@ test('real admissions carry expected quota and late responses cannot become exte
   report=quotaCheckReport(before,await readQuotaAudit({},'run-1',query));
   assert.equal(report.unexplainedRequests,2);assert.equal(report.skippedSamples,1);
   assert.ok(newer.quota);
+});
+
+test('site teammate-name lookups on the workflow key are reported apart from unknown callers',async t=>{
+  const {db,query}=database(t),before=await readQuotaAudit({},'run-1',query);
+  await recordQuotaObservation(db,{remaining:8,resetAt:160000},options);
+  await recordQuotaObservation(db,{remaining:7,resetAt:160000},{...options,expectedRemaining:7,runId:SITE_NAME_LOOKUP_RUN});
+  const report=quotaCheckReport(before,await readQuotaAudit({},'run-1',query));
+  assert.equal(report.status,'no_evidence');
+  assert.equal(report.otherProxyCalls,0);assert.equal(report.siteNameCalls,1);assert.equal(report.upstreamCalls,2);
 });

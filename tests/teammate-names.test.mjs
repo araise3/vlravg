@@ -19,6 +19,7 @@ test('current duo Riot ID replaces an archived name, with one lookup per analysi
   const api=setup(async(url,opts)=>{
     calls++;assert.equal(url,`/api/account-by-puuid/${id}`);
     assert.equal(opts.quiet,true);assert.equal(opts.cache,'no-store');
+    assert.equal(opts.headers['X-Name-Lookup'],'teammate'); // spends the collector key, not visitors' quota
     return {j:{data:{puuid:id,name:'atakurd',tag:'pkk'}}};
   });
   const old={puuid:id,name:'kurdistan peek',tag:'musun'};

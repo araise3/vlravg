@@ -648,3 +648,27 @@ test('D1 overload retries wait out the window; other errors fail at once',async(
   const saturated=retryOnD1Overload(async()=>{calls++;throw overload;},{delays:[1,1],sleep:async()=>{},log:()=>{}});
   await assert.rejects(saturated(),/7429/);assert.equal(calls,3);
 });
+
+test('teammate-name lookups spend the workflow key and pool, never the public quota',async t=>{
+  const {db,sql}=database(t),oldFetch=globalThis.fetch,oldCaches=globalThis.caches;
+  const keys=[];
+  globalThis.caches={default:{async match(){return null;},async put(){}}};
+  globalThis.fetch=async(_url,init)=>{keys.push(init.headers.Authorization);
+    return Response.json({data:{puuid,name:'Alpha',tag:'EU',region:'eu'}},{headers:{'x-ratelimit-remaining':'20'}});};
+  t.after(()=>{globalThis.fetch=oldFetch;globalThis.caches=oldCaches;});
+  const lookup=async(path,headers,env)=>{
+    for(const table of ['rate_quota','workflow_rate_quota'])
+      try{sql.prepare(`UPDATE ${table} SET next_start_at=0`).run();}catch{}
+    const response=await onRequestGet({request:new Request(`https://test/api/${path}`,{headers}),env:{APP_DB:db,...env},waitUntil(){}});
+    assert.equal(response.status,200);
+  };
+  const both={HENRIK_KEY:'public',HENRIK_WORKFLOW_KEY:'collector'},teammate={'X-Name-Lookup':'teammate'};
+  await lookup(`account-by-puuid/${puuid}`,teammate,both);
+  assert.equal(sql.prepare('SELECT last_request_at>0 AS used FROM workflow_rate_quota').get().used,1);
+  assert.equal(sql.prepare("SELECT upstream_calls FROM workflow_quota_audit WHERE run_id='site-teammate-names'").get().upstream_calls,1);
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rate_quota WHERE last_request_at>0').get().n,0,'public pool untouched');
+  await lookup(`account-by-puuid/${puuid}`,{},both);                 // a profile lookup stays public
+  await lookup('account/Alpha/EU',teammate,both);                      // the header only applies to PUUID lookups
+  await lookup(`account-by-puuid/${puuid}`,teammate,{HENRIK_KEY:'public'}); // no collector key: local development
+  assert.deepEqual(keys,['collector','public','public','public']);
+});

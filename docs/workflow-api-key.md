@@ -112,3 +112,22 @@ instances cannot be identified from rate-limit headers, and no comparable sample
 is reported as insufficient evidence. Quota-read failures are reported as
 unavailable. The check makes no extra upstream requests and does not stop RR
 capture merely because another consumer is detected.
+
+## Site teammate-name lookups
+
+Since 22 Nov 2026, when the site refreshes current Riot IDs for a player's duo
+partners (`refreshTeammateNames` in `src/engine/core.mjs`), it sends
+`X-Name-Lookup: teammate` on `/api/account-by-puuid/<puuid>`. On a cache miss
+the proxy admits these calls through the workflow pool and spends
+`HENRIK_WORKFLOW_KEY`. Before this change, a measured search made about 16 of
+these lookups (some edge-cache hits), and the public quota ran into 429s while
+matches were still loading. Other
+`account-by-puuid` lookups, and the header on any other route, stay on the
+public key.
+
+The trade-off: these calls take workflow-pool slots (2.1 s spacing), so the
+collector runs slightly slower while visitors search. The collector then
+borrows idle public slots under the existing `PUBLIC_BORROW_RESERVE` rule.
+These calls are recorded in `workflow_quota_audit` under the run ID
+`site-teammate-names`. The collector's quota check reports them as
+`siteNameCalls`, not as `other_proxy_activity`.

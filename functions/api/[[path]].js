@@ -88,6 +88,7 @@ import { beginCoverageScan, readCoverageScan, recordCoveragePage, finishCoverage
 import { collectRR, mergeRRUpdate, saveFeatures, trackRRAccount } from "../../lib/rr-corpus.mjs";
 import { discoverMatchPlayers } from "../../lib/rr-activity.mjs";
 import { workflowAuthorized } from "../../lib/workflow-auth.mjs";
+import { SITE_NAME_LOOKUP_RUN } from "../../lib/workflow-quota-audit.mjs";
 import { maintenance } from "../../lib/site-flags.mjs";
 import { matchKey, hasInlinePayload, readArchivedPayload, mapLimit } from "../../lib/match-store.mjs";
 import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, observePublicQuota, acquireBorrowedPublicPermit } from "../../lib/upstream-pacing.mjs";
@@ -1155,9 +1156,15 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
   // A collector call takes its own slot if one is free now. Otherwise it may
   // borrow an idle public slot (lib/upstream-pacing.mjs PUBLIC_BORROW_RESERVE),
   // and only then waits on its own pool. Storage failure never borrows.
+  // Teammate-name refreshes are optional display data: they spend the
+  // collector's workflow key, never the visitors' public quota. Without that
+  // key configured (local development) they stay on the public key.
+  const namePool=!workflow&&!!route.accountByPuuid&&!!env.HENRIK_WORKFLOW_KEY
+    &&request.headers.get('X-Name-Lookup')==='teammate';
   let permit,borrowed=false;
   try{
-    if(workflow){
+    if(namePool)permit=await acquireWorkflowPermit(env.APP_DB);
+    else if(workflow){
       permit=await acquireWorkflowPermit(env.APP_DB,{maxWaitMs:0});
       if(permit.retryAfterMs&&env.HENRIK_KEY&&!admission.noBorrow){
         const loan=await acquireBorrowedPublicPermit(env.APP_DB);
@@ -1167,8 +1174,8 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
     }else permit=await acquirePublicPermit(env.APP_DB);
   }catch{return json({error:'Upstream quota storage unavailable'},503);}
   if(workflow&&!permit.retryAfterMs)admission.pool=borrowed?'public':'workflow';
-  const upstreamKey=borrowed?env.HENRIK_KEY:henrikKey;
-  const ownPool=workflow&&!borrowed;
+  const upstreamKey=namePool?env.HENRIK_WORKFLOW_KEY:borrowed?env.HENRIK_KEY:henrikKey;
+  const ownPool=namePool||(workflow&&!borrowed);
   if(permit.retryAfterMs){
     if(route.nameHistory&&storedNameHistory.history.length)return savedNameHistoryResponse(storedNameHistory,'SAVED-REFRESH-DEFERRED',true);
     return json({error:'Rate limited',retryAfterMs:permit.retryAfterMs},429);
@@ -1197,7 +1204,7 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
   try{upstreamRetryMs=await (ownPool?observeWorkflowQuota:observePublicQuota)(env.APP_DB,parsed,
     {startedAt:permit.startedAt,status:upstream.status,retryAfterMs,
       expectedRemaining:permit.quota.remaining,expectedResetAt:permit.quota.resetAt,
-      runId:ownPool?request.headers.get('X-Workflow-Run'):null});}
+      runId:namePool?SITE_NAME_LOOKUP_RUN:ownPool?request.headers.get('X-Workflow-Run'):null});}
   catch{return json({error:'Upstream quota update failed'},503);}
 
   if (upstream.status === 429) {

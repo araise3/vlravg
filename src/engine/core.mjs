@@ -3310,7 +3310,9 @@ async function refreshTeammateNames(rows){
     while(state.queue.length&&state.generation===_analysisGen&&!signal?.aborted){
       const id=state.queue.shift();
       try{
-        const result=await apiGet(`${API_BASE}/account-by-puuid/${encodeURIComponent(id)}`,{signal,quiet:true,cache:'no-store'});
+        // The proxy spends the collector's key on these, not visitors' quota.
+        const result=await apiGet(`${API_BASE}/account-by-puuid/${encodeURIComponent(id)}`,
+          {signal,quiet:true,cache:'no-store',headers:{'X-Name-Lookup':'teammate'}});
         if(state.generation!==_analysisGen||signal?.aborted)return;
         const account=result?.j?.data;
         if(account?.puuid?.toLowerCase()!==id||!account.name||!account.tag)continue;
