@@ -16,8 +16,8 @@ function extract(name){
 const api=runInNewContext("const RR_RANGES=['all','50','30','20'];\n"+
   ['parseRRDetails','reportedRRStart','isRREligible','rrReportedStats','rrAdjustmentStats','rrDodgeEntry','rrDodgesInRange'].map(extract).join('\n')+
   '\n({parseRRDetails,reportedRRStart,isRREligible,rrReportedStats,rrAdjustmentStats,rrDodgeEntry,rrDodgesInRange})');
-// The match card's "Your RR details" panel, rendered by React.
-const details=m=>renderHtml('/src/app/pages/Matches.jsx','RRDetails',{m});
+// The opened match card's RR notes, rendered by React.
+const details=m=>renderHtml('/src/app/pages/Matches.jsx','RRNotes',{m});
 const match=d=>({myRR:20,myTierId:18,partySize:1,myRRDetails:api.parseRRDetails(d)});
 
 test('unavailable fields stay null while reported zero and false are preserved',()=>{
@@ -64,18 +64,23 @@ test('dodges are MMR-history entries with a zero match length, scoped to the RR 
   assert.deepEqual(api.rrDodgesInRange(dodges,scoped,'20').map(d=>d.atMs),[at(14)]);
   assert.equal(api.rrDodgesInRange(dodges,[],'20').length,0);
 });
-test('details preserve fractional penalty, escape strings, and explain missing coverage',async()=>{
-  const output=await details(match({rr_performance_bonus:5,rr_penalty:.25,queue_id:'<img src=x>',is_placement_match:false}));
-  assert.match(output,/Performance bonus/);assert.match(output,/0.25/);
-  assert.ok(!output.includes('<img'));assert.match(output,/Placement match/);
-  assert.match(await details(match({})),/unavailable/);
+test('RR notes show only what changed the RR, keep the fractional penalty verbatim, and drop zeros, "No" and the queue',async()=>{
+  const output=await details(match({rr_performance_bonus:5,rr_penalty:.25,queue_id:'<img src=x>',is_placement_match:false,new_map_incentive_rr_forgiven:0}));
+  const text=output.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+  assert.equal(text,'+5 RR performance bonus Party RR penalty 0.25 (reported)');
+  assert.ok(!output.includes('<img'));
+  assert.match(await details(match({is_placement_match:true,was_derank_protection_replenished:true})),/Placement match[^]*Rank Shield replenished/);
+  assert.match(await details({...match({}),myDerankProtected:true,myRefundedRR:12}),/Rank Shield kept your rank[^]*\+12 RR refunded/);
+  // No notable fields: no notes at all, rather than an "unavailable" line.
+  assert.equal(await details(match({rr_performance_bonus:0,afk_penalty:0,is_placement_match:false})),'');
+  assert.equal(await details(match({})),'');
   assert.equal(await details({}), '');
 });
 
 test('stable API unknown movement sentinel is not displayed as a rank event',async()=>{
   const m=match({competitive_movement:'MOVEMENT_UNKNOWN'});
   assert.equal(m.myRRDetails.movement,null);
-  assert.ok(!(await details(m)).includes('Competitive movement'));
+  assert.equal(await details(m),'');
 });
 
 test('history ingestion prefers exact starts across gaps, promotions and act transitions',()=>{

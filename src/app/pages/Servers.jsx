@@ -1,7 +1,7 @@
 import {useEffect,useState} from 'react';
-import {PARTY_LABELS,setServerPartySize,winRateLabel,winRateTone} from '@/engine/core.mjs';
+import {PARTY_LABELS,rrSigned,setServerPartySize,winRateLabel,winRateTone} from '@/engine/core.mjs';
 import {useEngine} from '@/app/hooks.js';
-import {EmptyState,LobbyValue,PageHeading,PartySizeFilter,PlacementToggle,SortableTable,TableSection,toneClass} from '@/app/shared.jsx';
+import {EmptyState,LobbyValue,PageHeading,PartySizeFilter,PlacementToggle,SortableTable,STAT_TABLE_WIDTHS,TableSection,toneClass} from '@/app/shared.jsx';
 import {Card} from '@/components/ui/card';
 
 // The EU ping map (assets/ping-map) is a standalone D3 script that binds to the
@@ -47,7 +47,7 @@ function PingMap({active}){
   );
 }
 
-function ServersTable({rows}){
+export function ServersTable({rows}){
   const tableRows=rows.map(row=>({key:row.name,cells:[
     <span className="block max-w-48 truncate" title={row.name}>{row.name}</span>,
     <>{row.games} <span className="text-xs text-muted-foreground">({Math.round(row.share)}%)</span></>,
@@ -56,15 +56,18 @@ function ServersTable({rows}){
     row.acs==null?'—':Math.round(row.acs),
     row.performanceScore==null?'—':Math.round(row.performanceScore),
     winRateLabel(row.winRate),
+    row.rrCount?rrSigned(row.rrTotal,0):'—',
   ],cellProps:[null,null,null,{className:toneClass(row.kd)},null,
     {title:`${row.performanceCount} of ${row.games} matches have Performance Score data`},
     {className:winRateTone(row.winRate)==='rank-positive'?'text-positive':winRateTone(row.winRate)==='rank-negative'?'text-negative':''},
+    {className:row.rrCount&&row.rrTotal?(row.rrTotal>0?'text-positive':'text-negative'):'',title:`${row.rrCount} of ${row.games} matches have a recorded RR change`},
   ]}));
-  const values=rows.map(row=>[row.name,row.games,row.avgLobby,row.kd,row.acs,row.performanceScore,row.winRate]);
+  const values=rows.map(row=>[row.name,row.games,row.avgLobby,row.kd,row.acs,row.performanceScore,row.winRate,row.rrCount?row.rrTotal:null]);
   return (
-    <SortableTable id="servers-table" standalone rows={tableRows} values={values}
+    // Same columns and fixed widths as the Duos tables (STAT_TABLE_WIDTHS).
+    <SortableTable id="servers-table" standalone rows={tableRows} values={values} widths={STAT_TABLE_WIDTHS}
       caption="Match results and performance grouped by game server; match share is the percentage of matches with a known server"
-      columns={[{label:'Server'},{label:'Matches'},{label:'Avg Lobby',wide:true,align:'left'},{label:'K/D'},{label:'ACS',title:'Average combat score'},{label:'PS',title:'Avg PS across matches with available data'},{label:'Win rate',title:'Wins divided by wins plus losses; draws excluded'}]}
+      columns={[{label:'Server'},{label:'Matches'},{label:'Avg Lobby',wide:true,align:'left'},{label:'K/D'},{label:'ACS',title:'Average combat score'},{label:'PS',title:'Avg PS across matches with available data'},{label:'Win rate',title:'Wins divided by wins plus losses; draws excluded'},{label:'Total RR',title:'Your net recorded RR change on this server'}]}
       maxima={[{column:1,label:'matches and match share'},{column:2,label:'average lobby rank'},{column:3,label:'K/D'},{column:4,label:'average ACS'},{column:5,label:'Avg PS'},{column:6,label:'win rate'}]}/>
   );
 }

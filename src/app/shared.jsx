@@ -59,19 +59,27 @@ export function toneClass(value,neutral=1){
 }
 
 // An average lobby rank in a table cell: the rank name in its rank colour
-// (the engine's RANK_COLORS, the same palette as the --rank accent), no icon
-// (22 Nov 2026, on request). Every table that shows an average lobby rank
-// uses this, so the look is the same site-wide.
+// (the engine's RANK_COLORS, the same palette as the --rank accent), after
+// the rank icon (22 Nov 2026, on request: the icon was removed, then asked
+// back the same day). Every table that shows an average lobby rank uses
+// this, so the look is the same site-wide.
 export function LobbyRankText({tier,className,children}){
   return <span className={cn('font-medium',className)} style={{color:rColor(tier)}} data-slot="lobby-rank-text">{children??avgLabel(tier)}</span>;
 }
+
+// Fixed column widths for the stat tables that share the site's column order
+// (name, Matches, Avg Lobby, K/D, ACS, PS, Win rate, Total RR): the Duos
+// party-size and teammates tables and the Servers table (22 Nov 2026), so
+// they look the same and line up where they stack.
+export const STAT_TABLE_WIDTHS=['15%','11%','20%','9%','9%','9%','12%','15%'];
 
 export function LobbyValue({sum,count}){
   if(!count)return '—';
   const lobby=tierRR(sum/count),rr=lobbyRR(lobby);
   return (
-    <span className="whitespace-nowrap" title={lobbyRankText(sum/count)}>
-      <LobbyRankText tier={lobby.tier}/>{rr!=null&&<> <span className="text-muted-foreground">({rr} RR)</span></>}
+    <span className="flex items-center gap-2 whitespace-nowrap" title={lobbyRankText(sum/count)}>
+      <RankIcon tier={lobby.tier} size={22}/>
+      <span><LobbyRankText tier={lobby.tier}/>{rr!=null&&<> <span className="text-muted-foreground">({rr} RR)</span></>}</span>
     </span>
   );
 }

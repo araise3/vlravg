@@ -153,12 +153,37 @@ end of `src/index.css` (they outrank Tailwind's utility layer):
   the right; they looked lost in the empty middle and were spread out on
   request.) The map splash is a faded backdrop on the right
   (opacity .2, .3 on hover or open), and the result colours the left edge and
-  a faint wash behind the tile. Opened, `MatchInfo` comes first: the agent as a
-  48px tile named in their colour, then start date and time, length with
-  seconds (`matchLengthText`, "26 min 56 s" from `game_length_in_ms`), server
-  and average lobby; then the
-  RR details (which carry the starting rank) and the roster, which puts each
-  player's agent icon before their name. The 210px map-art panel the redesign
+  a faint wash behind the tile. Opened, `MatchInfo` comes first and repeats
+  nothing from the closed row (22 Nov 2026, on request: no agent, no RR
+  change, no team rounds; the first tile-less version looked empty). It is
+  one strip of hairline tiles (`.mc-stats`, eight columns on desktop, three
+  where the card is under 640px): K/D (kills and deaths under it) and ACS,
+  asked for here although the closed row has K/D/A and ACS; ADR (total damage
+  under it); DDΔ, the damage delta per round (`ddDelta`: enemy damage dealt
+  minus enemy damage taken, from the round damage events, else the summary's
+  `damage.received`; green above zero, red below; damage taken under it);
+  HS% ("of hits"), KAST (rounds under it),
+  clutch win rate (won of situations under it; `clutchSummaryText`, the list
+  in its hint) and
+  the length, always as minutes and seconds ("35:07", `matchLengthText`) with
+  the start date and time under it. The server tile shows only where the
+  closed row hides its server (`.mc-info-server`: phones and cards under
+  640px). A tile without data shows a dash. The Rank tile (rank before →
+  after with a 100 RR bar) was removed the same day on request. Under the
+  strip, `RRNotes` (quiet text lines tinted by tone; pills were disliked)
+  lists only what
+  changed the RR beyond the payout: Rank Shield, placement, a non-zero
+  performance bonus or new-map forgiveness, refunds, reported AFK and party
+  penalties (verbatim, never converted to RR) and a replenished shield. The
+  old "Your RR details" grid (queue id, "No"/0 rows, payout restated, a
+  footnote) was removed on 22 Nov 2026 on request as debug output. Then the
+  roster, which puts each player's agent icon before their name; each team
+  header carries its average rank over the rank column. Ranks in the roster
+  are the short name in the rank colour ("Dia 1", full name in the tooltip)
+  on every width (icons were tried the same day and reverted on request);
+  the stat columns are only as wide as their numbers, and when a long Riot ID
+  still does not fit, its #tag shrinks before the name, and the link's
+  tooltip has the full ID. The 210px map-art panel the redesign
   replaced is gone (`mc-map-panel` and friends).
 - Clutches (22 Nov 2026): see [clutches-page.md](clutches-page.md).
 - Name History marks the current Riot ID in blue text.
@@ -230,13 +255,23 @@ pickers, and every toggle.
 `RankIcon` keeps each icon's aspect ratio (`object-contain`; the embedded
 Immortal 3 icon is 40×37) and switches to the 256px PNG from 32px up.
 
-Average lobby ranks in tables (22 Nov 2026, on request) show no rank icon:
-the rank name is coloured with its rank colour instead, through one shared
+Average lobby ranks in tables (22 Nov 2026, on request) show the rank icon
+followed by the rank name in its rank colour (the icon was removed earlier
+the same day, then asked back), through one shared
 `LobbyRankText` in `src/app/shared.jsx` (`rColor`, the engine's `RANK_COLORS`,
 the same palette as the `--rank` accent). It covers `LobbyValue` (the Party
 size, Teammates and Servers tables), the Performance by lobby rank table and
 the Overview lobby card's party table. Rank icons outside tables (the lobby
 card hero, the header, match cards, charts) are unchanged.
+
+Stat tables share one column order (22 Nov 2026, on request): name, Matches,
+Avg Lobby, K/D, ACS, PS, Win rate, Total RR. The Duos party-size and
+teammates tables and the Servers table also share fixed column widths
+(`STAT_TABLE_WIDTHS` in `src/app/shared.jsx`, passed as `SortableTable`'s
+`widths`), so they look the same from page to page and line up where they
+stack. Servers gained Total RR: your net recorded RR change on that server
+(every match with a recorded change, like the party-size table; the
+coverage count is in the cell's tooltip).
 
 Removed: the "Most-played lobbies" preview, the scrolling recent-match list,
 the "Net RR (last 20)" KPI card and the full RR trend chart (both folded

@@ -9,9 +9,14 @@ Field names and nullable types were verified against the stable authenticated
 OpenAPI schema and live stable history responses on 2026-10-10. Older records may
 lack every new field. See [verification results](rr-update-verification.md).
 
-Expanded match details show reported starting/ending rank and RR, performance
-bonus, penalties, new-map forgiveness, placement status, shield replenishment,
-queue and competitive movement. Match duration uses `match_length` (milliseconds)
+The opened match card shows short notes for only the fields that changed this
+update (its rank-change tile, before → after with a 100 RR bar, was removed
+later the same day on request; reported starting ranks still feed the RR
+charts): a non-zero performance bonus or
+new-map forgiveness, reported AFK and party penalties (verbatim), placement,
+Rank Shield and its replenishment, and refunds. Zeros, false flags, the queue id
+and competitive movement are no longer shown (22 Nov 2026, on request: the
+former field grid read as debug output). Match duration uses `match_length` (milliseconds)
 only when the match response lacks its own duration. The RR page shows total
 reported performance bonus and the number of eligible games with bonus data for
 the selected range. A reported zero counts as coverage; null does not.

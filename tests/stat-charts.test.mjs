@@ -276,12 +276,12 @@ test('teammates: a plain sortable table of shared results and the teammate\'s ow
   // The site's column order, shared with the party-size table above it.
   assert.deepEqual(heads,['Teammate','Matches','Avg Lobby','K/D','ACS','PS','Win rate','Total RR']);
   // Both Duos tables use the same fixed column widths, so they line up.
-  const {DUO_TABLE_WIDTHS}=await load('/src/app/pages/Duos.jsx');
-  assert.equal(DUO_TABLE_WIDTHS.length,8);
-  assert.match(html,/<table[^>]*class="[^"]*table-fixed[^"]*"[^>]*>.*?<colgroup><col style="width:17%"\/><col style="width:9%"\/><col style="width:20%"\/>/);
+  const {STAT_TABLE_WIDTHS}=await load('/src/app/shared.jsx');
+  assert.equal(STAT_TABLE_WIDTHS.length,8);
+  assert.match(html,/<table[^>]*class="[^"]*table-fixed[^"]*"[^>]*>.*?<colgroup><col style="width:15%"\/><col style="width:11%"\/><col style="width:20%"\/>/);
   const party=await renderHtml('/src/app/pages/Duos.jsx','PerformanceTable',{id:'p',party:true,rows:[{tier:2,label:'Duo',total:3,totalKills:3,totalDeaths:3,acsSum:0,acsCount:0,performanceSum:0,performanceCount:0,wins:1,decided:2,lobbySum:0,lobbyCount:0,rrCount:0,rrTotal:0}]});
   assert.deepEqual([...party.matchAll(/aria-label="([^"]+): sort/g)].map(m=>m[1]),['Party size','Matches','Avg Lobby','K/D','ACS','PS','Win rate','Total RR']);
-  assert.match(party,/<colgroup><col style="width:17%"\/>/);
+  assert.match(party,/<colgroup><col style="width:15%"\/>/);
   // Default order: most matches together first; ten rows on the first page.
   const names=[...table.matchAll(/scope="row"[^>]*>.*?title="([^"#]+)#EU"/g)].map(m=>m[1]);
   assert.deepEqual(names,['m3','m0','m1','m2','m4','m5','m6','m7','m8','m9']);
@@ -298,6 +298,19 @@ test('teammates: a plain sortable table of shared results and the teammate\'s ow
   // Colour is kept for RR only.
   assert.doesNotMatch(table.slice(0,table.indexOf('data-slot="table-pager"')),/text-positive[^"]*"[^>]*>\d+\.\d%|text-negative[^"]*"[^>]*>\d+\.\d%/);
   assert.match(table,/class="[^"]*text-positive[^"]*"[^>]*>\+12</);
+});
+
+test('servers: the Duos column order and widths, plus your net RR on each server',async()=>{
+  const server=(name,extra)=>({name,games:4,share:50,lobbySum:72,lobbyCount:4,avgLobby:18,kd:1.2,acs:230,performanceScore:240,performanceCount:4,winRate:50,rrTotal:0,rrCount:0,...extra});
+  const html=await renderHtml('/src/app/pages/Servers.jsx','ServersTable',{rows:[server('Frankfurt',{rrTotal:42,rrCount:4}),server('Paris',{rrTotal:-15,rrCount:3}),server('London')]});
+  assert.deepEqual([...html.matchAll(/aria-label="([^"]+): sort/g)].map(m=>m[1]),['Server','Matches','Avg Lobby','K/D','ACS','PS','Win rate','Total RR']);
+  assert.match(html,/table-fixed[^"]*"[^>]*>.*?<colgroup><col style="width:15%"\/><col style="width:11%"\/><col style="width:20%"\/>/);
+  assert.match(html,/class="[^"]*text-positive[^"]*" title="4 of 4 matches have a recorded RR change"[^>]*>\+42</);
+  assert.match(html,/class="[^"]*text-negative[^"]*" title="3 of 4 matches have a recorded RR change"[^>]*>−15</);
+  assert.match(html,/title="0 of 4 matches have a recorded RR change"[^>]*>—</);
+  // The engine sums every recorded change per server.
+  const source=readFileSync(new URL('../src/engine/core.mjs',import.meta.url),'utf8');
+  assert.match(source,/if\(Number\.isFinite\(m\.myRR\)\)\{row\.rrTotal\+=m\.myRR;row\.rrCount\+\+;\}/);
 });
 
 test('encounters: a database-style table with search, a same-team / opposing filter, team share and rows per page',async()=>{
@@ -328,17 +341,15 @@ test('data tables: an outside filter that leaves no rows shows its empty text in
   assert.match(html,/<td[^>]*colspan="2"[^>]*role="status">Nothing here\.<\/td>/i);
 });
 
-test('table lobby cells show the average lobby rank as text in its rank colour, no icon, left-aligned',async()=>{
+test('table lobby cells show the rank icon, then the rank name in its rank colour, as a left-aligned flex row',async()=>{
   const html=await renderHtml('/src/app/shared.jsx','LobbyValue',{sum:22,count:1});
-  // Ascendant 2 in the engine's rank colour (RANK_COLORS, the --rank palette), then the RR in muted text.
-  assert.match(html,/^<span class="whitespace-nowrap" title="Ascendant 2 \(50 RR\)"><span class="font-medium" style="color:#2db87a" data-slot="lobby-rank-text">Ascendant 2<\/span>/);
-  assert.doesNotMatch(html,/<img/);
+  // The icon, then Ascendant 2 in the engine's rank colour (RANK_COLORS, the --rank palette), then the RR in muted text.
+  assert.match(html,/^<span class="flex items-center gap-2 whitespace-nowrap" title="Ascendant 2 \(50 RR\)"><img [^>]*width="22"[^>]*\/><span><span class="font-medium" style="color:#2db87a" data-slot="lobby-rank-text">Ascendant 2<\/span>/);
   // Immortal and up show no RR.
   assert.doesNotMatch(await renderHtml('/src/app/shared.jsx','LobbyValue',{sum:25,count:1}),/ RR\)/);
   // The performance-by-lobby-rank table labels its rows the same way; the party-size table keeps its party icons.
   const byRank=await renderHtml('/src/app/pages/Duos.jsx','PerformanceTable',{id:'t',rows:[{tier:15,total:2,totalKills:4,totalDeaths:2,acsSum:0,acsCount:0,performanceSum:0,performanceCount:0,wins:1,decided:2}]});
-  assert.match(byRank,/style="color:#36b5c0" data-slot="lobby-rank-text">Platinum 1</);
-  assert.doesNotMatch(byRank,/<img/);
+  assert.match(byRank,/<img [^>]*width="24"[^>]*\/><span class="font-medium" style="color:#36b5c0" data-slot="lobby-rank-text">Platinum 1</);
   for(const file of ['Duos.jsx','Servers.jsx']){
     const source=readFileSync(new URL('../src/app/pages/'+file,import.meta.url),'utf8');
     assert.match(source,/label:'Avg Lobby',wide:true,align:'left'/,file);

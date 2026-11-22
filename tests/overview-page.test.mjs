@@ -42,9 +42,8 @@ test('the lobby rank card leads with the rank-coloured average, then the spread 
   const table=single.slice(single.indexOf('data-slot="lobby-party-table"'),single.indexOf('overview-duos-title'));
   assert.doesNotMatch(table,/>RR</);
   assert.doesNotMatch(table,/title="[^"]* RR /);
-  // The table's lobby rank is text in its rank colour, no icon (the hero above keeps its badge).
-  assert.match(table,/style="color:#c07de0" data-slot="lobby-rank-text"><span class="truncate[^"]*">Diamond 2</);
-  assert.doesNotMatch(table,/<img/);
+  // The table's lobby rank: the rank icon, then the name in its rank colour.
+  assert.match(table,/<img [^>]*width="18"[^>]*\/><span class="font-medium flex min-w-0" style="color:#c07de0" data-slot="lobby-rank-text"><span class="truncate[^"]*">Diamond 2</);
   assert.equal(avgLabel(18),'Diamond 1');
 });
 

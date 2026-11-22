@@ -2232,15 +2232,27 @@ function computeRoundStats(m,puuid){
   for(const p of m.players||[])if(p?.puuid)team[p.puuid]=String(p.team_id??'').toLowerCase();
   const myTeam=team[puuid];
   if(!myTeam)return null;
-  let enemyDamage=0,hasDamage=false;
+  // Damage dealt to enemies, and (22 Nov 2026, for the damage delta) damage
+  // taken from enemies: enemy players' damage events whose receiver is you.
+  // A live payload's taken total matched stats.damage.received exactly.
+  let enemyDamage=0,hasDamage=false,enemyDamageTaken=0,hasTaken=false;
   for(const r of m.rounds){
     for(const s of r?.stats||[]){
-      if(s?.player?.puuid!==puuid||!Array.isArray(s.damage_events))continue;
-      hasDamage=true;
-      for(const d of s.damage_events){
-        const to=d?.player?.puuid??d?.receiver?.puuid??d?.receiver;
-        if(!to||team[to]===myTeam)continue;
-        enemyDamage+=d.damage??0;
+      if(!Array.isArray(s?.damage_events))continue;
+      const from=s?.player?.puuid;
+      if(from===puuid){
+        hasDamage=true;
+        for(const d of s.damage_events){
+          const to=d?.player?.puuid??d?.receiver?.puuid??d?.receiver;
+          if(!to||team[to]===myTeam)continue;
+          enemyDamage+=d.damage??0;
+        }
+      }else if(from&&team[from]&&team[from]!==myTeam){
+        hasTaken=true;
+        for(const d of s.damage_events){
+          const to=d?.player?.puuid??d?.receiver?.puuid??d?.receiver;
+          if(to===puuid)enemyDamageTaken+=d.damage??0;
+        }
       }
     }
   }
@@ -2288,7 +2300,7 @@ function computeRoundStats(m,puuid){
       if(credited||(!died&&!absent))kastRounds++;
     }
   }
-  return{enemyDamage:hasDamage?enemyDamage:null,kastRounds,rounds:m.rounds.length};
+  return{enemyDamage:hasDamage?enemyDamage:null,enemyDamageTaken:hasTaken?enemyDamageTaken:null,kastRounds,rounds:m.rounds.length};
 }
 
 // Display rounding that reproduces tracker.gg's numbers (360 ADR and 330
@@ -2333,13 +2345,17 @@ function extractStats(p,fallbackRounds=null,roundStats=null){
   // KD: null means unknown (no data), not 0
   const kd=d>0?Math.round((k/d)*100)/100:k>0?k:null;
   const adr=rounds_played&&rounds_played>0&&dmg!==null?Math.round(dmg/rounds_played):null;
+  // Damage delta per round: damage dealt minus damage taken, both from the
+  // round data when present, else the summary totals (damage.received).
+  const dmgTaken=roundStats?.enemyDamageTaken??s.damage?.received??null;
+  const ddDelta=rounds_played&&rounds_played>0&&dmg!==null&&dmgTaken!==null?Math.round((dmg-dmgTaken)/rounds_played):null;
 
   const kastRounds=roundStats?.kastRounds??null;
   const kastTotalRounds=kastRounds!=null&&roundStats.rounds>0?roundStats.rounds:null;
   const kast=kastTotalRounds?roundHalfEven(kastRounds/kastTotalRounds*100):null;
 
   const performanceScore=Number.isFinite(p.performance?.score)?p.performance.score:null;
-  return{kills:k,deaths:d,assists,score,rounds_played:rounds_played??null,kd,acs,performanceScore,adr,hsPct,dmg,kast,kastRounds:kastTotalRounds?kastRounds:null,kastTotalRounds};
+  return{kills:k,deaths:d,assists,score,rounds_played:rounds_played??null,kd,acs,performanceScore,adr,hsPct,dmg,dmgTaken,ddDelta,kast,kastRounds:kastTotalRounds?kastRounds:null,kastTotalRounds};
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -3140,7 +3156,7 @@ function renderServers(matches){
   selectedMatches.forEach(m=>{
     if(!m.serverName)return;
     const key=m.serverName.toLocaleLowerCase();
-    if(!groups.has(key))groups.set(key,{name:m.serverName,games:0,wins:0,losses:0,draws:0,kills:0,deaths:0,combatGames:0,score:0,rounds:0,performanceSum:0,performanceCount:0,lobbySum:0,lobbyCount:0});
+    if(!groups.has(key))groups.set(key,{name:m.serverName,games:0,wins:0,losses:0,draws:0,kills:0,deaths:0,combatGames:0,score:0,rounds:0,performanceSum:0,performanceCount:0,lobbySum:0,lobbyCount:0,rrTotal:0,rrCount:0});
     const row=groups.get(key);
     row.games++;
     if(m.won===true)row.wins++;
@@ -3157,6 +3173,8 @@ function renderServers(matches){
       row.rounds+=stats.rounds_played;
     }
     if(Number.isFinite(stats?.performanceScore)){row.performanceSum+=stats.performanceScore;row.performanceCount++;}
+    // Net recorded RR on this server, every match counted (like the party-size table).
+    if(Number.isFinite(m.myRR)){row.rrTotal+=m.myRR;row.rrCount++;}
     if(m.avgRank!=null){
       row.lobbySum+=m.avgRank;
       row.lobbyCount++;

@@ -46,12 +46,52 @@ test('a closed card without a lobby average shows a dash, with the rated count i
   assert.match(text(mobile),/^Win 13 : 7 — \+24 Abyss/);
 });
 
-test('the opened card starts with the match info the closed row leaves out, then RR details and the roster with agent icons',async()=>{
-  const html=await renderHtml(PAGE,'MatchCard',{m:match,s,maps:null,agents,open:true,onOpenChange(){}});
+test('the opened card is a strip of tiles: K/D, ACS, ADR, damage delta, HS%, KAST, clutches and length, then the roster',async()=>{
+  const stats={...match.myStats,adr:162,dmg:3726,dmgTaken:2944,ddDelta:34,hsPct:28,kast:74,kastRounds:17,kastTotalRounds:23,kd:1.5};
+  const clutches=[{type:2,outcome:'win'},{type:1,outcome:'loss'},{type:3,outcome:'save'}];
+  const html=await renderHtml(PAGE,'MatchCard',{m:{...match,myStats:stats,myClutches:clutches,durationMs:35*60000+7000,myPostRR:1674,myPostTierId:18,avgTeamRank:18.4,avgEnemyRank:18.6},s,maps:null,agents,open:true,onOpenChange(){}});
   const info=html.slice(html.indexOf('data-slot="match-info"'),html.indexOf('Your team'));
-  // The agent leads the opened card, larger and named.
-  assert.match(info,/data-slot="match-agent"><span[^>]*data-agent="Jett"[^>]*width:48px/);
-  assert.match(text(info),/> Agent Jett Started 10 Oct, \d\d:\d\d Length 35 min Server Frankfurt Avg lobby \S+ \d/);
+  // No agent (the closed row's tile has it), no RR change, and no rank tile (removed on request).
+  assert.doesNotMatch(info,/data-agent=|match-agent|Jett|\+24|rank-change|rank-bar|Diamond/);
+  assert.match(text(info),/> K\/D 1\.50 18 K, 12 D ACS 240 per round ADR 162 3,726 damage DDΔ \+34 2,944 taken HS% 28% of hits KAST 74% 17 of 23 rounds Clutches 33% 1 of 3 won Length 35:07 10 Oct, \d\d:\d\d Server Frankfurt$/);
+  assert.match(info,/<dl class="mc-stats" data-slot="match-stats"><div class="mc-stat-tile"><dt class="mc-stat-label">/);
+  // A positive delta is green, a negative one red.
+  assert.match(info,/<dd class="mc-stat-value text-positive">\+34<\/dd>/);
+  const behind=await renderHtml(PAGE,'MatchCard',{m:{...match,myStats:{...stats,ddDelta:-21}},s,maps:null,agents,open:true,onOpenChange(){}});
+  assert.match(behind,/<dd class="mc-stat-value text-negative">−21<\/dd>/);
+  // RR notes are quiet text lines under the strip, not pills.
+  const noted=await renderHtml(PAGE,'MatchCard',{m:{...match,myRRDetails:{bonus:5,shieldReplenished:true}},s,maps:null,agents,open:true,onOpenChange(){}});
+  const notedInfo=noted.slice(noted.indexOf('data-slot="match-info"'),noted.indexOf('Your team'));
+  assert.match(notedInfo,/<\/dl><ul class="mc-rr-notes" aria-label="RR notes" data-slot="rr-notes">/);
+  assert.match(text(notedInfo),/\+5 RR performance bonus Rank Shield replenished/);
+  // Each note is block-level flex: an inline-flex note that starts with an icon sits on
+  // the icon's baseline and rode 1.75px higher than a text-only note beside it.
+  const {readFileSync}=await import('node:fs');
+  const css=readFileSync(new URL('../src/index.css',import.meta.url),'utf8');
+  assert.match(css,/\n\.mc-rr-note \{ display: flex; align-items: center;/);
+  // The server tile is in the markup but shown only where the closed row hides it (.mc-info-server).
+  assert.match(info,/<div class="mc-stat-tile mc-info-server"><dt class="mc-stat-label">Server<\/dt>/);
+  // Without per-match data the tiles say so rather than guess.
+  const bare=text(await renderHtml(PAGE,'MatchCard',{m:{...match,myClutches:null},s,maps:null,agents,open:true,onOpenChange(){}}));
+  assert.match(bare,/ADR — DDΔ — HS% — of hits KAST — Clutches — No round data Length 35:00/);
+  // No debug grid: no queue, no "Recorded payout", no reported-fields footnote.
+  assert.doesNotMatch(html,/Your RR details|Recorded payout|Queue|not added again/);
+  // Each team header carries its average rank as a short name in its colour, not its rounds (the closed row has the score).
+  const desktopRoster=html.slice(html.indexOf('Your team'));
+  assert.match(text(html),/Your team ACS PS KD Dia 1 Player #EU /);
+  assert.match(text(html),/Enemy team ACS PS KD Dia 2 /);
+  // Long names: the tag shrinks before the name, and the link carries the full Riot ID.
+  assert.match(html,/<span class="min-w-0 shrink-\[20\] truncate text-xs text-muted-foreground" data-slot="player-tag">#EU<\/span>/);
+  assert.match(html,/title="Mate#EU" class="flex min-w-0 items-baseline gap-0\.5 hover:underline"/);
+  // Ranks are short names in the rank colour (icons were tried and reverted), full name in the tooltip.
+  assert.equal((desktopRoster.match(/title="Diamond 1" data-slot="player-rank">Dia 1<\/span>/g)||[]).length,3);
+  assert.doesNotMatch(desktopRoster,/player-rank-icon|data-slot="team-rank"[^>]*><img /);
+  // Phones: the same short names.
+  const phone=await renderHtml(PAGE,'MobileMatchCard',{m:{...match,avgTeamRank:18.4,avgEnemyRank:18.6},s,maps:null,agents,open:true,onOpenChange(){}});
+  const phoneRoster=phone.slice(phone.indexOf('Your team'));
+  assert.equal((phoneRoster.match(/title="Diamond 1" data-slot="player-rank">Dia 1<\/span>/g)||[]).length,3);
+  assert.match(text(phoneRoster),/Your team ACS PS KD Dia 1 /);
+  assert.doesNotMatch(phoneRoster,/player-rank-icon|data-slot="team-rank"[^>]*><img /);
   const roster=html.slice(html.indexOf('Your team'));
   assert.deepEqual([...roster.matchAll(/data-agent="([^"]+)"/g)].map(x=>x[1]),['Jett','Omen','Sova']);
   // Sova has no art here: the tile falls back to the initial.
@@ -68,11 +108,11 @@ test('the phone card is two lines next to a 40px agent tile and names the agent 
   assert.match(none,/data-slot="agent-icon"[^>]*><\/span>/);
 });
 
-test('match length keeps its seconds',async()=>{
+test('match length always shows minutes and seconds',async()=>{
   const {matchLengthText}=await import('./helpers/react-render.mjs').then(r=>r.load(PAGE));
-  assert.equal(matchLengthText(1616400),'26 min 56 s');
-  assert.equal(matchLengthText(35*60000),'35 min');
-  assert.equal(matchLengthText(42000),'42 s');
-  assert.equal(matchLengthText(1616700),'26 min 57 s');
+  assert.equal(matchLengthText(1616400),'26:56');
+  assert.equal(matchLengthText(35*60000),'35:00');
+  assert.equal(matchLengthText(42000),'0:42');
+  assert.equal(matchLengthText(1616700),'26:57');
   for(const ms of [0,null,undefined,-5,NaN])assert.equal(matchLengthText(ms),null);
 });

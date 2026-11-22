@@ -25,7 +25,7 @@ down:
   together, avg lobby, the teammate's own K/D, ACS and PS in your shared
   matches (coverage counts in the tooltips), win rate (W–L–D record in its
   tooltip) and your net RR together. The party-size table above uses the same
-  order, and both pass `DUO_TABLE_WIDTHS` to `SortableTable`'s `widths`
+  order, and both pass `STAT_TABLE_WIDTHS` (shared.jsx, also used by Servers) to `SortableTable`'s `widths`
   (fixed table layout), so their columns line up. Elsewhere the RR-by-rank
   table now says Matches and Win rate (was Games and WR%), and Wintrading
   signals shows K/D, ACS, PS in that order. Default

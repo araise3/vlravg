@@ -2,7 +2,7 @@ import {Fragment,useEffect,useState} from 'react';
 import {ChevronDown,Shield} from 'lucide-react';
 import {
   avgLabel,avgLabelShort,dayHeaderLabel,loadMatchMapMetadata,loadMoreMatches,matchAward,placeText,
-  lobbyRankText,lobbyRR,matchCardPlayerRank,playerRouteUrl,rClass,rrSigned,tierRR,
+  lobbyRankText,matchCardPlayerRank,playerRouteUrl,rClass,rrSigned,tierRR,
 } from '@/engine/core.mjs';
 import {useEngine,useIsMobile} from '@/app/hooks.js';
 import {EmptyState,Hint,PageHeading,PlacementToggle,RankIcon} from '@/app/shared.jsx';
@@ -24,43 +24,52 @@ export function useMapArt(){
   return maps;
 }
 
-export function RRDetails({m}){
-  const d=m.myRRDetails;
-  const rows=[];
-  const add=(label,value)=>rows.push([label,value]);
-  if(m.myRR!=null)add('Recorded payout',rrSigned(m.myRR,0)+' RR');
-  if(d){
-    if(d.beforeTier!=null&&d.beforeRR!=null)add('Starting rank',avgLabelShort(d.beforeTier)+', '+d.beforeRR+' RR');
-    if(d.afterTier!=null&&d.afterRR!=null)add('Ending rank',avgLabelShort(d.afterTier)+', '+d.afterRR+' RR');
-    if(d.bonus!=null)add('Performance bonus',rrSigned(d.bonus,0)+' RR');
-    // Penalty units/sign conventions are not defined by the schema. Display
-    // the reported values verbatim; do not turn a fractional factor into RR.
-    if(d.afkPenalty!=null)add('AFK penalty (reported)',String(d.afkPenalty));
-    if(d.penalty!=null)add('RR penalty (reported)',String(d.penalty));
-    if(d.mapForgiveness!=null)add('New-map forgiveness',rrSigned(d.mapForgiveness,0)+' RR');
-    if(d.placement!=null)add('Placement match',d.placement?'Yes':'No');
-    if(d.shieldReplenished!=null)add('Rank Shield replenished',d.shieldReplenished?'Yes':'No');
-    if(d.queue)add('Queue',d.queue);
-    if(d.movement)add('Competitive movement',d.movement);
-  }
-  if(m.myRefundedRR)add('Refund',rrSigned(m.myRefundedRR,0)+' RR');
-  if(m.myDerankProtected)add('Rank Shield','Protected displayed rank');
-  if(!rows.length)return null;
-  const hasBreakdown=d&&[d.bonus,d.afkPenalty,d.penalty,d.mapForgiveness].some(v=>v!=null);
+// Only what changed this match's RR beyond the plain payout, as short notes;
+// zeros, "No" and the queue id are left out. Reported bonus, forgiveness and
+// penalties are already inside the RR change, so they are never added again.
+// Penalty units are not defined by the schema: AFK and party penalties show
+// the reported value verbatim and are never turned into RR.
+export function rrNotes(m){
+  const d=m.myRRDetails||{};
+  const notes=[];
+  const inside='Reported for this update and already part of its RR change';
+  if(m.myDerankProtected)notes.push({key:'shield',tone:'shield',text:'Rank Shield kept your rank',hint:'Rank Shield protected your displayed rank; the recorded RR loss still applied'});
+  if(d.placement)notes.push({key:'placement',text:'Placement match',hint:'Riot reported this as a placement match; it is left out of RR stats'});
+  if(d.bonus)notes.push({key:'bonus',tone:d.bonus>0?'gain':'loss',text:rrSigned(d.bonus,0)+' RR performance bonus',hint:inside});
+  if(d.mapForgiveness)notes.push({key:'forgiveness',tone:'gain',text:rrSigned(d.mapForgiveness,0)+' RR new-map forgiveness',hint:inside});
+  if(m.myRefundedRR)notes.push({key:'refund',tone:'gain',text:rrSigned(m.myRefundedRR,0)+' RR refunded',hint:'Refunded RR is applied on top of this match’s RR change'});
+  if(d.afkPenalty)notes.push({key:'afk',tone:'loss',text:'AFK penalty '+d.afkPenalty+' (reported)',hint:'Reported AFK penalty, shown as given'});
+  const party=d.penalty||m.myPartyPenalty;
+  if(party)notes.push({key:'party',tone:'loss',text:'Party RR penalty '+party+' (reported)',hint:'Reported party penalty factor, shown as given; not converted to RR'});
+  if(d.shieldReplenished)notes.push({key:'replenished',tone:'shield',text:'Rank Shield replenished'});
+  return notes;
+}
+
+// Quiet text lines in their tone colour under the stat strip (22 Nov 2026, on
+// request: pills were disliked; they sat in the Rank tile until that tile was
+// removed the same day).
+export function RRNotes({m}){
+  const notes=rrNotes(m);
+  if(!notes.length)return null;
   return (
-    <section aria-label="Your RR details" className="rounded-lg bg-muted/40 p-4">
-      <h4 className="mb-3 text-sm font-medium">Your RR details</h4>
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3 lg:grid-cols-4">
-        {rows.map(([label,value])=><div key={label}><dt className="text-xs text-muted-foreground">{label}</dt><dd className="font-medium tabular">{value}</dd></div>)}
-      </dl>
-      <p className="mt-3 text-xs text-muted-foreground">{hasBreakdown?'Reported bonus and penalty fields describe this update; they are not added again to the recorded payout.':'Bonus and penalty details are unavailable for this match.'}</p>
-    </section>
+    <ul className="mc-rr-notes" aria-label="RR notes" data-slot="rr-notes">
+      {notes.map(n=>{
+        const line=<span className={cn('mc-rr-note',n.tone)}>{n.tone==='shield'&&<Shield aria-hidden="true"/>}{n.text}</span>;
+        return <li key={n.key}>{n.hint?<Hint asChild content={n.hint}>{line}</Hint>:line}</li>;
+      })}
+    </ul>
   );
 }
 
-// `compact` (phones): narrower stat columns and the short rank label.
+// Long Riot IDs (22 Nov 2026, on request): the name column takes all the room
+// the stat columns leave. Ranks are the short name in the rank colour ("Dia 1",
+// full name in the tooltip) on every width; icons were tried the same day and
+// reverted on request. The stat columns are only as wide as their numbers.
+// When a name still does not fit, its tag gives way before the name does (it
+// shrinks first), and the full Riot ID is in the link's tooltip. `compact`
+// (phones): tighter columns and no tag.
 function PlayersGrid({m,me,compact,agents}){
-  const cols=compact?'grid-cols-[minmax(0,1fr)_2.25rem_2.25rem_2.5rem_3.25rem] gap-1.5':'grid-cols-[minmax(0,1fr)_3rem_3rem_3rem_5.5rem] gap-2';
+  const cols=compact?'grid-cols-[minmax(0,1fr)_2.25rem_2.25rem_2.5rem_3.25rem] gap-1.5':'grid-cols-[minmax(0,1fr)_2.5rem_2.5rem_2.75rem_3.5rem] gap-2';
   const myTeamId=me?.team_id,myPartyId=m.myPartyId;
   // Sort by ACS desc (nulls last), fall back to tier
   const byAcs=(a,b)=>{
@@ -69,30 +78,40 @@ function PlayersGrid({m,me,compact,agents}){
     if(b._acs!=null)return 1;
     return (b._tier??0)-(a._tier??0);
   };
-  const teams=[['Your team',m.players.filter(p=>p.team_id===myTeamId).sort(byAcs)],['Enemy team',m.players.filter(p=>p.team_id!==myTeamId).sort(byAcs)]];
+  // Each team's header carries its average rank (rated players only) over the
+  // Rank column. Rounds are not repeated here: the closed row has the score.
+  const teams=[
+    ['Your team',m.players.filter(p=>p.team_id===myTeamId).sort(byAcs),m.avgTeamRank],
+    ['Enemy team',m.players.filter(p=>p.team_id!==myTeamId).sort(byAcs),m.avgEnemyRank],
+  ];
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      {teams.map(([label,players])=>(
+      {teams.map(([label,players,avg])=>(
         <div key={label} className="text-sm">
-          <div className={cn('grid border-b',cols,'px-2 pb-2 text-xs text-muted-foreground uppercase')}>
-            <span>{label}</span><span className="text-right">ACS</span><span className="text-right"><Hint content="Performance Score">PS</Hint></span><span className="text-right">KD</span><span className="text-right">Rank</span>
+          <div className={cn('grid items-end border-b',cols,'px-2 pb-2 text-xs text-muted-foreground uppercase')}>
+            <span className="truncate">{label}</span>
+            <span className="text-right">ACS</span><span className="text-right"><Hint content="Performance Score">PS</Hint></span><span className="text-right">KD</span>
+            {Number.isFinite(avg)
+              ?<Hint asChild content={label+' average rank (rated players): '+lobbyRankText(avg)}><span className={cn('truncate text-right normal-case font-semibold',RANK_TEXT[rClass(tierRR(avg).tier)])} data-slot="team-rank">{avgLabelShort(tierRR(avg).tier)}</span></Hint>
+              :<span className="text-right">Rank</span>}
           </div>
           {players.map((p,i)=>{
             const isMe=p===me,isParty=myPartyId&&p.party_id===myPartyId;
-            const content=<><span className={cn('truncate',isParty&&'text-sky-300',isMe&&'font-semibold text-foreground')}>{p.name||'Unknown player'}</span>{p.tag&&!compact&&<span className="shrink-0 text-xs text-muted-foreground">#{p.tag}</span>}</>;
+            // The tag shrinks first (shrink-[20]); only then is the name cut.
+            const content=<><span className={cn('min-w-0 truncate',isParty&&'text-sky-300',isMe&&'font-semibold text-foreground')}>{p.name||'Unknown player'}</span>{p.tag&&!compact&&<span className="min-w-0 shrink-[20] truncate text-xs text-muted-foreground" data-slot="player-tag">#{p.tag}</span>}</>;
             const agent=p.agent&&<Hint asChild content={p.agent}><span className="shrink-0"><AgentIcon agents={agents} name={p.agent} id={p.agentId} size={compact?20:22}/></span></Hint>;
             return (
               <div key={p.puuid||i} className={cn('grid items-center rounded-md',cols,'px-2 py-1.5 tabular',isMe&&'bg-rank/10')}>
                 <span className="flex min-w-0 items-center gap-2">
                   {agent}
                   {p.name&&p.tag
-                    ?<a href={playerRouteUrl(p.name,p.tag)} title={`Search ${p.name}#${p.tag}`} className="flex min-w-0 items-baseline gap-0.5 hover:underline">{content}</a>
-                    :<span className="flex min-w-0 items-baseline gap-0.5">{content}</span>}
+                    ?<a href={playerRouteUrl(p.name,p.tag)} title={`${p.name}#${p.tag}`} className="flex min-w-0 items-baseline gap-0.5 hover:underline">{content}</a>
+                    :<span className="flex min-w-0 items-baseline gap-0.5" title={p.name||undefined}>{content}</span>}
                 </span>
                 <span className={cn('text-right',p._acs==null&&'text-muted-foreground')}>{p._acs!=null?Math.round(p._acs):'—'}</span>
                 <span className={cn('text-right',p._performanceScore==null&&'text-muted-foreground')}>{Number.isFinite(p._performanceScore)?Math.round(p._performanceScore):'—'}</span>
                 <span className={cn('text-right',p._kd==null&&'text-muted-foreground')}>{p._kd!=null?p._kd.toFixed(2):'—'}</span>
-                <span className={cn('truncate text-right text-xs font-medium',RANK_TEXT[rClass(p._tier)])} title={p._label}>{compact&&Number.isInteger(p._tier)&&p._tier>=3?avgLabelShort(p._tier):p._label}</span>
+                <span className={cn('truncate text-right text-xs font-medium',RANK_TEXT[rClass(p._tier)])} title={p._label} data-slot="player-rank">{Number.isInteger(p._tier)&&p._tier>=3?avgLabelShort(p._tier):p._label}</span>
               </div>
             );
           })}
@@ -157,8 +176,9 @@ export function matchView(m,s){
 // whole minutes drop the seconds. Null when the length is unknown.
 export function matchLengthText(ms){
   if(!(ms>0))return null;
+  // Always minutes and seconds, "35:07" (22 Nov 2026, on request).
   const total=Math.round(ms/1000),minutes=Math.floor(total/60),seconds=total%60;
-  return minutes?`${minutes} min${seconds?` ${seconds} s`:''}`:`${seconds} s`;
+  return `${minutes}:${String(seconds).padStart(2,'0')}`;
 }
 
 // Your rank at the start of the match as a badge on the agent tile (icon
@@ -218,31 +238,49 @@ function RRChange({m,v,className}){
   );
 }
 
-// The opened card's first block: the agent you played, larger and named in
-// their colour, then the details the closed card leaves out.
-function MatchInfo({m,v,agents}){
-  const {rank}=v;
-  const tint=agentTint(agents,m.myAgent,m.myAgentId);
-  const items=[
-    ['Started',[m.startedAtMs!=null?new Date(m.startedAtMs).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):null,v.time].filter(Boolean).join(', ')||'—'],
-    ['Length',v.duration||'—'],
-    ['Server',m.serverName||'—'],
-    ['Avg lobby',rank
-      ?<Hint asChild content={'Average lobby: '+lobbyRankText(m.avgRank)}><span className={cn('inline-flex items-center gap-1.5',RANK_TEXT[rClass(rank.tier)])}>{rank.tier>=3&&<RankIcon tier={rank.tier} size={16}/>}{avgLabel(rank.tier)}{lobbyRR(rank)!=null?<span className="text-xs font-normal text-muted-foreground">{rank.rr} RR</span>:null}</span></Hint>
-      :m.lowRated?<Hint asChild content={'Only '+m.ratedCount+' players were rated; excluded from stats'}><span className="text-muted-foreground">Unrated</span></Hint>:'—'],
+// Your clutches this match as a tile value and hint: won of situations.
+export function clutchSummaryText(clutches){
+  if(!Array.isArray(clutches))return null;
+  const won=clutches.filter(c=>c.outcome==='win').length;
+  const detail=clutches.map(c=>`1v${c.type} ${c.outcome==='win'?'won':c.outcome==='save'?'saved':'lost'}`).join(', ');
+  return {won,total:clutches.length,detail};
+}
+
+// The opened card's head (redesigned 22 Nov 2026, on request: the first
+// version looked empty). One strip of hairline tiles: K/D, ACS, ADR, damage
+// delta per round, headshot %, KAST, clutch win rate, and the game length with
+// the start under it. K/D and ACS were asked for here although the closed row
+// has K/D/A and ACS. The Rank tile (rank before and after) was removed the same
+// day on request. The server joins only where the closed row hides it
+// (`.mc-info-server`). The RR notes follow as quiet text lines.
+function MatchInfo({m,v}){
+  const st=m.myStats||{};
+  const started=[m.startedAtMs!=null?new Date(m.startedAtMs).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):null,v.time].filter(Boolean).join(', ');
+  const clutch=clutchSummaryText(m.myClutches);
+  const tiles=[
+    {label:'K/D',value:Number.isFinite(st.kd)?st.kd.toFixed(2):null,foot:st.kills!=null&&st.deaths!=null?`${st.kills} K, ${st.deaths} D`:null,hint:'Kills divided by deaths'},
+    {label:'ACS',value:Number.isFinite(st.acs)?Math.round(st.acs):null,foot:'per round',hint:'Average combat score'},
+    {label:'ADR',value:st.adr,foot:Number.isFinite(st.dmg)?`${Math.round(st.dmg).toLocaleString('en-GB')} damage`:null,hint:'Average damage per round'},
+    {label:'DDΔ',value:Number.isFinite(st.ddDelta)?rrSigned(st.ddDelta,0):null,tone:Number.isFinite(st.ddDelta)&&st.ddDelta!==0?(st.ddDelta>0?'text-positive':'text-negative'):null,
+      foot:Number.isFinite(st.dmgTaken)?`${Math.round(st.dmgTaken).toLocaleString('en-GB')} taken`:null,hint:'Damage delta: damage dealt minus damage taken, per round'},
+    {label:'HS%',value:st.hsPct!=null?st.hsPct+'%':null,foot:'of hits',hint:'Headshots as a share of your hits'},
+    {label:'KAST',value:st.kast!=null?st.kast+'%':null,foot:st.kastRounds!=null?`${st.kastRounds} of ${st.kastTotalRounds} rounds`:null,hint:'Rounds with a kill, assist, survival or trade'},
+    {label:'Clutches',value:clutch?.total?Math.round(clutch.won/clutch.total*100)+'%':null,foot:clutch?(clutch.total?`${clutch.won} of ${clutch.total} won`:'No situations'):'No round data',hint:clutch?.detail||undefined},
+    {label:'Length',value:v.duration,foot:started||null},
+    {label:'Server',value:m.serverName,className:'mc-info-server'},
   ];
   return (
-    <section className="flex flex-col gap-4 px-1 sm:flex-row sm:items-center sm:gap-8" aria-label="Match info" data-slot="match-info">
-      <div className="flex shrink-0 items-center gap-3" data-slot="match-agent">
-        <AgentIcon agents={agents} name={m.myAgent} id={m.myAgentId} size={48} className="rounded-lg"/>
-        <div className="flex flex-col">
-          <span className="text-xs text-muted-foreground">Agent</span>
-          <span className="text-base font-semibold" style={tint?{color:tint}:undefined}>{m.myAgent||'Unknown'}</span>
-        </div>
-      </div>
-      <dl className="grid flex-1 grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3 lg:grid-cols-5">
-        {items.map(([label,value])=><div key={label} className="min-w-0"><dt className="text-xs text-muted-foreground">{label}</dt><dd className="truncate font-medium tabular-nums">{value}</dd></div>)}
+    <section className="space-y-3" aria-label="Match info" data-slot="match-info">
+      <dl className="mc-stats" data-slot="match-stats">
+        {tiles.map(t=>(
+          <div key={t.label} className={cn('mc-stat-tile',t.className)}>
+            <dt className="mc-stat-label">{t.hint?<Hint content={t.hint}>{t.label}</Hint>:t.label}</dt>
+            <dd className={cn('mc-stat-value',t.value==null?'text-muted-foreground':t.tone)}>{t.value??'—'}</dd>
+            {t.foot&&<dd className="mc-stat-foot">{t.foot}</dd>}
+          </div>
+        ))}
       </dl>
+      <RRNotes m={m}/>
     </section>
   );
 }
@@ -287,8 +325,7 @@ export function MobileMatchCard({m,s,maps,agents,open,onOpenChange}){
           <ChevronDown className={cn('size-4 shrink-0 text-muted-foreground transition-transform duration-200',open&&'rotate-180')} aria-hidden="true"/>
         </CollapsibleTrigger>
         <CollapsibleContent className="match-card-details space-y-4">
-          <MatchInfo m={m} v={v} agents={agents}/>
-          <RRDetails m={m}/>
+          <MatchInfo m={m} v={v}/>
           <PlayersGrid m={m} me={v.me} agents={agents} compact/>
         </CollapsibleContent>
       </div>
@@ -361,8 +398,7 @@ function DesktopMatchCard({m,s,maps,agents,open,onOpenChange}){
           <ChevronDown className="mc-chevron" aria-hidden="true"/>
         </CollapsibleTrigger>
         <CollapsibleContent className="match-card-details space-y-4">
-          <MatchInfo m={m} v={v} agents={agents}/>
-          <RRDetails m={m}/>
+          <MatchInfo m={m} v={v}/>
           <PlayersGrid m={m} me={v.me} agents={agents}/>
         </CollapsibleContent>
       </div>
@@ -421,7 +457,7 @@ export function MatchesPage(){
           <RRSessionCard matches={s.allMatches} range={s.rrRanges.sessions}/>
           <div className="mh-list-heading">
             <span>Match log</span>
-            <span>Newest first. Select a match for RR details and roster.</span>
+            <span>Newest first. Select a match for your rank change and the roster.</span>
           </div>
           <div className="flex flex-col gap-2.5">
             {slice.map((m,index)=>{

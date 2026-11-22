@@ -61,7 +61,7 @@ Left as native `title`: truncation titles that repeat the visible text, and
 per-cell data titles (best value in a column, Performance Score coverage,
 the wintrade "heuristic" note per cell). Tooltips inside a match card's
 button are hover-only, so phones still don't see those; the card's
-`aria-label` carries the figures and the RR details panel repeats Rank Shield.
+`aria-label` carries the figures and the opened card's RR notes repeat Rank Shield.
 
 ### One progress bar
 

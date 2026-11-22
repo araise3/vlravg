@@ -418,7 +418,13 @@
   .mc-row { --mc-gap: 14px; grid-template-columns: minmax(0, 1fr) minmax(76px, .7fr) minmax(196px, 2fr) minmax(70px, .8fr) minmax(40px, .5fr) 16px; }
   .mc-lobby { margin-left: var(--mc-gap); }
   .mc-server { display: none; }
+  .match-card .mc-info-server { display: flex; }
+  .match-card .mc-stat-tile.mc-info-server { display: flex; }
 }
+/* The opened card repeats nothing from the closed row: its server shows only
+   where the row above hides it (the 640px rule above; phone cards are always
+   narrower). */
+.mc-info-server, .mc-stat-tile.mc-info-server { display: none; }
 .m-result-tag { color: var(--result-color); font-size: 10px; font-weight: 750; text-transform: uppercase; letter-spacing: .1em; }
 .match-score { display: flex; align-items: baseline; gap: 5px; font-size: 17px; font-weight: 750; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1.25; }
 .match-score .mc-score-divider { font-size: 14px; color: #71717a; font-weight: 400; }
@@ -435,6 +441,30 @@
 .match-rr-change.shielded { padding: 0 5px; border-radius: 6px; background: rgba(37,99,235,.1); box-shadow: 0 0 0 1px #60a5fa, 0 0 0 2px rgba(96,165,250,.12); }
 .match-rr-change.shielded svg { width: 13px; height: 13px; flex-shrink: 0; color: #60a5fa; }
 .match-card-details { padding: 18px 12px; border-top: 1px solid #222; background: #101012; }
+/* Opened card: rank before → after, with a 100 RR bar below Immortal. The
+   base fill takes the rank colour (currentColor); the change is green or red. */
+/* The opened card's stat strip: eight hairline tiles in one row, three
+   columns where the card is narrow (phones, 640px windows; the server tile
+   joins there, making three full rows). */
+.mc-stats { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 1px; overflow: hidden; border: 1px solid #27272a; border-radius: 10px; background: #27272a; }
+.mc-stat-tile { display: flex; min-width: 0; flex-direction: column; gap: 4px; padding: 10px 12px; background: #18181b; }
+.mc-stat-label { font-size: 11px; color: #a1a1aa; white-space: nowrap; }
+.mc-stat-value { font-size: 18px; line-height: 1.15; font-weight: 650; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc-stat-foot { margin-top: auto; font-size: 11px; color: #71717a; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Server names are words: a little smaller, and they wrap at spaces ("Washington DC") instead of being cut. */
+.mc-info-server .mc-stat-value { font-size: 14px; white-space: normal; overflow: visible; }
+@container (max-width: 640px) {
+  .mc-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+/* RR notes: quiet text lines inside the Rank tile, tinted by tone. Each note
+   is block-level flex so a line that starts with an icon is not baseline-
+   aligned to its icon and sits level with one that starts with text. */
+.mc-rr-notes { display: flex; flex-wrap: wrap; gap: 2px 12px; }
+.mc-rr-note { display: flex; align-items: center; gap: 4px; line-height: 16px; font-size: 11px; font-weight: 500; color: #a1a1aa; white-space: nowrap; }
+.mc-rr-note.gain { color: #86efac; }
+.mc-rr-note.loss { color: #fca5a5; }
+.mc-rr-note.shield { color: #93c5fd; }
+.mc-rr-note svg { width: 11px; height: 11px; }
 @media (prefers-reduced-motion: reduce) { .match-card, .mc-chevron, .mc-backdrop img { transition: none; } }
 @media (max-width: 760px) {
   .match-day-stat { flex-direction: column; gap: 3px; }

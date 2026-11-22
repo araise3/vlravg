@@ -3,7 +3,7 @@ import {
   computeWintradeSignals,decidedWinRate,playerRouteUrl,rName,rrSigned,winRateLabel,winRateTone,
 } from '@/engine/core.mjs';
 import {useEngine} from '@/app/hooks.js';
-import {EmptyState,InlineEmpty,LobbyValue,PageHeading,PartyIcon,PlacementToggle,PlayerLink,LobbyRankText,SortableTable,TableSection,pageEmptyText,toneClass} from '@/app/shared.jsx';
+import {EmptyState,InlineEmpty,LobbyValue,PageHeading,PartyIcon,PlacementToggle,PlayerLink,LobbyRankText,RankIcon,SortableTable,STAT_TABLE_WIDTHS,TableSection,pageEmptyText,toneClass} from '@/app/shared.jsx';
 import {cn} from '@/lib/utils';
 import {Card,CardContent,CardDescription,CardHeader,CardTitle} from '@/components/ui/card';
 import {Progress} from '@/components/ui/progress';
@@ -17,8 +17,7 @@ export const TABLE_PAGE_SIZE=10;
 // The site's table column order (22 Nov 2026, on request): the row's name,
 // Matches, Avg Lobby, K/D, ACS, PS, Win rate, then RR. The party-size and
 // teammates tables stack on the Duos page, so they also share fixed column
-// widths and line up column for column.
-export const DUO_TABLE_WIDTHS=['17%','9%','20%','9%','9%','9%','12%','15%'];
+// widths (STAT_TABLE_WIDTHS, also used by Servers) and line up column for column.
 
 // Your performance grouped by lobby rank (party=false) or by party size.
 export function PerformanceTable({id,rows,party}){
@@ -35,7 +34,7 @@ export function PerformanceTable({id,rows,party}){
     const cells=[
       party
         ?<span className="flex items-center gap-2"><PartyIcon size={b.tier}/><span>{b.label||rName(b.tier)}</span></span>
-        :<LobbyRankText tier={b.tier}>{b.label||rName(b.tier)}</LobbyRankText>,
+        :<span className="flex items-center gap-2"><RankIcon tier={b.tier} size={24}/><LobbyRankText tier={b.tier}>{b.label||rName(b.tier)}</LobbyRankText></span>,
       b.total,
       ...(party?[<LobbyValue sum={b.lobbySum} count={b.lobbyCount}/>]:[]),
       kd==null?'—':kd.toFixed(2),
@@ -64,7 +63,7 @@ export function PerformanceTable({id,rows,party}){
     ?[{column:2,label:'average lobby rank'},{column:3,label:'K/D'},{column:4,label:'average ACS'},{column:5,label:'Avg PS'},{column:6,label:'win rate'}]
     :[{column:2,label:'K/D'},{column:3,label:'average ACS'},{column:4,label:'Avg PS'},{column:5,label:'win rate'}];
   return (
-    <SortableTable id={id} rows={tableRows} values={values} columns={columns} maxima={maxima} standalone widths={party?DUO_TABLE_WIDTHS:undefined}
+    <SortableTable id={id} rows={tableRows} values={values} columns={columns} maxima={maxima} standalone widths={party?STAT_TABLE_WIDTHS:undefined}
       caption={`Your performance grouped by ${party?'party size, including your total recorded RR change':'average lobby rank'}`}/>
   );
 }
@@ -116,7 +115,7 @@ export function DuoRoster({teammates}){
   return (
     // Just the table, like the party-size table above it: no card around it.
     <TableSection label="Teammates">
-      <SortableTable id="teammates-list" rows={tableRows} values={values} noun="teammates" standalone widths={DUO_TABLE_WIDTHS}
+      <SortableTable id="teammates-list" rows={tableRows} values={values} noun="teammates" standalone widths={STAT_TABLE_WIDTHS}
         pageSize={TEAMMATE_PAGE_SIZES[0]} pageSizes={TEAMMATE_PAGE_SIZES}
         columns={[{label:'Teammate'},{label:'Matches'},{label:'Avg Lobby',wide:true,align:'left'},{label:'K/D',title:'Their K/D in your shared matches'},
           {label:'ACS',title:'Their average ACS in your shared matches'},{label:'PS',title:'Their average Performance Score in your shared matches'},

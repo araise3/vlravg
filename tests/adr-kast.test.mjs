@@ -205,3 +205,23 @@ test('seventy-one Nov 2026 matches reproduce tracker.gg ADR and KAST on every ro
   // The old summary-total ADR misses tracker on the friendly-fire rows.
   assert.ok(rawDiffers>=15,`raw dealt differs on ${rawDiffers} rows`);
 });
+
+test('damage delta per round: damage dealt minus damage taken, both from enemies only',()=>{
+  // Round 1: you hit e1 for 150 and a teammate for 40; e1 hits you for 90, your teammate hits you for 25.
+  // Round 2: you hit e2 for 100; e2 hits you for 120 and hits your teammate for 60.
+  const m={players:roster,rounds:[
+    {stats:[{player:P('me','Red'),damage_events:[hit('e1',150),hit('mate',40)]},{player:P('e1','Blue'),damage_events:[hit('me',90)]},{player:P('mate','Red'),damage_events:[hit('me',25)]}]},
+    {stats:[{player:P('me','Red'),damage_events:[hit('e2',100)]},{player:P('e2','Blue'),damage_events:[hit('me',120),hit('mate',60)]}]},
+  ],kills:[]};
+  const rs=computeRoundStats(m,'me');
+  assert.equal(rs.enemyDamage,250);
+  assert.equal(rs.enemyDamageTaken,210);
+  const stats=extractStats({stats:{kills:0,deaths:0,score:0,damage:{dealt:999,received:999}}},2,rs);
+  assert.equal(stats.dmgTaken,210);
+  assert.equal(stats.ddDelta,20);
+  // Without round data the summary totals are used (Henrik's damage.received).
+  const summary=extractStats({stats:{kills:0,deaths:0,score:0,damage:{dealt:3000,received:2300}}},20,null);
+  assert.equal(summary.ddDelta,35);
+  // Unknown damage taken: no delta rather than a guess.
+  assert.equal(extractStats({stats:{kills:0,deaths:0,score:0,damage:{dealt:3000}}},20,null).ddDelta,null);
+});

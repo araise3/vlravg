@@ -163,9 +163,12 @@ export function LobbyRankCard({s}){
                         <span className="block text-xs @min-[19rem]:hidden">{lobbiesText(count)}</span>
                       </TableCell>
                                             <TableCell className={cn(TABLE_CELL,'w-full max-w-0 font-medium')}>
-                        <LobbyRankText tier={r.tier} className="flex min-w-0">
-                          <span className="truncate @max-[19rem]:hidden">{avgLabel(r.tier)}</span><span className="truncate @min-[19rem]:hidden">{avgLabelShort(r.tier)}</span>
-                        </LobbyRankText>
+                        <span className="flex min-w-0 items-center gap-2">
+                          <RankIcon tier={r.tier} size={18}/>
+                          <LobbyRankText tier={r.tier} className="flex min-w-0">
+                            <span className="truncate @max-[19rem]:hidden">{avgLabel(r.tier)}</span><span className="truncate @min-[19rem]:hidden">{avgLabelShort(r.tier)}</span>
+                          </LobbyRankText>
+                        </span>
                       </TableCell>
                       <TableCell className={cn(TABLE_CELL,'text-right text-muted-foreground @max-[19rem]:hidden')}>{count}</TableCell>
                     </TableRow>

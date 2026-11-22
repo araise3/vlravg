@@ -59,11 +59,12 @@ only the chrome around them and the way some data is drawn differ.
   in gold for first, else "3rd"), K/D/A and PS on the next;
   older matches without PS show ACS there instead. ACS left this line on 22
   Nov 2026 to make room for the place; it is still in the roster. Desktop shows the same lobby as a "Lobby"
-  cell between Server and RR. The agent (as a 48px tile with its name), start time, length
-  with seconds, server and lobby rank are also in the opened card's
-  `MatchInfo` block, above the same RR details and roster as on
-  desktop; the roster uses narrower columns, short rank labels and agent
-  icons, and drops the #tag (kept in the link) so names have room.
+  cell between Server and RR. The opened card's `MatchInfo` strip is three
+  columns on phones, three full rows: K/D, ACS, ADR, DDΔ, HS%, KAST, clutch
+  win rate, length and server (the phone's closed card has no server), then
+  the RR notes, above the roster; the roster uses
+  narrower columns, short rank names and agent icons, and drops the #tag
+  (kept in the link) so names have room.
 - **Overview**: the lobby rank and top teammates cards stack; the lobby rows
   use the short rank label ("Immo 3") and put the lobby count under the row
   label. The last-20 RR card's four figures wrap to a 2×2 grid.
