@@ -68,9 +68,25 @@ export function RRNotes({m}){
 // When a name still does not fit, its tag gives way before the name does (it
 // shrinks first), and the full Riot ID is in the link's tooltip. `compact`
 // (phones): tighter columns and no tag.
+// Parties (22 Nov 2026, on request): every party of two or more, on either
+// team, colours its members' names alike; yours takes the first colour (sky, as
+// before), then the rest in roster order. The colours stay clear of the rank
+// colours in the column on the right. The link's tooltip names the partners.
+const PARTY_TEXT=['text-sky-300','text-lime-300','text-orange-300','text-indigo-300'];
+function rosterParties(players,myPartyId){
+  const members=new Map();
+  for(const p of players){
+    if(p.party_id==null||p.party_id==='')continue;
+    if(!members.has(p.party_id))members.set(p.party_id,[]);
+    members.get(p.party_id).push(p);
+  }
+  const ids=[...members.keys()].filter(id=>members.get(id).length>1);
+  ids.sort((a,b)=>(b===myPartyId)-(a===myPartyId));
+  return new Map(ids.map((id,i)=>[id,{index:i+1,className:PARTY_TEXT[i%PARTY_TEXT.length],members:members.get(id)}]));
+}
 function PlayersGrid({m,me,compact,agents}){
   const cols=compact?'grid-cols-[minmax(0,1fr)_2.25rem_2.25rem_2.5rem_3.25rem] gap-1.5':'grid-cols-[minmax(0,1fr)_2.5rem_2.5rem_2.75rem_3.5rem] gap-2';
-  const myTeamId=me?.team_id,myPartyId=m.myPartyId;
+  const myTeamId=me?.team_id;
   // Sort by ACS desc (nulls last), fall back to tier
   const byAcs=(a,b)=>{
     if(a._acs!=null&&b._acs!=null)return b._acs-a._acs;
@@ -84,6 +100,7 @@ function PlayersGrid({m,me,compact,agents}){
     ['Your team',m.players.filter(p=>p.team_id===myTeamId).sort(byAcs),m.avgTeamRank],
     ['Enemy team',m.players.filter(p=>p.team_id!==myTeamId).sort(byAcs),m.avgEnemyRank],
   ];
+  const parties=rosterParties(teams.flatMap(([,players])=>players),me?.party_id??m.myPartyId);
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       {teams.map(([label,players,avg])=>(
@@ -96,17 +113,21 @@ function PlayersGrid({m,me,compact,agents}){
               :<span className="text-right">Rank</span>}
           </div>
           {players.map((p,i)=>{
-            const isMe=p===me,isParty=myPartyId&&p.party_id===myPartyId;
+            const isMe=p===me,party=parties.get(p.party_id);
+            const partners=party?.members.filter(o=>o!==p).map(o=>o.name||'Unknown player');
+            const title=(p.name&&p.tag?`${p.name}#${p.tag}`:p.name||'')+(partners?`, in a party with ${partners.join(', ')}`:'');
             // The tag shrinks first (shrink-[20]); only then is the name cut.
-            const content=<><span className={cn('min-w-0 truncate',isParty&&'text-sky-300',isMe&&'font-semibold text-foreground')}>{p.name||'Unknown player'}</span>{p.tag&&!compact&&<span className="min-w-0 shrink-[20] truncate text-xs text-muted-foreground" data-slot="player-tag">#{p.tag}</span>}</>;
-            const agent=p.agent&&<Hint asChild content={p.agent}><span className="shrink-0"><AgentIcon agents={agents} name={p.agent} id={p.agentId} size={compact?20:22}/></span></Hint>;
+            const content=<><span className={cn('min-w-0 truncate',isMe&&'font-semibold text-foreground',party?.className)} data-party={party?.index}>{p.name||'Unknown player'}</span>{p.tag&&!compact&&<span className="min-w-0 shrink-[20] truncate text-xs text-muted-foreground" data-slot="player-tag">#{p.tag}</span>}</>;
+            // A block-level flex wrapper: an inline one sat the icon on a text
+            // baseline in a 27px line box, 2.5px above the name's centre.
+            const agent=p.agent&&<Hint asChild content={p.agent}><span className="flex shrink-0"><AgentIcon agents={agents} name={p.agent} id={p.agentId} size={compact?20:22}/></span></Hint>;
             return (
               <div key={p.puuid||i} className={cn('grid items-center rounded-md',cols,'px-2 py-1.5 tabular',isMe&&'bg-rank/10')}>
                 <span className="flex min-w-0 items-center gap-2">
                   {agent}
                   {p.name&&p.tag
-                    ?<a href={playerRouteUrl(p.name,p.tag)} title={`${p.name}#${p.tag}`} className="flex min-w-0 items-baseline gap-0.5 hover:underline">{content}</a>
-                    :<span className="flex min-w-0 items-baseline gap-0.5" title={p.name||undefined}>{content}</span>}
+                    ?<a href={playerRouteUrl(p.name,p.tag)} title={title} className="flex min-w-0 items-baseline gap-0.5 hover:underline">{content}</a>
+                    :<span className="flex min-w-0 items-baseline gap-0.5" title={title||undefined}>{content}</span>}
                 </span>
                 <span className={cn('text-right',p._acs==null&&'text-muted-foreground')}>{p._acs!=null?Math.round(p._acs):'—'}</span>
                 <span className={cn('text-right',p._performanceScore==null&&'text-muted-foreground')}>{Number.isFinite(p._performanceScore)?Math.round(p._performanceScore):'—'}</span>

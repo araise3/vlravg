@@ -98,6 +98,24 @@ test('the opened card is a strip of tiles: K/D, ACS, ADR, damage delta, HS%, KAS
   assert.match(roster,/data-agent="Sova"[^>]*>S<\/span>/);
 });
 
+test('roster parties share a colour on either team, yours first, solos stay plain; agent icons sit in a block-level wrapper so names line up',async()=>{
+  const players=[
+    player('p1','Player','red','Jett',{party_id:'a'}),player('p2','Mate','red','Omen',{party_id:'a'}),player('p3','Solo','red','Sova',{party_id:'s3'}),
+    player('p4','Foe','blue','Sova',{party_id:'b'}),player('p5','Foe2','blue','Jett',{party_id:'b'}),player('p6','Foe3','blue','Omen',{party_id:'b'}),
+  ];
+  const html=await renderHtml(PAGE,'MatchCard',{m:{...match,players,myPartyId:'a'},s,maps:null,agents,open:true,onOpenChange(){}});
+  const roster=html.slice(html.indexOf('Your team'));
+  const colour=name=>roster.match(new RegExp(`<span class="([^"]*)"(?: data-party="(\\d)")?>${name}</span>`)).slice(1);
+  assert.deepEqual(colour('Player'),['min-w-0 truncate font-semibold text-sky-300','1']);
+  assert.deepEqual(colour('Mate'),['min-w-0 truncate text-sky-300','1']);
+  assert.deepEqual(colour('Solo'),['min-w-0 truncate',undefined]);
+  for(const foe of ['Foe','Foe2','Foe3'])assert.deepEqual(colour(foe),['min-w-0 truncate text-lime-300','2']);
+  assert.match(roster,/title="Mate#EU, in a party with Player"/);
+  assert.match(roster,/title="Foe#EU, in a party with Foe2, Foe3"/);
+  assert.match(roster,/title="Solo#EU"/);
+  assert.match(roster,/<span class="flex shrink-0"[^>]*><span aria-hidden="true" data-slot="agent-icon"/);
+});
+
 test('the phone card is two lines next to a 40px agent tile and names the agent in its label',async()=>{
   const html=await renderHtml(PAGE,'MobileMatchCard',{m:match,s,maps:null,agents,open:false,onOpenChange(){}});
   assert.match(html,/data-agent="Jett"[^>]*width:40px/);

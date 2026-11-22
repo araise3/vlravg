@@ -71,7 +71,7 @@ export function loadFixture(stressCase='demo'){
       name:stressWorst&&i%5===3&&j===9?undefined:name,
       tag:stressWorst&&i%5===3&&j===9?undefined:tag,
       puuid:j===0?stressPuuid:'00000000-0000-4000-8000-'+String(j+1).padStart(12,'0'),
-      team_id:j<5?'Red':'Blue',party_id:j<(stressWorst?(i%5===4?5:i%5===0?3:i%5===2?1:2):demo?[2,1,2,3][i%4]:2)?'fixture-party':'solo-'+j,
+      team_id:j<5?'Red':'Blue',party_id:j<(stressWorst?(i%5===4?5:i%5===0?3:i%5===2?1:2):demo?[2,1,2,3][i%4]:2)?'fixture-party':demo&&i%2===0&&(j===5||j===7)?'fixture-enemy-party':'solo-'+j,
       tier:stressWorst&&i%5===3?{id:0,patched:'Unranked'}:stressWorst?{id:j===0?27:26,patched:j===0?'Radiant':'Immortal 3'}
         :{id:demo&&j?demoLobbyTier(i,j):18,patched:demo&&j?undefined:'Diamond 1'},
       stats:stressWorst&&i%5===3&&j===0?{}:{kills:j===0&&overtime?72:j===0&&stressWorst&&i%5===1?0:18-j,deaths:j===0&&stressWorst&&i%5===1?0:12+j,assists:8,score:(j===0&&overtime?450:stressWorst&&i%5===2&&j===5?480:stressWorst&&i%5===4&&j===1?480:240-j*12)*rounds,rounds_played:rounds,damage:{dealt:(j===0&&overtime?300:160)*rounds,received:(j===0?130:150)*rounds},shots:{head:30,body:60,leg:10}},
