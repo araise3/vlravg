@@ -21,3 +21,21 @@ There is no scheduled pro-name refresh or automatic library enrollment. Opening
 a profile enrolls the account in D1, where the remaining `Collect act RR corpus`
 workflow can capture its RR history under the usual activity policy. Historical
 name scans remain available through the profile's Load older names button.
+
+## List design (22 Nov 2026)
+
+Redesigned with shadcn parts on request; shared by the desktop popover and the
+phone search sheet (`src/app/pro-library.jsx`). Until then each row was the
+handle over its full PUUID in one alphabetical list.
+
+- A region filter (ToggleGroup: All, Americas, EMEA, Pacific, China) with
+  account counts for the current search. Five pros with no region show under
+  All only.
+- No search: players grouped under their team (teams A–Z, "No team listed"
+  last), the team's region beside the heading, two columns where the popover
+  is at least 520px wide. Each row is an Avatar initial, the handle, a
+  Main/Alt badge for players with several accounts, and the country.
+- A search matches handle, team or PUUID and lists results flat in match
+  order, each with team and country. The PUUID is shown only when the search
+  matched it rather than the handle; it is always in the row's accessible name.
+- Desktop shows keyboard hints (arrows, Enter, Esc) under the list.

@@ -6,9 +6,9 @@ import {
 } from '@/engine/core.mjs';
 import {useEngine,useIsMobile,useSignal} from '@/app/hooks.js';
 import {RankIcon} from '@/app/shared.jsx';
+import {ProAccount,ProGroupHeading,ProRegionFilter,filterProRegion,proAccountLabel,proGroups,proRegionCounts} from '@/app/pro-library.jsx';
 import {MobileSearchSheet,MobileTopBar} from '@/app/MobileShell.jsx';
 import {cn} from '@/lib/utils';
-import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
 import {ButtonGroup} from '@/components/ui/button-group';
 import {Card,CardContent} from '@/components/ui/card';
@@ -39,35 +39,51 @@ function Intro(){
   );
 }
 
+// The pro library (redesigned 22 Nov 2026, see pro-library.jsx): a header
+// with the count, the search box, a region filter, then players grouped by
+// team in two columns where the popover is wide enough. Arrow keys move
+// through the list in reading order; Enter opens the profile.
 function ProLibraryPanel({onPick}){
   const s=useEngine();
   const [query,setQuery]=useState('');
-  const results=s.proLibraryState==='ready'?proSearchResults(query):[];
+  const [region,setRegion]=useState('all');
+  const ready=s.proLibraryState==='ready';
+  const all=ready?proSearchResults(query):[];
+  const results=filterProRegion(all,region);
+  const groups=proGroups(results,query);
   const count=s.proLibraryState==='loading'?'Loading':s.proLibraryState==='error'?'Unavailable'
-    :query.trim()?`${results.length} result${results.length===1?'':'s'}`:`${results.length} accounts`;
+    :`${results.length} ${results.length===1?'account':'accounts'}`;
   return (
     <Command shouldFilter={false} label="Pro player library" className="min-h-0 flex-1 bg-transparent">
-      <div className="flex items-center justify-between gap-3 px-2 pt-1.5 pb-1 text-xs text-muted-foreground">
-        <span className="font-medium">Pro player library</span><span className="tabular-nums">{count}</span>
+      <div className="flex items-baseline justify-between gap-3 px-2.5 pt-2 pb-2">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold">Pro players</div>
+          <div className="text-xs text-muted-foreground">VCT 2026 rosters. Opens the player’s current account.</div>
+        </div>
+        <span className="shrink-0 text-xs text-muted-foreground tabular-nums" aria-live="polite">{count}</span>
       </div>
-      <CommandInput placeholder="Search pro name or PUUID" value={query} onValueChange={setQuery} autoFocus className="max-sm:text-base"/>
+      <CommandInput placeholder="Search player, team or PUUID" value={query} onValueChange={setQuery} autoFocus className="max-sm:text-base"/>
+      {ready&&<ProRegionFilter value={region} onChange={setRegion} counts={proRegionCounts(all)} className="px-1.5 pt-2"/>}
       <CommandList className="max-h-[min(56vh,520px)] min-h-0 flex-1 scrollbar-thin">
         {s.proLibraryState==='loading'&&<div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground"><Spinner/>Loading pro players…</div>}
         {s.proLibraryState==='error'&&<div className="py-6 text-center text-sm text-muted-foreground">The pro library could not be loaded.</div>}
-        {s.proLibraryState==='ready'&&<CommandEmpty>No pro players match that search.</CommandEmpty>}
-        <CommandGroup>
-          {results.map(row=>(
-            <CommandItem key={row.puuid} value={row.puuid} onSelect={()=>onPick(row)} aria-label={`${row.handle}, ${row.puuid}`}
-              className="flex-col items-start gap-0.5">
-              <span className="flex min-w-0 items-center gap-2">
-                <span className="truncate font-medium">{row.handle}</span>
-                {row.accountCount>1&&<Badge variant="secondary" className="px-1.5 py-0 text-[10px]">{row.accountIndex===0?'Main':`Alt ${row.accountIndex}`}</Badge>}
-              </span>
-              <span className="max-w-full truncate text-xs text-muted-foreground" title={row.puuid}>{row.puuid}</span>
-            </CommandItem>
-          ))}
-        </CommandGroup>
+        {ready&&<CommandEmpty>No pro players match that search{region!=='all'?` in ${region}`:''}.</CommandEmpty>}
+        {groups.map(group=>(
+          <CommandGroup key={group.key} heading={<ProGroupHeading group={group}/>}
+            className="[&_[cmdk-group-items]]:grid [&_[cmdk-group-items]]:gap-0.5 @min-[520px]/pro:[&_[cmdk-group-items]]:grid-cols-2">
+            {group.rows.map(row=>(
+              <CommandItem key={row.puuid} value={row.puuid} onSelect={()=>onPick(row)} aria-label={proAccountLabel(row)} className="min-w-0 gap-2.5 py-2">
+                <ProAccount row={row} flat={group.flat} query={query}/>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        ))}
       </CommandList>
+      <div className="flex items-center justify-end gap-3 border-t px-2.5 pt-2 pb-1 text-[11px] text-muted-foreground max-sm:hidden" aria-hidden="true">
+        <span className="flex items-center gap-1"><KbdGroup><Kbd>↑</Kbd><Kbd>↓</Kbd></KbdGroup>Move</span>
+        <span className="flex items-center gap-1"><Kbd>↵</Kbd>Open</span>
+        <span className="flex items-center gap-1"><Kbd>Esc</Kbd>Close</span>
+      </div>
     </Command>
   );
 }
@@ -239,7 +255,7 @@ export function SearchHeader(){
       {/* The list shrinks to the space Radix measures on the side it opens
           (12px from the window edge), so it never runs off screen. */}
       <PopoverContent align="start" sideOffset={8} collisionPadding={12} onOpenAutoFocus={event=>event.preventDefault()}
-        className="flex max-h-[var(--radix-popover-content-available-height)] w-[var(--radix-popover-trigger-width)] flex-col p-1.5">
+        className="@container/pro flex max-h-[var(--radix-popover-content-available-height)] w-[var(--radix-popover-trigger-width)] flex-col p-1.5">
         <ProLibraryPanel onPick={row=>{setProOpen(false);analyzeProAccount(row);}}/>
       </PopoverContent>
     </Popover>

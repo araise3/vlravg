@@ -6,9 +6,8 @@ import {analyzeProAccount,proSearchResults,rColor,rName,setSearchText,submitSear
 import {useEngine,useSignal} from '@/app/hooks.js';
 import {PageLink,RankIcon,Sep} from '@/app/shared.jsx';
 import {ActPicker,StatusBar} from '@/app/SearchHeader.jsx';
+import {ProAccount,ProGroupHeading,ProRegionFilter,filterProRegion,proAccountLabel,proGroups,proRegionCounts} from '@/app/pro-library.jsx';
 import {cn} from '@/lib/utils';
-import {Avatar,AvatarFallback} from '@/components/ui/avatar';
-import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
 import {InputGroup,InputGroupAddon,InputGroupButton,InputGroupInput} from '@/components/ui/input-group';
 import {Sheet,SheetContent,SheetDescription,SheetHeader,SheetTitle} from '@/components/ui/sheet';
@@ -62,8 +61,12 @@ export function MobileSearchSheet({open,onOpenChange}){
     if(submitted.current&&s.analysisState==='loading'){submitted.current=false;onOpenChange(false);}
   },[s.version]); // eslint-disable-line react-hooks/exhaustive-deps
   const query=s.searchText.trim();
-  const pros=s.proLibraryState==='ready'?proSearchResults(query):[];
-  const shown=pros.slice(0,PRO_LIMIT);
+  const [region,setRegion]=useState('all');
+  const allPros=s.proLibraryState==='ready'?proSearchResults(query):[];
+  const pros=filterProRegion(allPros,region);
+  // Browsing lists every team; a search lists at most PRO_LIMIT matches.
+  const groups=proGroups(query?pros.slice(0,PRO_LIMIT):pros,query);
+  const flatHidden=query?pros.length-Math.min(pros.length,PRO_LIMIT):0;
   const looksLikeId=/#/.test(query)||/^[0-9a-f-]{30,}$/i.test(query);
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -98,41 +101,35 @@ export function MobileSearchSheet({open,onOpenChange}){
           <div className="flex items-baseline justify-between px-2 pt-1 pb-2 text-xs text-muted-foreground">
             <span className="font-medium tracking-wide uppercase">Pro players</span>
             <span className="tabular-nums">
-              {s.proLibraryState==='loading'?'Loading':s.proLibraryState==='error'?'Unavailable':`${pros.length} ${query?'match':'account'}${pros.length===1?'':query?'es':'s'}`}
+              {s.proLibraryState==='loading'?'Loading':s.proLibraryState==='error'?'Unavailable':`${pros.length} ${pros.length===1?'account':'accounts'}`}
             </span>
           </div>
+          {s.proLibraryState==='ready'&&<ProRegionFilter value={region} onChange={setRegion} counts={proRegionCounts(allPros)} className="px-1 pb-2"/>}
           {s.proLibraryState==='loading'&&<div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground"><Spinner/>Loading pro players…</div>}
           {s.proLibraryState==='error'&&<p className="px-2 py-8 text-center text-sm text-muted-foreground">The pro library could not be loaded.</p>}
           {s.proLibraryState==='ready'&&!pros.length&&(
             <p className="px-2 py-8 text-center text-sm text-muted-foreground">
-              {looksLikeId?<>No pro matches. Tap <span className="font-medium text-foreground">Search</span> to look up <span className="font-medium text-foreground break-all">{query}</span>.</>:'No pro players match that search.'}
+              {looksLikeId?<>No pro matches. Tap <span className="font-medium text-foreground">Search</span> to look up <span className="font-medium text-foreground break-all">{query}</span>.</>:`No pro players match that search${region!=='all'?` in ${region}`:''}.`}
             </p>
           )}
-          <ul aria-label="Pro player library" className="flex flex-col">
-            {shown.map(row=>(
-              <li key={row.puuid}>
-                <Item asChild size="sm" className="w-full min-w-0 flex-nowrap gap-3 rounded-lg px-2 py-2.5 text-left text-base hover:bg-accent/60 active:bg-accent">
-                  <button type="button" onClick={()=>{submitted.current=false;onOpenChange(false);analyzeProAccount(row);}}
-                    aria-label={`${row.handle}, ${row.puuid}`}>
-                    <ItemMedia>
-                      <Avatar className="size-9" aria-hidden="true">
-                        <AvatarFallback className="text-sm font-semibold text-muted-foreground uppercase">{row.handle.slice(0,1)}</AvatarFallback>
-                      </Avatar>
-                    </ItemMedia>
-                    <ItemContent className="min-w-0 gap-0">
-                      <ItemTitle className="w-full min-w-0 text-base">
-                        <span className="truncate">{row.handle}</span>
-                        {row.accountCount>1&&<Badge variant="secondary" className="px-1.5 py-0 text-[10px]">{row.accountIndex===0?'Main':`Alt ${row.accountIndex}`}</Badge>}
-                      </ItemTitle>
-                      <ItemDescription className="line-clamp-1 font-mono text-[11px] break-all">{row.puuid}</ItemDescription>
-                    </ItemContent>
-                    <ItemActions><ChevronRight className="size-4 text-muted-foreground/60" aria-hidden="true"/></ItemActions>
-                  </button>
-                </Item>
-              </li>
-            ))}
-          </ul>
-          {pros.length>shown.length&&<p className="px-2 py-3 text-center text-xs text-muted-foreground">Showing {shown.length} of {pros.length}. Keep typing to narrow it down.</p>}
+          {groups.map(group=>(
+            <section key={group.key} aria-label={group.flat?'Search results':group.heading} className="pb-1">
+              <h3 className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground"><ProGroupHeading group={group}/></h3>
+              <ul className="flex flex-col">
+                {group.rows.map(row=>(
+                  <li key={row.puuid}>
+                    <Item asChild size="sm" className="w-full min-w-0 flex-nowrap gap-3 rounded-lg px-2 py-2.5 text-left text-base hover:bg-accent/60 active:bg-accent">
+                      <button type="button" onClick={()=>{submitted.current=false;onOpenChange(false);analyzeProAccount(row);}} aria-label={proAccountLabel(row)}>
+                        <ProAccount row={row} flat={group.flat} query={query} size="lg"/>
+                        <ItemActions><ChevronRight className="size-4 text-muted-foreground/60" aria-hidden="true"/></ItemActions>
+                      </button>
+                    </Item>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+          {flatHidden>0&&<p className="px-2 py-3 text-center text-xs text-muted-foreground">Showing {PRO_LIMIT} of {pros.length}. Keep typing to narrow it down.</p>}
         </div>
       </SheetContent>
     </Sheet>

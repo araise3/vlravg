@@ -1056,7 +1056,10 @@ async function loadProPlayerLibrary(){
       accountIndex:index,
       accountCount:player.accounts.length,
       puuid:account.puuid.toLowerCase(),
-      searchText:foldProSearch([player.handle,account.puuid].filter(Boolean).join(' ')),
+      team:player.team||null,
+      region:player.region||null,
+      countryCode:/^[a-z]{2}$/i.test(player.countryCode||'')?player.countryCode.toUpperCase():null,
+      searchText:foldProSearch([player.handle,account.puuid,player.team].filter(Boolean).join(' ')),
     })));
     proLibraryState='ready';
   }catch(error){

@@ -84,7 +84,9 @@ test('rank zoom chips are a single-choice ToggleGroup; tapping the chosen rank a
 test('list rows are shadcn Items: pro players with an avatar initial, the More sheet, replay rows',async()=>{
   const shell=source('app/MobileShell.jsx');
   assert.match(shell,/<Item asChild size="sm"[^>]*>\s*<button type="button"/);
-  assert.match(shell,/<AvatarFallback[^>]*>\{row\.handle\.slice\(0,1\)\}<\/AvatarFallback>/);
+  // The pro row content (avatar initial, handle, team and country) is shared with the desktop list.
+  assert.match(shell,/<Item asChild size="sm"[^>]*>\s*<button type="button"[^\n]*\n\s*<ProAccount /);
+  assert.match(source('app/pro-library.jsx'),/<AvatarFallback[^>]*>\{row\.handle\.slice\(0,1\)\}<\/AvatarFallback>/);
   assert.match(shell,/<Item asChild size="sm"[^>]*>\s*<PageLink page=\{target\}/);
   const replays=source('app/pages/Replays.jsx');
   assert.match(replays,/<Item variant="outline"/);
