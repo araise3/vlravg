@@ -1,12 +1,13 @@
 import {Fragment,useEffect,useState} from 'react';
 import {ChevronDown,Shield,Trophy} from 'lucide-react';
 import {
-  avgLabel,avgLabelShort,dayHeaderLabel,hexToRgb,loadMatchMapMetadata,loadMoreMatches,matchAward,
-  lobbyRankText,lobbyRR,matchCardPlayerRank,playerRouteUrl,rClass,rColor,rrSigned,tierRR,
+  avgLabel,avgLabelShort,dayHeaderLabel,loadMatchMapMetadata,loadMoreMatches,matchAward,
+  lobbyRankText,lobbyRR,matchCardPlayerRank,playerRouteUrl,rClass,rrSigned,tierRR,
 } from '@/engine/core.mjs';
 import {useEngine,useIsMobile} from '@/app/hooks.js';
-import {EmptyState,Hint,PageHeading,PlacementToggle,RankIcon,Sep} from '@/app/shared.jsx';
+import {EmptyState,Hint,PageHeading,PlacementToggle,RankIcon} from '@/app/shared.jsx';
 import {RRSessionCard} from '@/app/pages/RR.jsx';
+import {AgentIcon,agentTint,useAgentArt} from '@/app/agent-icon.jsx';
 import {cn} from '@/lib/utils';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
@@ -58,7 +59,7 @@ export function RRDetails({m}){
 }
 
 // `compact` (phones): narrower stat columns and the short rank label.
-function PlayersGrid({m,me,compact}){
+function PlayersGrid({m,me,compact,agents}){
   const cols=compact?'grid-cols-[minmax(0,1fr)_2.25rem_2.25rem_2.5rem_3.25rem] gap-1.5':'grid-cols-[minmax(0,1fr)_3rem_3rem_3rem_5.5rem] gap-2';
   const myTeamId=me?.team_id,myPartyId=m.myPartyId;
   // Sort by ACS desc (nulls last), fall back to tier
@@ -78,12 +79,16 @@ function PlayersGrid({m,me,compact}){
           </div>
           {players.map((p,i)=>{
             const isMe=p===me,isParty=myPartyId&&p.party_id===myPartyId;
-            const content=<><span className={cn('truncate',isParty&&'text-sky-300',isMe&&'font-semibold text-foreground')}>{p.name||'Unknown player'}</span>{p.tag&&<span className="shrink-0 text-xs text-muted-foreground">#{p.tag}</span>}</>;
+            const content=<><span className={cn('truncate',isParty&&'text-sky-300',isMe&&'font-semibold text-foreground')}>{p.name||'Unknown player'}</span>{p.tag&&!compact&&<span className="shrink-0 text-xs text-muted-foreground">#{p.tag}</span>}</>;
+            const agent=p.agent&&<Hint asChild content={p.agent}><span className="shrink-0"><AgentIcon agents={agents} name={p.agent} id={p.agentId} size={compact?20:22}/></span></Hint>;
             return (
               <div key={p.puuid||i} className={cn('grid items-center rounded-md',cols,'px-2 py-1.5 tabular',isMe&&'bg-rank/10')}>
-                {p.name&&p.tag
-                  ?<a href={playerRouteUrl(p.name,p.tag)} title={`Search ${p.name}#${p.tag}`} className="flex min-w-0 items-baseline gap-0.5 hover:underline">{content}</a>
-                  :<span className="flex min-w-0 items-baseline gap-0.5">{content}</span>}
+                <span className="flex min-w-0 items-center gap-2">
+                  {agent}
+                  {p.name&&p.tag
+                    ?<a href={playerRouteUrl(p.name,p.tag)} title={`Search ${p.name}#${p.tag}`} className="flex min-w-0 items-baseline gap-0.5 hover:underline">{content}</a>
+                    :<span className="flex min-w-0 items-baseline gap-0.5">{content}</span>}
+                </span>
                 <span className={cn('text-right',p._acs==null&&'text-muted-foreground')}>{p._acs!=null?Math.round(p._acs):'—'}</span>
                 <span className={cn('text-right',p._performanceScore==null&&'text-muted-foreground')}>{Number.isFinite(p._performanceScore)?Math.round(p._performanceScore):'—'}</span>
                 <span className={cn('text-right',p._kd==null&&'text-muted-foreground')}>{p._kd!=null?p._kd.toFixed(2):'—'}</span>
@@ -110,160 +115,206 @@ function Stat({label,children,title,className,valueClassName}){
   );
 }
 
-// Phones: a compact row instead of the two-panel card. Map thumbnail with the
-// result stripe and your starting rank, then result, score and RR on one line,
-// map/time/server on the next, and your line of stats under that. Tapping it
-// opens the same RR details and roster as on desktop.
-export function MobileMatchCard({m,s,maps,open,onOpenChange}){
-  const {mapName,serverName,startedAt,startedAtMs,won,myR,opR,avgRank,myStats,myRR,myDerankProtected}=m;
-  const rt=won===true?'Win':won===false?'Loss':'Draw';
-  const result=won===true?'win':won===false?'loss':'draw';
+// Shared by both cards (slimmed 22 Nov 2026, on request: the redesigned card
+// was too tall). The closed card keeps what a list is scanned for: agent,
+// map, result and score, K/D/A, ACS, RR change and the MVP accolade. Start
+// time, length, server, Performance Score and the average lobby move to
+// this strip at the top of the opened card; the starting rank is already in
+// the RR details under it.
+function matchView(m,s){
+  const {mapName,startedAt,startedAtMs,won,myR,opR,avgRank,myStats,myRR,myDerankProtected}=m;
   const award=matchAward(m);
-  const awardLabel=award==='match'?'Match MVP':award==='team'?'Team MVP':'';
-  const shielded=!!myDerankProtected&&myRR<0;
   const rank=avgRank!=null?tierRR(avgRank):null;
-  const time=startedAtMs!=null?new Date(startedAtMs).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):startedAt;
-  const duration=m.durationMs>0?Math.round(m.durationMs/60000)+' min':null;
-  const preMatchRank=matchCardPlayerRank(m);
-  const art=maps?.get(String(m.mapId||'').toLowerCase())||maps?.get(String(mapName).toLowerCase());
-  const me=m.players.find(p=>s.PUUID?p.puuid===s.PUUID:p.name?.toLowerCase()===s.PLAYER.toLowerCase()&&p.tag?.toLowerCase()===s.TAG.toLowerCase());
-  const kda=myStats?[myStats.kills,myStats.deaths,myStats.assists].join(' / '):'—';
-  const acs=myStats?.acs!=null?Math.round(myStats.acs):'—';
+  // Your rank going into the match (requested back on the closed card).
+  const myRank=matchCardPlayerRank(m);
+  const myAcs=myStats?.acs!=null?Math.round(myStats.acs):'—';
   const performanceScore=Number.isFinite(myStats?.performanceScore)?Math.round(myStats.performanceScore):'—';
+  const rt=won===true?'Win':won===false?'Loss':'Draw';
+  const awardLabel=award==='match'?'Match MVP':award==='team'?'Team MVP':'';
+  const kda=myStats?[myStats.kills,myStats.deaths,myStats.assists].join(' / '):'—';
   const score=myR!=null&&opR!=null?myR+'–'+opR:'—';
-  const label=rt+' on '+mapName+', '+score+'. '+(awardLabel?awardLabel+'. ':'')+kda+' KDA, '+acs+' ACS, '+performanceScore+' Performance Score.';
+  return {
+    rt,result:won===true?'win':won===false?'loss':'draw',award,awardLabel,rank,myRank,performanceScore,acs:myAcs,
+    shielded:!!myDerankProtected&&myRR<0,
+    time:startedAtMs!=null?new Date(startedAtMs).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):startedAt,
+    duration:matchLengthText(m.durationMs),
+    me:m.players.find(p=>s.PUUID?p.puuid===s.PUUID:p.name?.toLowerCase()===s.PLAYER.toLowerCase()&&p.tag?.toLowerCase()===s.TAG.toLowerCase()),
+    label:rt+' on '+mapName+', '+score+'. '+(m.myAgent?'Played '+m.myAgent+'. ':'')+(awardLabel?awardLabel+'. ':'')+kda+' KDA, '+myAcs+' ACS, '+performanceScore+' Performance Score.',
+  };
+}
+
+// "27 min 43 s" from the match length in ms (v4's game_length_in_ms);
+// whole minutes drop the seconds. Null when the length is unknown.
+export function matchLengthText(ms){
+  if(!(ms>0))return null;
+  const total=Math.round(ms/1000),minutes=Math.floor(total/60),seconds=total%60;
+  return minutes?`${minutes} min${seconds?` ${seconds} s`:''}`:`${seconds} s`;
+}
+
+// Your rank at the start of the match as a badge on the agent tile (icon
+// only, on request); the rank name and RR are in its hint.
+function TileRank({rank}){
+  if(!rank)return null;
+  return (
+    <Hint asChild content={'Your rank at the start of this match: '+(rank.tier<3?'Unranked':avgLabelShort(rank.tier)+', '+rank.rr+' RR')}>
+      <span className="mc-tile-rank"><RankIcon tier={rank.tier} size={20}/></span>
+    </Hint>
+  );
+}
+
+function KdaValue({stats}){
+  if(!stats)return '—';
+  return <>{stats.kills}<span className="mc-kda-separator">/</span><span className="mc-deaths">{stats.deaths}</span><span className="mc-kda-separator">/</span>{stats.assists}</>;
+}
+
+function RRChange({m,v,className}){
+  const {myRR}=m;
+  return (
+    <Hint asChild content={myRR==null?'No RR data for this match':v.shielded?'Rank Shield protected your displayed rank; this recorded RR loss still applied':'Recorded RR change for this match'}>
+      <span className={cn('match-rr-change',myRR!=null&&(myRR>=0?'gain':'loss'),v.shielded&&'shielded',className)}>
+        {v.shielded&&<Shield aria-hidden="true"/>}{myRR!=null?(myRR>=0?'+':'')+myRR:'—'}
+      </span>
+    </Hint>
+  );
+}
+
+// The opened card's first block: the agent you played, larger and named in
+// their colour, then the details the closed card leaves out.
+function MatchInfo({m,v,agents}){
+  const {rank}=v;
+  const tint=agentTint(agents,m.myAgent,m.myAgentId);
+  const items=[
+    ['Started',[m.startedAtMs!=null?new Date(m.startedAtMs).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):null,v.time].filter(Boolean).join(', ')||'—'],
+    ['Length',v.duration||'—'],
+    ['Server',m.serverName||'—'],
+    ['Avg lobby',rank
+      ?<Hint asChild content={'Average lobby: '+lobbyRankText(m.avgRank)}><span className={cn('inline-flex items-center gap-1.5',RANK_TEXT[rClass(rank.tier)])}>{rank.tier>=3&&<RankIcon tier={rank.tier} size={16}/>}{avgLabelShort(rank.tier)}{lobbyRR(rank)!=null?<span className="text-xs font-normal text-muted-foreground">{rank.rr} RR</span>:null}</span></Hint>
+      :m.lowRated?<Hint asChild content={'Only '+m.ratedCount+' players were rated; excluded from stats'}><span className="text-muted-foreground">Unrated</span></Hint>:'—'],
+  ];
+  return (
+    <section className="flex flex-col gap-4 px-1 sm:flex-row sm:items-center sm:gap-8" aria-label="Match info" data-slot="match-info">
+      <div className="flex shrink-0 items-center gap-3" data-slot="match-agent">
+        <AgentIcon agents={agents} name={m.myAgent} id={m.myAgentId} size={48} className="rounded-lg"/>
+        <div className="flex flex-col">
+          <span className="text-xs text-muted-foreground">Agent</span>
+          <span className="text-base font-semibold" style={tint?{color:tint}:undefined}>{m.myAgent||'Unknown'}</span>
+        </div>
+      </div>
+      <dl className="grid flex-1 grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3 lg:grid-cols-5">
+        {items.map(([label,value])=><div key={label} className="min-w-0"><dt className="text-xs text-muted-foreground">{label}</dt><dd className="truncate font-medium tabular-nums">{value}</dd></div>)}
+      </dl>
+    </section>
+  );
+}
+
+// Phones: two lines next to the agent tile. Result, score, MVP trophy and RR
+// change; then map, K/D/A and ACS. Everything else is in the opened card.
+export function MobileMatchCard({m,s,maps,agents,open,onOpenChange}){
+  const v=matchView(m,s);
+  const art=maps?.get(String(m.mapId||'').toLowerCase())||maps?.get(String(m.mapName).toLowerCase());
   return (
     <Collapsible open={open} onOpenChange={onOpenChange} asChild>
-      <div className={cn('match-card mobile',result,m.postReset&&!s.mhIncludeReset&&'opacity-55')} data-match-id={m.matchId}>
-        <CollapsibleTrigger className="flex w-full items-stretch gap-3 p-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset [-webkit-tap-highlight-color:transparent]"
-          aria-label={label+(open?' Hide RR details and roster':' Show RR details and roster')}>
-          <span className="relative size-[72px] shrink-0 overflow-hidden rounded-lg bg-[radial-gradient(ellipse_at_top_right,#344657,#1d242d_60%,#141416)]">
-            {art&&<img src={art} alt="" loading="lazy" decoding="async" className="absolute inset-0 size-full object-cover opacity-90" onError={event=>event.currentTarget.remove()}/>}
-            <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" aria-hidden="true"/>
-            <span className="absolute inset-y-0 left-0 w-1 bg-[var(--result-color)]" aria-hidden="true"/>
-            {preMatchRank&&<Hint asChild content="Your rank at the start of this match"><span className="absolute right-1 bottom-1 drop-shadow-[0_2px_4px_rgb(0_0_0/.7)]"><RankIcon tier={preMatchRank.tier} size={22}/></span></Hint>}
+      <div className={cn('match-card mobile',v.result,m.postReset&&!s.mhIncludeReset&&'opacity-55')} data-match-id={m.matchId}>
+        <CollapsibleTrigger className="relative isolate flex w-full items-center gap-3 px-3 py-2.5 pl-3.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-inset [-webkit-tap-highlight-color:transparent]"
+          aria-label={v.label+(open?' Hide match details and roster':' Show match details and roster')}>
+          <MapBackdrop art={art}/>
+          <span className="relative flex shrink-0">
+            <AgentIcon agents={agents} name={m.myAgent} id={m.myAgentId} size={40} className="rounded-lg"/>
+            <TileRank rank={v.myRank}/>
           </span>
-          <span className="flex min-w-0 flex-1 flex-col justify-between gap-1">
+          <span className="flex min-w-0 flex-1 flex-col gap-1">
             <span className="flex items-center gap-2">
-              <span className="m-result-tag">{rt}</span>
-              <span className="text-lg leading-none font-bold tracking-tight tabular-nums">
-                {myR!=null&&opR!=null?<>{myR}<span className="mx-0.5 text-sm font-normal text-zinc-500">:</span><span className="text-zinc-400">{opR}</span></>:'—'}
+              <span className="m-result-tag">{v.rt}</span>
+              <span className="text-base leading-none font-bold tracking-tight tabular-nums">
+                {m.myR!=null&&m.opR!=null?<>{m.myR}<span className="mx-0.5 text-sm font-normal text-zinc-500">:</span><span className="text-zinc-400">{m.opR}</span></>:'—'}
               </span>
-              {award&&<Trophy className={cn('size-3.5 shrink-0',award==='match'?'text-[#f2cf80]':'text-slate-300')} aria-label={awardLabel}/>}
+              {v.award&&<Trophy className={cn('size-3.5 shrink-0',v.award==='match'?'text-[#f2cf80]':'text-slate-300')} aria-label={v.awardLabel}/>}
               {m.postReset&&<Hint asChild content="Placement-week game after a total rank reset"><Badge variant="outline" className="px-1 py-0 text-[9px] uppercase">Plac.</Badge></Hint>}
-              <Hint asChild content={myRR==null?'No RR data for this match':shielded?'Rank Shield protected your displayed rank; this recorded RR loss still applied':'Recorded RR change for this match'}>
-                <span className={cn('match-rr-change ml-auto text-[15px]',myRR!=null&&(myRR>=0?'gain':'loss'),shielded&&'shielded')}>
-                  {shielded&&<Shield aria-hidden="true"/>}{myRR!=null?(myRR>=0?'+':'')+myRR:'—'}
-                </span>
-              </Hint>
-            </span>
-            <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-              <span className="shrink-0 font-semibold text-foreground">{mapName}</span>
-              {[time,duration].filter(Boolean).map(v=><Fragment key={v}><Sep/><span className="shrink-0">{v}</span></Fragment>)}
-              {serverName&&<><Sep/><span className="truncate">{serverName}</span></>}
+              <RRChange m={m} v={v} className="ml-auto text-[15px]"/>
             </span>
             <span className="flex min-w-0 items-center gap-x-3 text-xs tabular-nums text-muted-foreground">
-              <span className="shrink-0"><span className="font-semibold text-foreground">{myStats?<>{myStats.kills}<span className="text-zinc-500">/</span><span className="text-zinc-400">{myStats.deaths}</span><span className="text-zinc-500">/</span>{myStats.assists}</>:'—'}</span></span>
-              <span className="shrink-0"><span className="font-semibold text-foreground">{acs}</span> ACS</span>
-              <span className="shrink-0"><span className="font-semibold text-foreground">{performanceScore}</span> PS</span>
-              <Hint asChild content={rank?'Average lobby: '+lobbyRankText(avgRank):'Lobby rank unavailable'}>
-                <span className={cn('min-w-0 truncate font-medium',rank&&RANK_TEXT[rClass(rank.tier)])}>
-                  {rank?avgLabelShort(rank.tier):m.lowRated?'Unrated':'—'}
-                </span>
-              </Hint>
+              <span className="min-w-0 truncate font-semibold text-foreground">{m.mapName}</span>
+              <span className="shrink-0 font-semibold text-foreground"><KdaValue stats={m.myStats}/></span>
+              <span className="shrink-0"><span className="font-semibold text-foreground">{v.acs}</span> ACS</span>
+              <span className="shrink-0"><span className="font-semibold text-foreground">{v.performanceScore}</span> PS</span>
             </span>
           </span>
-          <ChevronDown className={cn('size-4 shrink-0 self-center text-muted-foreground transition-transform duration-200',open&&'rotate-180')} aria-hidden="true"/>
+          <ChevronDown className={cn('size-4 shrink-0 text-muted-foreground transition-transform duration-200',open&&'rotate-180')} aria-hidden="true"/>
         </CollapsibleTrigger>
         <CollapsibleContent className="match-card-details space-y-4">
+          <MatchInfo m={m} v={v} agents={agents}/>
           <RRDetails m={m}/>
-          <PlayersGrid m={m} me={me} compact/>
+          <PlayersGrid m={m} me={v.me} agents={agents} compact/>
         </CollapsibleContent>
       </div>
     </Collapsible>
   );
 }
 
-export function MatchCard({m,s,maps,open,onOpenChange}){
+export function MatchCard({m,s,maps,agents,open,onOpenChange}){
   const mobile=useIsMobile();
-  if(mobile)return <MobileMatchCard m={m} s={s} maps={maps} open={open} onOpenChange={onOpenChange}/>;
-  return <DesktopMatchCard m={m} s={s} maps={maps} open={open} onOpenChange={onOpenChange}/>;
+  if(mobile)return <MobileMatchCard m={m} s={s} maps={maps} agents={agents} open={open} onOpenChange={onOpenChange}/>;
+  return <DesktopMatchCard m={m} s={s} maps={maps} agents={agents} open={open} onOpenChange={onOpenChange}/>;
 }
 
-function DesktopMatchCard({m,s,maps,open,onOpenChange}){
-  const {mapName,serverName,startedAt,startedAtMs,won,myR,opR,avgRank,myStats,myRR,myDerankProtected}=m;
-  const rt=won===true?'Win':won===false?'Loss':'Draw';
-  const score=myR!=null&&opR!=null?myR+'–'+opR:'—';
-  const award=matchAward(m);
-  const awardLabel=award==='match'?'Match MVP':award==='team'?'Team MVP':'';
-  const shielded=!!myDerankProtected&&myRR<0;
-  const rank=avgRank!=null?tierRR(avgRank):null;
-  const rankLabel=rank?avgLabelShort(rank.tier):m.lowRated?'Unrated':'—';
-  const rankTitle=m.lowRated?'Only '+m.ratedCount+' players were rated; excluded from stats':rank?'Average lobby: '+lobbyRankText(avgRank):'Lobby rank unavailable';
-  const kda=myStats?[myStats.kills,myStats.deaths,myStats.assists].join(' / '):'—';
-  const acs=myStats?.acs!=null?Math.round(myStats.acs):'—';
-  const performanceScore=Number.isFinite(myStats?.performanceScore)?Math.round(myStats.performanceScore):'—';
-  const time=startedAtMs!=null?new Date(startedAtMs).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):startedAt;
-  const duration=m.durationMs>0?Math.round(m.durationMs/60000)+' min':null;
-  const preMatchRank=matchCardPlayerRank(m);
-  const preMatchRankText=preMatchRank?preMatchRank.tier<3?'Unranked':avgLabelShort(preMatchRank.tier)+' ('+preMatchRank.rr+' RR)':null;
-  const art=maps?.get(String(m.mapId||'').toLowerCase())||maps?.get(String(mapName).toLowerCase());
-  const me=m.players.find(p=>s.PUUID?p.puuid===s.PUUID:p.name?.toLowerCase()===s.PLAYER.toLowerCase()&&p.tag?.toLowerCase()===s.TAG.toLowerCase());
-  const label=rt+' on '+mapName+', '+score+'. '+(awardLabel?awardLabel+'. ':'')+kda+' KDA, '+acs+' ACS, '+performanceScore+' Performance Score.';
-  const result=won===true?'win':won===false?'loss':'draw';
-  // The pre-React match card (legacy .match-card): map art panel, large
-  // scoreline, uppercase result tag, bold stats with grey deaths.
+// The map's splash as a faded backdrop on the card's right side, so the map
+// reads at a glance without its own panel. Decorative.
+function MapBackdrop({art}){
+  return (
+    <span className="mc-backdrop" aria-hidden="true">
+      {art&&<img src={art} alt="" loading="lazy" decoding="async" onError={event=>event.currentTarget.remove()}/>}
+    </span>
+  );
+}
+
+// Redesigned 22 Nov 2026 (on request, with agent icons) and slimmed the same
+// day to one short row, grouped by what belongs together: agent and map,
+// result, your performance (K/D/A, ACS, PS), server, RR change. The map splash is a faded backdrop on
+// the right and the result colours the left edge.
+function DesktopMatchCard({m,s,maps,agents,open,onOpenChange}){
+  const v=matchView(m,s);
+  const art=maps?.get(String(m.mapId||'').toLowerCase())||maps?.get(String(m.mapName).toLowerCase());
   return (
     <Collapsible open={open} onOpenChange={onOpenChange} asChild>
-      <div className={cn('match-card',result,m.postReset&&!s.mhIncludeReset&&'opacity-55')} data-match-id={m.matchId}>
-        <CollapsibleTrigger className="match-row" aria-label={label+(open?' Hide RR details and roster':' Show RR details and roster')}>
-          <span className={cn('mc-map-panel',preMatchRank&&'has-player-rank')}>
-            {art&&<img src={art} alt="" loading="lazy" decoding="async" className="mc-map-image" onError={event=>event.currentTarget.remove()}/>}
-            <span className="match-map">{mapName}</span>
-            <span className="mc-map-meta">
-              <span className="mc-map-meta-row">
-                {[time,duration].filter(Boolean).map(v=><span key={v}>{v}</span>)}
-                {serverName&&<span className="truncate" title={serverName}>{serverName}</span>}
-              </span>
-              {preMatchRankText&&<span className="mc-map-meta-row"><Hint asChild content="Your rank at the start of this match"><span className="text-white">{preMatchRankText}</span></Hint></span>}
-            </span>
-            {preMatchRank&&(
-              <Hint asChild content="Your rank at the start of this match">
-              <span className="mc-player-rank-icon"
-                style={{filter:`drop-shadow(0 0 7px rgb(${hexToRgb(rColor(preMatchRank.tier))} / .42)) drop-shadow(0 4px 10px rgb(0 0 0 / .55))`}}>
-                <RankIcon tier={preMatchRank.tier} size={64}/>
-              </span>
-              </Hint>
-            )}
+      <div className={cn('match-card',v.result,m.postReset&&!s.mhIncludeReset&&'opacity-55')} data-match-id={m.matchId}>
+        <CollapsibleTrigger className="mc-row" aria-label={v.label+(open?' Hide match details and roster':' Show match details and roster')}>
+          <MapBackdrop art={art}/>
+          <span className="mc-lead">
+          <span className="relative flex shrink-0">
+            <AgentIcon agents={agents} name={m.myAgent} id={m.myAgentId} size={44} className="rounded-lg"/>
+            <TileRank rank={v.myRank}/>
           </span>
-          <span className="mc-body">
-            <span className="mc-topline">
-              <span className="mc-result">
-                <span className="m-result-tag">{rt}</span>
-                <span className="match-score">{myR!=null&&opR!=null?<>{myR}<span className="mc-score-divider">:</span><span className="mc-score-opponent">{opR}</span></>:'—'}</span>
-              </span>
-              {award&&<Hint asChild content={'Highest ACS '+(award==='match'?'in the match':'on your team')}><span className={cn('mc-accolade',award==='match'?'mvp-match':'mvp-team')}><Trophy aria-hidden="true"/>{awardLabel}</span></Hint>}
-              {m.postReset&&<Hint asChild content="Placement-week game after a total rank reset"><Badge variant="outline" className="text-[10px] uppercase">Placements</Badge></Hint>}
-              <span className="mc-expand-icon"><span className="mc-expand-label">Details</span><ChevronDown aria-hidden="true"/></span>
-            </span>
-            <span className="mc-performance">
-              <Stat label="K / D / A">{myStats?<>{myStats.kills}<span className="mc-kda-separator">/</span><span className="mc-deaths">{myStats.deaths}</span><span className="mc-kda-separator">/</span>{myStats.assists}</>:'—'}</Stat>
-              <Stat label="ACS">{acs}</Stat>
-              <Stat label="PS" title={myStats?.performanceScore==null?'Performance Score is not provided in this match’s API data':'Performance Score'}>{performanceScore}</Stat>
-              <Stat label="Avg lobby" title={rankTitle}>{rankLabel}{lobbyRR(rank)!=null?` (${rank.rr} RR)`:''}</Stat>
-              <Stat label="RR change" className="mc-rr-stat">
-                <Hint asChild content={myRR==null?'No RR data for this match':shielded?'Rank Shield protected your displayed rank; this recorded RR loss still applied':'Recorded RR change for this match'}>
-                  <span className={cn('match-rr-change',myRR!=null&&(myRR>=0?'gain':'loss'),shielded&&'shielded')}>
-                    {shielded&&<Shield aria-hidden="true"/>}{myRR!=null?(myRR>=0?'+':'')+myRR:'—'}
-                  </span>
-                </Hint>
-              </Stat>
+          <span className="mc-cell mc-identity">
+            <span className="match-map">{m.mapName}</span>
+            <span className="mc-sub">
+              {m.myAgent&&<span className="truncate" style={agentTint(agents,m.myAgent,m.myAgentId)?{color:agentTint(agents,m.myAgent,m.myAgentId)}:undefined}>{m.myAgent}</span>}
+              {m.postReset&&<Hint asChild content="Placement-week game after a total rank reset"><Badge variant="outline" className="px-1 py-0 text-[9px] uppercase">Placements</Badge></Hint>}
             </span>
           </span>
+          </span>
+          <span className="mc-cell mc-outcome">
+            <span className="mc-outcome-tag"><span className="m-result-tag">{v.rt}</span>{v.award&&<Hint asChild content={'Highest ACS '+(v.award==='match'?'in the match':'on your team')}><span className={cn('mc-accolade',v.award==='match'?'mvp-match':'mvp-team')}><Trophy aria-hidden="true"/><span className="mc-accolade-text">{v.awardLabel}</span></span></Hint>}</span>
+            <span className="match-score">{m.myR!=null&&m.opR!=null?<>{m.myR}<span className="mc-score-divider">:</span><span className="mc-score-opponent">{m.opR}</span></>:'—'}</span>
+          </span>
+          <span className="mc-perf">
+            <Stat label="K / D / A" className="mc-cell mc-kda"><KdaValue stats={m.myStats}/></Stat>
+            <Stat label="ACS" className="mc-cell mc-acs">{v.acs}</Stat>
+            <Stat label="PS" className="mc-cell mc-ps" title={m.myStats?.performanceScore==null?'Performance Score is not provided in this match’s API data':'Performance Score'}>{v.performanceScore}</Stat>
+          </span>
+          <span className="mc-cell mc-server">
+            <span className="mc-performance-lbl">Server</span>
+            <span className="mc-performance-val mc-server-val" title={m.serverName||undefined}>{m.serverName||'—'}</span>
+          </span>
+          <span className="mc-cell mc-rr">
+            <span className="mc-performance-lbl">RR</span>
+            <RRChange m={m} v={v}/>
+          </span>
+          <ChevronDown className="mc-chevron" aria-hidden="true"/>
         </CollapsibleTrigger>
         <CollapsibleContent className="match-card-details space-y-4">
+          <MatchInfo m={m} v={v} agents={agents}/>
           <RRDetails m={m}/>
-          <PlayersGrid m={m} me={me}/>
+          <PlayersGrid m={m} me={v.me} agents={agents}/>
         </CollapsibleContent>
       </div>
     </Collapsible>
@@ -302,6 +353,7 @@ function DayHeader({ms,stat,first}){
 export function MatchesPage(){
   const s=useEngine();
   const maps=useMapArt();
+  const agents=useAgentArt();
   const [expanded,setExpanded]=useState(()=>new Set());
   const ready=s.analysisState==='ready';
   const hasMatches=ready&&s.allMatches.length>0;
@@ -330,7 +382,7 @@ export function MatchesPage(){
               return (
                 <Fragment key={m.matchId}>
                   {header}
-                  <MatchCard m={m} s={s} maps={maps} open={expanded.has(m.matchId)} onOpenChange={next=>setExpanded(previous=>{
+                  <MatchCard m={m} s={s} maps={maps} agents={agents} open={expanded.has(m.matchId)} onOpenChange={next=>setExpanded(previous=>{
                     const copy=new Set(previous);
                     if(next)copy.add(m.matchId);else copy.delete(m.matchId);
                     return copy;

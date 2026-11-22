@@ -2118,6 +2118,7 @@ function processMatch(m){
       name:p.name,tag:p.tag,puuid:p.puuid,
       team_id:p.team_id?.toLowerCase(),
       party_id:p.party_id??null,
+      agent:p.agent?.name??null,agentId:p.agent?.id??null,
       _tier:p.tier?.id??p.currenttier??0,
       _label:p.tier?.patched??p.currenttier_patched??rName(p.tier?.id??p.currenttier??0),
       _kills,

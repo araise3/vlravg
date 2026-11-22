@@ -356,66 +356,87 @@
 .match-card.loss { --result-color: #fb7185; }
 .match-card:hover { border-color: #52525b; }
 .match-card[data-state="open"] { border-color: #52647c; }
-.match-row { display: grid; grid-template-columns: 210px minmax(0, 1fr); width: 100%; text-align: left; cursor: pointer; }
-.match-row:focus-visible { outline: 2px solid var(--brand); outline-offset: -3px; border-radius: 11px; }
-.mc-map-panel { position: relative; isolation: isolate; display: flex; flex-direction: column; justify-content: flex-end; min-height: 158px; padding: 18px; overflow: hidden; background: radial-gradient(ellipse at top right, #344657, #1d242d 60%, #141416); border-left: 3px solid var(--result-color); }
-.mc-map-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; opacity: .85; }
-.mc-map-panel::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(9,9,11,.08), rgba(9,9,11,.3) 30%, rgba(9,9,11,.92)); }
-.match-map { font-size: 23px; font-weight: 750; letter-spacing: -.035em; line-height: 1.2; overflow-wrap: anywhere; color: #fff; }
-.mc-map-meta { display: flex; flex-direction: column; gap: 5px; color: #d4d4d8; font-size: 10px; margin-top: 7px; min-width: 0; }
-.mc-map-meta-row { display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
-.mc-map-panel.has-player-rank .mc-map-meta-row:last-child { padding-right: 68px; }
-.mc-player-rank-icon { position: absolute; right: 10px; bottom: 10px; z-index: 1; display: flex; width: 64px; height: 64px; align-items: center; justify-content: center; pointer-events: none; }
-.mc-body { display: flex; flex-direction: column; justify-content: space-between; gap: 18px; padding: 18px 20px; min-width: 0; }
-.mc-topline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.mc-result { display: flex; align-items: center; gap: 13px; }
-.m-result-tag { color: var(--result-color); font-size: 10px; font-weight: 750; text-transform: uppercase; letter-spacing: .1em; }
-.match-score { display: flex; align-items: baseline; gap: 7px; font-size: 25px; font-weight: 750; letter-spacing: -.04em; font-variant-numeric: tabular-nums; line-height: 1; }
-.match-score .mc-score-divider { font-size: 16px; color: #71717a; font-weight: 400; }
-.match-score .mc-score-opponent { color: #a1a1aa; }
-.mc-accolade { display: inline-flex; align-items: center; gap: 5px; margin-left: 2px; padding-left: 12px; border-left: 1px solid #3f3f46; font-size: 10px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
-.mc-accolade svg { width: 13px; height: 13px; flex-shrink: 0; }
-.mc-accolade.mvp-match { color: #f2cf80; }
-.mc-accolade.mvp-team { color: #cbd5e1; }
-.mc-expand-icon { display: flex; align-items: center; gap: 5px; margin-left: auto; color: #a1a1aa; font-size: 10px; }
-.mc-expand-icon svg { width: 15px; height: 15px; transition: transform .2s; }
-.match-card[data-state="open"] .mc-expand-icon svg { transform: rotate(180deg); }
-.mc-performance { display: grid; grid-template-columns: 1.1fr .65fr 1fr 1.5fr 1fr; gap: 12px; align-items: start; }
-.mc-performance-stat { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.mc-performance-lbl { font-size: 10px; letter-spacing: .05em; text-transform: uppercase; color: #a1a1aa; }
-.mc-performance-val { display: flex; align-items: center; gap: 5px; font-size: 16px; font-weight: 700; line-height: 1.3; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.match-card { container-type: inline-size; }
+/* Match card (redesigned 22 Nov 2026, slimmed the same day, then laid out
+   as labelled columns spread over the row): agent tile, map with agent and
+   MVP under it, result over score, K/D/A, ACS and RR, each a small label
+   over its value. Fractional columns keep the cells spread evenly and
+   aligned from card to card. The map splash is a faded backdrop on the
+   right; the result colours the left edge and a faint wash behind the tile. */
+.mc-row { position: relative; isolation: isolate; display: grid; width: 100%; padding: 10px 16px 10px 14px; text-align: left; cursor: pointer;
+  --mc-gap: 32px; grid-template-columns: minmax(0, 140px) minmax(84px, .7fr) minmax(196px, 2fr) minmax(64px, .85fr) minmax(40px, .5fr) 16px; align-items: center; column-gap: 0;
+  border-left: 3px solid var(--result-color); background: linear-gradient(90deg, color-mix(in oklab, var(--result-color) 10%, transparent), transparent 34%); }
+.mc-row:focus-visible { outline: 2px solid var(--brand); outline-offset: -3px; border-radius: 11px; }
+.mc-backdrop { position: absolute; inset: 0 0 0 auto; z-index: -1; width: min(64%, 560px); overflow: hidden; pointer-events: none; }
+.mc-backdrop img { width: 100%; height: 100%; object-fit: cover; object-position: center 40%; opacity: .2; filter: saturate(.8); transition: opacity .2s;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 60%); mask-image: linear-gradient(90deg, transparent, #000 60%); }
+.match-card:hover .mc-backdrop img, .match-card[data-state="open"] .mc-backdrop img { opacity: .3; }
+/* Spacing follows how related cells are: agent and map sit together (12px),
+   K/D/A, ACS and PS form one performance group (14px apart), and the groups
+   (who and where, result, performance, server, RR) are 32px apart. */
+.mc-lead { display: flex; align-items: center; gap: 12px; min-width: 0; }
+/* The result belongs with the map, so it follows the lead cell 16px later;
+   the other groups are --mc-gap apart. The lead column is capped at 140px,
+   enough for the tile plus the longest map ("Fracture") and agent
+   ("Brimstone") names, so the result sits close instead of after an empty
+   stretch. The MVP accolade sits beside the result tag. */
+.mc-outcome { margin-left: 16px; }
+.mc-outcome-tag { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; }
+.mc-outcome-tag .mc-accolade { padding-left: 7px; font-size: 9.5px; }
+.mc-perf, .mc-server { margin-left: var(--mc-gap); }
+.mc-rr { margin-left: 12px; }
+.mc-chevron { margin-left: 14px; }
+.mc-perf { display: grid; grid-template-columns: minmax(94px, 1.25fr) minmax(34px, .75fr) minmax(34px, .75fr); column-gap: 14px; min-width: 0; }
+/* Minimum widths keep K/D/A (up to 20 / 22 / 14), scores and RR whole; the
+   map column gives way first. */
+.mc-cell { display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 0; }
+.mc-identity { gap: 4px; }
+.match-map { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; font-weight: 750; letter-spacing: -.02em; line-height: 1.2; color: #fff; }
+.mc-sub { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 11.5px; font-weight: 500; color: #a1a1aa; white-space: nowrap; }
+.mc-performance-stat { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.mc-performance-lbl { font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: #a1a1aa; white-space: nowrap; }
+.mc-performance-val { display: flex; align-items: center; gap: 5px; font-size: 15px; font-weight: 700; line-height: 1.25; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .mc-performance-val .mc-deaths { color: #a1a1aa; }
 .mc-kda-separator { font-size: 11px; color: #71717a; font-weight: 400; }
-.mc-rr-stat { align-items: flex-end; }
-.mc-rr-stat .match-rr-change { font-size: 17px; }
+.mc-outcome .m-result-tag { font-size: 9.5px; }
+.mc-rr { align-items: flex-end; }
+.mc-server-val { display: block; overflow: hidden; text-overflow: ellipsis; font-size: 14px; font-weight: 600; }
+.mc-tile-rank { position: absolute; right: -6px; bottom: -6px; display: flex; filter: drop-shadow(0 2px 3px rgb(0 0 0 / .75)); }
+.mc-rr .match-rr-change { font-size: 17px; line-height: 1.25; }
+.mc-chevron { width: 16px; height: 16px; color: #71717a; transition: transform .2s; }
+.match-card[data-state="open"] .mc-chevron { transform: rotate(180deg); }
+@container (max-width: 760px) {
+  .mc-row { --mc-gap: 18px; } .mc-outcome { margin-left: 12px; } .mc-perf { column-gap: 10px; } .mc-accolade-text { display: none; }
+}
+/* The narrowest desktop cards (640px windows) drop the server column; it is
+   still in the opened card. */
+@container (max-width: 640px) {
+  .mc-row { --mc-gap: 14px; grid-template-columns: minmax(0, 1fr) minmax(76px, .7fr) minmax(196px, 2fr) minmax(40px, .5fr) 16px; }
+  .mc-server { display: none; }
+}
+.m-result-tag { color: var(--result-color); font-size: 10px; font-weight: 750; text-transform: uppercase; letter-spacing: .1em; }
+.match-score { display: flex; align-items: baseline; gap: 5px; font-size: 17px; font-weight: 750; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1.25; }
+.match-score .mc-score-divider { font-size: 14px; color: #71717a; font-weight: 400; }
+.match-score .mc-score-opponent { color: #a1a1aa; }
+.mc-accolade { display: inline-flex; align-items: center; gap: 4px; padding-left: 8px; border-left: 1px solid #3f3f46; font-size: 10px; font-weight: 650; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+.mc-accolade svg { width: 12px; height: 12px; flex-shrink: 0; }
+.mc-accolade.mvp-match { color: #f2cf80; }
+.mc-accolade.mvp-team { color: #cbd5e1; }
 .match-rr-change { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .match-rr-change.gain { color: #4ade80; }
 .match-rr-change.loss { color: #f87171; }
 .match-rr-change.shielded { padding: 0 5px; border-radius: 6px; background: rgba(37,99,235,.1); box-shadow: 0 0 0 1px #60a5fa, 0 0 0 2px rgba(96,165,250,.12); }
 .match-rr-change.shielded svg { width: 13px; height: 13px; flex-shrink: 0; color: #60a5fa; }
 .match-card-details { padding: 18px 12px; border-top: 1px solid #222; background: #101012; }
-@media (prefers-reduced-motion: reduce) { .match-card, .mc-expand-icon svg { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .match-card, .mc-chevron, .mc-backdrop img { transition: none; } }
 @media (max-width: 760px) {
-  .match-row { grid-template-columns: 170px minmax(0, 1fr); }
-  .mc-body { padding: 16px; } .mc-topline { gap: 8px; } .mc-expand-label { display: none; }
   .match-day-stat { flex-direction: column; gap: 3px; }
 }
 @media (max-width: 600px) {
   .mh-list-heading { flex-direction: column; gap: 5px; }
-  .match-row { grid-template-columns: minmax(0, 1fr); }
-  .mc-map-panel { min-height: 110px; padding: 16px; } .mc-map-image { object-position: center 45%; }
-  .mc-map-panel::after { background: linear-gradient(90deg, rgba(9,9,11,.82), rgba(9,9,11,.12)); }
-  .mc-body { padding: 15px; gap: 20px; } .mc-performance { gap: 8px; grid-template-columns: 1.1fr .6fr 1fr 1.4fr .85fr; }
-  .mc-performance-val { font-size: 14px; } .mc-rr-stat .match-rr-change { font-size: 15px; }
   .match-day-header { flex-wrap: wrap; gap: 10px; } .match-day-heading { width: 100%; }
   .match-day-stats { width: 100%; justify-content: space-between; } .match-day-stat { padding: 0 10px; } .match-day-stat:first-child { padding-left: 0; }
   .match-card-details { padding: 15px 6px; }
-}
-@media (max-width: 520px) {
-  .mc-performance { grid-template-columns: 1fr 1fr; gap: 16px; }
-  .mc-performance-stat:nth-child(even) { align-items: flex-end; }
-  .mc-performance-stat:last-child { grid-column: 1 / -1; }
-  .mc-performance-val { font-size: 16px; } .mc-rr-stat .match-rr-change { font-size: 17px; }
 }
 
 /* ── Phone layout (below 640px; see src/app/MobileShell.jsx) ──────────
@@ -435,4 +456,6 @@
   /* Tap highlights stay off; the app draws its own pressed states. */
   .match-card.mobile, [data-slot="mobile-tab-bar"] a, [data-slot="mobile-tab-bar"] button { -webkit-tap-highlight-color: transparent; }
   .match-card.mobile .match-card-details { padding: 14px 10px; }
+  .match-card.mobile .mc-backdrop { width: 72%; }
+  .match-card.mobile > button { border-left: 3px solid var(--result-color); background: linear-gradient(90deg, color-mix(in oklab, var(--result-color) 10%, transparent), transparent 40%); }
 }

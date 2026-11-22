@@ -28,7 +28,8 @@ test('table headers and match cards carry their explanations as hints, not title
   assert.doesNotMatch(table,/title=\{col\.title\}/);
   const matches=source('app/pages/Matches.jsx');
   assert.doesNotMatch(matches,/title=\{myRR==null/);
-  assert.equal((matches.match(/<Hint asChild content=\{myRR==null\?'No RR data/g)||[]).length,2);
+  // Both cards share one RRChange component.
+  assert.equal((matches.match(/<Hint asChild content=\{myRR==null\?'No RR data/g)||[]).length,1);
 });
 
 test('progress bars: a null value is the indeterminate sliding segment, a number sets aria-valuenow',async()=>{

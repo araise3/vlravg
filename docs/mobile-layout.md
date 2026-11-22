@@ -50,11 +50,16 @@ only the chrome around them and the way some data is drawn differ.
   there is more than one row, and the sort row is hidden below three rows.
   This covers Duos (party size, teammates, encounters, wintrading), Lobby
   Rank, Servers and both RR tables.
-- **Match History**: `MobileMatchCard` is a compact row: 72px map thumbnail
-  with the result stripe and your starting rank, then result, score, MVP
-  trophy and RR change on one line, map/time/length/server on the next, and
-  K/D/A, ACS, PS and lobby rank under that. Tapping opens the same RR details
-  and roster; the roster uses narrower columns and short rank labels.
+- **Match History**: `MobileMatchCard` is a two-line, 63px row (since 22 Nov
+  2026; it was three lines with a 72px map thumbnail): a 40px agent tile with
+  your starting rank as an icon badge, the
+  result-coloured left edge and the map splash as a faded backdrop, then
+  result, score, MVP trophy and RR change on one line and map, K/D/A, ACS
+  and PS on the next. The agent (as a 48px tile with its name), start time, length
+  with seconds, server and lobby rank are in the opened card's
+  `MatchInfo` block, above the same RR details and roster as on
+  desktop; the roster uses narrower columns, short rank labels and agent
+  icons, and drops the #tag (kept in the link) so names have room.
 - **Overview**: the lobby rank and top teammates cards stack; the lobby rows
   use the short rank label ("Immo 3") and put the lobby count under the row
   label. The last-20 RR card's four figures wrap to a 2×2 grid.

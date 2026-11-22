@@ -131,10 +131,34 @@ end of `src/index.css` (they outrank Tailwind's utility layer):
 - Overview: rebuilt as a shadcn dashboard (see "Overview dashboard" below).
 - Match History: the "RR by session" card at the top (moved from the RR
   Breakdown on 22 Nov 2026, on request, replacing the matches / win rate /
-  MVP summary strip), one-line day headers, and the old match
-  card (210 px map-art panel, 25 px scoreline, uppercase result tag, bold
-  stats, deaths in grey rather than red). On phones the stats use the old
-  two-column layout, which also fixes the cut-off average lobby.
+  MVP summary strip), one-line day headers, and the match card. The card
+  was redesigned on 22 Nov 2026 (on request, with agent icons) and slimmed
+  the same day because it was too tall. Closed, it is one 64px row of
+  labelled cells (a small uppercase label over each value) spread over
+  fractional grid columns, so they fill the row and line up from card to
+  card: a 44px agent tile (agent colour and icon, see
+  [clutches-page.md](clutches-page.md) for the agent art) with your starting
+  rank as an icon-only badge (name and RR in its hint), the map over the
+  agent name (and the placements badge), the result tag with the quiet MVP
+  accolade beside it (trophy only below 760px of card width) over the score,
+  K/D/A, ACS and PS, server and the RR change. Spacing follows how related
+  the cells are: agent and map share one lead cell (12px), capped at 140px
+  (tile plus "Fracture" and "Brimstone") so the result follows 16px after it
+  instead of after an empty stretch; K/D/A, ACS and PS form one performance
+  group (14px apart); and the remaining groups (performance, server, RR) are
+  32px apart (18px and 10px below 760px of card width). Minimum widths keep K/D/A up to "20 / 22 / 14", the score and RR
+  whole, so the map column gives way first; below 640px of card width the
+  server column is dropped (it is in the opened card). (A first slim version kept fixed-width cells packed to
+  the right; they looked lost in the empty middle and were spread out on
+  request.) The map splash is a faded backdrop on the right
+  (opacity .2, .3 on hover or open), and the result colours the left edge and
+  a faint wash behind the tile. Opened, `MatchInfo` comes first: the agent as a
+  48px tile named in their colour, then start date and time, length with
+  seconds (`matchLengthText`, "26 min 56 s" from `game_length_in_ms`), server
+  and average lobby; then the
+  RR details (which carry the starting rank) and the roster, which puts each
+  player's agent icon before their name. The 210px map-art panel the redesign
+  replaced is gone (`mc-map-panel` and friends).
 - Clutches (22 Nov 2026): see [clutches-page.md](clutches-page.md).
 - Name History marks the current Riot ID in blue text.
 
