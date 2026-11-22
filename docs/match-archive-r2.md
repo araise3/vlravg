@@ -31,6 +31,33 @@ freed only about 0.5 GB.
   goes through `readArchivedPayload` ([lib/match-store.mjs](../lib/match-store.mjs)):
   it uses the inline payload when there is one, and otherwise reads R2.
 
+## Reads
+
+Measured on 22 Nov 2026 against the live site, 50-row pages of about 7 MB
+JSON: a player still inline in D1 took 0.49–0.69 s per page (mean about
+0.59 s); fully moved players took 0.61–0.81 s (mean about 0.69 s). With
+compression a page is about 0.6 MB on the wire and the first byte arrives
+after about 0.4 s, so the wait is proxy work (D1 query, R2 reads, gunzip),
+not transfer. These are single-location samples, not a benchmark.
+
+The client used to request pages strictly one after another.
+`readServerMatchArchive` ([src/engine/core.mjs](../src/engine/core.mjs)) now
+splits the archive into 50-row chunks and fetches up to three at once after
+the first chunk, which runs alone (most archives fit in it, so they still
+cost one request). A chunk the proxy cut at its JSON budget is finished from
+the returned cursor, so the refill asks for the rest of that chunk with a
+smaller `size`. The proxy therefore accepts any `size` from 1 to 50; any
+explicit size applies the budgets, and only a request without `size` gets
+the old unbounded ten rows. Pages still publish in archive order: a later chunk that answers
+first waits for the earlier ones. If a chunk fails, the published prefix is
+kept and the archive is not reported complete. Up to two extra empty pages
+past the end can be requested.
+
+Six parallel pages took 1.36 s with curl against about 2.7 s sequentially.
+Budget cuts are common for large matches: the first page of a 540-match
+archive held only 17 rows. A full in-browser search with the new client has
+not been timed yet, because the refill needs the proxy change deployed.
+
 ## Writes
 
 `saveMatchArchivePage` (functions/api/[[path]].js) writes the object first,
@@ -63,9 +90,9 @@ splits the rowid space into ranges, runs them in parallel and retries failing
 steps with backoff. It logs the D1 size before and after. Re-running it is
 safe because moved rows are skipped.
 
-Unknown until the migration runs: whether D1's reported size drops when
-payloads are emptied, or whether the freed pages are only reused. The
-workflow log records both sizes. The collector's headroom check
+D1's reported size does drop as payloads are emptied: it went from 9.06 GB
+(21:48 UTC, 22 Nov) to 4.72 GB (23:22 UTC) during the migration run. The
+workflow log records the sizes before and after. The collector's headroom check
 (`assertD1Headroom`) uses that reported size.
 
 ## Not migrated

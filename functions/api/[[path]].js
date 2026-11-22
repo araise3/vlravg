@@ -241,7 +241,10 @@ async function migrateMatchArchive(env, after, limit, before = Number.MAX_SAFE_I
     last: rows.at(-1)?.id ?? after, done: rows.length < limit };
 }
 
-async function readMatchArchive(env, puuid, seasonId, start, size) {
+// bounded: the request named its size, so the page stops at the compressed
+// and JSON budgets and returns a cursor. Without a size (the oldest clients)
+// it serves ten rows unbounded.
+async function readMatchArchive(env, puuid, seasonId, start, size, bounded = false) {
   if (!env.APP_DB) return json({ error: 'Match archive unavailable' }, 503);
   try {
     const { results } = await env.APP_DB.prepare(
@@ -252,7 +255,7 @@ async function readMatchArchive(env, puuid, seasonId, start, size) {
       + '(ORDER BY started_at DESC, match_id DESC ROWS UNBOUNDED PRECEDING) AS size FROM candidates) '
       + 'SELECT match_id, payload, total FROM page WHERE n<=?5 AND (size<=?6 OR n=1) ORDER BY n'
     ).bind(puuid, seasonId, size + 1, start, size,
-      size === MATCH_ARCHIVE_PAGE_SIZE ? Number.MAX_SAFE_INTEGER : MATCH_ARCHIVE_COMPRESSED_BUDGET).all();
+      bounded ? MATCH_ARCHIVE_COMPRESSED_BUDGET : Number.MAX_SAFE_INTEGER).all();
     const rows = results || [];
     // Fetch a few R2 objects at a time; decode sequentially below.
     const stored = await mapLimit(rows, 6, row => readArchivedPayload(env, row));
@@ -268,7 +271,7 @@ async function readMatchArchive(env, puuid, seasonId, start, size) {
       // current API checked this player and has no score to supply.
       match._performanceRefreshNeeded = (match.players || []).some(p => !Object.hasOwn(p, 'performance'));
       const bytes = new TextEncoder().encode(JSON.stringify(match)).byteLength;
-      if (size !== MATCH_ARCHIVE_PAGE_SIZE && matches.length && jsonBytes + bytes > MATCH_ARCHIVE_JSON_BUDGET) break;
+      if (bounded && matches.length && jsonBytes + bytes > MATCH_ARCHIVE_JSON_BUDGET) break;
       matches.push(match);
       jsonBytes += bytes;
       consumed++;
@@ -994,10 +997,11 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
     if (!/^\d+$/.test(startText) || !Number.isSafeInteger(start) || start > 5000) {
       return json({ error: 'Invalid archive offset' }, 400);
     }
-    if (!/^\d+$/.test(sizeText) || !Number.isInteger(size) || ![MATCH_ARCHIVE_PAGE_SIZE, MATCH_ARCHIVE_MAX_PAGE_SIZE].includes(size)) {
+    if (!/^\d+$/.test(sizeText) || !Number.isInteger(size) || size < 1 || size > MATCH_ARCHIVE_MAX_PAGE_SIZE) {
       return json({ error: 'Invalid archive page size' }, 400);
     }
-    return readMatchArchive(env, archiveMatch[1].toLowerCase(), archiveMatch[2].toLowerCase(), start, size);
+    return readMatchArchive(env, archiveMatch[1].toLowerCase(), archiveMatch[2].toLowerCase(), start, size,
+      url.searchParams.has('size'));
   }
 
   let route = null, match = null;

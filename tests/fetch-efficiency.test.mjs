@@ -107,23 +107,82 @@ async function archiveRequest(binding,query){
     env:{APP_DB:binding,MATCH_BUCKET:binding.bucket},waitUntil(){}});
 }
 
-test('a 200-match archive loads in four requests and publishes each page immediately',async t=>{
-  const {db,binding}=await archiveDb(Array.from({length:200},(_,id)=>({id})));
-  t.after(()=>db.close());
-  let requests=0;
-  const pages=[];
+// A client over the real proxy handler; `hold` lets a test pause chosen requests.
+function archiveClient(binding,{hold=()=>null}={}){
+  const calls=[],done=[];let inFlight=0,peak=0;
   const context={_analysisGen:1,API_BASE:'/api',...transport(async()=>Response.json({}))};
   context.fetchApiJson=async url=>{
-    requests++;
-    const r=await archiveRequest(binding,new URL(url,'https://example.test').search);
-    return{r,j:await r.json()};
+    const query=new URL(url,'https://example.test').search;
+    calls.push(query);inFlight++;peak=Math.max(peak,inFlight);
+    try{
+      await hold(query);
+      const r=await archiveRequest(binding,query);
+      const j=await r.json();done.push(query);
+      return{r,j};
+    }finally{inFlight--;}
   };
-  const read=runInNewContext(archiveSource+'\nreadServerMatchArchive',context);
-  const rows=await read(puuid,season,1,()=>true,{onPage:page=>pages.push(page.length)});
-  assert.equal(rows.length,200);
-  assert.equal(new Set(rows.map(row=>row.id)).size,200);
-  assert.equal(requests,4);
-  assert.deepEqual(pages,[50,50,50,50]);
+  return{calls,done,peak:()=>peak,context,read:runInNewContext(archiveSource+'\nreadServerMatchArchive',context)};
+}
+
+test('a 200-match archive loads in parallel pages and publishes each page in order',async t=>{
+  const {db,binding}=await archiveDb(Array.from({length:200},(_,id)=>({id})));
+  t.after(()=>db.close());
+  const client=archiveClient(binding),pages=[];
+  let complete=false;
+  const rows=await client.read(puuid,season,1,()=>true,{onPage:page=>pages.push([...page.map(row=>row.id)]),onComplete:()=>{complete=true;}});
+  assert.deepEqual([...rows.map(row=>row.id)],Array.from({length:200},(_,id)=>id));
+  assert.deepEqual(pages.map(page=>page.length),[50,50,50,50]);
+  assert.ok(complete);
+  assert.ok(client.peak()>1&&client.peak()<=3,`peak ${client.peak()}`);
+  // At most the other workers' chunks past the end are spent on empty pages.
+  assert.ok(client.calls.length>=4&&client.calls.length<=6,client.calls.join(' '));
+});
+
+test('an archive that fits one page costs exactly one request',async t=>{
+  const {db,binding}=await archiveDb(Array.from({length:30},(_,id)=>({id})));
+  t.after(()=>db.close());
+  const client=archiveClient(binding);
+  assert.equal((await client.read(puuid,season,1)).length,30);
+  assert.deepEqual(client.calls,['?start=0&size=50']);
+});
+
+test('a later page that answers first is held until the earlier pages publish',async t=>{
+  const {db,binding}=await archiveDb(Array.from({length:150},(_,id)=>({id})));
+  t.after(()=>db.close());
+  const slow=deferred();
+  const client=archiveClient(binding,{hold:query=>query==='?start=50&size=50'?slow.promise:null});
+  const pages=[];
+  const result=client.read(puuid,season,1,()=>true,{onPage:page=>pages.push(page[0].id)});
+  for(let i=0;i<400&&!client.done.includes('?start=100&size=50');i++)await new Promise(r=>setTimeout(r,5));
+  assert.ok(client.done.includes('?start=100&size=50'));
+  for(let i=0;i<5;i++)await tick();
+  assert.deepEqual(pages,[0],'chunk 100 must wait for chunk 50');
+  slow.resolve();
+  assert.equal((await result).length,150);
+  assert.deepEqual(pages,[0,50,100]);
+});
+
+test('budget-cut chunks are finished from the cursor without gaps or overlap',async t=>{
+  const {db,binding}=await archiveDb(Array.from({length:120},(_,id)=>({id,padding:id%7===0?'x'.repeat(3*1024*1024):''})));
+  t.after(()=>db.close());
+  const client=archiveClient(binding);
+  const rows=await client.read(puuid,season,1);
+  assert.deepEqual([...rows.map(row=>row.id)],Array.from({length:120},(_,id)=>id));
+  assert.ok(client.calls.some(query=>!query.endsWith('size=50')),'a short chunk is refilled with a smaller size');
+});
+
+test('a failed later page keeps the published prefix and does not report completion',async t=>{
+  const {db,binding}=await archiveDb(Array.from({length:150},(_,id)=>({id})));
+  t.after(()=>db.close());
+  const client=archiveClient(binding);
+  const real=client.context.fetchApiJson;
+  client.context.fetchApiJson=async(url,opts)=>url.includes('start=100&')?{r:{ok:false},j:{}}:real(url,opts);
+  let complete=false;
+  const rows=await client.read(puuid,season,1,()=>true,{onComplete:()=>{complete=true;}});
+  assert.deepEqual([...rows.map(row=>row.id)],Array.from({length:100},(_,id)=>id));
+  assert.equal(complete,false);
+  client.context.fetchApiJson=async()=>({r:{ok:false},j:{}});
+  await assert.rejects(client.read(puuid,season,1),/Match archive unavailable/);
 });
 
 test('bounded archive pages continue even when fewer than fifty rows fit',async t=>{

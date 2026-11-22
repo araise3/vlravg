@@ -302,37 +302,75 @@ let allTeammates=[],allEncounters=[],serverData=[],serverPartySize=0,serverFilte
 // ── SHARED MATCH ARCHIVE ──────────────────────────────────────────────────
 // Trusted full matches are kept in APP_DB by the proxy. Browser tabs and
 // devices read the same archive; failures fall back to live history.
+// Pages are fetched a few at a time: each one waits ~0.4 s on the proxy (D1
+// lookup plus R2 reads), so one-by-one paging made a 500-match archive take
+// several seconds. The archive is split into 50-row chunks; a chunk the
+// proxy cut short (its JSON budget) is finished from the returned cursor
+// before the chunk counts as done. Pages still publish strictly in order.
 async function readServerMatchArchive(puuid,seasonId,generation,isRelevant=()=>true,opts={}){
-  const matches=[];
-  for(let start=0;start<=5000;){
-    if(generation!==_analysisGen||!isRelevant())return [];
-    let response,j;
-    try{
-      ({r:response,j}=await fetchApiJson(`${API_BASE}/match-archive/${encodeURIComponent(puuid)}/${encodeURIComponent(seasonId)}?start=${start}&size=50`,{cache:'no-store',signal:opts.signal}));
-    }catch(e){
-      if(opts.signal?.aborted)throw e;
-      if(matches.length)break;
-      throw e;
+  const CHUNK=50,PARALLEL=3,MAX_START=5000;
+  const stale=()=>generation!==_analysisGen||!isRelevant();
+  const chunks=[],published=[];
+  let head=0,nextChunk=0,endFound=false,failed=null,fatal=null,cursorless=false;
+  const flush=()=>{
+    while(chunks[head]){
+      const chunk=chunks[head];
+      if(chunk.rows.length>chunk.sent){
+        const page=chunk.rows.slice(chunk.sent);chunk.sent=chunk.rows.length;
+        published.push(...page);
+        if(page.length)opts.onPage?.(page);
+      }
+      if(!chunk.done)break;
+      head++;
     }
-    if(!response.ok){
-      if(matches.length)break;
-      throw new Error('Match archive unavailable');
-    }
-    if(generation!==_analysisGen||!isRelevant())return [];
+  };
+  const fetchPage=async(start,size)=>{
+    const {r:response,j}=await fetchApiJson(`${API_BASE}/match-archive/${encodeURIComponent(puuid)}/${encodeURIComponent(seasonId)}?start=${start}&size=${size}`,{cache:'no-store',signal:opts.signal});
+    if(!response.ok)throw new Error('Match archive unavailable');
     const page=Array.isArray(j?.data)?j.data:[];
-    matches.push(...page);
-    if(page.length)opts.onPage?.(page);
-    if(Object.prototype.hasOwnProperty.call(j,'nextStart')){
-      if(j.nextStart===null){opts.onComplete?.();break;}
-      if(!Number.isSafeInteger(j.nextStart)||j.nextStart<=start)throw new Error('Invalid archive cursor');
-      start=j.nextStart;
-    }else{
-      // A previously deployed proxy still serves ten rows and no cursor.
-      if(page.length<10){opts.onComplete?.();break;}
-      start+=page.length;
+    if(j&&Object.prototype.hasOwnProperty.call(j,'nextStart')){
+      if(j.nextStart!==null&&(!Number.isSafeInteger(j.nextStart)||j.nextStart<=start))
+        throw Object.assign(new Error('Invalid archive cursor'),{fatal:true});
+      return{page,next:j.nextStart};
     }
-  }
-  return matches;
+    // A previously deployed proxy serves ten rows and no cursor.
+    cursorless=true;
+    return{page,next:page.length<10?null:start+page.length};
+  };
+  // Returns false once the read must stop (superseded or failed).
+  const runChunk=async index=>{
+    const chunk=chunks[index]={rows:[],sent:0,done:false};
+    const end=(index+1)*CHUNK;
+    let start=index*CHUNK;
+    while(true){
+      if(stale()||failed||fatal)return false;
+      let result;
+      try{result=await fetchPage(start,Math.min(CHUNK,end-start));}
+      catch(e){if(e?.fatal)fatal=fatal||e;else failed=failed||e;return false;}
+      if(stale())return false;
+      chunk.rows.push(...result.page);
+      if(result.next===null)endFound=true;
+      if(result.next===null||result.next>=end){chunk.done=true;flush();return true;}
+      flush();
+      start=result.next;
+    }
+  };
+  const worker=async()=>{
+    while(!endFound&&!failed&&!fatal&&!stale()&&nextChunk*CHUNK<=MAX_START){
+      if(!await runChunk(nextChunk++))return;
+    }
+  };
+  // The first chunk runs alone: most archives fit in it, and its answer
+  // shows whether the proxy speaks cursors at all.
+  await runChunk(nextChunk++);
+  if(!endFound&&!failed&&!fatal&&!stale())
+    await Promise.all(Array.from({length:cursorless?1:PARALLEL},worker));
+  if(stale())return [];
+  if(fatal)throw fatal;
+  if(opts.signal?.aborted&&failed)throw failed;
+  if(failed&&!published.length)throw failed;
+  if(!failed&&endFound&&chunks.every(c=>c.done))opts.onComplete?.();
+  return published;
 }
 async function readSavedMatchCounts(puuid,opts={}){
   if(!puuid)return{};
