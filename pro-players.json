@@ -1,13 +1,18 @@
 {
   "source": "vct-2026-data-analysis/src/lib/trackerLinks.json",
+  "rosterSource": "rostermania/data/rostermania.json",
+  "rosterUpdatedAt": "2026-11-22T00:08:04.000Z",
   "playerCount": 264,
   "accountCount": 268,
   "resolvedPuuidCount": 268,
+  "partnerPlayerCount": 95,
   "players": [
     {
       "handle": "aaaay",
-      "team": "FunPlus Phoenix",
+      "team": null,
+      "teamCode": null,
       "region": "China",
+      "baseRegion": "China",
       "countryCode": "cn",
       "accounts": [
         {
@@ -16,10 +21,12 @@
       ]
     },
     {
-      "handle": "absol",
+      "handle": "Absol",
       "team": "ZETA DIVISION",
+      "teamCode": "ZETA",
       "region": "Pacific",
-      "countryCode": "jp",
+      "baseRegion": "Pacific",
+      "countryCode": "JP",
       "accounts": [
         {
           "puuid": "4af4b440-0ad0-5489-a875-72da885956a7"
@@ -28,8 +35,10 @@
     },
     {
       "handle": "al0rante",
-      "team": "PCIFIC Esports",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "de",
       "accounts": [
         {
@@ -39,8 +48,10 @@
     },
     {
       "handle": "alert",
-      "team": "Xipto Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "th",
       "accounts": [
         {
@@ -50,8 +61,10 @@
     },
     {
       "handle": "alexiiik",
-      "team": "Natus Vincere",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "cz",
       "accounts": [
         {
@@ -60,10 +73,12 @@
       ]
     },
     {
-      "handle": "alfajer",
-      "team": "FNATIC",
+      "handle": "Alfajer",
+      "team": "Gentle Mates",
+      "teamCode": "M8",
       "region": "EMEA",
-      "countryCode": "tr",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
       "accounts": [
         {
           "puuid": "607de45b-964e-571a-a7f8-edf438074d23"
@@ -72,9 +87,11 @@
     },
     {
       "handle": "alvinboy",
-      "team": "M80",
-      "region": "Americas",
-      "countryCode": "cn",
+      "team": "Bilibili Gaming",
+      "teamCode": "BLG",
+      "region": "China",
+      "baseRegion": "Americas",
+      "countryCode": "CA",
       "accounts": [
         {
           "puuid": "1d44e4fc-751f-57d0-89f6-2d3f026f67df"
@@ -83,8 +100,10 @@
     },
     {
       "handle": "ange1",
-      "team": "Natus Vincere",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "ua",
       "accounts": [
         {
@@ -94,8 +113,10 @@
     },
     {
       "handle": "ara",
-      "team": "GIANTX",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "ro",
       "accounts": [
         {
@@ -105,8 +126,10 @@
     },
     {
       "handle": "ardiis",
-      "team": "Natus Vincere",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "lv",
       "accounts": [
         {
@@ -116,8 +139,10 @@
     },
     {
       "handle": "ash",
-      "team": "Gen.G",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "kr",
       "accounts": [
         {
@@ -127,8 +152,10 @@
     },
     {
       "handle": "askia",
-      "team": "2Game Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "br",
       "accounts": [
         {
@@ -138,8 +165,10 @@
     },
     {
       "handle": "aslanm4shadow",
-      "team": "BBL Esports",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "tr",
       "accounts": [
         {
@@ -148,10 +177,12 @@
       ]
     },
     {
-      "handle": "asuna",
+      "handle": "Asuna",
       "team": "100 Thieves",
+      "teamCode": "100T",
       "region": "Americas",
-      "countryCode": "us",
+      "baseRegion": "Americas",
+      "countryCode": "US",
       "accounts": [
         {
           "puuid": "f6581378-8d2c-59e3-b383-85a5f4401819"
@@ -161,7 +192,9 @@
     {
       "handle": "athan",
       "team": null,
+      "teamCode": null,
       "region": null,
+      "baseRegion": null,
       "countryCode": null,
       "accounts": [
         {
@@ -171,8 +204,10 @@
     },
     {
       "handle": "audaz",
-      "team": "Eternal Fire",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "tr",
       "accounts": [
         {
@@ -183,8 +218,10 @@
     {
       "handle": "avez",
       "team": "Karmine Corp",
+      "teamCode": "KC",
       "region": "EMEA",
-      "countryCode": "eg",
+      "baseRegion": "EMEA",
+      "countryCode": "EG",
       "accounts": [
         {
           "puuid": "53277fcb-e9b7-50aa-a7bb-cdea5982a2b5"
@@ -193,8 +230,10 @@
     },
     {
       "handle": "avova",
-      "team": "Apeks",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "dk",
       "accounts": [
         {
@@ -204,8 +243,10 @@
     },
     {
       "handle": "azury",
-      "team": "Eintracht Frankfurt",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "de",
       "accounts": [
         {
@@ -215,9 +256,11 @@
     },
     {
       "handle": "babybay",
-      "team": "G2 Esports",
-      "region": "Americas",
-      "countryCode": "us",
+      "team": "Weibo Gaming",
+      "teamCode": "WBG",
+      "region": "China",
+      "baseRegion": "Americas",
+      "countryCode": "US",
       "accounts": [
         {
           "puuid": "b2e1dd05-9c92-5027-9f61-fc1a5c324eb3"
@@ -226,8 +269,10 @@
     },
     {
       "handle": "baha",
-      "team": "FUT Esports",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "tr",
       "accounts": [
         {
@@ -238,8 +283,10 @@
     {
       "handle": "bang",
       "team": "100 Thieves",
+      "teamCode": "100T",
       "region": "Americas",
-      "countryCode": "us",
+      "baseRegion": "Americas",
+      "countryCode": "US",
       "accounts": [
         {
           "puuid": "a60e35e7-314b-5345-b83f-b813620be5cd"
@@ -248,8 +295,10 @@
     },
     {
       "handle": "bao",
-      "team": "Evil Geniuses",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "vn",
       "accounts": [
         {
@@ -259,9 +308,11 @@
     },
     {
       "handle": "basic",
-      "team": "FURIA",
+      "team": "LOUD",
+      "teamCode": "LOUD",
       "region": "Americas",
-      "countryCode": "br",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
       "accounts": [
         {
           "puuid": "a9d9b499-34ce-59dc-8b3d-acea3d6aabb2"
@@ -270,9 +321,11 @@
     },
     {
       "handle": "batujnax",
-      "team": "Fire Flux Esports",
+      "team": "FUT Esports",
+      "teamCode": "FUT",
       "region": "EMEA",
-      "countryCode": "tr",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
       "accounts": [
         {
           "puuid": "3dc599dc-cd2f-5feb-8801-af53ffe05317"
@@ -281,8 +334,10 @@
     },
     {
       "handle": "bcj",
-      "team": "Evil Geniuses",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -292,8 +347,10 @@
     },
     {
       "handle": "bdog",
-      "team": "FURIA",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -304,8 +361,10 @@
     {
       "handle": "benjyfishy",
       "team": "Team Heretics",
+      "teamCode": "TH",
       "region": "EMEA",
-      "countryCode": "gb",
+      "baseRegion": "EMEA",
+      "countryCode": "GB",
       "accounts": [
         {
           "puuid": "f74162df-6e66-51b6-81a9-e37dc2d793cb"
@@ -314,8 +373,10 @@
     },
     {
       "handle": "beyn",
-      "team": "KIWOOM DRX",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "kr",
       "accounts": [
         {
@@ -325,9 +386,11 @@
     },
     {
       "handle": "blowz",
-      "team": "LEVIATÁN",
+      "team": "Leviatán",
+      "teamCode": "LEV",
       "region": "Americas",
-      "countryCode": "br",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
       "accounts": [
         {
           "puuid": "712421ec-81ec-5654-a2eb-c6a130d1e8bd"
@@ -336,8 +399,10 @@
     },
     {
       "handle": "boo",
-      "team": "Team Heretics",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "lt",
       "accounts": [
         {
@@ -347,8 +412,10 @@
     },
     {
       "handle": "brave",
-      "team": "BBL Esports",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "tr",
       "accounts": [
         {
@@ -358,9 +425,11 @@
     },
     {
       "handle": "brawk",
-      "team": "NRG",
+      "team": "Sentinels",
+      "teamCode": "SEN",
       "region": "Americas",
-      "countryCode": "us",
+      "baseRegion": "Americas",
+      "countryCode": "US",
       "accounts": [
         {
           "puuid": "ba4d7928-7d21-5e46-9730-e6c292d6c404"
@@ -369,8 +438,10 @@
     },
     {
       "handle": "brinks",
-      "team": "2Game Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "br",
       "accounts": [
         {
@@ -381,8 +452,10 @@
     {
       "handle": "bud",
       "team": "Bilibili Gaming",
+      "teamCode": "BLG",
       "region": "China",
-      "countryCode": "cn",
+      "baseRegion": "China",
+      "countryCode": "CN",
       "accounts": [
         {
           "puuid": "03b46aaa-8836-5824-848a-d47f05c05e53"
@@ -391,8 +464,10 @@
     },
     {
       "handle": "c0m",
-      "team": "FURIA",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -402,8 +477,10 @@
     },
     {
       "handle": "c1nder",
-      "team": "VARREL",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "kr",
       "accounts": [
         {
@@ -413,8 +490,10 @@
     },
     {
       "handle": "canady",
-      "team": "Xipto Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "th",
       "accounts": [
         {
@@ -423,10 +502,12 @@
       ]
     },
     {
-      "handle": "chichoo",
-      "team": "EDward Gaming",
+      "handle": "CHICHOO",
+      "team": "Trace Esports",
+      "teamCode": "TE",
       "region": "China",
-      "countryCode": "cn",
+      "baseRegion": "China",
+      "countryCode": "CN",
       "accounts": [
         {
           "puuid": "5a2b6b69-b252-50c8-b9ca-95613a72d55e"
@@ -435,9 +516,11 @@
     },
     {
       "handle": "chloric",
-      "team": "Natus Vincere",
+      "team": "Team Heretics",
+      "teamCode": "TH",
       "region": "EMEA",
-      "countryCode": "us",
+      "baseRegion": "EMEA",
+      "countryCode": "US",
       "accounts": [
         {
           "puuid": "9c7c4e0f-7144-5acc-8573-2e8b455fe2ea"
@@ -445,10 +528,12 @@
       ]
     },
     {
-      "handle": "chronicle",
+      "handle": "Chronicle",
       "team": "Team Vitality",
+      "teamCode": "VIT",
       "region": "EMEA",
-      "countryCode": "ru",
+      "baseRegion": "EMEA",
+      "countryCode": "RU",
       "accounts": [
         {
           "puuid": "5359f395-c7e8-523d-9e93-0d8528c21371"
@@ -457,8 +542,10 @@
     },
     {
       "handle": "chubizin",
-      "team": "BESTIA",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "cl",
       "accounts": [
         {
@@ -467,10 +554,12 @@
       ]
     },
     {
-      "handle": "cloud",
-      "team": "FNATIC",
+      "handle": "Cloud",
+      "team": "Fnatic",
+      "teamCode": "FNC",
       "region": "EMEA",
-      "countryCode": "ru",
+      "baseRegion": "EMEA",
+      "countryCode": "RU",
       "accounts": [
         {
           "puuid": "c3937c89-3c03-55c3-9a4e-59b282fef85f"
@@ -479,8 +568,10 @@
     },
     {
       "handle": "coconut",
-      "team": "FunPlus Phoenix",
+      "team": null,
+      "teamCode": null,
       "region": "China",
+      "baseRegion": "China",
       "countryCode": "hk",
       "accounts": [
         {
@@ -490,8 +581,10 @@
     },
     {
       "handle": "comeback",
-      "team": "Natus Vincere",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "tr",
       "accounts": [
         {
@@ -501,9 +594,11 @@
     },
     {
       "handle": "cortezia",
-      "team": "Sentinels",
+      "team": "LOUD",
+      "teamCode": "LOUD",
       "region": "Americas",
-      "countryCode": "br",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
       "accounts": [
         {
           "puuid": "64960e8d-620f-5f8d-8c9a-e53b9c74ec8f"
@@ -512,9 +607,11 @@
     },
     {
       "handle": "crashies",
-      "team": "FNATIC",
-      "region": "EMEA",
-      "countryCode": "us",
+      "team": "T1",
+      "teamCode": "T1",
+      "region": "Pacific",
+      "baseRegion": "EMEA",
+      "countryCode": "US",
       "accounts": [
         {
           "puuid": "6720c913-88a9-51c7-ad12-9bc230af0bd1"
@@ -523,8 +620,10 @@
     },
     {
       "handle": "crewen",
-      "team": "BBL Esports",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "tr",
       "accounts": [
         {
@@ -535,8 +634,10 @@
     {
       "handle": "crownfisher",
       "team": "JDG Esports",
+      "teamCode": "JDG",
       "region": "China",
-      "countryCode": "cn",
+      "baseRegion": "China",
+      "countryCode": "CN",
       "accounts": [
         {
           "puuid": "c0331a2e-26ce-5c30-9086-c6ebc837a76b"
@@ -544,10 +645,12 @@
       ]
     },
     {
-      "handle": "cryocells",
+      "handle": "Cryocells",
       "team": "100 Thieves",
+      "teamCode": "100T",
       "region": "Americas",
-      "countryCode": "us",
+      "baseRegion": "Americas",
+      "countryCode": "US",
       "accounts": [
         {
           "puuid": "01efd229-d4f2-523e-8ffe-9fd7af153223"
@@ -556,8 +659,10 @@
     },
     {
       "handle": "cyvoph",
-      "team": "Natus Vincere",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "fr",
       "accounts": [
         {
@@ -567,9 +672,11 @@
     },
     {
       "handle": "d4v41",
-      "team": "Paper Rex",
-      "region": "Pacific",
-      "countryCode": "my",
+      "team": "Xi Lai Gaming",
+      "teamCode": "XLG",
+      "region": "China",
+      "baseRegion": "Pacific",
+      "countryCode": "MY",
       "accounts": [
         {
           "puuid": "0b623576-b272-5fd1-bc6a-088a9fbdbb7f"
@@ -577,10 +684,12 @@
       ]
     },
     {
-      "handle": "dambi",
-      "team": "Nongshim RedForce",
+      "handle": "Dambi",
+      "team": "Gen.G",
+      "teamCode": "GEN",
       "region": "Pacific",
-      "countryCode": "kr",
+      "baseRegion": "Pacific",
+      "countryCode": "KR",
       "accounts": [
         {
           "puuid": "558fe545-214b-5fcd-9de1-de078c0c722f"
@@ -589,8 +698,10 @@
     },
     {
       "handle": "dantedeu5",
-      "team": "KRÜ Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "ar",
       "accounts": [
         {
@@ -599,10 +710,12 @@
       ]
     },
     {
-      "handle": "darker",
-      "team": "LOUD",
+      "handle": "Darker",
+      "team": "KRÜ Esports",
+      "teamCode": "KRU",
       "region": "Americas",
-      "countryCode": "co",
+      "baseRegion": "Americas",
+      "countryCode": "CO",
       "accounts": [
         {
           "puuid": "2073a9da-10f9-570c-b677-7f2e6aac72b2"
@@ -610,10 +723,12 @@
       ]
     },
     {
-      "handle": "david",
-      "team": "BESTIA",
+      "handle": "David",
+      "team": "KRÜ Esports",
+      "teamCode": "KRU",
       "region": "Americas",
-      "countryCode": "cl",
+      "baseRegion": "Americas",
+      "countryCode": "CL",
       "accounts": [
         {
           "puuid": "6dfeab9a-5de2-57ef-97dd-ec87eb3177f3"
@@ -621,10 +736,12 @@
       ]
     },
     {
-      "handle": "davih",
+      "handle": "DaviH",
       "team": "LOUD",
+      "teamCode": "LOUD",
       "region": "Americas",
-      "countryCode": "pt",
+      "baseRegion": "Americas",
+      "countryCode": "PT",
       "accounts": [
         {
           "puuid": "c1ae1db9-7871-5509-87c0-f73d67bc86dc"
@@ -633,8 +750,10 @@
     },
     {
       "handle": "deadink",
-      "team": "Fire Flux Esports",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "tr",
       "accounts": [
         {
@@ -644,8 +763,10 @@
     },
     {
       "handle": "demon1",
-      "team": "ENVY",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -655,8 +776,10 @@
     },
     {
       "handle": "derke",
-      "team": "Team Vitality",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "fi",
       "accounts": [
         {
@@ -666,8 +789,10 @@
     },
     {
       "handle": "deryeon",
-      "team": "Wolves Esports",
+      "team": null,
+      "teamCode": null,
       "region": "China",
+      "baseRegion": "China",
       "countryCode": "sg",
       "accounts": [
         {
@@ -677,9 +802,11 @@
     },
     {
       "handle": "dgzin",
-      "team": "Evil Geniuses",
+      "team": "MIBR",
+      "teamCode": "MIBR",
       "region": "Americas",
-      "countryCode": "br",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
       "accounts": [
         {
           "puuid": "630c6bde-0c23-5bb7-9243-946ae60a09cd"
@@ -688,8 +815,10 @@
     },
     {
       "handle": "doffy",
-      "team": "Xipto Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "th",
       "accounts": [
         {
@@ -699,8 +828,10 @@
     },
     {
       "handle": "doma",
-      "team": "Joblife",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "hr",
       "accounts": [
         {
@@ -711,8 +842,10 @@
     {
       "handle": "dos9",
       "team": "Karmine Corp",
+      "teamCode": "KC",
       "region": "EMEA",
-      "countryCode": "kz",
+      "baseRegion": "EMEA",
+      "countryCode": "KZ",
       "accounts": [
         {
           "puuid": "2fedf2ef-1e5b-5dca-bfe8-bfe2ba6456a8"
@@ -721,8 +854,10 @@
     },
     {
       "handle": "echo",
-      "team": "Eternal Fire",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "tr",
       "accounts": [
         {
@@ -732,9 +867,11 @@
     },
     {
       "handle": "eeiu",
-      "team": "FURIA",
+      "team": "NRG",
+      "teamCode": "NRG",
       "region": "Americas",
-      "countryCode": "ca",
+      "baseRegion": "Americas",
+      "countryCode": "CA",
       "accounts": [
         {
           "puuid": "b0c5e027-6292-5f3f-972e-a4cb97d6eb80"
@@ -743,8 +880,10 @@
     },
     {
       "handle": "efina",
-      "team": "Gen.G",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "kr",
       "accounts": [
         {
@@ -754,8 +893,10 @@
     },
     {
       "handle": "eggsterr",
-      "team": "ENVY",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -764,10 +905,12 @@
       ]
     },
     {
-      "handle": "eko",
+      "handle": "eKo",
       "team": "ZETA DIVISION",
+      "teamCode": "ZETA",
       "region": "Pacific",
-      "countryCode": "kr",
+      "baseRegion": "Pacific",
+      "countryCode": "KR",
       "accounts": [
         {
           "puuid": "f9a2940b-cda2-5ba8-b4d3-10f26136adb7"
@@ -776,8 +919,10 @@
     },
     {
       "handle": "elite",
-      "team": "Karmine Corp",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "tr",
       "accounts": [
         {
@@ -787,8 +932,10 @@
     },
     {
       "handle": "endoist",
-      "team": "Xipto Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "th",
       "accounts": [
         {
@@ -798,9 +945,11 @@
     },
     {
       "handle": "erde",
-      "team": "LOUD",
+      "team": "Leviatán",
+      "teamCode": "LEV",
       "region": "Americas",
-      "countryCode": "cl",
+      "baseRegion": "Americas",
+      "countryCode": "CL",
       "accounts": [
         {
           "puuid": "158a3073-7294-5563-9602-c119cd9fff1d"
@@ -808,10 +957,12 @@
       ]
     },
     {
-      "handle": "ethan",
+      "handle": "Ethan",
       "team": "NRG",
+      "teamCode": "NRG",
       "region": "Americas",
-      "countryCode": "us",
+      "baseRegion": "Americas",
+      "countryCode": "US",
       "accounts": [
         {
           "puuid": "7ff76597-4864-54df-8939-bd0ba081099e"
@@ -820,8 +971,10 @@
     },
     {
       "handle": "exit",
-      "team": "Natus Vincere",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "sa",
       "accounts": [
         {
@@ -830,10 +983,12 @@
       ]
     },
     {
-      "handle": "f0rsaken",
+      "handle": "f0rsakeN",
       "team": "Paper Rex",
+      "teamCode": "PRX",
       "region": "Pacific",
-      "countryCode": "id",
+      "baseRegion": "Pacific",
+      "countryCode": "ID",
       "accounts": [
         {
           "puuid": "9f245fd0-1813-546a-be01-08c2145c7dd2"
@@ -843,8 +998,10 @@
     {
       "handle": "f4ngeer",
       "team": "All Gamers",
+      "teamCode": "AG",
       "region": "China",
-      "countryCode": "ru",
+      "baseRegion": "China",
+      "countryCode": "RU",
       "accounts": [
         {
           "puuid": "1c4c7dea-9a1b-5de5-91e9-4698ed33a721"
@@ -853,8 +1010,10 @@
     },
     {
       "handle": "famsii",
-      "team": "GIANTX",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "fi",
       "accounts": [
         {
@@ -864,8 +1023,10 @@
     },
     {
       "handle": "fengf",
-      "team": "Trace Esports",
+      "team": null,
+      "teamCode": null,
       "region": "China",
+      "baseRegion": "China",
       "countryCode": "cn",
       "accounts": [
         {
@@ -875,8 +1036,10 @@
     },
     {
       "handle": "filu",
-      "team": "Natus Vincere",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "pl",
       "accounts": [
         {
@@ -886,8 +1049,10 @@
     },
     {
       "handle": "fireballops",
-      "team": "Cloud9",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -897,8 +1062,10 @@
     },
     {
       "handle": "fizzy",
-      "team": "Eintracht Frankfurt",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "pt",
       "accounts": [
         {
@@ -908,8 +1075,10 @@
     },
     {
       "handle": "flickless",
-      "team": "GIANTX",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "be",
       "accounts": [
         {
@@ -919,8 +1088,10 @@
     },
     {
       "handle": "florescent",
-      "team": "Apeks",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "vn",
       "accounts": [
         {
@@ -931,7 +1102,9 @@
     {
       "handle": "fns",
       "team": null,
+      "teamCode": null,
       "region": null,
+      "baseRegion": null,
       "countryCode": null,
       "accounts": [
         {
@@ -941,8 +1114,10 @@
     },
     {
       "handle": "foxy9",
-      "team": "VARREL",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "kr",
       "accounts": [
         {
@@ -952,8 +1127,10 @@
     },
     {
       "handle": "foxz",
-      "team": "FULL SENSE",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "th",
       "accounts": [
         {
@@ -963,8 +1140,10 @@
     },
     {
       "handle": "free1ng",
-      "team": "KIWOOM DRX",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "kr",
       "accounts": [
         {
@@ -974,8 +1153,10 @@
     },
     {
       "handle": "frz",
-      "team": "2Game Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "br",
       "accounts": [
         {
@@ -985,9 +1166,11 @@
     },
     {
       "handle": "glacier",
-      "team": "Wolves Esports",
+      "team": "JDG Esports",
+      "teamCode": "JDG",
       "region": "China",
-      "countryCode": "tw",
+      "baseRegion": "China",
+      "countryCode": "TW",
       "accounts": [
         {
           "puuid": "1634a55b-8d42-5100-9159-9242ca38cf2d"
@@ -996,8 +1179,10 @@
     },
     {
       "handle": "glyph",
-      "team": "ENVY",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "ph",
       "accounts": [
         {
@@ -1007,8 +1192,10 @@
     },
     {
       "handle": "gobera",
-      "team": "2Game Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "br",
       "accounts": [
         {
@@ -1018,8 +1205,10 @@
     },
     {
       "handle": "grubinho",
-      "team": "GIANTX",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "pl",
       "accounts": [
         {
@@ -1028,10 +1217,12 @@
       ]
     },
     {
-      "handle": "gsr",
-      "team": null,
-      "region": null,
-      "countryCode": null,
+      "handle": "GSR",
+      "team": "Team Liquid",
+      "teamCode": "TL",
+      "region": "EMEA",
+      "baseRegion": null,
+      "countryCode": "RS",
       "accounts": [
         {
           "puuid": "1f610d3a-2ad5-5a91-bba4-3b8d26606e96"
@@ -1040,8 +1231,10 @@
     },
     {
       "handle": "h1ber",
-      "team": "Gentle Mates",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "fi",
       "accounts": [
         {
@@ -1052,8 +1245,10 @@
     {
       "handle": "happywei",
       "team": "Xi Lai Gaming",
+      "teamCode": "XLG",
       "region": "China",
-      "countryCode": "tw",
+      "baseRegion": "China",
+      "countryCode": "TW",
       "accounts": [
         {
           "puuid": "39036584-1d3e-5053-bf83-c513a8845529"
@@ -1062,8 +1257,10 @@
     },
     {
       "handle": "heat",
-      "team": "KRÜ Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "br",
       "accounts": [
         {
@@ -1073,9 +1270,11 @@
     },
     {
       "handle": "hezacoil",
-      "team": "Fire Flux Esports",
+      "team": "FUT Esports",
+      "teamCode": "FUT",
       "region": "EMEA",
-      "countryCode": "tr",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
       "accounts": [
         {
           "puuid": "e38498c2-d8c7-5d65-9a65-d40007333111"
@@ -1084,9 +1283,11 @@
     },
     {
       "handle": "hiro",
-      "team": "Natus Vincere",
+      "team": "Team Heretics",
+      "teamCode": "TH",
       "region": "EMEA",
-      "countryCode": "tr",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
       "accounts": [
         {
           "puuid": "fa9c52b9-ebe6-5ea8-93c0-efbdee85c6b7"
@@ -1095,8 +1296,10 @@
     },
     {
       "handle": "hype",
-      "team": "Apeks",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "lt",
       "accounts": [
         {
@@ -1105,10 +1308,12 @@
       ]
     },
     {
-      "handle": "hyunmin",
-      "team": "KIWOOM DRX",
-      "region": "Pacific",
-      "countryCode": "kr",
+      "handle": "HYUNMIN",
+      "team": "G2 Esports",
+      "teamCode": "G2",
+      "region": "Americas",
+      "baseRegion": "Pacific",
+      "countryCode": "KR",
       "accounts": [
         {
           "puuid": "38ee87b4-4313-5e70-bc8c-1f5a7d3d161c"
@@ -1117,9 +1322,11 @@
     },
     {
       "handle": "iamgrq",
-      "team": "All Gamers",
+      "team": "EDward Gaming",
+      "teamCode": "EDG",
       "region": "China",
-      "countryCode": "cn",
+      "baseRegion": "China",
+      "countryCode": "CN",
       "accounts": [
         {
           "puuid": "4311c44a-ea00-56d8-bc4b-8b31f0a9fa72"
@@ -1128,8 +1335,10 @@
     },
     {
       "handle": "icy",
-      "team": "Evil Geniuses",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -1139,8 +1348,10 @@
     },
     {
       "handle": "iluri",
-      "team": "Enterprise Esports",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "fi",
       "accounts": [
         {
@@ -1150,8 +1361,10 @@
     },
     {
       "handle": "infiltrator",
-      "team": "KRÜ Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "vn",
       "accounts": [
         {
@@ -1161,8 +1374,10 @@
     },
     {
       "handle": "inspire",
-      "team": "ENVY",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -1173,8 +1388,10 @@
     {
       "handle": "invy",
       "team": "Paper Rex",
+      "teamCode": "PRX",
       "region": "Pacific",
-      "countryCode": "ph",
+      "baseRegion": "Pacific",
+      "countryCode": "PH",
       "accounts": [
         {
           "puuid": "1a9d2a8b-2860-5106-9789-e584f83684a2"
@@ -1183,8 +1400,10 @@
     },
     {
       "handle": "ivy",
-      "team": "Nongshim RedForce",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "kr",
       "accounts": [
         {
@@ -1194,8 +1413,10 @@
     },
     {
       "handle": "jakee",
-      "team": "FURIA",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -1206,7 +1427,9 @@
     {
       "handle": "jamelinho",
       "team": null,
+      "teamCode": null,
       "region": null,
+      "baseRegion": null,
       "countryCode": null,
       "accounts": [
         {
@@ -1215,10 +1438,12 @@
       ]
     },
     {
-      "handle": "jamppi",
+      "handle": "Jamppi",
       "team": "Team Vitality",
+      "teamCode": "VIT",
       "region": "EMEA",
-      "countryCode": "fi",
+      "baseRegion": "EMEA",
+      "countryCode": "FI",
       "accounts": [
         {
           "puuid": "372508e5-8f86-54d7-8470-1372a5eeb669"
@@ -1227,9 +1452,11 @@
     },
     {
       "handle": "jawgemo",
-      "team": "G2 Esports",
-      "region": "Americas",
-      "countryCode": "kh",
+      "team": "Team Vitality",
+      "teamCode": "VIT",
+      "region": "EMEA",
+      "baseRegion": "Americas",
+      "countryCode": "KH",
       "accounts": [
         {
           "puuid": "8789814a-3843-594b-8d20-a5cf8d1100f3"
@@ -1238,8 +1465,10 @@
     },
     {
       "handle": "jerrwin",
-      "team": "Sentinels",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "in",
       "accounts": [
         {
@@ -1248,10 +1477,12 @@
       ]
     },
     {
-      "handle": "jieni7",
+      "handle": "Jieni7",
       "team": "EDward Gaming",
+      "teamCode": "EDG",
       "region": "China",
-      "countryCode": "cn",
+      "baseRegion": "China",
+      "countryCode": "CN",
       "accounts": [
         {
           "puuid": "04b4c4d3-06be-54a6-9651-c34f82ef39b9"
@@ -1259,10 +1490,12 @@
       ]
     },
     {
-      "handle": "jinggg",
-      "team": "Paper Rex",
-      "region": "Pacific",
-      "countryCode": "sg",
+      "handle": "Jinggg",
+      "team": "All Gamers",
+      "teamCode": "AG",
+      "region": "China",
+      "baseRegion": "Pacific",
+      "countryCode": "SG",
       "accounts": [
         {
           "puuid": "9ac13b84-e393-5327-8b8b-d30998fba73d"
@@ -1272,8 +1505,10 @@
     {
       "handle": "johnqt",
       "team": "Sentinels",
+      "teamCode": "SEN",
       "region": "Americas",
-      "countryCode": "ma",
+      "baseRegion": "Americas",
+      "countryCode": "MA",
       "accounts": [
         {
           "puuid": "43c9ac3f-1e8f-5a48-89cc-c4a8f4b2280d"
@@ -1282,8 +1517,10 @@
     },
     {
       "handle": "jonahp",
-      "team": "Sentinels",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "ca",
       "accounts": [
         {
@@ -1293,8 +1530,10 @@
     },
     {
       "handle": "juicy",
-      "team": "Wolves Esports",
+      "team": null,
+      "teamCode": null,
       "region": "China",
+      "baseRegion": "China",
       "countryCode": "sg",
       "accounts": [
         {
@@ -1304,8 +1543,10 @@
     },
     {
       "handle": "jzz",
-      "team": "Fluxo W7M",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "br",
       "accounts": [
         {
@@ -1314,10 +1555,12 @@
       ]
     },
     {
-      "handle": "k1ra",
+      "handle": "K1ra",
       "team": "All Gamers",
+      "teamCode": "AG",
       "region": "China",
-      "countryCode": "cn",
+      "baseRegion": "China",
+      "countryCode": "CN",
       "accounts": [
         {
           "puuid": "27e6b452-f00f-50be-82fd-6e35629c1b72"
@@ -1326,9 +1569,11 @@
     },
     {
       "handle": "kaajak",
-      "team": "FNATIC",
+      "team": "Fnatic",
+      "teamCode": "FNC",
       "region": "EMEA",
-      "countryCode": "pl",
+      "baseRegion": "EMEA",
+      "countryCode": "PL",
       "accounts": [
         {
           "puuid": "14828c40-e32d-528f-9075-7ffda668dc92"
@@ -1336,10 +1581,12 @@
       ]
     },
     {
-      "handle": "kachoww",
-      "team": "Fire Flux Esports",
+      "handle": "Kachoww",
+      "team": "Team Liquid",
+      "teamCode": "TL",
       "region": "EMEA",
-      "countryCode": "tr",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
       "accounts": [
         {
           "puuid": "644bd383-520b-517b-8d36-83366792c7f9"
@@ -1348,8 +1595,10 @@
     },
     {
       "handle": "kadoom",
-      "team": "Sharper Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "th",
       "accounts": [
         {
@@ -1360,8 +1609,10 @@
     {
       "handle": "kamo",
       "team": "Team Liquid",
+      "teamCode": "TL",
       "region": "EMEA",
-      "countryCode": "pl",
+      "baseRegion": "EMEA",
+      "countryCode": "PL",
       "accounts": [
         {
           "puuid": "9f4cd319-20c2-58e4-aed2-5086baed65c8"
@@ -1370,9 +1621,11 @@
     },
     {
       "handle": "keiko",
-      "team": "NRG",
+      "team": "Sentinels",
+      "teamCode": "SEN",
       "region": "Americas",
-      "countryCode": "gb",
+      "baseRegion": "Americas",
+      "countryCode": "GB",
       "accounts": [
         {
           "puuid": "75dda691-0e1d-5fdc-9dbe-0275eb6b918f"
@@ -1381,8 +1634,10 @@
     },
     {
       "handle": "kellys",
-      "team": "Team Secret",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "ph",
       "accounts": [
         {
@@ -1392,8 +1647,10 @@
     },
     {
       "handle": "kess",
-      "team": "100 Thieves",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "kr",
       "accounts": [
         {
@@ -1403,8 +1660,10 @@
     },
     {
       "handle": "keznit",
-      "team": "ENVY",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "cl",
       "accounts": [
         {
@@ -1414,8 +1673,10 @@
     },
     {
       "handle": "kicks",
-      "team": "Team Liquid",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "ee",
       "accounts": [
         {
@@ -1425,8 +1686,10 @@
     },
     {
       "handle": "killua",
-      "team": "FULL SENSE",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "th",
       "accounts": [
         {
@@ -1436,8 +1699,10 @@
     },
     {
       "handle": "kippei",
-      "team": "QT DIG∞",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "jp",
       "accounts": [
         {
@@ -1447,8 +1712,10 @@
     },
     {
       "handle": "kitae",
-      "team": "Gen.G",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "kr",
       "accounts": [
         {
@@ -1458,8 +1725,10 @@
     },
     {
       "handle": "kolosha",
-      "team": "Natus Vincere",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "ua",
       "accounts": [
         {
@@ -1469,8 +1738,10 @@
     },
     {
       "handle": "koshmaras",
-      "team": "Team Heretics",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "lt",
       "accounts": [
         {
@@ -1480,8 +1751,10 @@
     },
     {
       "handle": "kovaq",
-      "team": "FunPlus Phoenix",
+      "team": null,
+      "teamCode": null,
       "region": "China",
+      "baseRegion": "China",
       "countryCode": "ch",
       "accounts": [
         {
@@ -1491,9 +1764,11 @@
     },
     {
       "handle": "kozzy",
-      "team": "Enterprise Esports",
+      "team": "Gentle Mates",
+      "teamCode": "M8",
       "region": "EMEA",
-      "countryCode": "ro",
+      "baseRegion": "EMEA",
+      "countryCode": "RO",
       "accounts": [
         {
           "puuid": "087373dc-6f8b-59dc-8068-17bbf0565d1e"
@@ -1502,8 +1777,10 @@
     },
     {
       "handle": "krostaly",
-      "team": "FUT Esports",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "tr",
       "accounts": [
         {
@@ -1512,10 +1789,12 @@
       ]
     },
     {
-      "handle": "lar0k",
+      "handle": "Lar0k",
       "team": "BBL Esports",
+      "teamCode": "BBL",
       "region": "EMEA",
-      "countryCode": "tr",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
       "accounts": [
         {
           "puuid": "8bcfed82-0f50-51a1-ac1f-146ea2c0859f"
@@ -1525,8 +1804,10 @@
     {
       "handle": "leaf",
       "team": "G2 Esports",
+      "teamCode": "G2",
       "region": "Americas",
-      "countryCode": "us",
+      "baseRegion": "Americas",
+      "countryCode": "US",
       "accounts": [
         {
           "puuid": "1b76d5d4-b444-5b8d-90d3-9ddd49f79c30"
@@ -1535,8 +1816,10 @@
     },
     {
       "handle": "leo",
-      "team": "FNATIC",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "se",
       "accounts": [
         {
@@ -1545,10 +1828,12 @@
       ]
     },
     {
-      "handle": "less",
-      "team": "KRÜ Esports",
+      "handle": "Less",
+      "team": "MIBR",
+      "teamCode": "MIBR",
       "region": "Americas",
-      "countryCode": "br",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
       "accounts": [
         {
           "puuid": "905b3128-6c8e-5897-855e-8653b08150d2"
@@ -1556,10 +1841,12 @@
       ]
     },
     {
-      "handle": "lewn",
+      "handle": "LêwN",
       "team": "Karmine Corp",
+      "teamCode": "KC",
       "region": "EMEA",
-      "countryCode": "tr",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
       "accounts": [
         {
           "puuid": "1e4b67f2-08a5-5298-87a4-4c4f9724aaba"
@@ -1568,8 +1855,10 @@
     },
     {
       "handle": "life",
-      "team": "Dragon Ranger Gaming",
+      "team": null,
+      "teamCode": null,
       "region": "China",
+      "baseRegion": "China",
       "countryCode": "cn",
       "accounts": [
         {
@@ -1578,10 +1867,12 @@
       ]
     },
     {
-      "handle": "loita",
+      "handle": "Loita",
       "team": "BBL Esports",
+      "teamCode": "BBL",
       "region": "EMEA",
-      "countryCode": "tr",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
       "accounts": [
         {
           "puuid": "2c94bfc8-48ae-5ee3-b8cf-81c4711e1977"
@@ -1590,8 +1881,10 @@
     },
     {
       "handle": "loss",
-      "team": "BESTIA",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "br",
       "accounts": [
         {
@@ -1601,8 +1894,10 @@
     },
     {
       "handle": "lovers rock",
-      "team": "BBL Esports",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "tr",
       "accounts": [
         {
@@ -1612,8 +1907,10 @@
     },
     {
       "handle": "lucas",
-      "team": "Titan Esports Club",
+      "team": null,
+      "teamCode": null,
       "region": "China",
+      "baseRegion": "China",
       "countryCode": "cn",
       "accounts": [
         {
@@ -1623,9 +1920,11 @@
     },
     {
       "handle": "lukxo",
-      "team": "LOUD",
+      "team": "Leviatán",
+      "teamCode": "LEV",
       "region": "Americas",
-      "countryCode": "br",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
       "accounts": [
         {
           "puuid": "61f455a3-80a4-5641-87e6-e6d400dffb97"
@@ -1634,8 +1933,10 @@
     },
     {
       "handle": "luok1ng",
-      "team": "Trace Esports",
+      "team": null,
+      "teamCode": null,
       "region": "China",
+      "baseRegion": "China",
       "countryCode": "cn",
       "accounts": [
         {
@@ -1645,8 +1946,10 @@
     },
     {
       "handle": "lysoar",
-      "team": "Xi Lai Gaming",
+      "team": null,
+      "teamCode": null,
       "region": "China",
+      "baseRegion": "China",
       "countryCode": "cn",
       "accounts": [
         {
@@ -1656,8 +1959,10 @@
     },
     {
       "handle": "lz",
-      "team": "2Game Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "br",
       "accounts": [
         {
@@ -1668,8 +1973,10 @@
     {
       "handle": "mada",
       "team": "NRG",
+      "teamCode": "NRG",
       "region": "Americas",
-      "countryCode": "ca",
+      "baseRegion": "Americas",
+      "countryCode": "CA",
       "accounts": [
         {
           "puuid": "1fd6fe52-7fbf-52b6-9b43-9885bd162498"
@@ -1677,10 +1984,12 @@
       ]
     },
     {
-      "handle": "magnum",
-      "team": "Enterprise Esports",
+      "handle": "MAGNUM",
+      "team": "Gentle Mates",
+      "teamCode": "M8",
       "region": "EMEA",
-      "countryCode": "cz",
+      "baseRegion": "EMEA",
+      "countryCode": "CZ",
       "accounts": [
         {
           "puuid": "fccb105e-4b01-5d1a-957a-d5315adee655"
@@ -1688,10 +1997,12 @@
       ]
     },
     {
-      "handle": "mako",
-      "team": "KIWOOM DRX",
+      "handle": "MaKo",
+      "team": "Gen.G",
+      "teamCode": "GEN",
       "region": "Pacific",
-      "countryCode": "kr",
+      "baseRegion": "Pacific",
+      "countryCode": "KR",
       "accounts": [
         {
           "puuid": "84ee1311-4c39-5d40-8440-717461bbf29f"
@@ -1700,8 +2011,10 @@
     },
     {
       "handle": "margaret",
-      "team": "QT DIG∞",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "kr",
       "accounts": [
         {
@@ -1711,9 +2024,11 @@
     },
     {
       "handle": "marteen",
-      "team": "Gentle Mates",
+      "team": "Fnatic",
+      "teamCode": "FNC",
       "region": "EMEA",
-      "countryCode": "cz",
+      "baseRegion": "EMEA",
+      "countryCode": "CZ",
       "accounts": [
         {
           "puuid": "4516c9bc-7cda-5b01-915f-23fce7a49ed9"
@@ -1725,8 +2040,10 @@
     },
     {
       "handle": "marved",
-      "team": "Sentinels",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "ca",
       "accounts": [
         {
@@ -1736,8 +2053,10 @@
     },
     {
       "handle": "mazin",
-      "team": "Fluxo W7M",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "br",
       "accounts": [
         {
@@ -1747,8 +2066,10 @@
     },
     {
       "handle": "mazino",
-      "team": "MIBR",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "cl",
       "accounts": [
         {
@@ -1757,10 +2078,12 @@
       ]
     },
     {
-      "handle": "meiy",
-      "team": "DetonatioN FocusMe",
+      "handle": "Meiy",
+      "team": "Crazy Raccoon",
+      "teamCode": "CR",
       "region": "Pacific",
-      "countryCode": "jp",
+      "baseRegion": "Pacific",
+      "countryCode": "JP",
       "accounts": [
         {
           "puuid": "b8c0de16-869c-58a1-b542-a51987b013ab"
@@ -1769,8 +2092,10 @@
     },
     {
       "handle": "miniboo",
-      "team": "Team Liquid",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "lt",
       "accounts": [
         {
@@ -1779,10 +2104,12 @@
       ]
     },
     {
-      "handle": "minny",
-      "team": "Gentle Mates",
+      "handle": "Minny",
+      "team": "Fnatic",
+      "teamCode": "FNC",
       "region": "EMEA",
-      "countryCode": "cz",
+      "baseRegion": "EMEA",
+      "countryCode": "CZ",
       "accounts": [
         {
           "puuid": "4606b82c-b4b5-5c3c-bbf0-088885577db5"
@@ -1794,8 +2121,10 @@
     },
     {
       "handle": "mistic",
-      "team": "Team Liquid",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "gb",
       "accounts": [
         {
@@ -1805,8 +2134,10 @@
     },
     {
       "handle": "molsi",
-      "team": "Apeks",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "pl",
       "accounts": [
         {
@@ -1816,8 +2147,10 @@
     },
     {
       "handle": "monsteerr",
-      "team": "Eintracht Frankfurt",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "cz",
       "accounts": [
         {
@@ -1827,8 +2160,10 @@
     },
     {
       "handle": "moose",
-      "team": "Cloud9",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "ca",
       "accounts": [
         {
@@ -1838,8 +2173,10 @@
     },
     {
       "handle": "musashi",
-      "team": "Eintracht Frankfurt",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "de",
       "accounts": [
         {
@@ -1849,8 +2186,10 @@
     },
     {
       "handle": "mwzera",
-      "team": "KRÜ Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "br",
       "accounts": [
         {
@@ -1859,10 +2198,12 @@
       ]
     },
     {
-      "handle": "nats",
+      "handle": "nAts",
       "team": "Team Liquid",
+      "teamCode": "TL",
       "region": "EMEA",
-      "countryCode": "ru",
+      "baseRegion": "EMEA",
+      "countryCode": "RU",
       "accounts": [
         {
           "puuid": "816b2f6e-daa6-5edb-bae1-21dd5ea8f6fa"
@@ -1871,8 +2212,10 @@
     },
     {
       "handle": "nature",
-      "team": "Evil Geniuses",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -1882,8 +2225,10 @@
     },
     {
       "handle": "nekky",
-      "team": "Eternal Fire",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "tr",
       "accounts": [
         {
@@ -1892,10 +2237,12 @@
       ]
     },
     {
-      "handle": "neon",
-      "team": "LEVIATÁN",
+      "handle": "Neon",
+      "team": "Leviatán",
+      "teamCode": "LEV",
       "region": "Americas",
-      "countryCode": "ar",
+      "baseRegion": "Americas",
+      "countryCode": "AR",
       "accounts": [
         {
           "puuid": "68ae99f4-552a-5b0f-a361-2662019e42a1"
@@ -1904,8 +2251,10 @@
     },
     {
       "handle": "nerve",
-      "team": "FURIA",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -1915,8 +2264,10 @@
     },
     {
       "handle": "net",
-      "team": "GIANTX",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "us",
       "accounts": [
         {
@@ -1925,10 +2276,12 @@
       ]
     },
     {
-      "handle": "nicc",
-      "team": "Dragon Ranger Gaming",
+      "handle": "Nicc",
+      "team": "Trace Esports",
+      "teamCode": "TE",
       "region": "China",
-      "countryCode": "tw",
+      "baseRegion": "China",
+      "countryCode": "TW",
       "accounts": [
         {
           "puuid": "f6132ff0-e059-5c41-9b46-b0fc87408b1e"
@@ -1937,8 +2290,10 @@
     },
     {
       "handle": "nightz",
-      "team": "ENVY",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -1948,8 +2303,10 @@
     },
     {
       "handle": "ninja",
-      "team": "PCIFIC Esports",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "pl",
       "accounts": [
         {
@@ -1959,8 +2316,10 @@
     },
     {
       "handle": "notexxd",
-      "team": "Cloud9",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "bm",
       "accounts": [
         {
@@ -1970,8 +2329,10 @@
     },
     {
       "handle": "oderus",
-      "team": "Apeks",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "us",
       "accounts": [
         {
@@ -1981,8 +2342,10 @@
     },
     {
       "handle": "okeanos",
-      "team": "Evil Geniuses",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "vn",
       "accounts": [
         {
@@ -1992,8 +2355,10 @@
     },
     {
       "handle": "olizera",
-      "team": "Apeks",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "pt",
       "accounts": [
         {
@@ -2002,10 +2367,12 @@
       ]
     },
     {
-      "handle": "oxy",
-      "team": "Cloud9",
+      "handle": "OXY",
+      "team": "Sentinels",
+      "teamCode": "SEN",
       "region": "Americas",
-      "countryCode": "us",
+      "baseRegion": "Americas",
+      "countryCode": "US",
       "accounts": [
         {
           "puuid": "ec7185b3-1e4b-5c61-ad68-139a0445e757"
@@ -2014,8 +2381,10 @@
     },
     {
       "handle": "p0ppin",
-      "team": "ENVY",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -2025,8 +2394,10 @@
     },
     {
       "handle": "pa1ze",
-      "team": "Joblife",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "dk",
       "accounts": [
         {
@@ -2036,8 +2407,10 @@
     },
     {
       "handle": "paincakes",
-      "team": "Evil Geniuses",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -2050,8 +2423,10 @@
     },
     {
       "handle": "patitek",
-      "team": "Enterprise Esports",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "pl",
       "accounts": [
         {
@@ -2061,8 +2436,10 @@
     },
     {
       "handle": "paura",
-      "team": "BBL Esports",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "tr",
       "accounts": [
         {
@@ -2072,8 +2449,10 @@
     },
     {
       "handle": "penny",
-      "team": "Cloud9",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "ca",
       "accounts": [
         {
@@ -2083,9 +2462,11 @@
     },
     {
       "handle": "primmie",
-      "team": "FULL SENSE",
+      "team": "Paper Rex",
+      "teamCode": "PRX",
       "region": "Pacific",
-      "countryCode": "th",
+      "baseRegion": "Pacific",
+      "countryCode": "TH",
       "accounts": [
         {
           "puuid": "ff90a205-5ac9-55dd-9f3f-0d3e7f44fbb3"
@@ -2096,10 +2477,12 @@
       ]
     },
     {
-      "handle": "profek",
+      "handle": "PROFEK",
       "team": "Team Vitality",
+      "teamCode": "VIT",
       "region": "EMEA",
-      "countryCode": "pl",
+      "baseRegion": "EMEA",
+      "countryCode": "PL",
       "accounts": [
         {
           "puuid": "756f891a-e91b-552e-9c5a-e1b772326c49"
@@ -2108,8 +2491,10 @@
     },
     {
       "handle": "proxh",
-      "team": "Gentle Mates",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "tr",
       "accounts": [
         {
@@ -2119,8 +2504,10 @@
     },
     {
       "handle": "pryze",
-      "team": "2Game Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "br",
       "accounts": [
         {
@@ -2130,8 +2517,10 @@
     },
     {
       "handle": "purp0",
-      "team": "Team Liquid",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "ru",
       "accounts": [
         {
@@ -2141,8 +2530,10 @@
     },
     {
       "handle": "pxs",
-      "team": "LEVIATÁN",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -2152,8 +2543,10 @@
     },
     {
       "handle": "qck",
-      "team": "2Game Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "br",
       "accounts": [
         {
@@ -2162,10 +2555,12 @@
       ]
     },
     {
-      "handle": "ray",
-      "team": "ONSIDE GAMING",
+      "handle": "Ray",
+      "team": "Gen.G",
+      "teamCode": "GEN",
       "region": "Pacific",
-      "countryCode": "kr",
+      "baseRegion": "Pacific",
+      "countryCode": "KR",
       "accounts": [
         {
           "puuid": "bebf7b4f-cdc5-52b7-986f-bcf957abb7a7"
@@ -2174,8 +2569,10 @@
     },
     {
       "handle": "reazy",
-      "team": "Fire Flux Esports",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "tr",
       "accounts": [
         {
@@ -2185,8 +2582,10 @@
     },
     {
       "handle": "redgar",
-      "team": "GIANTX",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "ru",
       "accounts": [
         {
@@ -2196,8 +2595,10 @@
     },
     {
       "handle": "reduxx",
-      "team": "Sentinels",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -2206,10 +2607,12 @@
       ]
     },
     {
-      "handle": "riens",
+      "handle": "RieNs",
       "team": "Team Heretics",
+      "teamCode": "TH",
       "region": "EMEA",
-      "countryCode": "tr",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
       "accounts": [
         {
           "puuid": "0c22deed-51bb-5345-aae3-f35dbf8654b7"
@@ -2218,8 +2621,10 @@
     },
     {
       "handle": "robbiebk",
-      "team": "LOUD",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "nl",
       "accounts": [
         {
@@ -2228,10 +2633,12 @@
       ]
     },
     {
-      "handle": "rosé",
+      "handle": "Rosé",
       "team": "BBL Esports",
+      "teamCode": "BBL",
       "region": "EMEA",
-      "countryCode": "tr",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
       "accounts": [
         {
           "puuid": "8f45aab5-8fac-5c50-b04e-1e9da65b4726"
@@ -2239,10 +2646,12 @@
       ]
     },
     {
-      "handle": "rossy",
-      "team": "ENVY",
-      "region": "Americas",
-      "countryCode": "us",
+      "handle": "Rossy",
+      "team": "EDward Gaming",
+      "teamCode": "EDG",
+      "region": "China",
+      "baseRegion": "Americas",
+      "countryCode": "US",
       "accounts": [
         {
           "puuid": "e6d93620-14a8-5983-86c4-93ceb5d1452c"
@@ -2251,8 +2660,10 @@
     },
     {
       "handle": "runner",
-      "team": "Joblife",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "mk",
       "accounts": [
         {
@@ -2261,10 +2672,12 @@
       ]
     },
     {
-      "handle": "ruxic",
-      "team": "Natus Vincere",
+      "handle": "Ruxic",
+      "team": "Gentle Mates",
+      "teamCode": "M8",
       "region": "EMEA",
-      "countryCode": "tr",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
       "accounts": [
         {
           "puuid": "081dd4bc-db08-5645-8d21-7559db3bebd6"
@@ -2273,8 +2686,10 @@
     },
     {
       "handle": "s0pp",
-      "team": "FUT Esports",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "tr",
       "accounts": [
         {
@@ -2284,8 +2699,10 @@
     },
     {
       "handle": "s1mon",
-      "team": "EDward Gaming",
+      "team": null,
+      "teamCode": null,
       "region": "China",
+      "baseRegion": "China",
       "countryCode": "tw",
       "accounts": [
         {
@@ -2295,8 +2712,10 @@
     },
     {
       "handle": "saadhak",
-      "team": "KRÜ Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "ar",
       "accounts": [
         {
@@ -2305,10 +2724,12 @@
       ]
     },
     {
-      "handle": "sato",
-      "team": "LEVIATÁN",
+      "handle": "Sato",
+      "team": "G2 Esports",
+      "teamCode": "G2",
       "region": "Americas",
-      "countryCode": "br",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
       "accounts": [
         {
           "puuid": "2549cb4b-2722-5f8f-9cef-382e34293985"
@@ -2317,8 +2738,10 @@
     },
     {
       "handle": "sayf",
-      "team": "Team Vitality",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "se",
       "accounts": [
         {
@@ -2327,10 +2750,12 @@
       ]
     },
     {
-      "handle": "sayonara",
+      "handle": "Sayonara",
       "team": "Team Vitality",
+      "teamCode": "VIT",
       "region": "EMEA",
-      "countryCode": "md",
+      "baseRegion": "EMEA",
+      "countryCode": "MD",
       "accounts": [
         {
           "puuid": "437827db-03b9-5c0d-9f9c-ee7b5265b98a"
@@ -2339,8 +2764,10 @@
     },
     {
       "handle": "seoldam",
-      "team": "DetonatioN FocusMe",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "kr",
       "accounts": [
         {
@@ -2351,8 +2778,10 @@
     {
       "handle": "seph1roth",
       "team": "FULL SENSE",
+      "teamCode": "FS",
       "region": "Pacific",
-      "countryCode": "th",
+      "baseRegion": "Pacific",
+      "countryCode": "TH",
       "accounts": [
         {
           "puuid": "df2df4e4-34d1-56aa-acdd-0b40f70b0a6b"
@@ -2361,8 +2790,10 @@
     },
     {
       "handle": "serial",
-      "team": "Team Liquid",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "lv",
       "accounts": [
         {
@@ -2372,8 +2803,10 @@
     },
     {
       "handle": "setrod",
-      "team": "FunPlus Phoenix",
+      "team": null,
+      "teamCode": null,
       "region": "China",
+      "baseRegion": "China",
       "countryCode": "tw",
       "accounts": [
         {
@@ -2382,10 +2815,12 @@
       ]
     },
     {
-      "handle": "shr1mp",
+      "handle": "Shr1mp",
       "team": "All Gamers",
+      "teamCode": "AG",
       "region": "China",
-      "countryCode": "cn",
+      "baseRegion": "China",
+      "countryCode": "CN",
       "accounts": [
         {
           "puuid": "e4920cf2-ab9b-541d-af5b-32936c3b2e4b"
@@ -2394,8 +2829,10 @@
     },
     {
       "handle": "shyy",
-      "team": "FURIA",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "cl",
       "accounts": [
         {
@@ -2405,8 +2842,10 @@
     },
     {
       "handle": "signed",
-      "team": "Royal Never Give Up",
+      "team": null,
+      "teamCode": null,
       "region": "China",
+      "baseRegion": "China",
       "countryCode": "nz",
       "accounts": [
         {
@@ -2417,8 +2856,10 @@
     {
       "handle": "skuba",
       "team": "NRG",
+      "teamCode": "NRG",
       "region": "Americas",
-      "countryCode": "us",
+      "baseRegion": "Americas",
+      "countryCode": "US",
       "accounts": [
         {
           "puuid": "df454dbd-5312-5c69-9466-43ec666e8088"
@@ -2427,8 +2868,10 @@
     },
     {
       "handle": "sociablee",
-      "team": "FUT Esports",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "tr",
       "accounts": [
         {
@@ -2439,8 +2882,10 @@
     {
       "handle": "something",
       "team": "Paper Rex",
+      "teamCode": "PRX",
       "region": "Pacific",
-      "countryCode": "ru",
+      "baseRegion": "Pacific",
+      "countryCode": "RU",
       "accounts": [
         {
           "puuid": "28bccc07-1105-5f75-9fae-3992a8661be0"
@@ -2449,8 +2894,10 @@
     },
     {
       "handle": "soulcas",
-      "team": "KOI",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "gb",
       "accounts": [
         {
@@ -2460,8 +2907,10 @@
     },
     {
       "handle": "spike",
-      "team": "LEVIATÁN",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "br",
       "accounts": [
         {
@@ -2470,10 +2919,12 @@
       ]
     },
     {
-      "handle": "spring",
-      "team": "Wolves Esports",
+      "handle": "Spring",
+      "team": "All Gamers",
+      "teamCode": "AG",
       "region": "China",
-      "countryCode": "tw",
+      "baseRegion": "China",
+      "countryCode": "TW",
       "accounts": [
         {
           "puuid": "a82da05f-cb61-5083-9f1b-a63c772b27d5"
@@ -2481,10 +2932,12 @@
       ]
     },
     {
-      "handle": "sugarz3ro",
-      "team": "ZETA DIVISION",
+      "handle": "SugarZ3ro",
+      "team": "Crazy Raccoon",
+      "teamCode": "CR",
       "region": "Pacific",
-      "countryCode": "jp",
+      "baseRegion": "Pacific",
+      "countryCode": "JP",
       "accounts": [
         {
           "puuid": "8e799465-6290-5c0a-b67b-15c32ed0083b"
@@ -2493,8 +2946,10 @@
     },
     {
       "handle": "supamen",
-      "team": "Evil Geniuses",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -2504,8 +2959,10 @@
     },
     {
       "handle": "surf",
-      "team": "Xipto Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "th",
       "accounts": [
         {
@@ -2515,8 +2972,10 @@
     },
     {
       "handle": "sylvan",
-      "team": "Team Secret",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "kr",
       "accounts": [
         {
@@ -2525,10 +2984,12 @@
       ]
     },
     {
-      "handle": "syouta",
+      "handle": "SyouTa",
       "team": "ZETA DIVISION",
+      "teamCode": "ZETA",
       "region": "Pacific",
-      "countryCode": "jp",
+      "baseRegion": "Pacific",
+      "countryCode": "JP",
       "accounts": [
         {
           "puuid": "3c8214a1-b8d7-5faa-bb5a-6f5fb6afa479"
@@ -2537,8 +2998,10 @@
     },
     {
       "handle": "tacolilla",
-      "team": "BESTIA",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "cl",
       "accounts": [
         {
@@ -2548,8 +3011,10 @@
     },
     {
       "handle": "tex",
-      "team": "MIBR",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "de",
       "accounts": [
         {
@@ -2558,10 +3023,12 @@
       ]
     },
     {
-      "handle": "timotino",
+      "handle": "Timotino",
       "team": "100 Thieves",
+      "teamCode": "100T",
       "region": "Americas",
-      "countryCode": "ca",
+      "baseRegion": "Americas",
+      "countryCode": "CA",
       "accounts": [
         {
           "puuid": "548830cb-5c73-5140-8846-e51eda21bb66"
@@ -2571,8 +3038,10 @@
     {
       "handle": "trent",
       "team": "G2 Esports",
+      "teamCode": "G2",
       "region": "Americas",
-      "countryCode": "us",
+      "baseRegion": "Americas",
+      "countryCode": "US",
       "accounts": [
         {
           "puuid": "54d1c735-ddd5-5cad-b1bf-f226506d4603"
@@ -2581,8 +3050,10 @@
     },
     {
       "handle": "tuyz",
-      "team": "Fluxo W7M",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "br",
       "accounts": [
         {
@@ -2592,8 +3063,10 @@
     },
     {
       "handle": "udotan",
-      "team": "Global Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "kr",
       "accounts": [
         {
@@ -2603,8 +3076,10 @@
     },
     {
       "handle": "v1nny",
-      "team": "LOUD",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "br",
       "accounts": [
         {
@@ -2614,9 +3089,11 @@
     },
     {
       "handle": "valyn",
-      "team": "G2 Esports",
-      "region": "Americas",
-      "countryCode": "us",
+      "team": "Fnatic",
+      "teamCode": "FNC",
+      "region": "EMEA",
+      "baseRegion": "Americas",
+      "countryCode": "US",
       "accounts": [
         {
           "puuid": "62c3f894-f1b4-54ea-8b79-d788674a09bc"
@@ -2625,8 +3102,10 @@
     },
     {
       "handle": "veqaj",
-      "team": "FNATIC",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "fr",
       "accounts": [
         {
@@ -2636,8 +3115,10 @@
     },
     {
       "handle": "verno",
-      "team": "MIBR",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -2647,8 +3128,10 @@
     },
     {
       "handle": "verse",
-      "team": "Dragon Ranger Gaming",
+      "team": null,
+      "teamCode": null,
       "region": "China",
+      "baseRegion": "China",
       "countryCode": "cn",
       "accounts": [
         {
@@ -2659,8 +3142,10 @@
     {
       "handle": "vora",
       "team": "100 Thieves",
+      "teamCode": "100T",
       "region": "Americas",
-      "countryCode": "ca",
+      "baseRegion": "Americas",
+      "countryCode": "CA",
       "accounts": [
         {
           "puuid": "e8cddaf0-2328-5c06-bd22-1abddd4587dc"
@@ -2669,8 +3154,10 @@
     },
     {
       "handle": "wayne",
-      "team": "Team Liquid",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "sg",
       "accounts": [
         {
@@ -2680,8 +3167,10 @@
     },
     {
       "handle": "westside",
-      "team": "GIANTX",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "pl",
       "accounts": [
         {
@@ -2692,7 +3181,9 @@
     {
       "handle": "will",
       "team": null,
+      "teamCode": null,
       "region": null,
+      "baseRegion": null,
       "countryCode": null,
       "accounts": [
         {
@@ -2701,10 +3192,12 @@
       ]
     },
     {
-      "handle": "wo0t",
-      "team": "Team Heretics",
+      "handle": "Wo0t",
+      "team": "FUT Esports",
+      "teamCode": "FUT",
       "region": "EMEA",
-      "countryCode": "tr",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
       "accounts": [
         {
           "puuid": "b48f11cc-6264-5ac1-bc59-70f46620f7a5"
@@ -2713,8 +3206,10 @@
     },
     {
       "handle": "wolverine",
-      "team": "ONSIDE GAMING",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "kr",
       "accounts": [
         {
@@ -2724,8 +3219,10 @@
     },
     {
       "handle": "xdll",
-      "team": "ZETA DIVISION",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "jp",
       "accounts": [
         {
@@ -2735,8 +3232,10 @@
     },
     {
       "handle": "xenom",
-      "team": "2Game Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "br",
       "accounts": [
         {
@@ -2746,8 +3245,10 @@
     },
     {
       "handle": "xeus",
-      "team": "FUT Esports",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "tr",
       "accounts": [
         {
@@ -2757,8 +3258,10 @@
     },
     {
       "handle": "xiesta",
-      "team": "ONSIDE GAMING",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "kr",
       "accounts": [
         {
@@ -2768,8 +3271,10 @@
     },
     {
       "handle": "xlele",
-      "team": "FunPlus Phoenix",
+      "team": null,
+      "teamCode": null,
       "region": "China",
+      "baseRegion": "China",
       "countryCode": "cn",
       "accounts": [
         {
@@ -2779,8 +3284,10 @@
     },
     {
       "handle": "xuna",
-      "team": "VARREL",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "kr",
       "accounts": [
         {
@@ -2791,8 +3298,10 @@
     {
       "handle": "yetujey",
       "team": "FUT Esports",
+      "teamCode": "FUT",
       "region": "EMEA",
-      "countryCode": "tr",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
       "accounts": [
         {
           "puuid": "14c0198e-ebf1-54e6-ab4c-cfd1f0e0cbfb"
@@ -2801,8 +3310,10 @@
     },
     {
       "handle": "yong",
-      "team": "KIWOOM DRX",
+      "team": null,
+      "teamCode": null,
       "region": "Pacific",
+      "baseRegion": "Pacific",
       "countryCode": "kr",
       "accounts": [
         {
@@ -2811,10 +3322,12 @@
       ]
     },
     {
-      "handle": "yuicaw",
+      "handle": "Yuicaw",
       "team": "JDG Esports",
+      "teamCode": "JDG",
       "region": "China",
-      "countryCode": "tw",
+      "baseRegion": "China",
+      "countryCode": "TW",
       "accounts": [
         {
           "puuid": "5b4a5dba-ba25-55d1-9c02-59dd41a9fe75"
@@ -2823,8 +3336,10 @@
     },
     {
       "handle": "zanatsu",
-      "team": "Fluxo W7M",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "br",
       "accounts": [
         {
@@ -2834,8 +3349,10 @@
     },
     {
       "handle": "zander",
-      "team": "100 Thieves",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "ca",
       "accounts": [
         {
@@ -2845,8 +3362,10 @@
     },
     {
       "handle": "zap",
-      "team": "2Game Esports",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "br",
       "accounts": [
         {
@@ -2856,9 +3375,11 @@
     },
     {
       "handle": "zekken",
-      "team": "MIBR",
+      "team": "NRG",
+      "teamCode": "NRG",
       "region": "Americas",
-      "countryCode": "us",
+      "baseRegion": "Americas",
+      "countryCode": "US",
       "accounts": [
         {
           "puuid": "57bf3aff-d0e2-5ef3-a446-1fcfe199853d"
@@ -2867,8 +3388,10 @@
     },
     {
       "handle": "zellsis",
-      "team": "Cloud9",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -2878,8 +3401,10 @@
     },
     {
       "handle": "zerona",
-      "team": "Evil Geniuses",
+      "team": null,
+      "teamCode": null,
       "region": "Americas",
+      "baseRegion": "Americas",
       "countryCode": "us",
       "accounts": [
         {
@@ -2888,10 +3413,12 @@
       ]
     },
     {
-      "handle": "zeus",
-      "team": "Team Secret",
-      "region": "Pacific",
-      "countryCode": "ph",
+      "handle": "Zeus",
+      "team": "Xi Lai Gaming",
+      "teamCode": "XLG",
+      "region": "China",
+      "baseRegion": "Pacific",
+      "countryCode": "PH",
       "accounts": [
         {
           "puuid": "57101dd8-4766-52e9-b560-c024de07ee43"
@@ -2899,10 +3426,12 @@
       ]
     },
     {
-      "handle": "zmjjkk",
-      "team": "EDward Gaming",
+      "handle": "ZmjjKK",
+      "team": "Xi Lai Gaming",
+      "teamCode": "XLG",
       "region": "China",
-      "countryCode": "cn",
+      "baseRegion": "China",
+      "countryCode": "CN",
       "accounts": [
         {
           "puuid": "911f7b7f-5b97-558c-9b89-0f17d1650aaa"
@@ -2911,8 +3440,10 @@
     },
     {
       "handle": "zyppan",
-      "team": "Gentle Mates",
+      "team": null,
+      "teamCode": null,
       "region": "EMEA",
+      "baseRegion": "EMEA",
       "countryCode": "se",
       "accounts": [
         {

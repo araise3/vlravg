@@ -1056,10 +1056,12 @@ async function loadProPlayerLibrary(){
       accountIndex:index,
       accountCount:player.accounts.length,
       puuid:account.puuid.toLowerCase(),
+      // Team and team code only for pros on a partnered roster (rostermania).
       team:player.team||null,
+      teamCode:/^[a-z0-9]{1,6}$/i.test(player.teamCode||'')?player.teamCode:null,
       region:player.region||null,
       countryCode:/^[a-z]{2}$/i.test(player.countryCode||'')?player.countryCode.toUpperCase():null,
-      searchText:foldProSearch([player.handle,account.puuid,player.team].filter(Boolean).join(' ')),
+      searchText:foldProSearch([player.handle,account.puuid,player.team,player.teamCode].filter(Boolean).join(' ')),
     })));
     proLibraryState='ready';
   }catch(error){
