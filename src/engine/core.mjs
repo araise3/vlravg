@@ -2310,8 +2310,9 @@ function processMatch(m){
 //   came out higher than tracker.gg. Enemy-only ADR, with trackerFixed1's
 //   rounding, matched every row checked (360, incl. 30 from Oct 2026).
 // - KAST: rounds with a kill, an assist, survived, or traded.
-//   · kill/assist: no assist credit on a self-kill (an enemy's own spike
-//     death lists assisters).
+//   · kill/assist: no assist credit on a spike explosion (an enemy's own
+//     spike death lists assisters); an assist on another self-kill (a fall,
+//     an own ability) counts (kabzi#pogo, 23 Nov 2026).
 //   · survived: present in the round and alive at its end. A death undone
 //     by a revive (Sage, Clove; computeRealDeaths) or caused by the spike
 //     explosion (weapon type Bomb) doesn't count; a fall or a failed Clove
@@ -2322,13 +2323,20 @@ function processMatch(m){
 //     trade kill (a trade credits only the last teammate the killer took;
 //     same-millisecond kills keep the kill list's order). A kill in the
 //     same millisecond as the death doesn't count.
-//   Tracker computed trades differently for matches up to 27 Oct 2026
-//   (killer died within 5 s, any victim, any cause) and kept those stored
-//   values. We use the current rule everywhere, so act totals spanning that
-//   date run below tracker's (docs/adr-kast.md).
+//   · matches that started before 27 Oct 2026 17:00 UTC use tracker's older
+//     trade rule instead, which tracker kept for those matches: traded when
+//     the killer died within 5 s, however they died, whichever victim they
+//     took (23 Nov 2026: 207 of 208 of one player's act matches equal to
+//     tracker's per-match KAST, and the act total, docs/adr-kast.md).
+//   · rounds whose result is "Surrendered" don't count at all: after a
+//     surrender HenrikDev adds the rounds the winner was awarded, with no
+//     kills, and tracker leaves them out (a 9-round surrender arrived as
+//     14 rounds; tracker's KAST was over the 9).
 // Returns null when the payload has no round data (older/compact shapes),
 // so callers fall back to the summary totals.
 const KAST_TRADE_WINDOW_MS=3000;
+const KAST_OLD_TRADE_BEFORE_MS=Date.parse('2026-10-27T17:00:00Z');
+const KAST_OLD_TRADE_WINDOW_MS=5000;
 function computeRoundStats(m,puuid){
   if(!puuid||!Array.isArray(m?.rounds)||!m.rounds.length)return null;
   const team={};
@@ -2359,7 +2367,12 @@ function computeRoundStats(m,puuid){
       }
     }
   }
-  let kastRounds=null;
+  // kastByRound: per round, whether it counted (null for a surrendered round).
+  let kastRounds=null,kastByRound=null;
+  const started=Date.parse(m.metadata?.started_at??m.started_at);
+  const oldTradeRule=Number.isFinite(started)&&started<KAST_OLD_TRADE_BEFORE_MS;
+  const surrendered=n=>m.rounds[n]?.result==='Surrendered';
+  const countedRounds=m.rounds.filter((_,n)=>!surrendered(n)).length;
   if(Array.isArray(m.kills)){
     const byRound=new Map();
     for(const k of m.kills){
@@ -2368,7 +2381,9 @@ function computeRoundStats(m,puuid){
       byRound.get(k.round).push(k);
     }
     kastRounds=0;
+    kastByRound=m.rounds.map(()=>null);
     for(let n=0;n<m.rounds.length;n++){
+      if(surrendered(n))continue;
       const ks=(byRound.get(n)||[]).slice().sort((a,b)=>(a.time_in_round_in_ms??0)-(b.time_in_round_in_ms??0));
       let died=false,credited=false;
       // ks keeps the kill list's order for kills in the same millisecond
@@ -2377,12 +2392,15 @@ function computeRoundStats(m,puuid){
         const k=ks[i];
         const killer=k.killer?.puuid,victim=k.victim?.puuid,t0=k.time_in_round_in_ms??0;
         if(killer===puuid&&victim!==puuid)credited=true;
-        // No assist credit on a self-kill (an enemy's own spike death).
-        if(killer!==victim&&(k.assistants||[]).some(a=>a?.puuid===puuid))credited=true;
+        // No assist credit on a spike explosion (Bomb deaths list assisters);
+        // an assist on any other self-kill (a fall, an own ability) counts.
+        if(!(killer===victim&&k.weapon?.type==='Bomb')&&(k.assistants||[]).some(a=>a?.puuid===puuid))credited=true;
         // A spike explosion (weapon type Bomb) isn't a death for KAST; a
         // fall or a failed Clove revive ("Not Dead Yet") is.
         if(victim===puuid&&k.weapon?.type!=='Bomb')died=true;
-        if(victim===puuid&&killer&&killer!==puuid){
+        if(victim===puuid&&killer&&killer!==puuid&&oldTradeRule){
+          if(ks.some(x=>x.victim?.puuid===killer&&(x.time_in_round_in_ms??0)>t0&&(x.time_in_round_in_ms??0)-t0<=KAST_OLD_TRADE_WINDOW_MS))credited=true;
+        }else if(victim===puuid&&killer&&killer!==puuid){
           const trade=ks.find(x=>x.victim?.puuid===killer&&(x.time_in_round_in_ms??0)>t0&&(x.time_in_round_in_ms??0)-t0<=KAST_TRADE_WINDOW_MS&&team[x.killer?.puuid]===myTeam);
           const tTrade=trade?.time_in_round_in_ms??0;
           // The trade goes to the killer's last victim strictly before the
@@ -2400,10 +2418,11 @@ function computeRoundStats(m,puuid){
       // clutches: Riot's was_afk lags a round (set while the player is
       // still on the field, missing once they're gone) and doesn't match.
       const absent=presentCount([{puuid}],m.rounds[n]||{},ks)===0;
-      if(credited||(!died&&!absent))kastRounds++;
+      kastByRound[n]=credited||(!died&&!absent);
+      if(kastByRound[n])kastRounds++;
     }
   }
-  return{enemyDamage:hasDamage?enemyDamage:null,enemyDamageTaken:hasTaken?enemyDamageTaken:null,kastRounds,rounds:m.rounds.length};
+  return{enemyDamage:hasDamage?enemyDamage:null,enemyDamageTaken:hasTaken?enemyDamageTaken:null,kastRounds,kastByRound,rounds:countedRounds};
 }
 
 // Display rounding that reproduces tracker.gg's numbers (360 ADR and 330
@@ -3246,7 +3265,7 @@ function overviewStatValues(statsPanelMatches){
     performanceTitle:`Avg PS; ${performanceGames.length} of ${statsPanelMatches.length} matches have data`,
     adr:avgAdr!=null?avgAdr:'—',
     kast:totalKastDenom>0?`${(totalKastRounds/totalKastDenom*100).toFixed(1)}%`:'—',
-    kastTitle:`Share of rounds with a kill, an assist, survived, or traded (killer died to a teammate within 3 s); ${kastGames.length} of ${statsPanelMatches.length} matches have round data`,
+    kastTitle:`Share of rounds with a kill, an assist, survived, or traded (killer died to a teammate within 3 s; before 27 Oct 2026, died at all within 5 s, as tracker.gg counted then); ${kastGames.length} of ${statsPanelMatches.length} matches have round data`,
   };
 }
 

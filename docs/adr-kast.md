@@ -26,7 +26,9 @@ the KAST rules were then adjusted until they reproduced tracker.gg.
 A round counts when the player:
 
 - **K**illed someone (not themself), or
-- **A**ssisted, except on a self-kill (an enemy's own spike death lists assisters), or
+- **A**ssisted, except on a spike explosion (an enemy's own spike death lists assisters). An
+  assist on any other self-kill, a fall or the enemy's own ability, counts (second-account
+  check, 23 Nov 2026), or
 - **S**urvived: present in the round and alive at its end.
   - A death undone by a revive (Sage, Clove) doesn't count; revives are resolved by
     `computeRealDeaths`, the same positional check the clutch stats use.
@@ -41,9 +43,14 @@ A round counts when the player:
   millisecond doesn't come "before" it, and a trade in the death's own millisecond doesn't
   count.
 
+  For matches that started before 27 Oct 2026 17:00 UTC, the older rule applies instead (see
+  "Older matches"): traded when the killer died no more than 5 s after the death, by any
+  cause, whichever victim they took last.
+
 KAST = counted rounds ÷ rounds in the match, as a percentage where exactly .5 rounds to
-even (`roundHalfEven`: 15/24 = 62.5% → 62, as tracker shows). The overview weights by
-rounds across matches, shows one decimal as tracker's profile does (70.1%), and says on hover
+even (`roundHalfEven`: 15/24 = 62.5% → 62, as tracker shows). Rounds whose result is
+`Surrendered` aren't counted at all (see "Check of 23 Nov 2026"). The overview weights by
+rounds across matches, shows one decimal as tracker's profile does (70.8%), and says on hover
 how many matches had round data.
 
 ## How the rules were found
@@ -298,12 +305,107 @@ announced the change. The rules are still read from tracker's output, not its co
 Tracker's profile overview appears to add up these stored per-match values. It shows 71.2% KAST over kurd's 106 A6
 matches. Scoring every match with the current rules gives 1605 of 2288 rounds (70.1%).
 Scoring matches up to 27 Oct 16:30 with the older rule instead gives 1630 of 2288 (71.2%),
-which is tracker's figure. vlravg uses the current rules for every match, so for acts that
-started before 27 Oct its overview runs below tracker's.
+which is tracker's figure.
 
-**Decision (7 Nov 2026):** keep the current rule for all matches. vlravg doesn't reproduce
-tracker's pre-27 Oct values. Those come from trade logic tracker has since replaced, and one
-rule for every match keeps vlravg's numbers consistent.
+**Decision (7 Nov 2026, reversed 23 Nov 2026):** on 7 Nov the current rule was kept for every
+match, so act totals spanning 27 Oct ran below tracker's. On 23 Nov the goal became KAST
+identical to tracker's, so matches that started before 27 Oct 2026 17:00 UTC now use the older
+rule (`KAST_OLD_TRADE_BEFORE_MS` in `computeRoundStats`), as the ML pilot's job already did.
+The cut-off is the one the pilot uses. Matches that started between 16:30 and 17:27 UTC that
+day are not verified either way.
+
+## Check of 23 Nov 2026
+
+### Tracker's API
+
+tracker.gg publishes no KAST or trade definition, and its developer portal is gone
+(`tracker.gg/developers` and its docs pages return 404). The site's own API, read in Chrome
+from tracker's pages, holds everything needed:
+
+- `api.tracker.gg/api/v2/valorant/standard/matches/<match id>`: each player's
+  `player-summary` holds `kast`, `attackKast` and `defenseKast` (whole percentages), `survived`,
+  `traded` and `tradesAvenger`. `player-round` segments give each player's side per round, but
+  no per-round KAST flag.
+- `api.tracker.gg/api/v2/valorant/standard/matches/riot/<name>%23<tag>?type=competitive&season=<act id>&next=<n>`:
+  a player's match list, 20 a page, with `roundsPlayed` and `kAST` per match (`kasted` is
+  null).
+
+### Fresh matches, scored blind
+
+The 10 most recent matches of THE MyXoN#Vicay (16 to 23 Nov 2026, patch 13.10, 100 rows) were
+scored with the code as committed in `6a2c9ae`, and the predictions hashed (SHA-256
+`e864f644…`, 22:39 UTC) before tracker was read.
+
+- **ADR 100/100.**
+- **KAST 100/100**, and attack and defense KAST 200/200. The side split tests every round's
+  credit, not only the total.
+
+No rule changed: tracker hasn't changed its method since early November.
+
+### A whole act
+
+All 211 of THE MyXoN's A6 matches (14 Oct to 23 Nov), compared with tracker's match list:
+
+| Rules | Matches equal to tracker |
+| --- | --- |
+| Current rule for every match | 169/208 |
+| Older rule before 27 Oct 17:00 UTC | 207/208 |
+| + surrendered rounds left out | **211/211** |
+
+(208 were in vlravg's archive when the first two rows were scored; the last 3, from 14 Oct, came
+from `/api/match-detail` afterwards.) The one remaining miss, `1fc99ff3` (29 Oct), was a
+surrender: Red led 8–1 when Blue surrendered, and HenrikDev lists 14 rounds, the last 5 with
+result `Surrendered`, no kills and no economy (the rounds Red was awarded, up to 13). vlravg
+counted them as survived (12 of 14, 86%). Tracker leaves them out (`roundsPlayed` 9; KAST 7 of 9,
+78%). Its lobby fits the 9 rounds for all 10 players, including the side split (all 9 rounds are
+one side's). Team round totals (8 + 1) already exclude these rounds, so ADR was already right.
+This is the only surrender in the 300+ matches checked so far.
+
+With both changes, the act total is 3176 of 4483 rounds, 70.8%, which is the figure on
+tracker's profile overview (vlravg's deployed overview showed 69.9%).
+
+### Second account: kabzi#pogo
+
+kabzi shared one lobby with THE MyXoN and nothing else. Tracker lists 319 A6 matches (16 Oct to
+23 Nov; 108 before the 27 Oct cut-off, 5 surrenders). 260 came from vlravg's archive and 59 from
+`/api/match-detail`, using only the match IDs from tracker's list. All 319 were scored with
+the rules above before tracker's KAST values were read, and the predictions were hashed
+(SHA-256 `e773344d…`). Tracker's profile total (71.1%) had already been seen by then; the
+per-match values hadn't.
+
+- **317/319 matches**, including all 108 older-rule matches and all 5 surrenders. Act total
+  71.0% against tracker's 71.1%.
+- Both misses were one round short, for the same reason: kabzi was listed as an assister on an
+  enemy's self-kill that wasn't a spike explosion. In `860f8c2d` round 4 a Hush fell to their death (assisters: kabzi and a
+  teammate). In `47cd3d33` round 1 a Sova killed kabzi, then himself with his own Shock Bolt
+  4.4 s later, with kabzi as the assister. Tracker counts both rounds. vlravg had refused an
+  assist on any self-kill. That rule came from one row (axl, `4415ea0e`), where the self-kill
+  was a spike explosion.
+
+Narrowing it to spike explosions gives **319/319** and **71.1%** (4830 of 6797 rounds), tracker's
+profile figure. The 71 + 211 pinned matches are unchanged: in their 18 assisted non-spike
+self-kills the assister was credited anyway. Tracker answered with a captcha challenge
+(HTTP 429, `Warden::Challenge`) after this pass, so the two lobbies' other players weren't
+read; this rule rests on those two rows.
+
+### Third and fourth accounts: Top1Gunz#oren and dmadoj#yaren
+
+Two more accounts that each shared one lobby with THE MyXoN and none with kabzi, checked with
+the rules above unchanged (assist rule included). dmadoj was picked as an account without
+surrenders. Match IDs came from tracker's list, and payloads from vlravg's archive or
+`/api/match-detail` (91 and 32 fetched). Every match was scored and the predictions hashed
+before tracker's per-match values were compared, inside the page:
+
+| Account | Matches | Before 27 Oct | Surrenders | Equal to tracker | Act total | Tracker profile |
+| --- | --- | --- | --- | --- | --- | --- |
+| Top1Gunz (SHA-256 `ac32c481…`) | 396 | 122 | 6 | **396/396** | 68.0% (5760/8473) | 68.0% |
+| dmadoj (SHA-256 `6fcccd79…`) | 238 | 92 | 0 | **238/238** | 72.1% (3653/5068) | 72.1%* |
+
+\* Read on a second visit, after tracker's "Human Check" captcha had blocked the first.
+
+Across the four accounts, 1,164 act matches were compared: 1,162 matched as first scored, and
+the 2 that didn't led to the assist rule. These two accounts aren't pinned as fixtures (no rule
+changed, and each would add about 1 MB).
 
 ## Tests
 
@@ -311,3 +413,10 @@ rule for every match keeps vlravg's numbers consistent.
 (`tests/fixtures/tracker-adr-kast-2026-11.json.gz`: HenrikDev payloads trimmed to the fields
 used, in their original kill order, plus tracker's ADR and KAST per player; blind-test
 matches carry `blind: 1` to `5`). Every row must match.
+
+`tests/fixtures/tracker-kast-2026-11-23.json.gz` pins the 23 Nov check: the 211 A6 matches
+with tracker's per-match KAST for THE MyXoN (only the fields KAST reads), the 11 full lobbies
+(the 10 blind matches and the surrender) with every player's ADR, KAST, attack KAST and
+defense KAST, and tracker's profile figure. Every value must match, including the 70.8%.
+`tests/fixtures/tracker-kast-2026-11-23-kabzi.json.gz` does the same for kabzi's 319 matches
+and the 71.1%.

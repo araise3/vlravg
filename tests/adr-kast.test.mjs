@@ -118,6 +118,16 @@ test('a spike explosion is not a death, and an assist on a spike self-kill earns
   assert.equal(computeRoundStats(m,'me').kastRounds,1);
 });
 
+test('an assist on an enemy\'s other self-kill (a fall, their own ability) counts',()=>{
+  // kabzi#pogo, 23 Nov 2026: 860f8c2d r4 (a Hush falls, assisted) and 47cd3d33 r1
+  // (a Sova kills himself with Shock Bolt after killing kabzi). Tracker counts both.
+  const m={players:roster,rounds:[round(),round()],kills:[
+    kill(0,4684,'e2','me'),{...kill(0,24431,'e1','e1',['me']),weapon:{type:'Fall'}},
+    kill(1,24305,'e1','me'),{...kill(1,28702,'e1','e1',['me']),weapon:{type:'Ability',name:'Shock Bolt'}},
+  ]};
+  assert.equal(computeRoundStats(m,'me').kastRounds,2);
+});
+
 test('a player absent from the round does not survive it; Riot\'s was_afk alone decides nothing',()=>{
   // e707c572 (Yan): was_afk is set on r9, where Yan is in every snapshot,
   // and missing on r10, where Yan is in none. Tracker drops r10, counts r9.
@@ -174,12 +184,90 @@ test('overview KAST weights by rounds and ignores matches without round data',()
 });
 
 test("overview KAST shows one decimal, as tracker's profile does",()=>{
-  // kurd with dream, A6 to 6 Nov 2026: 1605 of 2288 rounds.
+  // kurd with dream, A6 to 6 Nov 2026: 1630 of 2288 rounds with the older
+  // trade rule before 27 Oct; tracker's profile showed 71.2%.
   const stats=overviewStatValues([
-    {myStats:{adr:150,dmg:343200,rounds_played:2288,kastRounds:1605,kastTotalRounds:2288}},
+    {myStats:{adr:150,dmg:343200,rounds_played:2288,kastRounds:1630,kastTotalRounds:2288}},
   ]);
-  assert.equal(stats.kast,'70.1%');
+  assert.equal(stats.kast,'71.2%');
 });
+
+test('before 27 Oct 2026 17:00 UTC a death is traded when the killer dies within 5 s, any way, any victim',()=>{
+  const roster3=[...roster,{puuid:'mate2',team_id:'Red'}];
+  const kills=[
+    // r0: killer dies to their own ability 4 s later (b0711939 r12, bissyboy4511)
+    kill(0,40080,'e1','me'),kill(0,44090,'e1','e1'),
+    // r1: killer takes mate after me, then dies 4.5 s after my death
+    kill(1,10000,'e1','me'),kill(1,11000,'e1','mate'),kill(1,14500,'mate2','e1'),
+    // r2: 5.001 s is too late under either rule
+    kill(2,10000,'e1','me'),kill(2,15001,'mate','e1'),
+  ];
+  const at=started_at=>({metadata:{started_at},players:roster3,rounds:[round(),round(),round()],kills});
+  assert.equal(computeRoundStats(at('2026-10-27T16:30:00Z'),'me').kastRounds,2);
+  assert.equal(computeRoundStats(at('2026-10-27T17:27:00Z'),'me').kastRounds,0);
+  // No start time (trimmed fixtures): the current rule.
+  assert.equal(computeRoundStats({players:roster3,rounds:[round(),round(),round()],kills},'me').kastRounds,0);
+});
+
+test('rounds added after a surrender count for nothing, not as survived',()=>{
+  // 1fc99ff3 (29 Oct 2026): 9 rounds played, then 5 "Surrendered" rounds
+  // with no kills. Tracker's KAST and ADR are over the 9.
+  const rounds=[round(),round(),...Array.from({length:3},()=>({result:'Surrendered',winning_team:'Red',stats:[]}))];
+  const m={players:roster,rounds,kills:[kill(0,5000,'e1','me')]};
+  const rs=computeRoundStats(m,'me');
+  assert.equal(rs.rounds,2);
+  assert.equal(rs.kastRounds,1);
+  assert.deepEqual(rs.kastByRound,[false,true,null,null,null]);
+  assert.equal(extractStats({stats:{kills:0,deaths:1}},2,rs).kast,50);
+});
+
+// Read 23 Nov 2026 from tracker's own match API (docs/adr-kast.md, "Check of
+// 23 Nov 2026"): 11 full lobbies with ADR, KAST and its attack/defense split,
+// and every A6 match of one player with tracker's per-match KAST.
+const nov23=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/tracker-kast-2026-11-23.json.gz',import.meta.url))).toString('utf8'));
+// Red attacks first; sides swap after 12 rounds and every round in overtime.
+const attacking=(team,n)=>{const red=String(team).toLowerCase()==='red';return n<12?red:n<24?!red:((n-24)%2===0)===red;};
+
+test('eleven Nov 2026 lobbies match tracker on ADR, KAST and KAST on each side',()=>{
+  const lobbies=nov23.matches.filter(m=>m.tracker);
+  assert.equal(lobbies.length,11);
+  const off=[];
+  for(const m of lobbies){
+    for(const p of m.players){
+      const [adr,kast,atk,def]=m.tracker[p.puuid];
+      const rs=computeRoundStats(m,p.puuid);
+      const stats=extractStats(p,rs.rounds,rs);
+      const side=a=>{const ns=rs.kastByRound.map((k,n)=>k==null||attacking(p.team_id,n)!==a?null:k).filter(k=>k!=null);return ns.length?roundHalfEven(ns.filter(Boolean).length/ns.length*100):null;};
+      const got=[+trackerFixed1(stats.dmg/rs.rounds),stats.kast,side(true),side(false)];
+      if(got.join()!==[adr,kast,atk,def].join())off.push(`${m.match_id.slice(0,8)}/${p.name}: ${got} vs ${[adr,kast,atk,def]}`);
+    }
+  }
+  assert.deepEqual(off,[]);
+});
+
+// Two accounts' whole A6, per match and in the act total: THE MyXoN (211
+// matches, the rules were fitted on it) and kabzi (319, scored blind first).
+const kabzi=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/tracker-kast-2026-11-23-kabzi.json.gz',import.meta.url))).toString('utf8'));
+for(const [label,set,olderCount,surrenders] of [['THE MyXoN',nov23,100,1],['kabzi',kabzi,108,5]]){
+  test(`${label}'s ${set.profile.matches} A6 matches match tracker per match and in the act total`,()=>{
+    assert.equal(set.matches.length,set.profile.matches);
+    const off=[],myStats=[];
+    let older=0,surrendered=0;
+    for(const m of set.matches){
+      const rs=computeRoundStats(m,set.me);
+      const [rounds,kast]=m.tracker_me;
+      const s=extractStats({stats:{kills:0,deaths:0}},rs.rounds,rs);
+      if(rs.rounds!==rounds||s.kast!==kast)off.push(`${m.match_id.slice(0,8)} ${m.started_at}: ${s.kast}% of ${rs.rounds} vs ${kast}% of ${rounds}`);
+      if(Date.parse(m.started_at)<Date.parse('2026-10-27T17:00:00Z'))older++;
+      if(m.rounds.some(r=>r.result==='Surrendered'))surrendered++;
+      myStats.push({myStats:s});
+    }
+    assert.deepEqual(off,[]);
+    assert.equal(older,olderCount,'the older trade rule is exercised');
+    assert.equal(surrendered,surrenders);
+    assert.equal(overviewStatValues(myStats).kast,set.profile.kast);
+  });
+}
 
 test('seventy-one Nov 2026 matches reproduce tracker.gg ADR and KAST on every row',()=>{
   const {matches}=JSON.parse(gunzipSync(readFileSync(new URL('./fixtures/tracker-adr-kast-2026-11.json.gz',import.meta.url))).toString('utf8'));
