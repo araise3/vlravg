@@ -112,3 +112,20 @@ maintenance", collector workflows keep their own key pool but don't borrow publi
 only requests with `X-Sim-Pilot: <token>` use the public key. Each pilot run reads the token
 from D1 at start and then paces itself to 60 a minute with 4 workers. The proxy rereads the
 switch every 15 s per isolate; a missing table or a storage error counts as off.
+
+## Data removed from D1 (23 Nov 2026)
+
+The fetch workflow is disabled (`gh workflow disable sim-pilot-fetch.yml`; its file is still in
+the repository) and all nine `sim_*` tables were dropped from `vlravg-calib`: `sim_pilot_players`,
+`sim_pilot_rr`, `sim_pilot_prev`, `sim_pilot_kast`, `sim_live_rr`, `sim_live_players`,
+`sim_live_prev`, `sim_live_matches` and `sim_live_state`, 240,187 rows in all. The database went
+from 2.86 GB to 2.48 GB.
+
+Before the drop they were exported to `.local/sim-pilot-export-2026-11-23/` (gitignored, local
+only): `schema.sql`, one gzip NDJSON file per table with each row's `_rowid`, and
+`manifest.json`. The export paged through rowids with `wrangler d1 execute` instead of
+`wrangler d1 export`, which blocks the database while it runs. For every table the row count and
+the summed `data` bytes equal D1's, and both were checked again just before the drop. The
+manifest holds each file's SHA-256.
+
+The `site_flags` row `sim_live_collect` is still there; nothing reads it without the workflow.
