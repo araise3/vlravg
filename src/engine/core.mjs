@@ -402,8 +402,13 @@ async function readServerMatchArchive(puuid,seasonId,generation,isRelevant=()=>t
           if(!await runChunk(index,start,start+size))return;
         }
       };
+      // The first page goes first: started together, ten requests each took
+      // about twice as long, and saved matches appeared at 1.9 s instead of
+      // 0.7 s in production (23 Nov 2026).
       const [start,size]=plan[0];
-      await Promise.all([runChunk(0,start,start+size,firstPage),
+      const first=runChunk(0,start,start+size,firstPage);
+      await firstPage.catch(()=>{});
+      await Promise.all([first,
         ...Array.from({length:Math.min(PLANNED_PARALLEL,plan.length-1)},planned)]);
       // Every planned page loaded, so the archive is complete even if its
       // last page did not report the end itself.

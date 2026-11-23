@@ -141,7 +141,21 @@ test('a 200-match archive loads its planned pages in parallel and publishes them
   // at once: no request is spent past the end.
   assert.deepEqual(client.calls.slice(0,2),['?start=0&size=50',PLAN]);
   assert.deepEqual(client.calls.slice(2).sort(),['?start=100&size=50','?start=150&size=50','?start=50&size=50']);
-  assert.ok(client.peak()>=3&&client.peak()<=7,`peak ${client.peak()}`);
+  assert.equal(client.peak(),3,`peak ${client.peak()}`);
+});
+
+test('the other planned pages wait for the first page, so it is not slowed down',async t=>{
+  const {db,binding}=await archiveDb(Array.from({length:120},(_,id)=>({id})));
+  t.after(()=>db.close());
+  const first=deferred();
+  const client=archiveClient(binding,{hold:query=>query==='?start=0&size=50'?first.promise:null});
+  const result=client.read(puuid,season,1);
+  for(let i=0;i<400&&!client.done.includes(PLAN);i++)await new Promise(r=>setTimeout(r,5));
+  for(let i=0;i<5;i++)await tick();
+  assert.deepEqual(client.calls,['?start=0&size=50',PLAN],'the plan has arrived, but no other page starts yet');
+  first.resolve();
+  assert.equal((await result).length,120);
+  assert.deepEqual(client.calls.slice(2).sort(),['?start=100&size=20','?start=50&size=50']);
 });
 
 test('an archive that fits one page costs one page request beside the plan',async t=>{

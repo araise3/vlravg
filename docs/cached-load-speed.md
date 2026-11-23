@@ -97,6 +97,34 @@ slightly. The parallel saves are covered by tests only; they could not be
 timed before deploying. After deploying, the critical path should be the two
 live scan pages, which these saves shorten.
 
+### After deploying (23 Nov 2026, about 20:40 UTC)
+
+Production, same player, first load after the deploy:
+
+| | Before (production) | After (production) |
+| --- | --- | --- |
+| Plan answered | – | 0.6 s (38 ms request) |
+| First saved matches on screen | 0.7 s | 1.9 s |
+| Archive read done | 3.9 s, 12 requests | 2.8 s, 10 requests |
+| Stored-matches index done | 4.6 s | 3.7 s |
+| Main-thread blocking (long animation frames) | 2.6 s | 0 s |
+
+The first page arrived later because all ten archive requests ran at once
+(each took 0.8–1.2 s instead of about 0.5 s). The whole search could not be
+timed cleanly: D1 was rejecting queries with "D1 DB is overloaded. Too many
+resources consumed within a 10 second window" (code 7429). In that run the
+first live scan page took 7.4 s and the next returned 503 twice before it
+succeeded; on a reload every D1 route (archive, plan, counts, coverage, name
+history) returned 503, so the site fell back to a full live scan. The
+overload predates this change: the RR corpus collector logged "D1
+overloaded; retrying read" in its 11:39 and 14:38 UTC runs that day, and
+it was still running. This change adds one small D1 query per search (the
+plan) and runs the archive's queries at once instead of one after another.
+
+Follow-up the same evening: the other planned pages now start only once the
+first page has arrived (the plan still loads beside it), so the first saved
+matches are not slowed by the rest. Not yet timed in production.
+
 The result was checked in the browser: 164 matches and 164 rated lobbies,
 no duplicate match IDs; an opened match card stays open across page
 switches; hidden Duos and RR Breakdown pages show current data when opened;
