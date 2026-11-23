@@ -26,73 +26,33 @@ dashboard binding continues to show upstream data.
 The existing collection job includes these visitor-discovered accounts under
 the activity policy below and enriches saved payouts with trusted match details.
 
-`Collect act RR corpus` is triggered hourly. The concurrency group keeps one
-run queued behind the active one, so runs follow each other back to back; a
-newer queued trigger replaces an older one and shows as cancelled. Each run
-reads the activity index for every tracked account and captures every account
-due under the activity policy before slower match-detail work. Four workers
-share a FIFO client queue. The proxy atomically paces actual upstream calls;
-a 429 pauses queued client requests too, preventing workers from repeatedly
-racing for the same slot. Manual and scheduled collector runs share one workflow lock. No name refresh
-or historical backfill workflows run alongside collection. GitHub scheduling is best-effort; hourly triggers make a dropped trigger cost minutes instead of hours.
+`Collect act RR corpus` runs continuously since 24 November 2026: each run is
+a 330-minute scheduler that polls due accounts, heals gaps from HenrikDev's
+stored RR history and fills match features, then starts the next run itself
+(the hourly trigger is the backup). Polling intervals, gap detection and
+healing, and the evidence for them are in
+[rr-collector-gap-healing.md](rr-collector-gap-healing.md); it supersedes the
+earlier 6/8/24/72-hour policy, the 180-minute runs and `shouldChainRun`.
+Polling uses actual ranked-game dates, never the date someone searched an
+account.
 
-Hourly triggers alone were not enough. Between 14 and 16 November 2026, GitHub
-dropped several in a row, leaving the collector idle for 4.6–5 hours between
-some runs. Runs then started with 3,000–4,000 accounts due, more than one
-175-minute budget could capture. A run therefore starts the next one itself
-(`gh workflow run`, after its report). The new run waits in the concurrency
-group and uses the default inputs. `shouldChainRun` chains only after
-progress: committed RR, scouted accounts or saved match features. It also
-needs either work deferred by the run budget or at least 30 minutes of
-running. A run that captured nothing, for example because every call was
-rate-limited, never chains. A short run that finished its work doesn't either:
-continuous tiny runs would repeat the startup and census queries against D1.
-The hourly schedule restarts both. The decision is recorded as `chainNext` in
-the collection report. Chaining also follows runs that exit with failures, so
-a few rate-limited accounts don't stop collection.
-
-Polling uses actual ranked-game dates, never the date someone searched an account.
-Henrik keeps about 20 payouts, so every interval must end before a player can
-finish 20 more games:
-
-- Frequent: 10+ games in the last week and a game in the last 48 hours; every 6 hours.
-- Active: any other ranked game in the last week; every 8 hours.
-- Dormant: last ranked game 7–30 days ago; once a day.
-- Inactive: last ranked game over 30 days ago, or no ranked game; every 3 days.
-
-These bounds come from production RR saved 2026-10-06 to 10-28 (3,206 players).
-No player reached 20 games within 8 hours (most: 15; within 6 hours: 13). Within
-12 hours 28 players did, and within 24 hours 151. These are lower bounds,
-because games lost in gaps are not counted.
-
-The previous policy (4/12/24 hours, nothing for accounts quiet for a week, at
-most 1,000 accounts per run, a four-hourly trigger) lost payouts. A read-only
-check on 2026-10-28 found 38 proven gaps (one per player) where a payout's
-reported starting rank/RR did not match the previous saved payout's ending
-rank/RR and the two were never seen in the same 20-game window. Each needed at
-least 11.6 hours (median 32.5) without a poll. From Oct 15, almost every run
-logged `Polling 1000/<tracked>`, and GitHub started only 3–4 of the six daily
-triggers. Several gaps spanned 2–6 weeks: players returned from a quiet week
-and played a full window before roster evidence woke them. Detection needs the
-reported starting fields, which were complete only from Oct 6, so earlier gaps
-are undercounted.
+History: the 6/8/24/72-hour intervals came from production RR saved
+2026-10-06 to 10-28 (3,206 players): no player reached 20 games within 8 hours
+(most 15; 13 within 6 hours), 28 did within 12 hours and 151 within 24. They
+replaced a 4/12/24-hour policy capped at 1,000 accounts per run, under which a
+read-only check on 2026-10-28 found 38 proven gaps (each needing at least
+11.6 hours without a poll; several spanned weeks after a player returned from
+a break). In November the tracked pool grew to 23,392 accounts and those
+intervals needed about 60,000 polls a day against the key's ~40,000, so polls
+fell behind and games were lost again.
 
 Accounts without a prior check get one assessment. Once a newly observed act
 appears in saved RR, accounts last checked before its first observed game
 receive one new assessment. Act detection uses saved season IDs
 and game dates, with no hardcoded act or guessed release date. Fresh, unseen roster evidence
-can wake an inactive account once, and its returned RR history determines the
+can wake a quiet account once, and its returned RR history determines the
 new interval. Existing history is retained. Names are resolved when a profile is loaded; there is no daily name workflow or
 automatic enrollment of the static pro library.
-There is no per-run account cap; the run deadline bounds capture. Due accounts
-are ordered by how overdue they are relative to their interval, then by
-frequency, so the most at-risk windows are fetched first. Optional scouting and
-match details only run once every due account has been captured. With the
-2026-10-28 pool (1,009 frequent, 1,333 active, 958 dormant, 234 inactive) this
-is about 9,100 captures a day. At the measured ~4.2 s per capture, that is
-about 10.6 hours of run time, leaving the rest of the day for details.
-Growth in tracked accounts should be accompanied by a check of the
-`Polling <due>/<tracked>` line and the report's overdue count.
 
 Up to 50 recent match rosters per collection run supply discovery evidence via
 `rr_candidate_games`. Only trusted match payloads are accepted; duplicate match
@@ -125,22 +85,28 @@ so the new-act reset does not silently exclude them from discovery.
 Failed/unavailable candidate probes cool down for a day, and failures while
 scouting do not mark successful tracked-account capture as failed.
 
-Henrik returns a rolling window of roughly 20 payouts. Expired unseen payouts
-cannot be recovered from ordinary match history. The collector records the last
-successful check, overlapping IDs and possible window gaps. An entire replaced
-window is a warning, not a count of lost games; season changes can also cause it.
+Henrik's live window holds the ranked games among the player's last 20
+matches of any mode. A poll whose window does not reach the newest saved
+payout records an `rr_gaps` row in the same batch; the collector fills it from
+stored RR history and verifies the rank chain
+([rr-collector-gap-healing.md](rr-collector-gap-healing.md)). Payouts that
+neither endpoint holds cannot be recovered; their gap stays `unresolved`.
 Collection succeeds only after the D1 writes commit; storage failures produce
-503s marked `storage: "unavailable"` and failed accounts make the workflow fail
-visibly. The collector does not retry those (the upstream call was already
-spent), stops after 5 in a row, and refuses to start when D1 is within 200 MB
-of its 10 GB size limit.
+503s marked `storage: "unavailable"`. The collector does not retry those (the
+upstream call was already spent), stops after 5 in a row, and refuses to start
+when D1 is within 200 MB of its 10 GB size limit.
 
-Apply `migrations/0005_rr_corpus.sql`, `migrations/0006_rr_activity.sql` and
-`migrations/0010_rr_history_activity_indexes.sql` to the existing APP_DB
-before deploying.
+Apply `migrations/0005_rr_corpus.sql`, `migrations/0006_rr_activity.sql`,
+`migrations/0010_rr_history_activity_indexes.sql` and
+`migrations/0012_rr_gap_healing.sql` to the existing APP_DB before deploying.
 No secrets or bindings are added. New tables:
 
-- `rr_collection`: check time and overlap health per account/platform.
+- `rr_collection`: check time, last window and its oldest payout date
+  (`window_from`) per account/platform; `possible_gaps` counts windows that
+  did not reach the saved history.
+- `rr_gaps`: those windows and rank discontinuities found by the daily scan,
+  with their healing state (`open`, `incomplete`, `connected`, `healed`,
+  `unresolved`). `rr_collector_state` records the last daily audit.
 - `rr_predecessors`: consecutive match IDs witnessed together in real upstream
   responses. Database neighbors alone do not establish adjacency.
 - `rr_match_features`: compact, trusted match context for every saved payout:
@@ -151,32 +117,25 @@ No secrets or bindings are added. New tables:
   when called directly. Deferred details retain their raw RR and are reported
   separately from unexpected request/storage errors.
 
-The detail queue joins saved RR to features, reuses existing gzip match archives
-first, and otherwise fetches match-by-ID. It prioritizes newest evidence plus due retries of older unavailable matches, and
-processes up to 1,500 missing rows per run. Missing older rows remain eligible
-after the recent-game window; an act transition never discards their evidence. Only already-saved RR match IDs are
-accepted. No browser-supplied payout or feature data can enter the corpus.
-Expected upstream 404s do not fail a run; unexpected detail errors do. Transient
-tracked-account capture failures get one final retry pass. If transient failures
-or the run budget leave capture incomplete, optional scouting and enrichment
-are skipped so capture has priority on the next run. Permanent account errors
-remain visible without blocking enrichment for every other player. Retry
-rows remain eligible after the seven-day recent-match cutoff, so the longer
-backoff cannot silently strand an older payout without future enrichment.
-Compact feature rows avoid storing a full kill feed for every research sample.
-Payouts and feature evidence have no act-end expiry. Placement payouts remain
-raw evidence, and witnessed RR predecessors never cross act boundaries. A full
-20-entry window is saved atomically using five write statements, leaving room
-for quota queries under the D1 invocation limit.
+The detail queue takes payouts of the last 3 days without features, newest
+first, and only uses calls left after due polls and gap heals. Archived
+matches are read from R2 without an upstream call; others are fetched by
+match ID. Only already-saved RR match IDs are accepted. No browser-supplied
+payout or feature data can enter the corpus. Expected upstream 404s become
+durable retries; other detail errors are counted and retried later, never
+fatal. Older payouts without features stay in D1; the census reports feature
+coverage per act. Compact feature rows avoid storing a full kill feed for
+every research sample. Payouts and feature evidence have no act-end expiry.
+Placement payouts remain raw evidence, and witnessed RR predecessors never
+cross act boundaries. A full 20-entry window is saved atomically in a fixed
+number of statements, leaving room for quota queries under the D1 invocation
+limit.
 
-The default run budget is 180 minutes, configurable from 10 to 210 minutes for
-manual runs. Five minutes are reserved for reporting; the job timeout is 220
-minutes. The next queued run starts when this one ends. Work not attempted before the deadline
-remains in D1 and is reported as deferred. Capture results are written before optional scouting, detail queries or aggregate
-coverage queries, so later failures cannot erase the capture report. Capture,
-scouting and detail failures remain visible in the job outcome. A coverage
-report failure is a job warning, not a failed run: the report only summarizes
-evidence already in D1.
+The default run budget is 330 minutes (10–345 for manual runs); five minutes
+are reserved for the audit tail and the report, and the job timeout is 355
+minutes. Work not done before the deadline stays in D1 for the next run.
+Failed polls, heals and details never fail the workflow; only a configuration
+error or D1 refusing writes does, and those runs do not chain.
 
 The act/tier census parses every `rr_history` row. As one statement it read
 ~733k rows and took ~7.8 s on the 1 GB database (D1 query analytics,
@@ -213,7 +172,11 @@ The census now runs in 64 slices paced by D1's own reported time, the feature
 inventory is sliced and paced the same way, and the health and startup queries
 seek indexes instead of reading every row. Measurements and changes are in
 [rr-collector-d1-load.md](rr-collector-d1-load.md).
-Reports identify the latest observed act, its date range, payouts and placements.
+The daily audit (census plus gap scan) now runs once per 24 hours beside
+polling instead of at the end of every run, and the per-run health query was
+replaced by counts the collector computes from the activity rows it already
+reads. Reports identify the latest observed act, its date range, payouts and
+placements.
 
 With repository variable `RR_REPORT_EXPORT_ENABLED=true`, each run uploads
 `rr-corpus-coverage`: payouts, unique players, detail coverage,

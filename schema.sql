@@ -229,7 +229,35 @@ CREATE TABLE IF NOT EXISTS rr_collection (
   window_ids TEXT NOT NULL,
   checks INTEGER NOT NULL DEFAULT 0,
   possible_gaps INTEGER NOT NULL DEFAULT 0,
+  window_from TEXT, -- oldest payout date of the last live window (migrations/0012)
   PRIMARY KEY (puuid,platform)
+);
+-- Gap-free RR history (migrations/0012_rr_gap_healing.sql,
+-- docs/rr-collector-gap-healing.md): a poll whose live window does not reach
+-- the newest saved payout records a gap; the collector fills it from
+-- HenrikDev's stored RR history.
+CREATE TABLE IF NOT EXISTS rr_gaps (
+  puuid TEXT NOT NULL,
+  after_match_id TEXT NOT NULL,
+  after_date TEXT NOT NULL,
+  before_match_id TEXT,
+  before_date TEXT NOT NULL,
+  region TEXT NOT NULL,
+  platform TEXT NOT NULL,
+  source TEXT NOT NULL,
+  detected_at TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',
+  attempts INTEGER NOT NULL DEFAULT 0,
+  next_attempt_at TEXT NOT NULL,
+  recovered INTEGER NOT NULL DEFAULT 0,
+  resolved_at TEXT,
+  PRIMARY KEY (puuid,after_match_id)
+);
+CREATE INDEX IF NOT EXISTS rr_gaps_queue ON rr_gaps(status,next_attempt_at);
+CREATE TABLE IF NOT EXISTS rr_collector_state (
+  name TEXT PRIMARY KEY,
+  value TEXT,
+  updated_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS rr_match_features (
   puuid TEXT NOT NULL,

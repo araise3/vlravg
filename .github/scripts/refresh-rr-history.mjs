@@ -212,7 +212,7 @@ export async function main(env = process.env) {
   const [trackedPlayers,proPlayers]=await Promise.all([listPlayers(env),loadProPlayers()]);
   const allPlayers=mergeTrackedPlayers(await loadActivity(env,trackedPlayers),proPlayers);
   const selected=target?allPlayers.filter(p=>p.puuid.toLowerCase()===target)
-    :allPlayers.filter(p=>!['inactive','dormant'].includes(pollingPolicy(p).cohort));
+    :allPlayers.filter(p=>!['inactive','quiet'].includes(pollingPolicy(p).cohort));
   if(target && !selected.length)throw new Error('Target player is not tracked or in the pro library');
   const players = maxPlayers ? selected.slice(0, maxPlayers) : selected;
   console.log(`Checking names for ${players.length} active/unassessed account(s); RR polling is managed by the activity-based corpus collector.`);

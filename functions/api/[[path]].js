@@ -85,7 +85,7 @@
 import { observeName, readNameHistory } from "../../lib/name-history.mjs";
 import { backfillState, saveBackfillPage, saveStoredBackfillPage, saveStoredMatchDetail, skipStoredMatchDetail } from "../../lib/name-backfill.mjs";
 import { beginCoverageScan, readCoverageScan, recordCoveragePage, finishCoverageScan } from "../../lib/match-coverage.mjs";
-import { collectRR, mergeRRUpdate, saveFeatures, trackRRAccount } from "../../lib/rr-corpus.mjs";
+import { collectRR, mergeRRUpdate, saveFeatures, trackRRAccount, healRR, storedGapEntries, HEAL_PAGE_SIZE, HEAL_MAX_PAGES } from "../../lib/rr-corpus.mjs";
 import { discoverMatchPlayers } from "../../lib/rr-activity.mjs";
 import { workflowAuthorized } from "../../lib/workflow-auth.mjs";
 import { SITE_NAME_LOOKUP_RUN } from "../../lib/workflow-quota-audit.mjs";
@@ -789,6 +789,14 @@ const ROUTES = [
     rrCollect: true,
   },
   {
+    // Collector-only: fills a recorded RR gap (rr_gaps) from HenrikDev's
+    // stored RR history, one page per request. Region and platform come from
+    // the gap row, never from the caller (docs/rr-collector-gap-healing.md).
+    match: new RegExp(`^/rr-heal/(${UUID})/(${UUID})$`,'i'),
+    upstream: m=>`/valorant/v2/by-puuid/stored-mmr-history/${m.gap.region}/${m.gap.platform}/${m[1]}`,
+    rrHeal: true,
+  },
+  {
     match: new RegExp(`^/rr-feature/(eu|na|ap|kr|latam|br)/(${UUID})/(${UUID})$`,'i'),
     upstream: m=>`/valorant/v4/match/${m[1]}/${m[3]}`,
     rrFeature: true,
@@ -1050,6 +1058,22 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
     if (m) { route = r; match = m; break; }
   }
   if (!route) return json({ error: "Unknown route" }, 404);
+  if(route.rrHeal){
+    if(!workflow)return json({error:'Unknown route'},404);
+    match[1]=match[1].toLowerCase();match[2]=match[2].toLowerCase();
+    const pageText=url.searchParams.get('page')||'1';
+    const page=Number(pageText);
+    if(!/^\d+$/.test(pageText)||!Number.isInteger(page)||page<1||page>HEAL_MAX_PAGES)return json({error:'Invalid heal page'},400);
+    if(!env.APP_DB)return json({error:'RR corpus storage unavailable'},503);
+    try{
+      match.gap=await env.APP_DB.prepare(`SELECT * FROM rr_gaps WHERE puuid=?1 AND after_match_id=?2 AND status IN ('open','incomplete')`)
+        .bind(match[1],match[2]).first();
+    }catch{return storageFailure('RR gap storage unavailable');}
+    if(!match.gap||!['eu','na','ap','kr','latam','br'].includes(match.gap.region)||!['pc','console'].includes(match.gap.platform))
+      return json({error:'Unknown RR gap'},404);
+    match.page=page;
+    url.search=`?page=${page}&size=${HEAL_PAGE_SIZE}`;
+  }
   if(route.rrCollect||route.rrFeature){
     match.discover=route.rrFeature&&url.searchParams.get('discover')==='1';
     for(let i=1;i<match.length;i++)match[i]=match[i].toLowerCase();
@@ -1164,7 +1188,7 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
   // once for the new schema; callers cannot supply a cache-bypass token.
   if (route.matchDetail || route.foldCalibration) cacheUrl.searchParams.set('_payload', 'performance-v1');
   const cacheKey = new Request(cacheUrl.toString());
-  const cached = workflow || route.rrCollect || route.rrFeature || route.nameBackfill || (route.nameHistory && !storedNameHistory.history.length)
+  const cached = workflow || route.rrCollect || route.rrFeature || route.rrHeal || route.nameBackfill || (route.nameHistory && !storedNameHistory.history.length)
     ? null : await cache.match(cacheKey);
   if (cached) {
     if(route.trackAccount){
@@ -1264,6 +1288,22 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
     try{await env.APP_DB.prepare('INSERT INTO rr_candidate_checks(puuid,platform,checked_at) VALUES(?1,?2,?3) ON CONFLICT(puuid,platform) DO UPDATE SET checked_at=excluded.checked_at')
       .bind(match[3],match[2],new Date().toISOString()).run();}
     catch{return storageFailure('RR discovery retry could not be saved');}
+  }
+  if(route.rrHeal&&(upstream.status===200||upstream.status===404)){
+    // 404: no stored history for this account; an empty page still lets the
+    // gap be verified (or retried later) instead of failing the collector.
+    let list=[];
+    if(upstream.status===200){
+      try{list=JSON.parse(bodyText)?.data;storedGapEntries(list,match.gap);}
+      catch{return json({error:'Invalid stored RR history'},502);}
+    }
+    try{
+      const data=await healRR(env.APP_DB,match.gap,list,{page:match.page});
+      const res=json({data},200);res.headers.set('Cache-Control','no-store');return res;
+    }catch{
+      console.error('RR gap healing could not be saved');
+      return storageFailure('RR gap could not be saved');
+    }
   }
   if(route.rrFeature&&upstream.status===404){
     try{
@@ -1402,7 +1442,7 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
   // the whole point of this rewrite. The client only ever sees success or a
   // 429 with retryAfterMs in the body.
 
-  if (upstream.status === 200 && !workflow && !unsaved && !route.nameBackfill && !route.rrCollect && !route.rrFeature) {
+  if (upstream.status === 200 && !workflow && !unsaved && !route.nameBackfill && !route.rrCollect && !route.rrFeature && !route.rrHeal) {
     const cacheRes = new Response(bodyText, {
       status: 200,
       headers: {

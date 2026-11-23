@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {collectRR,matchFeatures,saveFeatures,trackRRAccount} from '../lib/rr-corpus.mjs';
-import {collectPlayers,collectMatchFeatures,corpusReport,puuidSliceBounds} from '../.github/scripts/collect-rr-corpus.mjs';
+import {collectPlayers,corpusReport,puuidSliceBounds} from '../.github/scripts/collect-rr-corpus.mjs';
 import {retryOnD1Overload,pacedQuery,recentDateBound,d1Query,D1_MS} from '../.github/scripts/d1-query.mjs';
 import {onRequestGet} from '../functions/api/[[path]].js';
-import {pollingPolicy,selectPollingPlayers,selectDiscoveryCandidates,discoverMatchPlayers,DISCOVERY_BAND_TARGET} from '../lib/rr-activity.mjs';
+import {pollingPolicy,selectPollingPlayers,selectDiscoveryCandidates,discoverMatchPlayers,DISCOVERY_BAND_TARGET,POLL_HOURS} from '../lib/rr-activity.mjs';
 import {loadActivity,loadCandidates} from '../.github/scripts/rr-activity-query.mjs';
-import {loadFeaturePlan} from '../.github/scripts/rr-feature-plan.mjs';
+import {loadFeatureQueue} from '../.github/scripts/rr-feature-plan.mjs';
 
 // Pacing sleeps are skipped in tests; the pacing itself has its own tests.
 const noPause={pauseMs:0,sleep:async()=>{}};
@@ -27,29 +27,32 @@ function database(t){
   return {sql,db};
 }
 
-test('D1 feature plan skips saved evidence and prioritizes archives over upstream requests',async t=>{
-  const {sql,db}=database(t);
-  await collectRR(db,payload(['saved','archived','waiting','ready'].map(id=>entry(id))),{puuid,region:'eu',platform:'pc'});
+test('the feature queue skips saved evidence, waits out retries except for archives, newest first',async t=>{
+  const {sql,db}=database(t),now=Date.now();
+  const recent=(id,i)=>({...entry(id),date:new Date(now-(i+1)*3600000).toISOString()});
+  await collectRR(db,payload(['saved','ready','waiting','archived'].map(recent).concat({...entry('old'),date:new Date(now-5*86400000).toISOString()})),{puuid,region:'eu',platform:'pc'});
   sql.prepare('INSERT INTO rr_match_features VALUES (?,?,?,?,?,?)').run(puuid,'saved',season,null,'{}',new Date().toISOString());
   sql.prepare('INSERT INTO match_archive (puuid,season_id,match_id,started_at,payload) VALUES (?,?,?,?,?)').run(puuid,season,'archived',null,new Uint8Array([1]));
   for(const id of ['archived','waiting'])sql.prepare('INSERT INTO rr_feature_retry VALUES (?,?,1,?)').run(puuid,id,'2099-01-01');
-  sql.prepare('INSERT INTO rr_history VALUES (?,?,?,?)').run('unknown','no-region','{}',entry().date);
+  sql.prepare('INSERT INTO rr_history VALUES (?,?,?,?)').run('unknown','no-region','{}',new Date(now).toISOString());
   const query=async(_env,text,params=[]) => (await db.prepare(text).bind(...params).all()).results;
-  const plan=await loadFeaturePlan({},10,query,noPause);
-  assert.deepEqual({...plan.inventory},{total:5,saved:1,missing:4,missingRegion:1,archived:1,waitingRetry:1});
-  assert.deepEqual(plan.rows.map(r=>r.match_id),['archived','ready']);
-  assert.equal(plan.rows[0].archived,1);
-  assert.deepEqual((await loadFeaturePlan({},1,query,noPause)).rows.map(r=>r.match_id),['archived']);
-  assert.deepEqual((await loadFeaturePlan({},0,query,noPause)).rows,[]);
+  const rows=await loadFeatureQueue({},10,query);
+  // 'old' is outside the recent window; 'unknown' has no region.
+  // 'archived' waits for an upstream retry, but its saved payload needs none.
+  assert.deepEqual(rows.map(r=>r.match_id),['ready','archived']);
+  assert.deepEqual(rows.map(r=>r.archived),[0,1]);
+  assert.deepEqual((await loadFeatureQueue({},1,query)).map(r=>r.match_id),['ready']);
+  assert.deepEqual(await loadFeatureQueue({},0,query),[]);
+  await assert.rejects(loadFeatureQueue({},5001,query),/Invalid feature limit/);
 });
 
-test('empty D1 inventory reports zeros and no pending features',async t=>{
-  const {db}=database(t);
-  const query=async(_env,text,params=[]) => (await db.prepare(text).bind(...params).all()).results;
-  const plan=await loadFeaturePlan({},10,query,noPause);
-  assert.deepEqual({...plan.inventory},{total:0,saved:0,missing:0,missingRegion:0,archived:0,waitingRetry:0});
-  assert.deepEqual(plan.rows,[]);
+test('the feature queue reads the date index, not every rr_history row',async t=>{
+  const {sql}=database(t);let text;
+  await loadFeatureQueue({},5,async(_env,query)=>{text=query;return [];});
+  const plan=sql.prepare(`EXPLAIN QUERY PLAN ${text.replace('?1','5')}`).all().map(row=>row.detail).join('\n');
+  assert.match(plan,/SEARCH h USING INDEX rr_history_date \(date>\?\)/,plan);
 });
+
 test('collector commits raw entries and witnessed predecessors, corrects existing IDs',async t=>{
   const {sql,db}=database(t),old={...entry('old'),date:'2026-10-02T00:00:00Z'};
   await collectRR(db,payload([entry(),old]),{puuid,region:'eu',platform:'pc'});
@@ -75,14 +78,29 @@ test('collector retains new competitive fields when a later response is missing 
   assert.equal(saved.rr_performance_bonus,0);
   assert.equal(saved.is_placement_match,false);
 });
-test('a non-overlapping full window is flagged, initial or empty windows are not',async t=>{
+test('a window that does not reach the saved head records a gap; overlapping, first and stale windows do not',async t=>{
   const {db,sql}=database(t),scope={puuid,region:'eu',platform:'pc'};
-  const windows=n=>Array.from({length:20},(_,i)=>({...entry(`${n}-${i}`),date:new Date(1790985600000+i*60000).toISOString()}));
-  assert.equal((await collectRR(db,payload(windows(1)),scope)).possible_gap,false);
-  assert.equal((await collectRR(db,payload(windows(2)),scope)).possible_gap,true);
-  assert.equal((await collectRR(db,payload([]),scope)).possible_gap,false);
-  assert.equal(sql.prepare('SELECT possible_gaps FROM rr_collection').get().possible_gaps,1);
+  const at=i=>new Date(1790985600000+i*60000).toISOString();
+  const game=i=>({...entry(`g-${i}`),date:at(i)});
+  const window=(from,to)=>Array.from({length:to-from+1},(_,i)=>game(to-i));
+  assert.equal((await collectRR(db,payload(window(0,19)),scope)).gap,null,'first window: nothing saved before it');
+  assert.equal((await collectRR(db,payload(window(5,24)),scope)).gap,null,'still holds the saved head g-19');
+  const missed=await collectRR(db,payload(window(30,49)),scope,at(60));
+  assert.deepEqual(missed.gap,{after_match_id:'g-24',after_date:at(24),before_match_id:'g-30',before_date:at(30)});
+  assert.equal(missed.possible_gap,true);
+  assert.equal((await collectRR(db,payload(window(10,29)),scope)).gap,null,'a stale window older than the head proves nothing');
+  const empty=await collectRR(db,payload([]),scope,at(70));
+  assert.deepEqual(empty.gap,{after_match_id:'g-49',after_date:at(49),before_match_id:null,before_date:at(70)},'an empty window may hide pushed-out games');
+  const rows=sql.prepare('SELECT puuid,after_match_id,before_match_id,source,status,region,platform FROM rr_gaps ORDER BY after_date').all().map(r=>({...r}));
+  assert.deepEqual(rows,[{puuid,after_match_id:'g-24',before_match_id:'g-30',source:'window',status:'open',region:'eu',platform:'pc'},
+    {puuid,after_match_id:'g-49',before_match_id:null,source:'window',status:'open',region:'eu',platform:'pc'}]);
+  assert.equal(sql.prepare('SELECT possible_gaps FROM rr_collection').get().possible_gaps,2);
+  assert.equal(sql.prepare('SELECT window_from FROM rr_collection').get().window_from,null,'the empty window has no oldest payout');
+  await collectRR(db,payload(window(30,49)),scope,at(80));
+  assert.equal(sql.prepare('SELECT window_from FROM rr_collection').get().window_from,at(30));
+  assert.equal(sql.prepare('SELECT COUNT(*) AS n FROM rr_gaps').get().n,2,'a repeated gap is recorded once');
 });
+
 test('wrong account or a failed batch never records a successful check',async t=>{
   const {db,sql}=database(t);
   await assert.rejects(collectRR(db,{data:{account:{puuid:'wrong'},history:[]}},{puuid,region:'eu',platform:'pc'}));
@@ -121,12 +139,12 @@ test('a full RR window uses a bounded number of D1 statements and commits atomic
     'sliding windows retain previously witnessed same-act predecessors');
 });
 
-test('a new season reassesses inactive players once, without turning searches into activity',async t=>{
+test('a new season reassesses quiet players once, without turning searches into activity',async t=>{
   const now=Date.now(),iso=hours=>new Date(now-hours*3600000).toISOString();
   const player={puuid,platform:'pc',checked_at:iso(48),last_played_at:iso(240),games_7d:0,season_started_at:iso(24)};
   assert.equal(pollingPolicy(player,now).cohort,'season-assessment');
   assert.equal(selectPollingPlayers([player],now).length,1);
-  assert.equal(pollingPolicy({...player,checked_at:iso(1)},now).cohort,'dormant');
+  assert.equal(pollingPolicy({...player,checked_at:iso(1)},now).cohort,'quiet');
   const {db}=database(t);
   await collectRR(db,payload([{...entry(),date:iso(240)}]),{puuid,region:'eu',platform:'pc'},iso(48));
   const other='55555555-5555-4555-8555-555555555555';
@@ -135,6 +153,7 @@ test('a new season reassesses inactive players once, without turning searches in
   const query=async(_env,text,params=[]) => (await db.prepare(text).bind(...params).all()).results;
   const rows=await loadActivity({},[{puuid,platform:'pc'}],query);
   assert.equal(rows[0].season_started_at,iso(24));
+  assert.equal(rows[0].region,'eu');
   assert.equal(pollingPolicy(rows[0],now).cohort,'season-assessment');
 });
 
@@ -163,14 +182,12 @@ test('new-act Unrated placement rosters still supply trusted competitive discove
   assert.equal(await discoverMatchPlayers(db,record,{puuid,region:'eu',platform:'pc'},stamp),0);
 });
 
-test('run deadlines preserve unattempted capture and enrichment as deferred work',async()=>{
+test('run deadlines preserve unattempted capture as deferred work',async()=>{
   const players=[1,2,3].map(n=>({puuid:String(n),region:'eu',platform:'pc',match_id:String(n)}));
   let now=0,calls=0;
   const refresh=await collectPlayers(players,{origin:'https://test',log:()=>{},concurrency:1,deadline:1,now:()=>now,
     fetchImpl:async url=>{calls++;now=1;return Response.json({data:{puuid:url.split('/').at(-1),checked_at:'now'}});}});
   assert.equal(calls,1);assert.equal(refresh.checked,1);assert.equal(refresh.deferred,2);assert.equal(refresh.failures.length,0);
-  const features=await collectMatchFeatures(players,{origin:'https://test',deadline:1,now:()=>now,fetchImpl:()=>{throw new Error('budget exhausted');}});
-  assert.equal(features.budgetDeferred,3);assert.equal(features.failed,0);
 });
 test('compact evidence retains unknown party values, shields stay in raw payouts',async t=>{
   const {sql,db}=database(t),m=match();
@@ -225,7 +242,7 @@ test('region recovery rejects a mismatched PUUID and preserves transient failure
   }
 });
 
-test('D1 failed probe survives runs, applies a one-day cooldown and clears after successful collection',async t=>{
+test('D1 failed probe survives runs, applies a cooldown of at most a day and clears after successful collection',async t=>{
   const {db,sql}=database(t),now=Date.now(),iso=h=>new Date(now-h*3600000).toISOString();
   await collectRR(db,payload([{...entry(),date:iso(240)}]),{puuid,region:'na',platform:'pc'},iso(48));
   sql.prepare('INSERT INTO rr_candidate_checks VALUES (?,?,?)').run(puuid,'pc',iso(1));
@@ -235,9 +252,9 @@ test('D1 failed probe survives runs, applies a one-day cooldown and clears after
   assert.equal(pollingPolicy(player,now).due,false);
   assert.equal(pollingPolicy(player,now+24*3600000).due,true);
   assert.equal(pollingPolicy({...player,candidate_observed_at:iso(.5),candidate_played_at:iso(.5)},now).due,true);
-  assert.equal(pollingPolicy({...player,checked_at:iso(0)},now).cohort,'dormant');
-  const report=await corpusReport({},query,noPause);
-  assert.equal(report.health.stale,0);
+  assert.equal(pollingPolicy({...player,checked_at:iso(0)},now).cohort,'quiet');
+  // An active account is retried after its own, shorter interval.
+  assert.equal(pollingPolicy({...player,games_7d:40,last_played_at:iso(2)},now+12*3600000).due,true);
 });
 
 test('transient capture failures get one final retry before optional enrichment',async()=>{
@@ -251,12 +268,13 @@ test('transient capture failures get one final retry before optional enrichment'
   assert.equal(result.checked,1);assert.equal(result.failures.length,0);
   assert.equal(calls,4);
 });
-test('coverage SQL reports staleness using UTC timestamps and returns act sample counts',async t=>{
+test('the census returns act sample counts and counts payouts healed from stored history',async t=>{
   const {db}=database(t);
   await collectRR(db,payload([entry()]),{puuid,region:'eu',platform:'pc'});
   const report=await corpusReport({},async(_env,query,params=[])=>{const s=db.prepare(query);return (await s.bind(...params).all()).results;},noPause);
-  assert.equal(report.health.stale,0);assert.equal(report.ranks[0].payouts,1);
+  assert.equal(report.ranks[0].payouts,1);
   assert.equal(report.competitiveUpdates.bonus_known,0);
+  assert.equal(report.competitiveUpdates.stored,0);
   await collectRR(db,payload([{...entry(),tier_before_update:{id:12},rr_before_update:30,
     rr_performance_bonus:0,afk_penalty:0,rr_penalty:.25,is_placement_match:false}]),{puuid,region:'eu',platform:'pc'});
   const enriched=await corpusReport({},async(_env,query,params=[])=>{const s=db.prepare(query);return (await s.bind(...params).all()).results;},noPause);
@@ -489,46 +507,38 @@ test('a failure to persist the missing-match retry remains an actual storage err
   assert.equal((await response.json()).storage,'unavailable');
 });
 
-test('feature sweep separates saved details, upstream deferrals and malformed errors',async()=>{
-  const rows=['saved','deferred','invalid'].map(match_id=>({puuid,region:'eu',match_id}));
-  const logs=[];
-  const result=await collectMatchFeatures(rows,{origin:'https://test',log:s=>logs.push(s),fetchImpl:async url=>{
-    const id=new URL(url).pathname.split('/').at(-1);
-    return Response.json({data:{puuid,match_id:id,saved:id==='saved',
-      ...(id==='deferred'?{deferred:true,reason:'upstream_match_not_found',retry_at:'2030-01-01 00:00:00'}:{})}});
-  }});
-  assert.deepEqual(result,{saved:1,deferred:1,failed:1,budgetDeferred:0});
-  assert.ok(logs.some(s=>s.includes('Detail deferred')&&s.includes('RR retained')));
-  assert.ok(logs.some(s=>s.includes('Detail FAILED')));
-});
-
-test('activity policy polls before a 20-game window can roll over: 6/8/24/72-hour intervals',()=>{
+test('activity policy: intervals by weekly games, shortened when the live window turns over fast',()=>{
   const now=Date.parse('2026-10-03T12:00:00Z'),ago=h=>new Date(now-h*3600000).toISOString();
-  const player={puuid,last_played_at:ago(1),checked_at:ago(7),games_7d:12};
-  assert.deepEqual([pollingPolicy(player,now).cohort,pollingPolicy(player,now).intervalHours],['frequent',6]);
+  const player={puuid,last_played_at:ago(1),checked_at:ago(13),games_7d:40};
+  const shape=p=>{const x=pollingPolicy(p,now);return [x.cohort,x.intervalHours];};
+  assert.deepEqual(shape(player),['heavy',12]);
   assert.equal(pollingPolicy(player,now).due,true);
-  assert.equal(pollingPolicy({...player,checked_at:ago(5)},now).due,false);
-  // Anyone who played in the last week is polled every 8 hours, however few games.
-  for(const games_7d of [1,4,9])assert.deepEqual([pollingPolicy({...player,games_7d},now).cohort,pollingPolicy({...player,games_7d},now).intervalHours],['active',8]);
-  assert.equal(pollingPolicy({...player,games_7d:1,last_played_at:ago(150)},now).intervalHours,8);
-  // Quiet accounts are still checked so a return from a break is noticed.
-  const dormant={...player,last_played_at:ago(200)};
-  assert.deepEqual([pollingPolicy(dormant,now).cohort,pollingPolicy(dormant,now).intervalHours],['dormant',24]);
-  assert.equal(pollingPolicy(dormant,now).due,false);
-  assert.equal(pollingPolicy({...dormant,checked_at:ago(25)},now).due,true);
-  const old={...player,last_played_at:ago(40*24)};
-  assert.deepEqual([pollingPolicy(old,now).cohort,pollingPolicy(old,now).intervalHours],['inactive',72]);
-  assert.equal(pollingPolicy({...old,checked_at:ago(71)},now).due,false);
-  assert.equal(pollingPolicy({...old,checked_at:ago(73)},now).due,true);
-  assert.equal(pollingPolicy({...player,last_played_at:null},now).due,false);
-  assert.equal(pollingPolicy({...player,last_played_at:null,checked_at:ago(73)},now).due,true);
-  assert.equal(pollingPolicy({puuid},now).due,true);
-  assert.equal(selectPollingPlayers([dormant,player],now).length,1);
+  assert.equal(pollingPolicy({...player,checked_at:ago(11)},now).due,false);
+  assert.deepEqual(shape({...player,games_7d:15}),['regular',16]);
+  assert.deepEqual(shape({...player,games_7d:14}),['casual',24]);
+  assert.deepEqual(shape({...player,games_7d:5}),['casual',24]);
+  assert.deepEqual(shape({...player,games_7d:1}),['light',24]);
+  assert.deepEqual(shape({...player,games_7d:0,last_played_at:ago(200)}),['quiet',48]);
+  assert.deepEqual(shape({...player,games_7d:0,last_played_at:ago(40*24)}),['inactive',72]);
+  assert.deepEqual(shape({...player,games_7d:0,last_played_at:null}),['inactive',72]);
+  assert.deepEqual(POLL_HOURS,{heavy:12,regular:16,casual:24,light:24,quiet:48,inactive:72});
+  // The last window's ranked games span 6 hours: its 20 matches (any mode)
+  // took at most that long, so the next poll comes within 6 hours.
+  const mixed={...player,games_7d:5,window_from:ago(19)};
+  assert.deepEqual(shape(mixed),['casual',6]);
+  assert.equal(pollingPolicy(mixed,now).due,true);
+  // Never below 4 hours; a slow window does not lengthen the interval.
+  assert.equal(pollingPolicy({...player,window_from:ago(13.5)},now).intervalHours,4);
+  assert.equal(pollingPolicy({...player,window_from:ago(500)},now).intervalHours,12);
+  // Unassessed accounts come first among due ones.
+  assert.deepEqual([pollingPolicy({puuid},now).cohort,pollingPolicy({puuid},now).due],['unassessed',true]);
+  const quiet={...player,games_7d:0,last_played_at:ago(200),checked_at:ago(30)};
+  assert.equal(selectPollingPlayers([quiet,player],now).map(p=>p.puuid).length,1);
 });
 
 test('polling selection has no count cap; the run deadline bounds capture',()=>{
   const now=Date.parse('2026-10-03T12:00:00Z');
-  const players=Array.from({length:2500},(_,i)=>({puuid:`p${i}`,games_7d:12,last_played_at:'2026-10-03T10:00:00Z',checked_at:'2026-10-03T01:00:00Z'}));
+  const players=Array.from({length:2500},(_,i)=>({puuid:`p${i}`,games_7d:40,last_played_at:'2026-10-03T10:00:00Z',checked_at:'2026-10-02T21:00:00Z'}));
   assert.equal(selectPollingPlayers(players,now).length,2500);
   assert.equal(selectPollingPlayers(players,now,10).length,10);
 });
@@ -543,8 +553,8 @@ test('a paused account wakes once for a newly observed recent roster match',()=>
 
 test('bounded polling favors relative overdue time so active cohorts cannot starve each other',()=>{
   const now=Date.parse('2026-10-03T12:00:00Z');
-  const players=[{puuid:'frequent',games_7d:20,last_played_at:'2026-10-03T01:00:00Z',checked_at:'2026-10-03T07:00:00Z'},
-    {puuid:'occasional',games_7d:1,last_played_at:'2026-10-01T01:00:00Z',checked_at:'2026-10-01T01:00:00Z'}];
+  const players=[{puuid:'frequent',games_7d:40,last_played_at:'2026-10-03T01:00:00Z',checked_at:'2026-10-02T23:00:00Z'},
+    {puuid:'occasional',games_7d:1,last_played_at:'2026-10-01T01:00:00Z',checked_at:'2026-09-30T01:00:00Z'}];
   assert.equal(selectPollingPlayers(players,now,1)[0].puuid,'occasional');
 });
 
@@ -634,9 +644,9 @@ test('sliced act census matches one whole-table statement',async t=>{
   assert.deepEqual(sliced.ranks,whole.ranks);
   assert.deepEqual(sliced.currentAct,whole.currentAct);
   assert.deepEqual(sliced.competitiveUpdates,whole.competitiveUpdates);
-  assert.equal(statements.length,17);// 16 census slices plus the health query
-  // Every statement after the first waits, the health query included.
-  assert.equal(pauses.length,16);
+  assert.equal(statements.length,16);// 16 census slices
+  // Every statement after the first waits.
+  assert.equal(pauses.length,15);
   assert.equal(sliced.ranks.reduce((n,row)=>n+row.players,0),10);
   assert.equal(sliced.ranks.find(row=>row.act==='test'&&row.ending_tier===12).players,4);
 });
@@ -704,12 +714,8 @@ test('last-week filters read the date window from an index, not every rr_history
   const recent=plan(activity);
   assert.ok(recent.some(line=>/^SEARCH h USING COVERING INDEX idx_rr_history_puuid_date \(puuid=\? AND date>\?\)/.test(line)),recent.join('\n'));
   assert.ok(!recent.some(line=>/^SCAN rr_history USING COVERING INDEX idx_rr_history_puuid_date$/.test(line)),recent.join('\n'));
-  const statements=[];
-  await corpusReport({},async(_env,query)=>{statements.push(query);return [];},{slices:1,pauseMs:0,sleep:async()=>{}});
-  const health=plan(statements.at(-1));
-  assert.ok(health.filter(line=>/rr_history|\bh\b/.test(line)).length>=2,health.join('\n'));
-  assert.ok(health.filter(line=>/\bh\b/.test(line)).every(line=>/^SEARCH h USING (COVERING )?INDEX idx_rr_history_puuid_date \(puuid=\?( AND date>\?)?\)/.test(line)),health.join('\n'));
-  assert.ok(health.some(line=>/idx_rr_history_puuid_date \(puuid=\? AND date>\?\)/.test(line)),health.join('\n'));
+  // The health report that read 5.1 million rows is gone: the collector
+  // computes overdue counts from these activity rows.
 });
 
 test('the date-index bound keeps every format of a date inside the window',t=>{
@@ -725,30 +731,6 @@ test('the date-index bound keeps every format of a date inside the window',t=>{
     }
   }
   assert.equal(keep.get(at(-60000)).exact,0);
-});
-
-test('the sliced feature inventory matches one whole-table statement',async t=>{
-  const {db,sql}=database(t);
-  const ids=['0aaaaaaa-1111-4111-8111-111111111111','3bbbbbbb-1111-4111-8111-111111111111',
-    '9ccccccc-1111-4111-8111-111111111111','ffdddddd-1111-4111-8111-111111111111'];
-  for(const [i,id] of ids.entries()){
-    const history=Array.from({length:6},(_,j)=>({...entry(`4444444${i}-4444-4444-8444-00000000000${j}`),date:`2026-10-0${1+j}T0${i}:00:00Z`}));
-    await collectRR(db,{data:{account:{puuid:id,name:`P${i}`,tag:'EU'},history}},{puuid:id,region:'eu',platform:'pc'});
-    sql.prepare('INSERT INTO rr_match_features VALUES (?,?,?,?,?,?)').run(id,history[0].match_id,season,null,'{}',new Date().toISOString());
-    sql.prepare('INSERT INTO match_archive (puuid,season_id,match_id,started_at,payload) VALUES (?,?,?,?,?)').run(id,season,history[5-i].match_id,null,new Uint8Array([1]));
-    sql.prepare('INSERT INTO rr_feature_retry VALUES (?,?,1,?)').run(id,history[2].match_id,'2099-01-01');
-  }
-  sql.prepare('INSERT INTO rr_history VALUES (?,?,?,?)').run('ZZ-unknown','no-region','{}',entry().date);
-  const query=async(_env,text,params=[])=>(await db.prepare(text).bind(...params).all()).results;
-  for(const limit of [0,3,7,50]){
-    const whole=await loadFeaturePlan({},limit,query,{slices:1,...noPause});
-    const sliced=await loadFeaturePlan({},limit,query,{slices:16,...noPause});
-    assert.deepEqual(sliced,whole,`limit ${limit}`);
-  }
-  const plan=await loadFeaturePlan({},50,query,{slices:16,...noPause});
-  assert.deepEqual({...plan.inventory},{total:25,saved:4,missing:21,missingRegion:1,archived:4,waitingRetry:3});
-  assert.equal(plan.rows.length,17);// 21 missing, less 1 without a region and 3 waiting for retry
-  assert.deepEqual(plan.rows.slice(0,4).map(row=>row.archived),[1,1,1,1]);
 });
 
 test('the activity query counts last-week games and finds the act start as before',async t=>{

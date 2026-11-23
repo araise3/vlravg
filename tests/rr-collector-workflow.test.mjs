@@ -2,99 +2,184 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
-import {shouldChainRun,CHAIN_MIN_ELAPSED_MS} from '../.github/scripts/collect-rr-corpus.mjs';
+import {runCollector,healGap,dailyAudit,stepSummary,HEAL_EVERY,RETRY_MS,FEATURE_BATCH} from '../.github/scripts/collect-rr-corpus.mjs';
 
-// Exercise orchestration without real credentials, network calls or report files.
+const T0=Date.parse('2026-11-24T12:00:00Z'),HOUR=3600000;
+const ago=h=>new Date(T0-h*HOUR).toISOString();
+const uuid=n=>`${String(n).padStart(8,'0')}-1111-4111-8111-111111111111`;
+const origin='https://test';
+// A heavy player polls every 12 hours: checked 36 hours ago is three intervals overdue.
+const heavy=(n,hoursAgo)=>({puuid:uuid(n),region:'eu',platform:'pc',games_7d:40,last_played_at:ago(1),checked_at:ago(hoursAgo)});
+
+// The site's proxy, simulated: every call takes two seconds of the fake clock.
+function harness({players,gaps=[],features=[],respond={}}={}){
+  let t=T0;
+  const calls=[];
+  const clock={now:()=>t,sleep:async ms=>{t+=Math.max(1,ms);}};
+  const fetchImpl=async url=>{
+    t+=2000;
+    const path=new URL(url).pathname.split('/').slice(2);
+    calls.push(path.slice(0,1).concat(path.at(-1)).join(':'));
+    const custom=respond[path[0]]?.(path,calls);
+    if(custom)return custom;
+    if(path[0]==='rr-collect')return Response.json({data:{puuid:path[3],checked_at:new Date(t).toISOString(),new_games:2,
+      newest_date:new Date(t-HOUR).toISOString(),window_from:new Date(t-48*HOUR).toISOString(),possible_gap:false,gap:null}});
+    if(path[0]==='rr-heal')return Response.json({data:{puuid:path[1],after_match_id:path[2],done:true,status:'healed',recovered:3,breaks:0}});
+    if(path[0]==='rr-feature')return Response.json({data:{puuid:path[2],match_id:path[3],saved:true}});
+    return Response.json({},{status:404});
+  };
+  let featureLoads=0;
+  const run=options=>runCollector({origin,fetchImpl,deadline:T0+HOUR,now:clock.now,sleep:clock.sleep,sleepImpl:clock.sleep,
+    log:()=>{},concurrency:1,discoveryLimit:0,
+    loadPlayers:async()=>players.map(p=>({...p})),loadGaps:async()=>gaps.splice(0),
+    loadFeatures:async()=>featureLoads++?[]:features,...options});
+  return {run,calls,clock};
+}
+
+test('due polls go most overdue first, heals interleave, spare calls fill features, nothing else is polled',async()=>{
+  const players=[heavy(1,13),heavy(2,36),heavy(3,24),...Array.from({length:8},(_,i)=>heavy(10+i,14)),heavy(9,1)];
+  const gap={puuid:uuid(1),after_match_id:'gap-1',after_date:ago(30),before_date:ago(13),region:'eu',platform:'pc',status:'open',attempts:0,recovered:0};
+  const h=harness({players,gaps:[gap],features:[{puuid:uuid(1),match_id:'m1',region:'eu'},{puuid:uuid(2),match_id:'m2',region:'eu'}]});
+  const report=await h.run();
+  assert.deepEqual(h.calls.slice(0,2),[`rr-collect:${uuid(2)}`,`rr-collect:${uuid(3)}`],'three, then two intervals overdue');
+  const healAt=h.calls.indexOf('rr-heal:gap-1');
+  assert.equal(healAt,HEAL_EVERY-1,'one task in five heals while polls are due');
+  const polls=h.calls.filter(c=>c.startsWith('rr-collect'));
+  assert.equal(polls.length,11);
+  assert.ok(!polls.includes(`rr-collect:${uuid(9)}`),'checked an hour ago: not due');
+  assert.ok(h.calls.indexOf('rr-feature:m1')>h.calls.lastIndexOf(polls.at(-1)),'features only after every due poll');
+  assert.deepEqual([report.polls.done,report.polls.newGames,report.heals.healed,report.heals.recovered,report.features.saved],[11,22,1,3,2]);
+  assert.equal(report.backlog.due,0);assert.equal(report.tracked,12);
+  assert.equal(report.cohorts.heavy,12);
+});
+
+test('a window that misses the saved head is healed in the same run',async()=>{
+  const players=[heavy(1,13),heavy(2,13)];
+  const h=harness({players,respond:{'rr-collect':path=>path[3]===uuid(1)?Response.json({data:{puuid:uuid(1),checked_at:ago(0),new_games:20,
+    newest_date:ago(0.5),window_from:ago(10),possible_gap:true,gap:{after_match_id:'head',after_date:ago(20),before_match_id:'w0',before_date:ago(10)}}}):null}});
+  const report=await h.run();
+  assert.ok(h.calls.includes('rr-heal:head'));
+  assert.equal(report.polls.gapsFound,1);assert.equal(report.heals.healed,1);
+});
+
+test('failed polls and heals are retried later in the same run and never fail it',async()=>{
+  let pollFailures=0,healFailures=0;
+  const gap={puuid:uuid(2),after_match_id:'g',after_date:ago(30),before_date:ago(13),region:'eu',platform:'pc',status:'open',attempts:0,recovered:0};
+  const h=harness({players:[heavy(1,13)],gaps:[gap],respond:{
+    'rr-collect':()=>pollFailures++<3?Response.json({},{status:503}):null,
+    'rr-heal':()=>healFailures++<3?Response.json({},{status:502}):null,
+  }});
+  const report=await h.run();
+  assert.deepEqual([report.polls.failed,report.polls.done],[1,1]);
+  assert.deepEqual([report.heals.failed,report.heals.healed],[1,1]);
+  assert.equal(h.calls.filter(c=>c===`rr-collect:${uuid(1)}`).length,4,'three transient attempts, then one after the cooldown');
+  assert.equal(report.failures.length,2);
+  assert.ok(RETRY_MS<HOUR);
+});
+
+test('a resolved gap is dropped; a paged heal follows next_page',async()=>{
+  let page=0;
+  const fetchImpl=async url=>{
+    const p=Number(new URL(url).searchParams.get('page'));page=p;
+    return p===1?Response.json({data:{puuid:uuid(1),after_match_id:'a',done:false,next_page:2,recovered:100}})
+      :Response.json({data:{puuid:uuid(1),after_match_id:'a',done:true,status:'healed',recovered:7,breaks:0}});
+  };
+  assert.deepEqual(await healGap({puuid:uuid(1),after_match_id:'a'},{origin,fetchImpl}),{status:'healed',recovered:107,breaks:0});
+  assert.equal(page,2);
+  const gone=await healGap({puuid:uuid(1),after_match_id:'a'},{origin,fetchImpl:async()=>Response.json({},{status:404})});
+  assert.equal(gone.status,'gone');
+});
+
+test('a configuration error stops every worker and is rethrown',async()=>{
+  const h=harness({players:[heavy(1,13),heavy(2,13)],respond:{'rr-collect':()=>{const e=new Error('Central workflow pacing is not ready');e.code='WORKFLOW_CONFIGURATION';throw e;}}});
+  await assert.rejects(h.run({concurrency:2}),{code:'WORKFLOW_CONFIGURATION'});
+});
+
+test('reloads keep this run\'s newer checks over a lagging D1 read and pick up new accounts',async()=>{
+  const rows=[heavy(1,13)];
+  let loads=0;
+  const h=harness({players:[]});
+  const report=await h.run({reloadMs:10*60000,loadPlayers:async()=>{loads++;if(loads===2)rows.push(heavy(2,13));return rows.map(p=>({...p}));}});
+  assert.ok(loads>=3);
+  assert.equal(h.calls.filter(c=>c===`rr-collect:${uuid(1)}`).length,1,'the stale replica row does not make it due again');
+  assert.ok(h.calls.includes(`rr-collect:${uuid(2)}`));
+  assert.equal(report.polls.done,2);
+});
+
+test('the initial load is retried before the run gives up',async()=>{
+  let loads=0;
+  const h=harness({players:[]});
+  const report=await h.run({loadPlayers:async()=>{if(++loads<3)throw new Error('fetch failed');return [heavy(1,13)];}});
+  assert.equal(report.polls.done,1);
+  await assert.rejects(harness({players:[]}).run({loadPlayers:async()=>{throw new Error('fetch failed');}}),/fetch failed/);
+});
+
+test('the daily audit runs once a day',async()=>{
+  const events=[];
+  const fake={log:()=>{},scan:async()=>{events.push('scan');return {found:2};},census:async()=>{events.push('census');return {currentAct:null,ranks:[]};},
+    write:async(_env,name,value)=>events.push(`write:${name}`)};
+  assert.equal((await dailyAudit({},{...fake,read:async()=>({value:new Date(Date.now()-HOUR).toISOString()})})).skipped,true);
+  assert.deepEqual(events,[]);
+  const done=await dailyAudit({},{...fake,read:async()=>({value:new Date(Date.now()-25*HOUR).toISOString()})});
+  assert.deepEqual([done.skipped,done.gapScan.found],[false,2]);
+  assert.deepEqual(events,['scan','census','write:audit_at']);
+  await dailyAudit({},{...fake,read:async()=>null});
+  assert.equal(events.filter(e=>e==='scan').length,2);
+});
+
+// main() with every network and file dependency stubbed.
 const source=readFileSync(new URL('../.github/scripts/collect-rr-corpus.mjs',import.meta.url),'utf8');
-const mainSource=source.slice(source.indexOf('export async function main('),source.indexOf('\nif(process.argv'))
+const mainSource=source.slice(source.indexOf('export async function main('),source.indexOf('export function stepSummary('))
   .replace('export ','')+'\nmain';
-const player={puuid:'11111111-1111-4111-8111-111111111111',region:'eu',platform:'pc'};
-function fixture({capture,coverageFailure=false,detailQueryFailure=false,databaseFull=false}={}){
-  const writes=[],events=[],outputs=[],process={exitCode:0};
-  const context={process,Date,URL,JSON,Number,console:{log(){},error(){},warn(){}},randomUUID:()=> 'test-run',
+function fixture({collector,databaseFull=false}={}){
+  const events=[],outputs=[],writes=[],process={exitCode:0};
+  const context={process,Date,URL,JSON,Number,Math,console:{log(){},error(){},warn(){}},randomUUID:()=>'test-run',
+    MINUTE:60000,FEATURE_BATCH,stepSummary,fatal:e=>['WORKFLOW_CONFIGURATION','WORKFLOW_STORAGE'].includes(e?.code),
     readQuotaAudit:async()=>({available:true,calls:0}),quotaCheckReport:()=>({status:'insufficient_evidence'}),
     assertD1Headroom:async()=>{events.push('headroom');if(databaseFull){const e=new Error('D1 database is full');e.code='WORKFLOW_STORAGE';throw e;}},
-    listPlayers:async()=>{events.push('list');return [player];},loadActivity:async(_env,players)=>players,
-    selectPollingPlayers:players=>players,loadCandidates:async()=>[player],selectDiscoveryCandidates:players=>players,
-    createRequestScheduler:()=>()=>{},pollingPolicy:()=>({cohort:'frequent'}),
-    collectPlayers:async players=>{events.push('capture');return players.length&&capture?capture:{players:players.length,checked:players.length,failures:[],deferred:0};},
-    loadFeaturePlan:async(_env,limit)=>{
-      events.push('inventory');
-      if(limit){events.push('detail-query');if(detailQueryFailure)throw new Error('Detail query unavailable');}
-      return {inventory:{total:10,saved:8,missing:2,archived:1,waitingRetry:1,missingRegion:0},rows:[]};
-    },
-    collectMatchFeatures:async()=>({saved:0,deferred:0,failed:0,budgetDeferred:0}),
-    corpusReport:async()=>{events.push('coverage');if(coverageFailure)throw new Error('D1 unavailable');return {health:{stale:0,possible_gaps:0}};},
-    mkdir:async()=>{},writeFile:async(_path,json)=>{events.push('write');writes.push(JSON.parse(json));},
-    appendFile:async(path,text)=>{if(path==='github-output')outputs.push(text);},shouldChainRun,
+    createRequestScheduler:()=>Object.assign(()=>{},{pools:{workflow:3,public:0}}),
+    loadTracked:async()=>[],loadOpenGaps:async()=>[],loadFeatureQueue:async()=>[],loadCandidates:async()=>[],
+    runCollector:async options=>{events.push('collect');assert.ok(options.deadline>Date.now());return collector?collector():{polls:{done:3},heals:{},backlog:{due:0,overdue2x:0}};},
+    dailyAudit:async()=>{events.push('audit');return {skipped:true};},gapSummary:async()=>({total:0,byStatus:{}}),
+    mkdir:async()=>{},writeFile:async(_path,json)=>writes.push(JSON.parse(json)),
+    appendFile:async(path,text)=>{if(path==='github-output')outputs.push(text);},
   };
-  return {run:runInNewContext(mainSource,context),writes,events,outputs,process};
+  return {run:runInNewContext(mainSource,context),events,outputs,writes,process};
 }
-const env={HENRIK_WORKFLOW_KEY:'fixture',DETAIL_LIMIT:'0'};
+const env={HENRIK_WORKFLOW_KEY:'fixture',GITHUB_OUTPUT:'github-output'};
 
-test('zero detail limit avoids detail queries and a coverage failure only warns after committed capture',async()=>{
-  const f=fixture({coverageFailure:true});
-  const report=await f.run(env);
-  assert.ok(!f.events.includes('detail-query'));
-  assert.ok(f.events.indexOf('write')<f.events.indexOf('coverage'));
-  assert.equal(f.writes[0].refresh.checked,1);
-  assert.equal(report.coverageError,'D1 unavailable');
-  assert.equal(f.writes.at(-1).coverageError,'D1 unavailable');
-  assert.equal(f.process.exitCode,0);
-  assert.equal(report.detailInventory.saved,8);
-});
-
-test('incomplete transient capture skips optional scouting and detail queries',async()=>{
-  const f=fixture({capture:{players:1,checked:0,failures:[{puuid:player.puuid,retryable:true}],deferred:0}});
-  const report=await f.run({...env,DETAIL_LIMIT:'1500'});
-  assert.equal(report.enrichmentSkipped,'tracked_capture_incomplete');
-  assert.equal(report.candidatesScouted,0);
-  assert.ok(!f.events.includes('detail-query'));
-  assert.equal(f.process.exitCode,1);
-});
-
-test('an optional detail query failure cannot erase captured RR or appear successful',async()=>{
-  const f=fixture({detailQueryFailure:true});
-  const report=await f.run({...env,DETAIL_LIMIT:'1500'});
-  assert.ok(f.events.indexOf('write')<f.events.indexOf('detail-query'));
-  assert.equal(report.refresh.checked,1);
-  assert.equal(report.enrichmentError,'Detail query unavailable');
-  assert.equal(f.writes.at(-1).refresh.checked,1);
-  assert.equal(f.process.exitCode,1);
-});
-
-test('invalid budgets fail before credentials can be used for network access',async()=>{
+test('a normal run writes its report, chains the next run and exits cleanly',async()=>{
   const f=fixture();
-  await assert.rejects(f.run({...env,RUNTIME_MINUTES:'240'}),/RUNTIME_MINUTES/);
+  const report=await f.run(env);
+  assert.deepEqual(f.events,['headroom','audit','collect']);
+  assert.equal(report.chainNext,true);assert.deepEqual(f.outputs,['chain=true\n']);
+  assert.equal(f.process.exitCode,0);
+  assert.equal(f.writes.at(-1).polls.done,3);
+});
+
+test('failed polls never fail the workflow; a configuration stop does, without chaining',async()=>{
+  const busy=fixture({collector:()=>({polls:{done:1,failed:40},heals:{failed:3},backlog:{due:900,overdue2x:12}})});
+  await busy.run(env);
+  assert.equal(busy.process.exitCode,0);assert.deepEqual(busy.outputs,['chain=true\n']);
+  const broken=fixture({collector:()=>{const e=new Error('HENRIK_WORKFLOW_KEY must match');e.code='WORKFLOW_CONFIGURATION';throw e;}});
+  const report=await broken.run(env);
+  assert.equal(broken.process.exitCode,1);assert.deepEqual(broken.outputs,['chain=false\n']);
+  assert.equal(report.fatal.code,'WORKFLOW_CONFIGURATION');
+  const crash=fixture({collector:()=>{throw new Error('bug');}});
+  await assert.rejects(crash.run(env),/bug/);
+});
+
+test('invalid budgets and a full database stop before any upstream call',async()=>{
+  const f=fixture();
+  await assert.rejects(f.run({...env,RUNTIME_MINUTES:'360'}),/RUNTIME_MINUTES/);
+  await assert.rejects(f.run({...env,DETAIL_LIMIT:'9000'}),/DETAIL_LIMIT/);
   assert.equal(f.events.length,0);
+  const full=fixture({databaseFull:true});
+  await assert.rejects(full.run(env),{code:'WORKFLOW_STORAGE'});
+  assert.deepEqual(full.events,['headroom']);assert.equal(full.outputs.length,0);
 });
 
-test('a run chains the next one only after progress with work left or a long run',()=>{
-  const done={refresh:{checked:3,deferred:0},scouting:{checked:0},details:0,detailBudgetDeferred:0};
-  assert.equal(shouldChainRun(done,{elapsedMs:60000}),false,'a short run that finished leaves the next start to the schedule');
-  assert.equal(shouldChainRun(done,{elapsedMs:CHAIN_MIN_ELAPSED_MS}),true);
-  assert.equal(shouldChainRun({...done,refresh:{checked:3,deferred:40}},{elapsedMs:60000}),true,'budget-deferred capture continues');
-  assert.equal(shouldChainRun({...done,detailBudgetDeferred:5},{elapsedMs:60000}),true,'budget-deferred details continue');
-  assert.equal(shouldChainRun({refresh:{checked:0,deferred:3000},details:0},{elapsedMs:3*3600000}),false,
-    'a run without progress (all 429s) never loops; the hourly trigger retries');
-  assert.equal(shouldChainRun({refresh:{checked:0,deferred:0},scouting:{checked:0},details:7,detailBudgetDeferred:0},{elapsedMs:CHAIN_MIN_ELAPSED_MS}),true);
-});
-
-test('collection failures still report the chain decision to the workflow',async()=>{
-  const f=fixture({capture:{players:2,checked:1,failures:[{puuid:player.puuid,retryable:true}],deferred:1}});
-  const report=await f.run({...env,GITHUB_OUTPUT:'github-output'});
-  assert.equal(f.process.exitCode,1);
-  assert.equal(report.chainNext,true);
-  assert.deepEqual(f.outputs,['chain=true\n']);
-  assert.equal(f.writes.at(-1).chainNext,true);
-  const idle=fixture();
-  await idle.run({...env,GITHUB_OUTPUT:'github-output'});
-  assert.deepEqual(idle.outputs,['chain=false\n']);
-});
-
-test('a full database stops the run before any player is listed or any upstream call is made',async()=>{
-  const f=fixture({databaseFull:true});
-  await assert.rejects(f.run(env),{code:'WORKFLOW_STORAGE'});
-  assert.deepEqual(f.events,['headroom']);
-  assert.equal(f.outputs.length,0); // no chain to a next run
+test('the step summary renders partial reports',()=>{
+  assert.match(stepSummary({}),/0 polls committed/);
+  assert.match(stepSummary({fatal:{message:'D1 full'},polls:{done:2}}),/Stopped:\*\* D1 full/);
 });

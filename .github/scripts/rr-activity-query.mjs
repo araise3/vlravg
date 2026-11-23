@@ -13,7 +13,14 @@ const readQuery=retryOnD1Overload(d1Query);
 // MIN(date) that read every row of the current act. The counts now read only
 // each player's last week, and the act's first game is a single index seek.
 export async function loadActivity(env,players,query=readQuery){
-  const rows=await query(env,`WITH latest_season AS (
+  const rows=await loadTracked(env,query);
+  const byId=new Map(rows.map(p=>[`${p.puuid}:${p.platform}`,p]));
+  return players.map(p=>({...p,...byId.get(`${p.puuid}:${p.platform}`)}));
+}
+
+// Every tracked account with its region, platform and activity, in one read.
+export async function loadTracked(env,query=readQuery){
+  return query(env,`WITH latest_season AS (
     SELECT LOWER(json_extract(data,'$.season.id')) AS id FROM rr_history
     WHERE COALESCE(json_extract(data,'$.season.id'),'')<>'' ORDER BY date DESC LIMIT 1
   ), season_start AS (
@@ -23,7 +30,7 @@ export async function loadActivity(env,players,query=readQuery){
   ), roster AS (
     SELECT puuid,platform,MAX(played_at) AS played_at,MAX(observed_at) AS observed_at
     FROM rr_candidate_games WHERE played_at>=strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days') GROUP BY puuid,platform
-  ) SELECT p.puuid,p.platform,c.checked_at,failed.checked_at AS failed_probe_at,
+  ) SELECT p.puuid,p.region,p.platform,c.checked_at,c.window_from,failed.checked_at AS failed_probe_at,
     (SELECT COUNT(*) FROM rr_history h WHERE h.puuid=p.puuid AND h.date>=${recentDateBound(7)}
       AND julianday(h.date)>=julianday('now','-7 days')) AS games_7d,
     (SELECT date FROM rr_history h WHERE h.puuid=p.puuid ORDER BY date DESC LIMIT 1) AS last_played_at,
@@ -35,8 +42,6 @@ export async function loadActivity(env,players,query=readQuery){
     LEFT JOIN rr_candidate_checks failed ON failed.puuid=p.puuid AND failed.platform=p.platform
     LEFT JOIN roster ON roster.puuid=p.puuid AND roster.platform=p.platform
     CROSS JOIN season_start`);
-  const byId=new Map(rows.map(p=>[`${p.puuid}:${p.platform}`,p]));
-  return players.map(p=>({...p,...byId.get(`${p.puuid}:${p.platform}`)}));
 }
 
 export async function loadCandidates(env,query=readQuery){
