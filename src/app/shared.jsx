@@ -81,7 +81,7 @@ export function LobbyValue({sum,count}){
   return (
     <span className="flex items-center gap-2 whitespace-nowrap" title={lobbyRankText(sum/count)}>
       <RankIcon tier={lobby.tier} size={22}/>
-      <span><LobbyRankText tier={lobby.tier}/>{rr!=null&&<> <span className="text-muted-foreground">({rr} RR)</span></>}</span>
+      <span><LobbyRankText tier={lobby.tier}/>{rr!=null&&<> <span className="text-foreground">({rr} RR)</span></>}</span>
     </span>
   );
 }

@@ -50,7 +50,7 @@ function PingMap({active}){
 export function ServersTable({rows}){
   const tableRows=rows.map(row=>({key:row.name,cells:[
     <span className="block max-w-48 truncate" title={row.name}>{row.name}</span>,
-    <>{row.games} <span className="text-xs text-muted-foreground">({Math.round(row.share)}%)</span></>,
+    row.games,
     <LobbyValue sum={row.lobbySum} count={row.lobbyCount}/>,
     row.kd==null?'—':row.kd.toFixed(2),
     row.acs==null?'—':Math.round(row.acs),
@@ -66,9 +66,9 @@ export function ServersTable({rows}){
   return (
     // Same columns and fixed widths as the Duos tables (STAT_TABLE_WIDTHS).
     <SortableTable id="servers-table" standalone rows={tableRows} values={values} widths={STAT_TABLE_WIDTHS}
-      caption="Match results and performance grouped by game server; match share is the percentage of matches with a known server"
+      caption="Match results and performance grouped by game server"
       columns={[{label:'Server'},{label:'Matches'},{label:'Avg Lobby',wide:true,align:'left'},{label:'K/D'},{label:'ACS',title:'Average combat score'},{label:'PS',title:'Avg PS across matches with available data'},{label:'Win rate',title:'Wins divided by wins plus losses; draws excluded'},{label:'Total RR',title:'Your net recorded RR change on this server'}]}
-      maxima={[{column:1,label:'matches and match share'},{column:2,label:'average lobby rank'},{column:3,label:'K/D'},{column:4,label:'average ACS'},{column:5,label:'Avg PS'},{column:6,label:'win rate'}]}/>
+      maxima={[{column:1,label:'matches'},{column:2,label:'average lobby rank'},{column:3,label:'K/D'},{column:4,label:'average ACS'},{column:5,label:'Avg PS'},{column:6,label:'win rate'}]}/>
   );
 }
 
