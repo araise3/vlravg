@@ -339,18 +339,6 @@
 /* Match History */
 .mh-list-heading { display: flex; justify-content: space-between; gap: 12px; font-size: 11px; color: #a1a1aa; }
 .mh-list-heading > span:first-child { font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: #e4e4e7; }
-.match-day-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 20px; padding: 12px 0; border-bottom: 1px solid #222; }
-.match-day-header.first { margin-top: 0; }
-.match-day-heading { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
-.match-day-title { font-size: 13px; font-weight: 750; color: #e4e4e7; white-space: nowrap; }
-.match-day-count { font-size: 10px; color: #a1a1aa; white-space: nowrap; }
-.match-day-stats { display: flex; align-items: center; }
-.match-day-stat { display: flex; align-items: baseline; gap: 7px; padding: 0 12px; border-left: 1px solid #303030; }
-.match-day-stat:first-child { border-left: 0; }
-.match-day-stat:last-child { padding-right: 0; }
-.match-day-stat-label { font-size: 10px; color: #a1a1aa; white-space: nowrap; }
-.match-day-stat-value { font-size: 11px; font-weight: 650; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.match-day-coverage { color: #a1a1aa; font-size: 10px; font-weight: 400; }
 .match-card { --result-color: #fbbf24; background: #141416; border: 1px solid #2a2a2e; border-radius: 12px; overflow: hidden; transition: border-color .15s, opacity .15s; }
 .match-card.win { --result-color: #4ade80; }
 .match-card.loss { --result-color: #fb7185; }
@@ -364,7 +352,7 @@
    aligned from card to card. The map splash is a faded backdrop on the
    right; the result colours the left edge and a faint wash behind the tile. */
 .mc-row { position: relative; isolation: isolate; display: grid; width: 100%; padding: 10px 16px 10px 14px; text-align: left; cursor: pointer;
-  --mc-gap: 32px; grid-template-columns: minmax(0, 172px) minmax(84px, .65fr) minmax(calc(228px + var(--mc-gap)), 1.75fr) minmax(0, 1.25fr) minmax(108px, .75fr) minmax(56px, .45fr) 16px; align-items: center; column-gap: 0;
+  --mc-gap: 32px; grid-template-columns: minmax(0, 172px) minmax(84px, .65fr) minmax(calc(276px + var(--mc-gap)), 1.75fr) minmax(0, 1.25fr) minmax(108px, .75fr) minmax(56px, .45fr) 16px; align-items: center; column-gap: 0;
   border-left: 3px solid var(--result-color); background: linear-gradient(90deg, color-mix(in oklab, var(--result-color) 10%, transparent), transparent 34%); }
 .mc-row:focus-visible { outline: 2px solid var(--brand); outline-offset: -3px; border-radius: 11px; }
 .mc-backdrop { position: absolute; inset: 0 0 0 auto; z-index: -1; width: min(64%, 560px); overflow: hidden; pointer-events: none; }
@@ -387,9 +375,8 @@
 .mc-lobby { margin-left: 16px; }
 .mc-rr { margin-left: 12px; }
 .mc-chevron { margin-left: 14px; }
-/* PS carries your place after it ("230 (MVP)", "199 (10th)"), so its
-   column is wider than ACS. */
-.mc-perf { display: grid; grid-template-columns: minmax(94px, 1.25fr) minmax(34px, .75fr) minmax(72px, 1.1fr); column-gap: 14px; min-width: 0; }
+/* K/D/A, ACS, ADR (23 Nov 2026) and PS. */
+.mc-perf { display: grid; grid-template-columns: minmax(94px, 1.25fr) minmax(34px, .75fr) minmax(34px, .75fr) minmax(34px, .75fr); column-gap: 14px; min-width: 0; }
 /* Minimum widths keep K/D/A (up to 20 / 22 / 14), scores and RR whole; the
    map column gives way first. */
 .mc-cell { display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 0; }
@@ -411,22 +398,24 @@
 /* Server names run up to "US West (N. California)" (about 152px here). Its
    column is the one that gives way: the other columns' minimums fit their
    longest values (K/D/A, PS with place, "Ascendant 3"). Since the lead
-   column grew for the start time (23 Nov 2026) the widest card (910px) has
-   about 139px here: every name fits except "US West (N. California)", which
-   is cut with an ellipsis like on narrower cards and keeps the full name in
-   the tooltip. */
+   column grew for the start time and the performance group took ADR (both
+   23 Nov 2026) the widest card (910px) has about 101px here: short names
+   ("Frankfurt", "Stockholm") fit, longer ones are cut with an ellipsis like
+   on narrower cards and keep the full name in the tooltip. */
 .mc-server-val { display: block; overflow: hidden; text-overflow: ellipsis; font-size: 14px; font-weight: 600; }
 .mc-tile-rank { position: absolute; right: -6px; bottom: -6px; display: flex; filter: drop-shadow(0 2px 3px rgb(0 0 0 / .75)); }
 .mc-rr .match-rr-change { font-size: 17px; line-height: 1.25; }
 .mc-chevron { width: 16px; height: 16px; color: #71717a; transition: transform .2s; }
 .match-card[data-state="open"] .mc-chevron { transform: rotate(180deg); }
-/* Cards of 800px and less drop the server column (it is in the opened card)
+/* Cards of 880px and less (800px until ADR joined the row, 23 Nov 2026,
+   when the server would have been squeezed to a few letters) drop the
+   server column (it is in the opened card)
    and stop using fixed columns (23 Nov 2026, on request: columns may shift
    and move closer rather than cut or hide anything). Each cell takes its
    own width; agent, map and result stay together, and the spare width goes
    to the gaps before the performance group and before the lobby, which
    shrink to a 14px minimum. Cells line up less from card to card here. */
-@container (max-width: 800px) {
+@container (max-width: 880px) {
   .mc-row { display: flex; align-items: center; }
   .mc-row > .mc-cell, .mc-row > .mc-chevron { flex: none; }
   .mc-lead { flex: none; min-width: auto; }
@@ -434,7 +423,7 @@
   /* K/D/A, ACS and PS keep their wide-card column widths while there is
      room (the assists sat right against the ACS value), and only shrink
      towards their values once the side gaps are used up. */
-  .mc-perf { flex: 0 1 auto; grid-template-columns: minmax(auto, 94px) minmax(auto, 48px) minmax(auto, 48px); column-gap: 14px; margin-left: auto; padding-left: 14px; }
+  .mc-perf { flex: 0 1 auto; grid-template-columns: minmax(auto, 94px) minmax(auto, 48px) minmax(auto, 48px) minmax(auto, 48px); column-gap: 14px; margin-left: auto; padding-left: 14px; }
   .mc-perf > .mc-cell { min-width: max-content; }
   .mc-lobby { margin-left: auto; padding-left: 14px; }
   .mc-rr { margin-left: 12px; }
@@ -454,9 +443,13 @@
   .mc-chevron { margin-left: 6px; }
 }
 /* The opened card repeats nothing from the closed row: its server shows only
-   where the row above hides it (the 800px rule above; phone cards are always
+   where the row above hides it (the 880px rule above; phone cards are always
    narrower). */
 .mc-info-server, .mc-stat-tile.mc-info-server { display: none; }
+/* Phone cards show ADR on the closed row but not the start time, so their
+   strip swaps the one for the other (23 Nov 2026). */
+.mc-stat-tile.mc-info-started, .match-card.mobile .mc-stat-tile.mc-info-adr { display: none; }
+.match-card.mobile .mc-stat-tile.mc-info-started { display: flex; }
 .m-result-tag { color: var(--result-color); font-size: 10px; font-weight: 750; text-transform: uppercase; letter-spacing: .1em; }
 .match-score { display: flex; align-items: baseline; gap: 5px; font-size: 17px; font-weight: 750; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1.25; }
 .match-score .mc-score-divider { font-size: 14px; color: #71717a; font-weight: 400; }
@@ -498,13 +491,8 @@
 .mc-rr-extra.gain { color: #86efac; }
 .mc-rr-extra.loss { color: #fca5a5; }
 @media (prefers-reduced-motion: reduce) { .match-card, .mc-chevron, .mc-backdrop img { transition: none; } }
-@media (max-width: 760px) {
-  .match-day-stat { flex-direction: column; gap: 3px; }
-}
 @media (max-width: 600px) {
   .mh-list-heading { flex-direction: column; gap: 5px; }
-  .match-day-header { flex-wrap: wrap; gap: 10px; } .match-day-heading { width: 100%; }
-  .match-day-stats { width: 100%; justify-content: space-between; } .match-day-stat { padding: 0 10px; } .match-day-stat:first-child { padding-left: 0; }
   .match-card-details { padding: 15px 6px; }
 }
 

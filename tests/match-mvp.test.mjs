@@ -87,19 +87,21 @@ test('the place hint names the deciding score and a Team MVP',async()=>{
   assert.equal(matchView({...match,mvpBasis:'acs',matchMvpPuuid:'x',teamMvpPuuids:new Set(),scorePlaces:new Map([['p1',4]])},s).placeHint,'4th by ACS in the match');
 });
 
-test('the phone card shows the place after the map and a plain PS (ACS on older matches)',async()=>{
+test('the phone card shows the place after the map, and ADR rather than PS or ACS',async()=>{
   const phoneCard=m=>renderHtml(PAGE,'MobileMatchCard',{m,s,maps:null,agents:null,open:false,onOpenChange(){}});
   const places=new Map([['x',1],['p1',3]]);
   const phone=await phoneCard({...match,matchMvpPuuid:'x',teamMvpPuuids:new Set(),scorePlaces:places});
   assert.match(phone,/>Abyss<\/span><span class="mc-place shrink-0" data-slot="match-place"[^>]*>3rd<\/span>/);
-  assert.match(phone,/<span class="font-semibold text-foreground">230<\/span> PS/);
+  // The place already ranks you by the deciding score, so the phone line drops
+  // the PS/ACS figure (23 Nov 2026); both stay in the opened card.
   const visible=html=>html.replace(/aria-label="[^"]*"/g,'');
-  assert.doesNotMatch(visible(phone),/ ACS|mc-mvp/);
+  assert.match(visible(phone),/ ADR</);
+  assert.doesNotMatch(visible(phone),/ ACS| PS|mc-mvp|>230<|>240</);
   const mvp=await phoneCard({...match,scorePlaces:new Map([['p1',1]])});
   assert.match(mvp,/class="mc-place mvp-match shrink-0" data-slot="match-place"[^>]*>MVP</);
   const olderPhone=await phoneCard({...match,mvpBasis:'acs',matchMvpPuuid:'x',teamMvpPuuids:new Set(),scorePlaces:places});
-  assert.match(olderPhone,/<span class="font-semibold text-foreground">240<\/span> ACS/);
-  assert.doesNotMatch(visible(olderPhone),/ PS/);
+  assert.match(olderPhone,/>Abyss<\/span><span class="mc-place shrink-0" data-slot="match-place"[^>]*>3rd<\/span>/);
+  assert.doesNotMatch(visible(olderPhone),/ ACS| PS/);
 });
 
 test('the MVP mark has no trophy icon',async()=>{

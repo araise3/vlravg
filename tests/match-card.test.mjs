@@ -17,12 +17,12 @@ const match={matchId:'m1',mapName:'Abyss',won:true,myR:13,opR:7,myRR:24,startedA
   players:[player('p1','Player','red','Jett'),player('p2','Mate','red','Omen'),player('p3','Foe','blue','Sova')]};
 const s={PUUID:'p1',PLAYER:'Player',TAG:'EU',mhIncludeReset:false};
 
-test('the closed desktop card is one short row of labelled cells: agent, map over your place, result over score, K/D/A, ACS and PS as one group, server, average lobby and RR, with your rank as a badge on the agent tile',async()=>{
-  const html=await renderHtml(PAGE,'MatchCard',{m:match,s,maps:null,agents,open:false,onOpenChange(){}});
+test('the closed desktop card is one short row of labelled cells: agent, map over your place, result over score, K/D/A, ACS, ADR and PS as one group, server, average lobby and RR, with your rank as a badge on the agent tile',async()=>{
+  const html=await renderHtml(PAGE,'MatchCard',{m:{...match,myStats:{...match.myStats,adr:162}},s,maps:null,agents,open:false,onOpenChange(){}});
   assert.match(html,/class="match-card win"/);
   assert.match(html,/data-agent="Jett"[^>]*style="[^"]*width:44px[^"]*background:#25607a/);
   assert.match(html,/<img src="https:\/\/media\.valorant-api\.com\/jett\.png" alt=""/);
-  assert.match(text(html),/^10 Oct, \d\d:\d\d Abyss Win 13 : 7 K \/ D \/ A 18 \/ 12 \/ 8 ACS 240 PS 230 Server Frankfurt Lobby Diamond 2 RR \+24$/);
+  assert.match(text(html),/^10 Oct, \d\d:\d\d Abyss Win 13 : 7 K \/ D \/ A 18 \/ 12 \/ 8 ACS 240 ADR 162 PS 230 Server Frankfurt Lobby Diamond 2 RR \+24$/);
   // The start sits in small text over the map, and your place right after the map name
   // (23 Nov 2026, on request).
   assert.match(html,/<span class="mc-cell mc-identity"><span class="mc-started" title="10 Oct, \d\d:\d\d" data-slot="match-started"><span class="mc-started-date">10 Oct, <\/span>\d\d:\d\d<\/span><span class="mc-title"><span class="match-map">Abyss<\/span>/);
@@ -30,21 +30,27 @@ test('the closed desktop card is one short row of labelled cells: agent, map ove
   // a flex row whose group gaps shrink, with nothing in the closed row hidden but the server.
   const {readFileSync}=await import('node:fs');
   const css=readFileSync(new URL('../src/index.css',import.meta.url),'utf8');
-  const narrow=css.slice(css.indexOf('@container (max-width: 800px)'),css.indexOf('/* The opened card repeats nothing'));
+  const narrow=css.slice(css.indexOf('@container (max-width: 880px)'),css.indexOf('/* The opened card repeats nothing'));
   assert.match(narrow,/\.mc-row \{ display: flex; align-items: center; \}/);
   assert.match(narrow,/\.mc-perf \{[^}]*margin-left: auto; padding-left: 14px; \}/);
   assert.match(narrow,/@container \(max-width: 660px\)/);
+  // ADR (23 Nov 2026) is a fourth performance column at both widths.
+  assert.match(css,/\.mc-perf \{ display: grid; grid-template-columns: (minmax\([^)]+\) ?){4};/);
+  assert.match(narrow,/\.mc-perf \{ flex: 0 1 auto; grid-template-columns: (minmax\([^)]+\) ?){4};/);
   assert.deepEqual([...narrow.matchAll(/([.\w -]+) \{ display: none; \}/g)].map(m=>m[1].trim()),['.mc-server']);
   // The average lobby is the full rank name in the rank colour, without an icon, between server and RR.
   assert.match(html,/<span class="mc-cell mc-lobby">[^]*?<span class="text-fuchsia-300" data-slot="lobby-rank"[^>]*>Diamond 2<\/span>/);
   assert.doesNotMatch(html.slice(html.indexOf('mc-lobby'),html.indexOf('mc-rr')),/<img/);
   assert.match(html,/mc-server[^]*mc-lobby[^]*mc-rr/);
-  // Agent and map share one lead cell; K/D/A, ACS and PS share the performance group.
+  // Agent and map share one lead cell; K/D/A, ACS, ADR and PS share the performance group.
   assert.match(html,/<span class="mc-lead">[^]*data-agent="Jett"[^]*class="match-map">Abyss</);
-  assert.match(html,/<span class="mc-perf">[^]*K \/ D \/ A[^]*ACS[^]*>PS</);
+  assert.match(html,/<span class="mc-perf">[^]*K \/ D \/ A[^]*ACS[^]*mc-cell mc-adr"[^]*>ADR<[^]*>PS</);
+  // Without damage data the ADR cell says so rather than guess.
+  const noAdr=await renderHtml(PAGE,'MatchCard',{m:match,s,maps:null,agents,open:false,onOpenChange(){}});
+  assert.match(text(noAdr),/ACS 240 ADR — PS 230/);
   // Rank is the icon alone, on the tile; its name and RR are in the hint.
   assert.match(html,/<span class="relative flex shrink-0"><span[^>]*data-agent="Jett"[^]*?<\/span><span class="mc-tile-rank"[^>]*><img src="data:image\//);
-  assert.match(html,/aria-label="Win on Abyss, 13–7\. Played Jett\. 18 \/ 12 \/ 8 KDA, 240 ACS, 230 Performance Score\. Average lobby Diamond 2 \(0 RR\)\. Show match details and roster"/);
+  assert.match(html,/aria-label="Win on Abyss, 13–7\. Played Jett\. 18 \/ 12 \/ 8 KDA, 240 ACS, 162 ADR, 230 Performance Score\. Average lobby Diamond 2 \(0 RR\)\. Show match details and roster"/);
   assert.match(html,/<span class="mc-backdrop" aria-hidden="true"><\/span>/);
   // In the opened card only: the length.
   assert.doesNotMatch(text(html),/35:00|Avg lobby/);
@@ -55,7 +61,7 @@ test('a closed card without a lobby average shows a dash, with the rated count i
   assert.match(text(lowRated),/Server Frankfurt Lobby — RR \+24$/);
   assert.doesNotMatch(lowRated,/data-slot="lobby-rank"|Average lobby/);
   const mobile=await renderHtml(PAGE,'MobileMatchCard',{m:{...match,avgRank:null},s,maps:null,agents,open:false,onOpenChange(){}});
-  assert.match(text(mobile),/^Win 13 : 7 \d\d:\d\d — \+24 Abyss/);
+  assert.match(text(mobile),/^Win 13 : 7 — \+24 Abyss/);
 });
 
 test('the opened card is a strip of tiles: K/D, ACS, ADR, damage delta, HS%, KAST, clutches and length, then the roster',async()=>{
@@ -66,7 +72,15 @@ test('the opened card is a strip of tiles: K/D, ACS, ADR, damage delta, HS%, KAS
   // No agent (the closed row's tile has it), no RR change, and no rank tile (removed on request).
   assert.doesNotMatch(info,/data-agent=|match-agent|Jett|\+24|rank-change|rank-bar|Diamond/);
   // No notes under the values (23 Nov 2026, on request): their counts are in the label hints.
-  assert.match(text(info),/> K\/D 1\.50 ACS 240 ADR 162 DDΔ \+34 HS% 28% KAST 74% Clutches 33% Length 35:07 Server Frankfurt$/);
+  assert.match(text(info),/> K\/D 1\.50 ACS 240 ADR 162 DDΔ \+34 HS% 28% KAST 74% Clutches 33% Length 35:07 Server Frankfurt Start \d\d:\d\d$/);
+  // Phones swap the ADR tile (on their closed row) for the start time (not on it): CSS
+  // shows .mc-info-started and hides .mc-info-adr only inside .match-card.mobile.
+  assert.match(info,/<div class="mc-stat-tile mc-info-adr"><dt class="mc-stat-label">/);
+  assert.match(info,/<div class="mc-stat-tile mc-info-started"><dt class="mc-stat-label">Start<\/dt>/);
+  const {readFileSync}=await import('node:fs');
+  const css=readFileSync(new URL('../src/index.css',import.meta.url),'utf8');
+  assert.match(css,/\.mc-stat-tile\.mc-info-started, \.match-card\.mobile \.mc-stat-tile\.mc-info-adr \{ display: none; \}/);
+  assert.match(css,/\.match-card\.mobile \.mc-stat-tile\.mc-info-started \{ display: flex; \}/);
   assert.doesNotMatch(info,/mc-stat-foot/);
   const {matchInfoTiles}=await import('./helpers/react-render.mjs').then(r=>r.load(PAGE));
   const hints=Object.fromEntries(matchInfoTiles({...match,myStats:stats,myClutches:clutches},{duration:'35:07'}).map(t=>[t.label,t.hint]));
@@ -148,7 +162,11 @@ test('roster parties share a colour on either team, yours first, solos stay plai
 });
 
 test('the phone card is two lines next to a 40px agent tile and names the agent in its label',async()=>{
-  const html=await renderHtml(PAGE,'MobileMatchCard',{m:match,s,maps:null,agents,open:false,onOpenChange(){}});
+  const html=await renderHtml(PAGE,'MobileMatchCard',{m:{...match,myStats:{...match.myStats,adr:162}},s,maps:null,agents,open:false,onOpenChange(){}});
+  // Decluttered 23 Nov 2026: no start time and no PS/ACS figure on the closed card; ADR instead.
+  const visible=text(html.replace(/aria-label="[^"]*"/g,''));
+  assert.match(visible,/^Win 13 : 7 Diamond 2 \+24 Abyss 18 \/ 12 \/ 8 162 ADR$/);
+  assert.doesNotMatch(html,/data-slot="match-started"/);
   assert.match(html,/data-agent="Jett"[^>]*width:40px/);
   assert.match(html,/class="mc-backdrop" aria-hidden="true"/);
   assert.match(html,/aria-label="Win on Abyss, 13–7\. Played Jett\. 18 \/ 12 \/ 8 KDA/);
@@ -164,4 +182,48 @@ test('match length always shows minutes and seconds',async()=>{
   assert.equal(matchLengthText(42000),'0:42');
   assert.equal(matchLengthText(1616700),'26:57');
   for(const ms of [0,null,undefined,-5,NaN])assert.equal(matchLengthText(ms),null);
+});
+
+test('a day\'s K/D, ACS, ADR, KAST and PS are weighted like the act stats and count their coverage',async()=>{
+  const {dayPerformance}=await import('../src/engine/core.mjs');
+  const day=[
+    {myStats:{kills:20,deaths:10,score:6000,rounds_played:20,adr:150,dmg:3000,kastRounds:15,kastTotalRounds:20,performanceScore:240}},
+    {myStats:{kills:10,deaths:20,score:3000,rounds_played:30,adr:100,dmg:3000,kastRounds:null,kastTotalRounds:null,performanceScore:null}},
+    {myStats:null},
+  ];
+  const p=dayPerformance(day);
+  // K/D from summed kills and deaths; ACS and ADR per round played, not a mean of match averages.
+  assert.equal(p.kd,1);
+  assert.equal(p.acs,9000/50);
+  assert.equal(p.adr,6000/50);
+  assert.equal(p.kast,75);
+  assert.equal(p.ps,240);
+  assert.deepEqual([p.matches,p.kdCount,p.acsCount,p.adrCount,p.kastCount,p.psCount],[3,2,2,2,1,1]);
+  const none=dayPerformance([{myStats:null}]);
+  assert.deepEqual([none.kd,none.acs,none.adr,none.kast,none.ps],[null,null,null,null,null]);
+});
+
+test('the day recap is one quiet line: record and net RR, then lobby, K/D, ACS, ADR, KAST and PS as value-and-unit pairs',async()=>{
+  const {dayRecapItems}=await import('./helpers/react-render.mjs').then(r=>r.load(PAGE));
+  const stat={matches:4,wins:2,losses:1,draws:1,sum:18.5*3,count:3,rrTotal:28,rrCount:3,
+    perf:{matches:4,kd:1.234,kdCount:4,acs:241.6,acsCount:4,adr:158.4,adrCount:4,kast:72.5,kastCount:3,ps:229.5,psCount:4}};
+  const {result,performance}=dayRecapItems(stat);
+  assert.deepEqual(result.map(i=>i.key),['record','rr']);
+  assert.deepEqual(performance.map(i=>[i.key,i.value,i.unit]),[['lobby','Diamond 2','lobby'],['kd','1.23','K/D'],['acs',242,'ACS'],['adr',158,'ADR'],['kast','73%','KAST'],['ps',230,'PS']]);
+  assert.equal(result[1].value,'+28');
+  assert.equal(result[1].tone,'text-positive');
+  // Win rate is wins over decided matches; partial coverage is named in the hint.
+  assert.match(result[0].hint,/^67% win rate/);
+  assert.equal(result[1].hint,'Net RR: every recorded RR change this day, Rank Shield losses included; 3 of 4 matches have data');
+  assert.match(performance.find(i=>i.key==='kast').hint,/; 3 of 4 matches have data$/);
+  assert.doesNotMatch(performance.find(i=>i.key==='acs').hint,/matches have data/);
+  // Without data: dashes, not zeros.
+  const empty=dayRecapItems({matches:1,wins:0,losses:0,draws:1,sum:0,count:0,rrTotal:0,rrCount:0,perf:{}});
+  assert.deepEqual([...empty.result,...empty.performance].slice(1).map(i=>i.value),[null,null,null,null,null,null,null]);
+  // The rendered page: no boxed tiles, only plain pairs, under a day heading.
+  const {readFileSync}=await import('node:fs');
+  const source=readFileSync(new URL('../src/app/pages/Matches.jsx',import.meta.url),'utf8');
+  const header=source.slice(source.indexOf('function DayHeader('),source.indexOf('export function MatchesPage('));
+  assert.doesNotMatch(header,/<dl|rounded-lg|bg-card|grid-cols/);
+  assert.match(header,/data-slot="day-recap-result"[^]*data-slot="day-recap-performance"/);
 });

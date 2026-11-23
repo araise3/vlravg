@@ -4342,13 +4342,16 @@ function scoreMarginDistribution(matches){
 
 // Per-day avg lobby rank + total RR change, aggregated across the FULL set
 // (mhData) — not just whatever page is currently visible — so a day's figures
-// stay correct and stable regardless of Load More.
+// stay correct and stable regardless of Load More. Each day also carries its
+// K/D, ACS, ADR, KAST and PS (dayPerformance, 23 Nov 2026) for the day recap.
 function renderMatches(){
   mhData=allMatches.slice().sort((a,b)=>(b.startedAtMs??0)-(a.startedAtMs??0));
   mhDayStats={};
+  const dayMatches={};
   mhData.forEach(m=>{
     const k=m.startedAtMs!=null?new Date(m.startedAtMs).toDateString():'unknown';
     if(!mhDayStats[k])mhDayStats[k]={sum:0,count:0,rrTotal:0,rrCount:0,matches:0,wins:0,losses:0,draws:0};
+    (dayMatches[k]||=[]).push(m);
     mhDayStats[k].matches++;
     if(m.won===true)mhDayStats[k].wins++;
     else if(m.won===false)mhDayStats[k].losses++;
@@ -4366,7 +4369,34 @@ function renderMatches(){
       mhDayStats[k].rrCount++;
     }
   });
+  for(const k in dayMatches)mhDayStats[k].perf=dayPerformance(dayMatches[k]);
   emit();
+}
+// One day's K/D, ACS, ADR, KAST and PS as numbers, weighted the same way as
+// the act's Stats panel (overviewStatValues): K/D from summed kills and
+// deaths, ACS and ADR per round played, KAST over the rounds with round
+// data, PS the mean of reported scores. Each figure is null without data and
+// carries how many of the day's matches it covers.
+function dayPerformance(matches){
+  const has=(m,...keys)=>keys.every(key=>Number.isFinite(m.myStats?.[key]));
+  const sum=(list,key)=>list.reduce((a,m)=>a+m.myStats[key],0);
+  const kdGames=matches.filter(m=>has(m,'kills','deaths'));
+  const kills=sum(kdGames,'kills'),deaths=sum(kdGames,'deaths');
+  const acsGames=matches.filter(m=>has(m,'score','rounds_played')&&m.myStats.rounds_played>0);
+  const acsRounds=sum(acsGames,'rounds_played');
+  const adrGames=matches.filter(m=>has(m,'adr','dmg','rounds_played')&&m.myStats.rounds_played>0);
+  const adrRounds=sum(adrGames,'rounds_played');
+  const kastGames=matches.filter(m=>has(m,'kastRounds','kastTotalRounds')&&m.myStats.kastTotalRounds>0);
+  const kastTotal=sum(kastGames,'kastTotalRounds');
+  const psGames=matches.filter(m=>has(m,'performanceScore'));
+  return {
+    matches:matches.length,
+    kd:kdGames.length?(deaths>0?kills/deaths:kills):null,kdCount:kdGames.length,
+    acs:acsRounds>0?sum(acsGames,'score')/acsRounds:null,acsCount:acsGames.length,
+    adr:adrRounds>0?sum(adrGames,'dmg')/adrRounds:null,adrCount:adrGames.length,
+    kast:kastTotal>0?sum(kastGames,'kastRounds')/kastTotal*100:null,kastCount:kastGames.length,
+    ps:psGames.length?sum(psGames,'performanceScore')/psGames.length:null,psCount:psGames.length,
+  };
 }
 function loadMoreMatches(){
   if(mhVisible>=mhData.length)return;
@@ -4450,5 +4480,5 @@ export {
   rrMovementRows,rrMovementXAxis,rrPayoutEstimates,rrMarginAdjusted,RR_MARGIN_REFERENCE,rrPayoutEvenPoint,rrPayoutSegments,rrScopedMatches,RR_RANGES,
   rrDuoInfo,rrSessionRows,RR_SESSION_BREAK_MS,rrReportedStats,rrAdjustmentStats,rrDodgesInRange,rrDodgeEntry,buildRRScoreRows,rrRankRows,clutchTotals,clutchBreakdown,roundAttackers,lobbyTeamsChartRows,
   lobbyTeamsGapLabel,loadMatchMapMetadata,loadAgentMetadata,parseAgentMetadata,matchAward,pickMvps,placeText,matchCardPlayerRank,dayHeaderLabel,
-  scoreMarginDistribution,
+  scoreMarginDistribution,dayPerformance,
 };

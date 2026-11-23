@@ -136,7 +136,18 @@ end of `src/index.css` (they outrank Tailwind's utility layer):
 - Overview: rebuilt as a shadcn dashboard (see "Overview dashboard" below).
 - Match History: the "RR by session" card at the top (moved from the RR
   Breakdown on 22 Nov 2026, on request, replacing the matches / win rate /
-  MVP summary strip), one-line day headers, and the match card. The card
+  MVP summary strip), a day recap above each day, and the match card. The
+  day recap (23 Nov 2026, on request) is one quiet line under the day and
+  its match count: the record and net RR, then the average lobby, K/D, ACS,
+  ADR, KAST and PS as plain value-and-unit pairs ("160 ADR"). The figures
+  come from `dayPerformance` in core.mjs, weighted like the act's Stats
+  panel (K/D from summed kills and deaths, ACS and ADR per round played,
+  KAST over rounds with round data, PS the mean of reported scores), and
+  each hint says when a figure covers only some of the day's matches. A
+  boxed eight-tile strip was tried first the same day and dropped as too
+  heavy. Narrow lists (under 576px, phones) keep the record and RR beside
+  the day and spread the rest over a second line with the lobby's short
+  name; on 320px phones the last figures wrap rather than overflow. The card
   was redesigned on 22 Nov 2026 (on request, with agent icons) and slimmed
   the same day because it was too tall. Closed, it is one 64px row of
   labelled cells (a small uppercase label over each value) spread over
@@ -147,19 +158,20 @@ end of `src/index.css` (they outrank Tailwind's utility layer):
   place in the match (agent name until 22 Nov 2026; see
   [match-mvp.md](match-mvp.md)) and the placements badge, the result tag with the quiet MVP
   accolade beside it (trophy only below 760px of card width) over the score,
-  K/D/A, ACS and PS, server and the RR change. Spacing follows how related
+  K/D/A, ACS, ADR (23 Nov 2026, on request) and PS, server and the RR change. Spacing follows how related
   the cells are: agent and map share one lead cell (12px), capped at 140px
   (tile plus "Fracture" and "Brimstone") so the result follows 16px after it
-  instead of after an empty stretch; K/D/A, ACS and PS form one performance
+  instead of after an empty stretch; K/D/A, ACS, ADR and PS form one performance
   group (14px apart); and the remaining groups (performance, server, RR) are
   32px apart on wide cards, whose fixed columns line up from card to card.
-  Cards of 800px and less (23 Nov 2026, on request: columns may shift and
+  Cards of 880px and less (800px until ADR joined, when the server column
+  would have been squeezed to a few letters; 23 Nov 2026, on request: columns may shift and
   move closer instead of cutting or hiding values) drop the server column
   (it is in the opened card) and become a flex row: each cell takes its own
   width, agent, map and result stay together, and the spare width goes to
   the gaps before the performance group and the lobby, which shrink to
   14px (10px, with every other gap tightened, from 660px down). K/D/A, ACS
-  and PS keep their 94/48/48px column widths while those gaps have room (the
+  ADR and PS keep their 94/48/48/48px column widths while those gaps have room (the
   assists sat against the ACS value otherwise) and shrink towards their
   values only after; a column is never narrower than its value. The longest
   values together ("Fracture 10th", "20 / 22 / 14", "Ascendant 3",
@@ -273,8 +285,9 @@ pickers, and every toggle.
   window; the averages use RR-eligible matches only (no placements or
   5-stacks), as the footnote says. No range tabs; the RR page keeps the
   rank-axis chart and the longer ranges.
-- Recent matches: full-width `Table` of the latest 8 with map art. Card
-  actions link to the full pages.
+- Card actions link to the full pages. The Recent matches table (latest 8
+  with map art) was removed on 23 Nov 2026, on request; the Matches page
+  lists every match.
 
 `RankIcon` keeps each icon's aspect ratio (`object-contain`; the embedded
 Immortal 3 icon is 40×37) and switches to the 256px PNG from 32px up.

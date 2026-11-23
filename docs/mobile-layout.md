@@ -54,17 +54,23 @@ only the chrome around them and the way some data is drawn differ.
   2026; it was three lines with a 72px map thumbnail): a 40px agent tile with
   your starting rank as an icon badge, the
   result-coloured left edge and the map splash as a faded backdrop, then
-  result, score, the start time (23 Nov 2026; only in the line's spare
-  width, hidden when it does not fit), the average lobby (full rank name in
+  result, score, the average lobby (full rank name in
   its colour since 22 Nov 2026, short before) and RR change, with any
   performance bonus or refund right after it ("+35+5", `rrExtras`, 23 Nov
   2026), on one line and map, your place ("MVP" in gold for first, else
-  "3rd"), K/D/A and PS on the next;
-  older matches without PS show ACS there instead. ACS left this line on 22
-  Nov 2026 to make room for the place; it is still in the roster. Desktop shows the same lobby as a "Lobby"
+  "3rd"), K/D/A and ADR on the next, the lobby and K/D/A right-aligned so
+  the two figure groups line up from card to card. Decluttered 23 Nov 2026
+  (on request, our pick of what to drop): the start time left the first
+  line (the day header gives the date; the opened card has the time) and
+  the PS figure (ACS on older matches) left the second, since your place
+  already ranks you by it and both stay in the opened card; ADR took its
+  slot. ACS had left this line on 22 Nov 2026 for the place. At 375px the
+  longest values fit whole; at 320px only extreme lines ("72/12/8", "300
+  ADR") shorten the map name. Desktop shows the same lobby as a "Lobby"
   cell between Server and RR. The opened card's `MatchInfo` strip is three
-  columns on phones, three full rows: K/D, ACS, ADR, DDΔ, HS%, KAST, clutch
-  win rate, length and server (the phone's closed card has no server),
+  columns on phones, three full rows: K/D, ACS, DDΔ, HS%, KAST, clutch
+  win rate, length, server and start time (the phone's closed card has
+  neither; its ADR tile is hidden, as the closed card has ADR),
   above the roster; the roster uses
   narrower columns, short rank names and agent icons, and drops the #tag
   (kept in the link) so names have room.

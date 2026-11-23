@@ -145,6 +145,7 @@ export function matchView(m,s){
   // Your rank going into the match (requested back on the closed card).
   const myRank=matchCardPlayerRank(m);
   const myAcs=myStats?.acs!=null?Math.round(myStats.acs):'—';
+  const adr=Number.isFinite(myStats?.adr)?myStats.adr:'—';
   const performanceScore=Number.isFinite(myStats?.performanceScore)?Math.round(myStats.performanceScore):'—';
   const rt=won===true?'Win':won===false?'Loss':'Draw';
   const awardLabel=award==='match'?'Match MVP':award==='team'?'Team MVP':'';
@@ -164,12 +165,12 @@ export function matchView(m,s){
   // Length tile's note in the opened card). Narrow cards show the time alone.
   const date=startedAtMs!=null?new Date(startedAtMs).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):null;
   return {
-    rt,result:won===true?'win':won===false?'loss':'draw',award,awardLabel,place,placeHint,rank,myRank,performanceScore,acs:myAcs,
+    rt,result:won===true?'win':won===false?'loss':'draw',award,awardLabel,place,placeHint,rank,myRank,performanceScore,acs:myAcs,adr,
     shielded:!!myDerankProtected&&myRR<0,
     time,date,started:date&&time?`${date}, ${time}`:time,
     duration:matchLengthText(m.durationMs),
     me,
-    label:rt+' on '+mapName+', '+score+'. '+(m.myAgent?'Played '+m.myAgent+'. ':'')+(awardLabel?awardLabel+'. ':'')+kda+' KDA, '+myAcs+' ACS, '+performanceScore+' Performance Score.'+(rank?' Average lobby '+lobbyRankText(avgRank)+'.':'')
+    label:rt+' on '+mapName+', '+score+'. '+(m.myAgent?'Played '+m.myAgent+'. ':'')+(awardLabel?awardLabel+'. ':'')+kda+' KDA, '+myAcs+' ACS, '+(adr==='—'?'':adr+' ADR, ')+performanceScore+' Performance Score.'+(rank?' Average lobby '+lobbyRankText(avgRank)+'.':'')
       +rrExtras(m).map(n=>' '+n.text+'.').join(''),
   };
 }
@@ -270,7 +271,9 @@ export function clutchSummaryText(clutches){
 // The notes under the values went on 23 Nov 2026 (on request); their counts
 // moved into the label hints, and the start time moved to the closed row.
 // The server joins only where the closed row hides it (`.mc-info-server`).
-// The RR notes follow as quiet text lines.
+// Phones (23 Nov 2026) swap the ADR tile, which their closed row now shows,
+// for the start time, which it no longer does (`.mc-info-adr`/`-started`);
+// the time alone, as the day header above gives the date.
 export function matchInfoTiles(m,v){
   const st=m.myStats||{};
   const clutch=clutchSummaryText(m.myClutches);
@@ -279,7 +282,7 @@ export function matchInfoTiles(m,v){
   return [
     {label:'K/D',value:Number.isFinite(st.kd)?st.kd.toFixed(2):null,hint:hint('Kills divided by deaths',st.kills!=null&&st.deaths!=null&&`${st.kills} kills, ${st.deaths} deaths`)},
     {label:'ACS',value:Number.isFinite(st.acs)?Math.round(st.acs):null,hint:'Average combat score per round'},
-    {label:'ADR',value:st.adr,hint:hint('Average damage per round',Number.isFinite(st.dmg)&&`${count(st.dmg)} damage`)},
+    {label:'ADR',value:st.adr,className:'mc-info-adr',hint:hint('Average damage per round',Number.isFinite(st.dmg)&&`${count(st.dmg)} damage`)},
     {label:'DDΔ',value:Number.isFinite(st.ddDelta)?rrSigned(st.ddDelta,0):null,tone:Number.isFinite(st.ddDelta)&&st.ddDelta!==0?(st.ddDelta>0?'text-positive':'text-negative'):null,
       hint:hint('Damage delta: damage dealt minus damage taken, per round',Number.isFinite(st.dmgTaken)&&`${count(st.dmgTaken)} taken`)},
     {label:'HS%',value:st.hsPct!=null?st.hsPct+'%':null,hint:'Headshots as a share of your hits'},
@@ -288,6 +291,7 @@ export function matchInfoTiles(m,v){
       hint:!clutch?'No round data for this match':clutch.total?`${clutch.won} of ${clutch.total} won: ${clutch.detail}`:'No clutch situations'},
     {label:'Length',value:v.duration},
     {label:'Server',value:m.serverName,className:'mc-info-server'},
+    {label:'Start',value:v.time,className:'mc-info-started'},
   ];
 }
 
@@ -308,10 +312,12 @@ function MatchInfo({m,v}){
 }
 
 // Phones: two lines next to the agent tile. Result, score, the average lobby
-// and RR change; then map, K/D/A and one score with your place after it: PS,
-// or ACS on older matches without PS. ACS left the phone line on 22 Nov 2026
-// (on request) to make room for the place; it is still in the roster.
-// Everything else is in the opened card.
+// and RR change; then map, your place, K/D/A and ADR. Decluttered 23 Nov 2026
+// (on request, our pick): the start time left the first line (the day header
+// gives the date; the opened card has the time) and the PS/ACS figure left the
+// second (your place already ranks you by it; both stay in the opened card's
+// tiles and roster), which made room for ADR. Everything else is in the opened
+// card.
 export function MobileMatchCard({m,s,maps,agents,open,onOpenChange}){
   const v=matchView(m,s);
   const art=maps?.get(String(m.mapId||'').toLowerCase())||maps?.get(String(m.mapName).toLowerCase());
@@ -332,23 +338,14 @@ export function MobileMatchCard({m,s,maps,agents,open,onOpenChange}){
                 {m.myR!=null&&m.opR!=null?<>{m.myR}<span className="mx-0.5 text-sm font-normal text-zinc-500">:</span><span className="text-zinc-400">{m.opR}</span></>:'—'}
               </span>
               {m.postReset&&<Hint asChild content="Placement-week game after a total rank reset"><Badge variant="outline" className="px-1 py-0 text-[9px] uppercase">Plac.</Badge></Hint>}
-              {/* Phones show the start time only: the full date does not fit, and
-                  the day header above gives it. It takes only the line's spare
-                  width and hides when that is narrower than the time, so it never
-                  pushes the lobby or RR change out. */}
-              <span className="@container min-w-0 flex-1">
-                {v.time&&<span className="block text-xs whitespace-nowrap tabular-nums text-zinc-500 @max-[34px]:hidden" title={v.started||undefined} data-slot="match-started">{v.time}</span>}
-              </span>
-              <LobbyRank m={m} rank={v.rank} className="shrink-0 text-xs font-semibold"/>
+              <LobbyRank m={m} rank={v.rank} className="ml-auto shrink-0 text-xs font-semibold"/>
               <RRChange m={m} v={v} className="shrink-0 text-[15px]"/>
             </span>
-            <span className="flex min-w-0 items-center gap-x-3 text-xs tabular-nums text-muted-foreground">
+            <span className="flex min-w-0 items-center gap-x-2 text-xs tabular-nums text-muted-foreground">
               <span className="min-w-0 truncate font-semibold text-foreground">{m.mapName}</span>
               <PlaceTag v={v} className="shrink-0"/>
-              <span className="shrink-0 font-semibold text-foreground"><KdaValue stats={m.myStats}/></span>
-              {m.mvpBasis==='acs'
-                ?<span className="shrink-0"><span className="font-semibold text-foreground">{v.acs}</span> ACS</span>
-                :<span className="shrink-0"><span className="font-semibold text-foreground">{v.performanceScore}</span> PS</span>}
+              <span className="ml-auto shrink-0 font-semibold text-foreground"><KdaValue stats={m.myStats}/></span>
+              <span className="shrink-0"><span className="font-semibold text-foreground">{v.adr}</span> ADR</span>
             </span>
           </span>
           <ChevronDown className={cn('size-4 shrink-0 text-muted-foreground transition-transform duration-200',open&&'rotate-180')} aria-hidden="true"/>
@@ -380,7 +377,8 @@ function MapBackdrop({art}){
 
 // Redesigned 22 Nov 2026 (on request, with agent icons) and slimmed the same
 // day to one short row, grouped by what belongs together: agent and map,
-// result, your performance (K/D/A, ACS, PS), server, RR change. The map splash is a faded backdrop on
+// result, your performance (K/D/A, ACS, ADR, PS; ADR added 23 Nov 2026 on
+// request), server, RR change. The map splash is a faded backdrop on
 // the right and the result colours the left edge.
 function DesktopMatchCard({m,s,maps,agents,open,onOpenChange}){
   const v=matchView(m,s);
@@ -413,6 +411,7 @@ function DesktopMatchCard({m,s,maps,agents,open,onOpenChange}){
           <span className="mc-perf">
             <Stat label="K / D / A" className="mc-cell mc-kda"><KdaValue stats={m.myStats}/></Stat>
             <Stat label="ACS" className="mc-cell mc-acs">{v.acs}</Stat>
+            <Stat label="ADR" className="mc-cell mc-adr" title="Average damage per round, to enemies only">{v.adr}</Stat>
             <Stat label="PS" className="mc-cell mc-ps" title={m.myStats?.performanceScore==null?'Performance Score is not provided in this match’s API data':'Performance Score'}>{v.performanceScore}</Stat>
           </span>
           <span className="mc-cell mc-server">
@@ -438,32 +437,81 @@ function DesktopMatchCard({m,s,maps,agents,open,onOpenChange}){
   );
 }
 
-function DayHeader({ms,stat,first}){
-  let avgValue='—',avgClass='',rrValue='—',rrClass='';
-  if(stat&&stat.count>0){
-    const {tier}=tierRR(stat.sum/stat.count);
-    avgValue=lobbyRankText(stat.sum/stat.count);avgClass=RANK_TEXT[rClass(tier)];
-  }
-  if(stat&&stat.rrCount>0){rrValue=`${stat.rrTotal>=0?'+':''}${stat.rrTotal} RR`;rrClass=stat.rrTotal>=0?'text-positive':'text-negative';}
-  const matchCount=stat?.matches??0;
-  const record=[stat?.wins?[`${stat.wins}W`,'text-positive']:null,stat?.losses?[`${stat.losses}L`,'text-negative']:null,stat?.draws?[`${stat.draws}D`,'text-draw']:null].filter(Boolean);
+// The day recap above each day's matches (redesigned 23 Nov 2026, on
+// request, then made minimal the same day: a boxed tile strip looked too
+// heavy). One quiet line under the day: the record and net RR, then the
+// average lobby, K/D, ACS, ADR, KAST and PS as plain value-and-unit pairs
+// like the phone card's "160 ADR", with no boxes or dividers. The
+// performance figures are weighted like the act's (dayPerformance); each
+// hint says when a figure covers only some of the day's matches. Narrow
+// lists (phones) put the record and RR beside the day and the rest on a
+// second line, with the lobby as its short name.
+export function dayRecapItems(stat){
+  const matches=stat?.matches??0;
+  const perf=stat?.perf||{};
+  const covered=(count,text)=>count>0&&count<matches?`${text}; ${count} of ${matches} matches have data`:text;
+  const decided=(stat?.wins??0)+(stat?.losses??0);
+  const lobby=stat?.count>0?stat.sum/stat.count:null;
+  const lobbyTier=lobby==null?null:tierRR(lobby).tier;
+  const net=stat?.rrCount>0?stat.rrTotal:null;
+  const whole=v=>v==null?null:Math.round(v);
+  return {
+    result:[
+      {key:'record',value:matches?true:null,
+        hint:decided?`${Math.round(stat.wins/decided*100)}% win rate: wins divided by wins plus losses; draws excluded`:'No decided matches this day'},
+      {key:'rr',unit:'RR',value:net==null?null:rrSigned(net,0),tone:net==null||net===0?null:net>0?'text-positive':'text-negative',
+        hint:net==null?'No RR data is available for this day':covered(stat.rrCount,'Net RR: every recorded RR change this day, Rank Shield losses included')},
+    ],
+    performance:[
+      {key:'lobby',unit:'lobby',value:lobby==null?null:avgLabel(lobbyTier),short:lobby==null?null:avgLabelShort(lobbyTier),tone:lobby==null?null:RANK_TEXT[rClass(lobbyTier)],
+        hint:lobby==null?'No lobby this day had enough rated players for an average':covered(stat.count,'Average lobby: '+lobbyRankText(lobby))},
+      {key:'kd',unit:'K/D',value:perf.kd==null?null:perf.kd.toFixed(2),hint:covered(perf.kdCount,'Kills divided by deaths, summed over the day')},
+      {key:'acs',unit:'ACS',value:whole(perf.acs),hint:covered(perf.acsCount,'Combat score per round, over every round played this day')},
+      {key:'adr',unit:'ADR',value:whole(perf.adr),hint:covered(perf.adrCount,'Damage to enemies per round, over every round played this day')},
+      {key:'kast',unit:'KAST',value:perf.kast==null?null:Math.round(perf.kast)+'%',hint:covered(perf.kastCount,'Rounds with a kill, assist, survival or trade')},
+      {key:'ps',unit:'PS',value:whole(perf.ps),hint:covered(perf.psCount,'Average Performance Score')},
+    ],
+  };
+}
+
+function DayRecapItem({item,stat}){
+  let value;
+  if(item.value==null)value=<span className="text-muted-foreground">—</span>;
+  else if(item.key==='record'){
+    const parts=[['W',stat.wins,'text-positive'],['L',stat.losses,'text-negative'],['D',stat.draws,'text-draw']].filter(([,n],i)=>n||i<2);
+    value=<span className="flex gap-1">{parts.map(([unit,n,tone])=><span key={unit} className={n?tone:'text-muted-foreground'}>{n}{unit}</span>)}</span>;
+  }else if(item.short)value=<span className={item.tone}><span className="@max-xl:hidden">{item.value}</span><span className="@xl:hidden">{item.short}</span></span>;
+  else value=<span className={item.tone}>{item.value}</span>;
   return (
-    <div className={cn('match-day-header',first&&'first')}>
-      <div className="match-day-heading">
-        <span className="match-day-title">{dayHeaderLabel(ms)}</span>
-        <span className="match-day-count">{matchCount} {matchCount===1?'match':'matches'}</span>
+    <Hint asChild content={item.hint}>
+      <span className="flex items-baseline gap-1 whitespace-nowrap" data-stat={item.key}>
+        <span className="font-semibold text-foreground">{value}</span>
+        {item.unit&&<span className={cn('text-muted-foreground',item.key==='lobby'&&'@max-xl:hidden')}>{item.unit}</span>}
+      </span>
+    </Hint>
+  );
+}
+
+function DayHeader({ms,stat,first}){
+  const matchCount=stat?.matches??0;
+  const {result,performance}=dayRecapItems(stat);
+  return (
+    <section className={cn('@container border-b pb-2.5',first?'':'mt-5')} aria-label={`${dayHeaderLabel(ms)} recap`} data-slot="day-recap">
+      <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1.5 text-xs tabular-nums">
+        <div className="mr-auto flex items-baseline gap-2">
+          <h3 className="text-sm font-semibold whitespace-nowrap">{dayHeaderLabel(ms)}</h3>
+          <span className="whitespace-nowrap text-muted-foreground">{matchCount} {matchCount===1?'match':'matches'}</span>
+        </div>
+        <div className="flex items-baseline gap-x-3" data-slot="day-recap-result">
+          {result.map(item=><DayRecapItem key={item.key} item={item} stat={stat}/>)}
+        </div>
+        {/* Narrow lists: the full width, spread out; the narrowest phones (320px)
+            wrap the last figures to a second line rather than overflow. */}
+        <div className="flex items-baseline gap-x-3 @max-xl:w-full @max-xl:flex-wrap @max-xl:justify-between @max-xl:gap-x-2.5 @max-xl:gap-y-1" data-slot="day-recap-performance">
+          {performance.map(item=><DayRecapItem key={item.key} item={item} stat={stat}/>)}
+        </div>
       </div>
-      <div className="match-day-stats" aria-label="Daily recap">
-        <span className="match-day-stat"><span className="match-day-stat-label">Record</span>
-          <span className="match-day-stat-value">{record.length?record.map(([text,tone],i)=><span key={text}>{i>0&&<span className="text-muted-foreground" aria-hidden="true"> – </span>}<span className={tone}>{text}</span></span>):'—'}</span></span>
-        <span className="match-day-stat"><span className="match-day-stat-label">Avg lobby</span><span className={cn('match-day-stat-value',avgClass)}>{avgValue}</span></span>
-        <span className="match-day-stat">
-          <span className="match-day-stat-label"><Hint content={stat?.rrCount?`Net RR from ${stat.rrCount} of ${matchCount} matches with RR data. Rank Shield losses include their recorded loss.`:'No RR data is available for this day.'}>Net RR</Hint></span>
-          <span className={cn('match-day-stat-value',rrClass)}>{rrValue}</span>
-          {stat?.rrCount<stat?.matches&&stat?.rrCount>0&&<span className="match-day-coverage">{stat.rrCount}/{stat.matches} covered</span>}
-        </span>
-      </div>
-    </div>
+    </section>
   );
 }
 
