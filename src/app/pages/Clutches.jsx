@@ -28,11 +28,13 @@ const outcomeText=t=>`${t.win} won, ${t.loss} lost, ${t.save} saved`;
 function OutcomeRow({label,chip,note,t,scale}){
   const width=scale?Math.max(4,t.total/scale*100):0;
   return (
-    <li className="grid grid-cols-[minmax(0,9.5rem)_minmax(0,1fr)_3.25rem] items-center gap-3 max-sm:grid-cols-[minmax(0,1fr)_3.25rem] max-sm:gap-y-1.5"
+    <li className="grid grid-cols-[minmax(0,11.5rem)_minmax(0,1fr)_3.25rem] items-center gap-3 max-sm:grid-cols-[minmax(0,1fr)_3.25rem] max-sm:gap-y-1.5"
       title={t.total?`${label}: ${outcomeText(t)} (${plural(t.total,'situation')})`:`${label}: no situations`}>
+      {/* 11.5rem fits "Defense, before the plant"; a longer label truncates
+          inside its column rather than running into the bar. */}
       <span className="flex min-w-0 items-center gap-2 text-sm">
         {chip}
-        {note?<Hint content={note}><span className="truncate">{label}</span></Hint>:<span className="truncate">{label}</span>}
+        {note?<Hint content={note} className="min-w-0 truncate">{label}</Hint>:<span className="truncate">{label}</span>}
       </span>
       <span className="flex min-w-0 items-center gap-2 max-sm:order-last max-sm:col-span-2">
         <span className="flex h-2.5 min-w-0 gap-0.5" style={{width:`${width}%`}} role="img"

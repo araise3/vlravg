@@ -125,23 +125,6 @@ test('clutch stats show every situation, attempt share and the outcome split, an
   assert.match(raw,/aria-labelledby="overview-clutch-title"/);
 });
 
-test('recent matches show result, score, K/D/A and RR per row',async()=>{
-  const matches=[{matchId:'a',mapName:'Haven',startedAtMs:Date.UTC(2026,10,15,12),won:true,myR:13,opR:8,myRR:22,myStats:{kills:24,deaths:15,assists:11}},
-    {matchId:'b',mapName:'Bind',startedAtMs:Date.UTC(2026,10,14,12),won:null,myR:12,opR:12,myRR:null,myStats:null}];
-  const html=text(await renderHtml(PAGE,'RecentMatchesCard',{matches,maps:null}));
-  assert.match(html,/^ ?Recent matches All matches Map /);
-  assert.match(html,/Haven 15 Nov Win 13–8 24 \/ 15 \/ 11 \+22/);
-  assert.match(html,/Bind 14 Nov Draw 12–12 — —/);
-});
-
-test('recent matches use the shared table look',async()=>{
-  const html=await renderHtml(PAGE,'RecentMatchesCard',{matches:[{matchId:'a',mapName:'Haven',won:true,myR:13,opR:8,myRR:22,myStats:{kills:1,deaths:1,assists:1}}],maps:null});
-  assert.match(html,/<div class="overflow-hidden border bg-card rounded-lg max-sm:rounded-none max-sm:border-x-0">/);
-  assert.match(html,/<tr[^>]*class="[^"]*bg-muted\/40 hover:bg-muted\/40/);
-  assert.match(html,/<th[^>]*class="[^"]*h-10 px-3 text-xs font-medium text-muted-foreground/);
-  assert.match(html,/<td[^>]*class="[^"]*px-3 py-2\.5/);
-});
-
 test('overview is built from shadcn cards with no scrolling lists',()=>{
   const source=readFileSync(new URL('../src/app/pages/Overview.jsx',import.meta.url),'utf8');
   assert.match(source,/components\/ui\/card/);
@@ -181,8 +164,10 @@ test('top teammates sit beside the lobby rank card as rows with matches, win rat
 test('the overview no longer carries the full RR trend chart',()=>{
   const source=readFileSync(new URL('../src/app/pages/Overview.jsx',import.meta.url),'utf8');
   assert.doesNotMatch(source,/RRTrendChart|setRRTrendRange|<Tabs/);
-  const order=['<KpiCards s={s}/>','<ActStatsCard s={s}/>','<ClutchCard matches={s.allMatches}/>','<RecentRRCard matches={recent}/>','<RecentMatchesCard'].map(tag=>source.indexOf(tag));
+  const order=['<KpiCards s={s}/>','<ActStatsCard s={s}/>','<ClutchCard matches={s.allMatches}/>','<RecentRRCard matches={recent}/>'].map(tag=>source.indexOf(tag));
   assert.ok(order.every((at,i)=>at>0&&(!i||at>order[i-1])),String(order));
+  // Recent matches left the overview (23 Nov 2026); the Matches page lists them.
+  assert.doesNotMatch(source,/RecentMatchesCard|Recent matches/);
 });
 
 test('rank icons keep their aspect ratio and use the sharp PNG from 32px',async()=>{

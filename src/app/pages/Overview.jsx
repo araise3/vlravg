@@ -7,7 +7,6 @@ import {
 import {useElementWidth,useEngine,useIsMobile} from '@/app/hooks.js';
 import {TABLE_CELL,TABLE_FRAME,TABLE_HEAD,TABLE_HEAD_ROW} from '@/app/data-table.jsx';
 import {ChartTooltip,Hint,InlineEmpty,LobbyRankText,PageHeading,PageLink,PartyIcon,PlacementToggle,RankIcon,toneClass} from '@/app/shared.jsx';
-import {useMapArt} from '@/app/pages/Matches.jsx';
 import {cn} from '@/lib/utils';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
@@ -18,8 +17,8 @@ import {Skeleton} from '@/components/ui/skeleton';
 import {Table,TableBody,TableCell,TableHead,TableHeader,TableRow} from '@/components/ui/table';
 
 // Dashboard layout from shadcn's blocks: lobby rank beside top teammates, the
-// act's 4×2 stat grid, clutch stats, the last-20 RR card, then recent matches.
-// Cards link to the page with the full detail.
+// act's 4×2 stat grid, clutch stats, then the last-20 RR card. Cards link to
+// the page with the full detail.
 
 const toneOf=tone=>tone==='rank-positive'?'text-positive':tone==='rank-negative'?'text-negative':'';
 
@@ -317,64 +316,6 @@ export function RecentRRCard({matches}){
     </Card>
   );
 }
-const RESULT={win:['Win','var(--chart-win)'],loss:['Loss','var(--chart-loss)'],draw:['Draw','var(--chart-draw)']};
-
-export function RecentMatchesCard({matches,maps,className}){
-  return (
-    <Card className={cn('gap-4',className)} aria-labelledby="overview-matches-title">
-      <CardHeader>
-        <CardTitle><h2 id="overview-matches-title">Recent matches</h2></CardTitle>
-        <CardAction><ViewLink page="matches">All matches</ViewLink></CardAction>
-      </CardHeader>
-      {/* Phones: full-bleed with tighter cells so all four columns fit. */}
-      <CardContent className="max-sm:px-0">
-        <div className={cn(TABLE_FRAME,'rounded-lg max-sm:rounded-none max-sm:border-x-0')}>
-        <Table>
-          <TableHeader>
-            <TableRow className={TABLE_HEAD_ROW}>
-              <TableHead className={cn(TABLE_HEAD,'max-sm:pl-4')}>Map</TableHead>
-              <TableHead className={cn(TABLE_HEAD,'max-sm:px-2')}>Result</TableHead>
-              <TableHead className={cn(TABLE_HEAD,'text-right max-sm:px-2')}>Score</TableHead>
-              <TableHead className={cn(TABLE_HEAD,'text-right max-sm:hidden')}>K / D / A</TableHead>
-              <TableHead className={cn(TABLE_HEAD,'text-right max-sm:pr-4')}>RR</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {matches.map(m=>{
-              const [label,color]=RESULT[m.won===true?'win':m.won===false?'loss':'draw'];
-              const art=maps?.get(String(m.mapId||'').toLowerCase())||maps?.get(String(m.mapName).toLowerCase());
-              const date=m.startedAtMs!=null?new Date(m.startedAtMs).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'';
-              return (
-                <TableRow key={m.matchId}>
-                  <TableCell className={cn(TABLE_CELL,'max-sm:pl-4')}>
-                    <div className="flex items-center gap-3 max-sm:gap-2">
-                      <div className="h-8 w-14 shrink-0 max-sm:w-10 overflow-hidden rounded-md bg-muted">
-                        {art&&<img src={art} alt="" loading="lazy" decoding="async" className="size-full object-cover" onError={event=>event.currentTarget.remove()}/>}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="truncate font-medium">{m.mapName}</div>
-                        <div className="text-xs text-muted-foreground">{date}</div>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className={cn(TABLE_CELL,'max-sm:px-2')}>
-                    <Badge variant="outline"><span className="size-1.5 rounded-full" style={{background:color}} aria-hidden="true"/>{label}</Badge>
-                  </TableCell>
-                  <TableCell className={cn(TABLE_CELL,'text-right tabular-nums max-sm:px-2')}>{m.myR!=null&&m.opR!=null?`${m.myR}–${m.opR}`:'—'}</TableCell>
-                  <TableCell className={cn(TABLE_CELL,'text-right text-muted-foreground tabular-nums max-sm:hidden')}>{m.myStats?`${m.myStats.kills} / ${m.myStats.deaths} / ${m.myStats.assists}`:'—'}</TableCell>
-                  <TableCell className={cn(TABLE_CELL,'text-right font-medium tabular-nums max-sm:pr-4',m.myRR==null?'text-muted-foreground':m.myRR>0?'text-positive':m.myRR<0?'text-negative':null)}>
-                    {m.myRR==null?'—':rrSigned(m.myRR,0)}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 // How many whole table rows fit in a box: its height minus the header and the
 // frame's borders, over one body row's height; at least `min`. Re-measured
@@ -550,12 +491,10 @@ function OverviewSkeleton({mobile}){
 
 export function OverviewPage(){
   const s=useEngine();
-  const maps=useMapArt();
   const mobile=useIsMobile();
   if(s.hasAnalysis&&s.analysisState==='loading')return <OverviewSkeleton mobile={mobile}/>;
   if(!s.hasAnalysis||!s.overviewStats||!s.allMatches.length||s.analysisState!=='ready')return null;
   const recent=overviewRecentMatches(s.allMatches);
-  const latest=[...s.allMatches].sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0)).slice(0,8);
   return (
     <div className="flex flex-col gap-4">
       <PageHeading id="overview-title" title="Overview"/>
@@ -564,7 +503,6 @@ export function OverviewPage(){
       <ActStatsCard s={s}/>
       <ClutchCard matches={s.allMatches}/>
       <RecentRRCard matches={recent}/>
-      <RecentMatchesCard matches={latest} maps={maps}/>
     </div>
   );
 }
