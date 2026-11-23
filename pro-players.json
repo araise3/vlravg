@@ -1,12 +1,29 @@
 {
   "source": "vct-2026-data-analysis/src/lib/trackerLinks.json",
   "rosterSource": "rostermania/data/rostermania.json",
-  "rosterUpdatedAt": "2026-11-22T00:08:04.000Z",
-  "playerCount": 264,
-  "accountCount": 268,
-  "resolvedPuuidCount": 268,
-  "partnerPlayerCount": 95,
+  "rosterUpdatedAt": "2026-11-23T17:02:12.000Z",
+  "playerCount": 411,
+  "accountCount": 416,
+  "resolvedPuuidCount": 416,
+  "partnerPlayerCount": 112,
+  "expectedPlayerCount": 389,
+  "expectedPartnerPlayerCount": 153,
+  "expectedListedCount": 262,
+  "expectedMissingCount": 127,
   "players": [
+    {
+      "handle": "77even",
+      "team": null,
+      "teamCode": null,
+      "region": "China",
+      "baseRegion": "China",
+      "countryCode": "LT",
+      "accounts": [
+        {
+          "puuid": "19e4b7ce-65a9-5bd7-a977-a1300ec0ff50"
+        }
+      ]
+    },
     {
       "handle": "aaaay",
       "team": null,
@@ -17,6 +34,19 @@
       "accounts": [
         {
           "puuid": "ddbe127c-4c9f-5349-a1eb-449d59ccc286"
+        }
+      ]
+    },
+    {
+      "handle": "Aace",
+      "team": "Crazy Raccoon",
+      "teamCode": "CR",
+      "region": "Pacific",
+      "baseRegion": "Pacific",
+      "countryCode": "JP",
+      "accounts": [
+        {
+          "puuid": "17ce4631-9f6f-5d5f-a204-fb1f4d7d4be2"
         }
       ]
     },
@@ -34,6 +64,19 @@
       ]
     },
     {
+      "handle": "Akame",
+      "team": "Crazy Raccoon",
+      "teamCode": "CR",
+      "region": "Pacific",
+      "baseRegion": "Pacific",
+      "countryCode": "KR",
+      "accounts": [
+        {
+          "puuid": "66fac698-fd90-5b89-a6da-495fd0dd02cd"
+        }
+      ]
+    },
+    {
       "handle": "al0rante",
       "team": null,
       "teamCode": null,
@@ -43,6 +86,19 @@
       "accounts": [
         {
           "puuid": "cc8894e2-3f2e-5d7c-b087-c7ec8f7631ff"
+        }
+      ]
+    },
+    {
+      "handle": "alca",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "CL",
+      "accounts": [
+        {
+          "puuid": "5bc3ac9f-3f7b-572d-bc1c-59040f248b16"
         }
       ]
     },
@@ -73,6 +129,19 @@
       ]
     },
     {
+      "handle": "alexis",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "e1ea17c3-db4d-5b69-9be4-a5618a520675"
+        }
+      ]
+    },
+    {
       "handle": "Alfajer",
       "team": "Gentle Mates",
       "teamCode": "M8",
@@ -95,6 +164,19 @@
       "accounts": [
         {
           "puuid": "1d44e4fc-751f-57d0-89f6-2d3f026f67df"
+        }
+      ]
+    },
+    {
+      "handle": "Alym",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "KG",
+      "accounts": [
+        {
+          "puuid": "b64be6a4-2c10-56c2-943f-8eddb57f8702"
         }
       ]
     },
@@ -177,6 +259,19 @@
       ]
     },
     {
+      "handle": "aspas",
+      "team": "FUT Esports",
+      "teamCode": "FUT",
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "56e7a83e-b9c0-59c9-8485-0254134dbacf"
+        }
+      ]
+    },
+    {
       "handle": "Asuna",
       "team": "100 Thieves",
       "teamCode": "100T",
@@ -212,6 +307,19 @@
       "accounts": [
         {
           "puuid": "624ead1c-2b85-518c-a462-f3a81b0a65d0"
+        }
+      ]
+    },
+    {
+      "handle": "avey",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "LV",
+      "accounts": [
+        {
+          "puuid": "624f6ac3-8cc6-57d7-8403-5827e4d76e37"
         }
       ]
     },
@@ -255,6 +363,19 @@
       ]
     },
     {
+      "handle": "B1SK",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "RU",
+      "accounts": [
+        {
+          "puuid": "539368b0-6b62-5151-b37e-b04bf8b8d581"
+        }
+      ]
+    },
+    {
       "handle": "babybay",
       "team": "Weibo Gaming",
       "teamCode": "WBG",
@@ -264,6 +385,19 @@
       "accounts": [
         {
           "puuid": "b2e1dd05-9c92-5027-9f61-fc1a5c324eb3"
+        }
+      ]
+    },
+    {
+      "handle": "BadreX",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
+      "accounts": [
+        {
+          "puuid": "088d6d26-e52e-5649-b462-42ca736d5cf3"
         }
       ]
     },
@@ -385,6 +519,19 @@
       ]
     },
     {
+      "handle": "Bishepss",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "RU",
+      "accounts": [
+        {
+          "puuid": "785ed13a-d96c-51b8-bbff-4756e5813e27"
+        }
+      ]
+    },
+    {
       "handle": "blowz",
       "team": "Leviatán",
       "teamCode": "LEV",
@@ -394,6 +541,19 @@
       "accounts": [
         {
           "puuid": "712421ec-81ec-5654-a2eb-c6a130d1e8bd"
+        }
+      ]
+    },
+    {
+      "handle": "Boni",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "2a2b2fb8-513e-54aa-860b-0456ec4b4fee"
         }
       ]
     },
@@ -450,6 +610,19 @@
       ]
     },
     {
+      "handle": "Bruxo",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "df67e244-2b70-59b1-83a9-dea894639835"
+        }
+      ]
+    },
+    {
       "handle": "bud",
       "team": "Bilibili Gaming",
       "teamCode": "BLG",
@@ -459,6 +632,19 @@
       "accounts": [
         {
           "puuid": "03b46aaa-8836-5824-848a-d47f05c05e53"
+        }
+      ]
+    },
+    {
+      "handle": "BULD",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "PL",
+      "accounts": [
+        {
+          "puuid": "b3e87648-35fc-528b-9589-ac9eff406881"
         }
       ]
     },
@@ -489,6 +675,19 @@
       ]
     },
     {
+      "handle": "Calamity",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "23ec335b-5774-585f-8400-10982a838f23"
+        }
+      ]
+    },
+    {
       "handle": "canady",
       "team": null,
       "teamCode": null,
@@ -502,6 +701,45 @@
       ]
     },
     {
+      "handle": "canezerra",
+      "team": "Sentinels",
+      "teamCode": "SEN",
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "ecf3883b-f9ba-51de-b842-f5fd49c2fcb2"
+        }
+      ]
+    },
+    {
+      "handle": "Chadi",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "HU",
+      "accounts": [
+        {
+          "puuid": "35ea484f-c6fd-5c85-bac5-f9b62166d120"
+        }
+      ]
+    },
+    {
+      "handle": "chadu",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "12da711c-a45e-5e95-997f-69bee9940b26"
+        }
+      ]
+    },
+    {
       "handle": "CHICHOO",
       "team": "Trace Esports",
       "teamCode": "TE",
@@ -511,6 +749,19 @@
       "accounts": [
         {
           "puuid": "5a2b6b69-b252-50c8-b9ca-95613a72d55e"
+        }
+      ]
+    },
+    {
+      "handle": "chiwa",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "RU",
+      "accounts": [
+        {
+          "puuid": "1a0344cd-9e93-5279-b010-3476077679c5"
         }
       ]
     },
@@ -567,6 +818,32 @@
       ]
     },
     {
+      "handle": "Cloudy",
+      "team": null,
+      "teamCode": null,
+      "region": "Pacific",
+      "baseRegion": "Pacific",
+      "countryCode": "KR",
+      "accounts": [
+        {
+          "puuid": "6e75a6d1-9c27-5674-9f66-e6e3d6802092"
+        }
+      ]
+    },
+    {
+      "handle": "cNed",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
+      "accounts": [
+        {
+          "puuid": "68ade1bc-9dd8-5207-9c7e-c9ebe01b9f76"
+        }
+      ]
+    },
+    {
       "handle": "coconut",
       "team": null,
       "teamCode": null,
@@ -619,6 +896,19 @@
       ]
     },
     {
+      "handle": "Crazy NY",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "CL",
+      "accounts": [
+        {
+          "puuid": "f75d2eb8-ba55-53fe-9a68-1d4afc0597a1"
+        }
+      ]
+    },
+    {
       "handle": "crewen",
       "team": null,
       "teamCode": null,
@@ -645,6 +935,19 @@
       ]
     },
     {
+      "handle": "CRUNCH",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "7cafb143-141c-527a-9cca-a4f48591ef6a"
+        }
+      ]
+    },
+    {
       "handle": "Cryocells",
       "team": "100 Thieves",
       "teamCode": "100T",
@@ -654,6 +957,19 @@
       "accounts": [
         {
           "puuid": "01efd229-d4f2-523e-8ffe-9fd7af153223"
+        }
+      ]
+    },
+    {
+      "handle": "cuz",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "1cc5e4b7-68f8-59b9-ab3d-ae0be0d08b1d"
         }
       ]
     },
@@ -710,6 +1026,19 @@
       ]
     },
     {
+      "handle": "Dark3st",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "e77f65e5-b542-5d04-b586-baf2d44e6917"
+        }
+      ]
+    },
+    {
       "handle": "Darker",
       "team": "KRÜ Esports",
       "teamCode": "KRU",
@@ -719,6 +1048,19 @@
       "accounts": [
         {
           "puuid": "2073a9da-10f9-570c-b677-7f2e6aac72b2"
+        }
+      ]
+    },
+    {
+      "handle": "Darxcio",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "BE",
+      "accounts": [
+        {
+          "puuid": "af4b4ef6-4b5b-58c3-a490-6f41ebde5de1"
         }
       ]
     },
@@ -788,6 +1130,19 @@
       ]
     },
     {
+      "handle": "Derrek",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "ffcc2498-7db0-5d30-b13a-176b23c6fcc0"
+        }
+      ]
+    },
+    {
       "handle": "deryeon",
       "team": null,
       "teamCode": null,
@@ -810,6 +1165,19 @@
       "accounts": [
         {
           "puuid": "630c6bde-0c23-5bb7-9243-946ae60a09cd"
+        }
+      ]
+    },
+    {
+      "handle": "Dlasqx1",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "VE",
+      "accounts": [
+        {
+          "puuid": "9e78ee06-8069-528e-a971-db198dfdfb1b"
         }
       ]
     },
@@ -849,6 +1217,45 @@
       "accounts": [
         {
           "puuid": "2fedf2ef-1e5b-5dca-bfe8-bfe2ba6456a8"
+        }
+      ]
+    },
+    {
+      "handle": "drakk",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "CO",
+      "accounts": [
+        {
+          "puuid": "9e91b96e-f602-5f2b-8c98-dcd5203720ce"
+        }
+      ]
+    },
+    {
+      "handle": "dth",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "2d02c196-8d63-567d-a213-63e4dd7c4c6a"
+        }
+      ]
+    },
+    {
+      "handle": "dynamic",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "4cb811a9-6446-56c6-8b4c-5207dd61a277"
         }
       ]
     },
@@ -944,6 +1351,19 @@
       ]
     },
     {
+      "handle": "envex",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
+      "accounts": [
+        {
+          "puuid": "e14b35a6-b2d3-5f5e-b531-e8e34da2a442"
+        }
+      ]
+    },
+    {
       "handle": "erde",
       "team": "Leviatán",
       "teamCode": "LEV",
@@ -970,6 +1390,19 @@
       ]
     },
     {
+      "handle": "Exa",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "KR",
+      "accounts": [
+        {
+          "puuid": "8136bfd3-f949-58dc-abec-96761066b150"
+        }
+      ]
+    },
+    {
       "handle": "exit",
       "team": null,
       "teamCode": null,
@@ -979,6 +1412,19 @@
       "accounts": [
         {
           "puuid": "fa0d6afb-dcd5-5af6-b38f-5f09758f4b8f"
+        }
+      ]
+    },
+    {
+      "handle": "ezznap",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "CO",
+      "accounts": [
+        {
+          "puuid": "e1b4d2fd-0455-5718-8fc2-4ccfe73be7d5"
         }
       ]
     },
@@ -1022,6 +1468,19 @@
       ]
     },
     {
+      "handle": "Favian",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
+      "accounts": [
+        {
+          "puuid": "006564c1-777c-530c-856f-879114785c64"
+        }
+      ]
+    },
+    {
       "handle": "fengf",
       "team": null,
       "teamCode": null,
@@ -1057,6 +1516,19 @@
       "accounts": [
         {
           "puuid": "df35a39f-b920-5dff-aabd-5b05a2df2648"
+        }
+      ]
+    },
+    {
+      "handle": "Fit1nho",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "ES",
+      "accounts": [
+        {
+          "puuid": "59234061-28fa-52e4-b6d6-4952af941aa8"
         }
       ]
     },
@@ -1113,6 +1585,19 @@
       ]
     },
     {
+      "handle": "forbanz",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "0fd4aa3e-b5d2-5059-9a9c-b87f7029203c"
+        }
+      ]
+    },
+    {
       "handle": "foxy9",
       "team": null,
       "teamCode": null,
@@ -1165,6 +1650,32 @@
       ]
     },
     {
+      "handle": "Fw",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "665a363f-21b9-5ec8-9aca-c85b4bd1f6e2"
+        }
+      ]
+    },
+    {
+      "handle": "GeneralSteak",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "GT",
+      "accounts": [
+        {
+          "puuid": "e498be5e-b638-523b-bee2-fe0568e66211"
+        }
+      ]
+    },
+    {
       "handle": "glacier",
       "team": "JDG Esports",
       "teamCode": "JDG",
@@ -1174,6 +1685,32 @@
       "accounts": [
         {
           "puuid": "1634a55b-8d42-5100-9159-9242ca38cf2d"
+        }
+      ]
+    },
+    {
+      "handle": "globeX",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "RU",
+      "accounts": [
+        {
+          "puuid": "f06df13e-a05d-592a-a419-7f9fd63792ee"
+        }
+      ]
+    },
+    {
+      "handle": "Gloomy",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
+      "accounts": [
+        {
+          "puuid": "200d285b-b573-5cf5-ad02-61481c7f9dcf"
         }
       ]
     },
@@ -1243,6 +1780,19 @@
       ]
     },
     {
+      "handle": "Hada",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "MX",
+      "accounts": [
+        {
+          "puuid": "a6f036f0-59a3-5fdc-808d-dcfea8df5a69"
+        }
+      ]
+    },
+    {
       "handle": "happywei",
       "team": "Xi Lai Gaming",
       "teamCode": "XLG",
@@ -1252,6 +1802,19 @@
       "accounts": [
         {
           "puuid": "39036584-1d3e-5053-bf83-c513a8845529"
+        }
+      ]
+    },
+    {
+      "handle": "havoc",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "26417bfb-fa76-5394-b801-9e3aba035470"
         }
       ]
     },
@@ -1291,6 +1854,19 @@
       "accounts": [
         {
           "puuid": "fa9c52b9-ebe6-5ea8-93c0-efbdee85c6b7"
+        }
+      ]
+    },
+    {
+      "handle": "hoody",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "FI",
+      "accounts": [
+        {
+          "puuid": "f6b46126-e9c6-5b5c-9023-f415bb793b6c"
         }
       ]
     },
@@ -1360,6 +1936,19 @@
       ]
     },
     {
+      "handle": "Indra",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "RU",
+      "accounts": [
+        {
+          "puuid": "0742c87c-373d-57db-9043-74f17dca95b8"
+        }
+      ]
+    },
+    {
       "handle": "infiltrator",
       "team": null,
       "teamCode": null,
@@ -1369,6 +1958,19 @@
       "accounts": [
         {
           "puuid": "3b5eeecf-a41c-5717-9ced-359299c00863"
+        }
+      ]
+    },
+    {
+      "handle": "influx",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
+      "accounts": [
+        {
+          "puuid": "1138a3dd-b646-5981-8eaa-77f51e4b3cfc"
         }
       ]
     },
@@ -1399,6 +2001,19 @@
       ]
     },
     {
+      "handle": "Ion2x",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "21ae2233-9dee-535f-849d-19ce64695a16"
+        }
+      ]
+    },
+    {
       "handle": "ivy",
       "team": null,
       "teamCode": null,
@@ -1408,6 +2023,19 @@
       "accounts": [
         {
           "puuid": "996cc6b6-4e8e-5bfe-a6b3-38c74ff3d47a"
+        }
+      ]
+    },
+    {
+      "handle": "izana",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "FR",
+      "accounts": [
+        {
+          "puuid": "a93a8f84-7f84-5be8-b80d-564fe5292889"
         }
       ]
     },
@@ -1425,15 +2053,18 @@
       ]
     },
     {
-      "handle": "jamelinho",
-      "team": null,
-      "teamCode": null,
-      "region": null,
+      "handle": "Jamelinho213",
+      "team": "Team Heretics",
+      "teamCode": "TH",
+      "region": "EMEA",
       "baseRegion": null,
-      "countryCode": null,
+      "countryCode": "FR",
       "accounts": [
         {
           "puuid": "ef505d70-cd68-5dd5-9adb-6aa6068397ad"
+        },
+        {
+          "puuid": "f6c03ff1-47eb-56c2-9d7b-4bcd30414e74"
         }
       ]
     },
@@ -1447,6 +2078,19 @@
       "accounts": [
         {
           "puuid": "372508e5-8f86-54d7-8470-1372a5eeb669"
+        }
+      ]
+    },
+    {
+      "handle": "Javelin",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "UA",
+      "accounts": [
+        {
+          "puuid": "791fd27e-3d2b-5e7c-9ff1-f0642bf98dc2"
         }
       ]
     },
@@ -1529,6 +2173,32 @@
       ]
     },
     {
+      "handle": "Jow",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "CO",
+      "accounts": [
+        {
+          "puuid": "255f2b8e-18ff-56cb-a069-134a931a35f9"
+        }
+      ]
+    },
+    {
+      "handle": "jPacheco",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "VE",
+      "accounts": [
+        {
+          "puuid": "e7022609-d17b-53aa-9548-02f63be9e790"
+        }
+      ]
+    },
+    {
       "handle": "juicy",
       "team": null,
       "teamCode": null,
@@ -1607,6 +2277,19 @@
       ]
     },
     {
+      "handle": "Kajuks",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "LT",
+      "accounts": [
+        {
+          "puuid": "3b0251b9-75db-5a47-bced-b95a56ebc47a"
+        }
+      ]
+    },
+    {
       "handle": "kamo",
       "team": "Team Liquid",
       "teamCode": "TL",
@@ -1616,6 +2299,32 @@
       "accounts": [
         {
           "puuid": "9f4cd319-20c2-58e4-aed2-5086baed65c8"
+        }
+      ]
+    },
+    {
+      "handle": "kamyk",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "PL",
+      "accounts": [
+        {
+          "puuid": "732a1261-6a95-5b81-8589-8678d02cd0fd"
+        }
+      ]
+    },
+    {
+      "handle": "Karon",
+      "team": "Gen.G",
+      "teamCode": "GEN",
+      "region": "Pacific",
+      "baseRegion": "Pacific",
+      "countryCode": "KR",
+      "accounts": [
+        {
+          "puuid": "0c3015b5-c323-5622-bf53-c06a510969bb"
         }
       ]
     },
@@ -1685,6 +2394,19 @@
       ]
     },
     {
+      "handle": "kiles",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": null,
+      "accounts": [
+        {
+          "puuid": "ec421118-e199-5058-be7e-977a91af39d2"
+        }
+      ]
+    },
+    {
       "handle": "killua",
       "team": null,
       "teamCode": null,
@@ -1694,6 +2416,19 @@
       "accounts": [
         {
           "puuid": "dbab053d-77ec-50d4-b47e-54b27f866bf4"
+        }
+      ]
+    },
+    {
+      "handle": "kiNgg",
+      "team": "G2 Esports",
+      "teamCode": "G2",
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "CL",
+      "accounts": [
+        {
+          "puuid": "6b1d5917-0523-50dc-85dd-37749261275b"
         }
       ]
     },
@@ -1737,6 +2472,19 @@
       ]
     },
     {
+      "handle": "kon4n",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "0a226423-6185-52ca-8c21-0d83b6e25325"
+        }
+      ]
+    },
+    {
       "handle": "koshmaras",
       "team": null,
       "teamCode": null,
@@ -1746,6 +2494,19 @@
       "accounts": [
         {
           "puuid": "760a3a64-d1a3-5c5a-914d-697e496fd0b8"
+        }
+      ]
+    },
+    {
+      "handle": "kospa1n",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "RU",
+      "accounts": [
+        {
+          "puuid": "627ae38f-4b65-520c-a03d-28de280a1050"
         }
       ]
     },
@@ -1772,6 +2533,32 @@
       "accounts": [
         {
           "puuid": "087373dc-6f8b-59dc-8068-17bbf0565d1e"
+        }
+      ]
+    },
+    {
+      "handle": "kramarick",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "26934208-3602-5e19-969f-6d47dc5617d6"
+        }
+      ]
+    },
+    {
+      "handle": "Kring",
+      "team": "MIBR",
+      "teamCode": "MIBR",
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "4af4dff5-388d-502c-8100-7daf7723cecd"
         }
       ]
     },
@@ -1841,6 +2628,32 @@
       ]
     },
     {
+      "handle": "Levi",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "VE",
+      "accounts": [
+        {
+          "puuid": "9b617c42-a9a4-501f-876c-1719d66f3faa"
+        }
+      ]
+    },
+    {
+      "handle": "Leviathan",
+      "team": "FULL SENSE",
+      "teamCode": "FS",
+      "region": "Pacific",
+      "baseRegion": "Pacific",
+      "countryCode": "TH",
+      "accounts": [
+        {
+          "puuid": "36f2ad08-f87e-5f52-96d4-ba4bebbdb70e"
+        }
+      ]
+    },
+    {
       "handle": "LêwN",
       "team": "Karmine Corp",
       "teamCode": "KC",
@@ -1850,6 +2663,19 @@
       "accounts": [
         {
           "puuid": "1e4b67f2-08a5-5298-87a4-4c4f9724aaba"
+        }
+      ]
+    },
+    {
+      "handle": "liazzi",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "ff1775d7-7e91-5c63-82d4-30bcd0957cc7"
         }
       ]
     },
@@ -1867,6 +2693,19 @@
       ]
     },
     {
+      "handle": "ligasa",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "CL",
+      "accounts": [
+        {
+          "puuid": "c82cf691-1e40-527e-8034-2653eafbf980"
+        }
+      ]
+    },
+    {
       "handle": "Loita",
       "team": "BBL Esports",
       "teamCode": "BBL",
@@ -1876,6 +2715,19 @@
       "accounts": [
         {
           "puuid": "2c94bfc8-48ae-5ee3-b8cf-81c4711e1977"
+        }
+      ]
+    },
+    {
+      "handle": "Lolo",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "UY",
+      "accounts": [
+        {
+          "puuid": "13b6c074-6bfb-50ba-bf36-d22b6d1a540f"
         }
       ]
     },
@@ -1902,6 +2754,19 @@
       "accounts": [
         {
           "puuid": "e244540d-08f9-5ac3-bdac-09c98483af99"
+        }
+      ]
+    },
+    {
+      "handle": "lowz",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "79f13595-4c11-535e-aa63-b770725f619e"
         }
       ]
     },
@@ -1945,6 +2810,19 @@
       ]
     },
     {
+      "handle": "lux9",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "FR",
+      "accounts": [
+        {
+          "puuid": "35820fac-558e-5e6b-ba25-23d57a08a6cc"
+        }
+      ]
+    },
+    {
       "handle": "lysoar",
       "team": null,
       "teamCode": null,
@@ -1980,6 +2858,19 @@
       "accounts": [
         {
           "puuid": "1fd6fe52-7fbf-52b6-9b43-9885bd162498"
+        }
+      ]
+    },
+    {
+      "handle": "maestr0",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "ee39cd66-b168-5515-9cc9-54e68e69dfbb"
         }
       ]
     },
@@ -2091,6 +2982,58 @@
       ]
     },
     {
+      "handle": "melya",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "PK",
+      "accounts": [
+        {
+          "puuid": "2b12a234-d8b4-511e-8afb-cc3bdb96f211"
+        }
+      ]
+    },
+    {
+      "handle": "mepeezy",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
+      "accounts": [
+        {
+          "puuid": "c51437f2-94e4-5ea2-a0ed-8aeaebe91cec"
+        }
+      ]
+    },
+    {
+      "handle": "Mephisto",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "MX",
+      "accounts": [
+        {
+          "puuid": "459b68c1-ef16-553f-b54d-37690cb6f1a4"
+        }
+      ]
+    },
+    {
+      "handle": "Meteor",
+      "team": null,
+      "teamCode": null,
+      "region": "Pacific",
+      "baseRegion": "Pacific",
+      "countryCode": "KR",
+      "accounts": [
+        {
+          "puuid": "d062d4df-27e5-57cd-9eaa-237a84c5eff8"
+        }
+      ]
+    },
+    {
       "handle": "miniboo",
       "team": null,
       "teamCode": null,
@@ -2129,6 +3072,19 @@
       "accounts": [
         {
           "puuid": "b5863339-3d96-5ee8-9945-a127f97d9050"
+        }
+      ]
+    },
+    {
+      "handle": "Mited",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "CO",
+      "accounts": [
+        {
+          "puuid": "d0a1595a-0d8f-57f0-aa2f-cc1f06f949b3"
         }
       ]
     },
@@ -2172,6 +3128,19 @@
       ]
     },
     {
+      "handle": "mta",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "CL",
+      "accounts": [
+        {
+          "puuid": "ce1c2da6-6568-5fde-8203-fcd86657e495"
+        }
+      ]
+    },
+    {
       "handle": "musashi",
       "team": null,
       "teamCode": null,
@@ -2198,6 +3167,45 @@
       ]
     },
     {
+      "handle": "Mystizip",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "CL",
+      "accounts": [
+        {
+          "puuid": "da88099d-06e3-54ff-93a3-db0d94094641"
+        }
+      ]
+    },
+    {
+      "handle": "N4RRATE",
+      "team": "Karmine Corp",
+      "teamCode": "KC",
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "a6742679-2267-51f9-ae2e-2dd1d2deda7f"
+        }
+      ]
+    },
+    {
+      "handle": "nataNk",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "FR",
+      "accounts": [
+        {
+          "puuid": "8fbbea9d-1366-5eab-be2e-765355452d56"
+        }
+      ]
+    },
+    {
       "handle": "nAts",
       "team": "Team Liquid",
       "teamCode": "TL",
@@ -2220,6 +3228,19 @@
       "accounts": [
         {
           "puuid": "bb17d870-62d9-5411-963c-90129358178c"
+        }
+      ]
+    },
+    {
+      "handle": "nayte",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "FR",
+      "accounts": [
+        {
+          "puuid": "b6fc34ef-b77a-5278-86d3-6988e50ea093"
         }
       ]
     },
@@ -2315,6 +3336,32 @@
       ]
     },
     {
+      "handle": "Noia",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "DK",
+      "accounts": [
+        {
+          "puuid": "4c3149ca-8ddf-5156-af4c-994e040f9081"
+        }
+      ]
+    },
+    {
+      "handle": "none",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "badd73f6-a13f-5ae6-a6c5-6e8751ad8094"
+        }
+      ]
+    },
+    {
       "handle": "notexxd",
       "team": null,
       "teamCode": null,
@@ -2367,6 +3414,32 @@
       ]
     },
     {
+      "handle": "om3y",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "51347e96-8fb7-5ed0-8040-52f863cbdec9"
+        }
+      ]
+    },
+    {
+      "handle": "oroni",
+      "team": "BBL Esports",
+      "teamCode": "BBL",
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
+      "accounts": [
+        {
+          "puuid": "40573a69-1688-530c-a23f-a98891fc5f48"
+        }
+      ]
+    },
+    {
       "handle": "OXY",
       "team": "Sentinels",
       "teamCode": "SEN",
@@ -2389,6 +3462,19 @@
       "accounts": [
         {
           "puuid": "58090855-1228-53b8-9bae-d44357b4f189"
+        }
+      ]
+    },
+    {
+      "handle": "Pa1nt",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "81654a86-179a-58f5-b8c7-edc735b7baa2"
         }
       ]
     },
@@ -2422,6 +3508,19 @@
       ]
     },
     {
+      "handle": "Palla",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "b6cb2c53-090e-543e-9bc3-8d1d4eb62217"
+        }
+      ]
+    },
+    {
       "handle": "patitek",
       "team": null,
       "teamCode": null,
@@ -2448,6 +3547,32 @@
       ]
     },
     {
+      "handle": "payne",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "60a1d473-caaa-5d11-a0b1-46e2910c8f51"
+        }
+      ]
+    },
+    {
+      "handle": "Peloncito",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "MX",
+      "accounts": [
+        {
+          "puuid": "e2d32fae-5c95-5aa8-973d-93f54cfcb2fd"
+        }
+      ]
+    },
+    {
       "handle": "penny",
       "team": null,
       "teamCode": null,
@@ -2457,6 +3582,32 @@
       "accounts": [
         {
           "puuid": "488b558e-b6e8-5099-8900-60bbbdf5c5f7"
+        }
+      ]
+    },
+    {
+      "handle": "phc",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "a3d7b466-c758-5a6a-872d-d64c1509de94"
+        }
+      ]
+    },
+    {
+      "handle": "poeth",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "FR",
+      "accounts": [
+        {
+          "puuid": "0ea2ed47-153c-55dc-8bd8-f1b9ae5d0c37"
         }
       ]
     },
@@ -2499,6 +3650,19 @@
       "accounts": [
         {
           "puuid": "7409614f-2055-5dff-a249-c9060dabc58d"
+        }
+      ]
+    },
+    {
+      "handle": "prozin",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "4590b24c-f608-5702-bc1d-7227e9438e46"
         }
       ]
     },
@@ -2555,6 +3719,19 @@
       ]
     },
     {
+      "handle": "raised",
+      "team": "KRÜ Esports",
+      "teamCode": "KRU",
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "87a6fa2e-2f15-5460-94f2-7df1d0d4a187"
+        }
+      ]
+    },
+    {
       "handle": "Ray",
       "team": "Gen.G",
       "teamCode": "GEN",
@@ -2568,6 +3745,19 @@
       ]
     },
     {
+      "handle": "Rb",
+      "team": null,
+      "teamCode": null,
+      "region": "Pacific",
+      "baseRegion": "Pacific",
+      "countryCode": "KR",
+      "accounts": [
+        {
+          "puuid": "48fc555b-5760-5b12-a04c-812c6a0dd5c3"
+        }
+      ]
+    },
+    {
       "handle": "reazy",
       "team": null,
       "teamCode": null,
@@ -2577,6 +3767,19 @@
       "accounts": [
         {
           "puuid": "b24c394f-8967-528d-a870-e15bb5dda30f"
+        }
+      ]
+    },
+    {
+      "handle": "reblyik",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "UA",
+      "accounts": [
+        {
+          "puuid": "f1379b05-60e7-544a-94f7-98091c1ddfe2"
         }
       ]
     },
@@ -2603,6 +3806,19 @@
       "accounts": [
         {
           "puuid": "577adbec-b4db-5f2c-b2fc-6613c6e3d882"
+        }
+      ]
+    },
+    {
+      "handle": "RgLM",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "68823df7-5e6f-5380-9655-95ba36746cd8"
         }
       ]
     },
@@ -2672,6 +3888,19 @@
       ]
     },
     {
+      "handle": "ruso",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "AR",
+      "accounts": [
+        {
+          "puuid": "db9c8e1a-6832-5bbc-bc53-acbe175f07c7"
+        }
+      ]
+    },
+    {
       "handle": "Ruxic",
       "team": "Gentle Mates",
       "teamCode": "M8",
@@ -2681,6 +3910,19 @@
       "accounts": [
         {
           "puuid": "081dd4bc-db08-5645-8d21-7559db3bebd6"
+        }
+      ]
+    },
+    {
+      "handle": "s0m",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "d1f0ff26-4670-5a4e-8302-29325aadbfb0"
         }
       ]
     },
@@ -2720,6 +3962,32 @@
       "accounts": [
         {
           "puuid": "5fcb9a26-3ce5-56a2-8d97-8d94cb38b8d1"
+        }
+      ]
+    },
+    {
+      "handle": "Sabortzz",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "MX",
+      "accounts": [
+        {
+          "puuid": "3d4bebfa-82ec-57f3-90f3-97fdd699b42e"
+        }
+      ]
+    },
+    {
+      "handle": "samed",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "AT",
+      "accounts": [
+        {
+          "puuid": "a453605e-c277-5380-b3f8-51a652a75724"
         }
       ]
     },
@@ -2815,6 +4083,71 @@
       ]
     },
     {
+      "handle": "Sevire",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "GB",
+      "accounts": [
+        {
+          "puuid": "3badd61c-5bbf-57f5-b52c-c09c8be672d8"
+        }
+      ]
+    },
+    {
+      "handle": "sh0ut",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
+      "accounts": [
+        {
+          "puuid": "e2e9a7f4-2465-5641-bc59-3252fa4d6687"
+        }
+      ]
+    },
+    {
+      "handle": "sh1ngo",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
+      "accounts": [
+        {
+          "puuid": "fdbed905-528e-5823-81b1-b9e6ad451ec5"
+        }
+      ]
+    },
+    {
+      "handle": "Sheydos",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "RS",
+      "accounts": [
+        {
+          "puuid": "fe7b0c51-a8ec-5151-a61c-3a89d9ee53bf"
+        }
+      ]
+    },
+    {
+      "handle": "shinnok",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "HU",
+      "accounts": [
+        {
+          "puuid": "73cf6eac-4530-5d22-af75-a163983cd974"
+        }
+      ]
+    },
+    {
       "handle": "Shr1mp",
       "team": "All Gamers",
       "teamCode": "AG",
@@ -2841,6 +4174,32 @@
       ]
     },
     {
+      "handle": "sickrey",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "RU",
+      "accounts": [
+        {
+          "puuid": "52f7c2b4-9978-52c5-a67c-bd059db7d8b2"
+        }
+      ]
+    },
+    {
+      "handle": "Siduzord",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "7e57bec3-4336-5ef4-b93c-c1fedc1ea91c"
+        }
+      ]
+    },
+    {
       "handle": "signed",
       "team": null,
       "teamCode": null,
@@ -2850,6 +4209,45 @@
       "accounts": [
         {
           "puuid": "03eb78d3-2aab-5a42-b4d8-a7bce12f1a51"
+        }
+      ]
+    },
+    {
+      "handle": "Sitolui",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "VE",
+      "accounts": [
+        {
+          "puuid": "f31fedd8-ae46-5b1b-bb87-4b2acaf16150"
+        }
+      ]
+    },
+    {
+      "handle": "sizo",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "PL",
+      "accounts": [
+        {
+          "puuid": "8143b84b-905c-59aa-8277-1a3cfba356e2"
+        }
+      ]
+    },
+    {
+      "handle": "SkRossi",
+      "team": null,
+      "teamCode": null,
+      "region": "Pacific",
+      "baseRegion": "Pacific",
+      "countryCode": "IN",
+      "accounts": [
+        {
+          "puuid": "ba7857c8-21eb-5103-996a-1df68975bb7c"
         }
       ]
     },
@@ -2867,6 +4265,19 @@
       ]
     },
     {
+      "handle": "Smoke",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "a6c789eb-e61c-5d61-8073-7a201093e177"
+        }
+      ]
+    },
+    {
       "handle": "sociablee",
       "team": null,
       "teamCode": null,
@@ -2876,6 +4287,19 @@
       "accounts": [
         {
           "puuid": "2b614024-431b-58d8-8096-983e2c96f3a8"
+        }
+      ]
+    },
+    {
+      "handle": "solada",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "CA",
+      "accounts": [
+        {
+          "puuid": "7de33f03-cd78-5d06-a26f-881cf3792455"
         }
       ]
     },
@@ -2893,6 +4317,32 @@
       ]
     },
     {
+      "handle": "soren",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "FR",
+      "accounts": [
+        {
+          "puuid": "e907b9ff-f00d-59a3-b335-755c064acec8"
+        }
+      ]
+    },
+    {
+      "handle": "sorex",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "7abed229-2a13-56e9-bb61-d855cb67ff5a"
+        }
+      ]
+    },
+    {
       "handle": "soulcas",
       "team": null,
       "teamCode": null,
@@ -2902,6 +4352,19 @@
       "accounts": [
         {
           "puuid": "5a7eadb3-a8d1-51e4-9b74-accd775391e3"
+        }
+      ]
+    },
+    {
+      "handle": "Spaz",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "MA",
+      "accounts": [
+        {
+          "puuid": "1b9aecaa-cbb9-598f-8df5-e9c9386812d3"
         }
       ]
     },
@@ -2919,6 +4382,19 @@
       ]
     },
     {
+      "handle": "Splash",
+      "team": "TYLOO",
+      "teamCode": "TYL",
+      "region": "China",
+      "baseRegion": "China",
+      "countryCode": "ID",
+      "accounts": [
+        {
+          "puuid": "76b3c483-800e-5255-b3e8-965b2ab09da4"
+        }
+      ]
+    },
+    {
       "handle": "Spring",
       "team": "All Gamers",
       "teamCode": "AG",
@@ -2932,6 +4408,58 @@
       ]
     },
     {
+      "handle": "stellar",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "b0c8c993-b3c3-59ae-a5c0-9e401bb4a2af"
+        }
+      ]
+    },
+    {
+      "handle": "stress",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "VE",
+      "accounts": [
+        {
+          "puuid": "e1bac1db-3680-509c-9bb5-8391c9d47447"
+        }
+      ]
+    },
+    {
+      "handle": "stunna",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "b26c6c73-ce01-593f-8b20-57cce0642971"
+        }
+      ]
+    },
+    {
+      "handle": "Stwz1",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "d71b7cfd-6548-540c-9798-aa519a15744a"
+        }
+      ]
+    },
+    {
       "handle": "SugarZ3ro",
       "team": "Crazy Raccoon",
       "teamCode": "CR",
@@ -2941,6 +4469,19 @@
       "accounts": [
         {
           "puuid": "8e799465-6290-5c0a-b67b-15c32ed0083b"
+        }
+      ]
+    },
+    {
+      "handle": "sunflower",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "UA",
+      "accounts": [
+        {
+          "puuid": "28687052-3e7f-57bd-9fdb-f9dfbffb4637"
         }
       ]
     },
@@ -2971,6 +4512,19 @@
       ]
     },
     {
+      "handle": "SUYGETSU",
+      "team": "Karmine Corp",
+      "teamCode": "KC",
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "RU",
+      "accounts": [
+        {
+          "puuid": "7f30d7ac-2e80-509c-9d3e-06c1add4c272"
+        }
+      ]
+    },
+    {
       "handle": "sylvan",
       "team": null,
       "teamCode": null,
@@ -2997,6 +4551,19 @@
       ]
     },
     {
+      "handle": "t3xture",
+      "team": "Gen.G",
+      "teamCode": "GEN",
+      "region": "Pacific",
+      "baseRegion": "Pacific",
+      "countryCode": "KR",
+      "accounts": [
+        {
+          "puuid": "a43bf7f7-c60a-54b6-99fc-60517d1e13e8"
+        }
+      ]
+    },
+    {
       "handle": "tacolilla",
       "team": null,
       "teamCode": null,
@@ -3006,6 +4573,45 @@
       "accounts": [
         {
           "puuid": "0f7712b5-bda4-5538-8c50-cef34175239e"
+        }
+      ]
+    },
+    {
+      "handle": "taka",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "JP",
+      "accounts": [
+        {
+          "puuid": "a37d09db-9e5f-56ce-9e1c-2d0526ad7022"
+        }
+      ]
+    },
+    {
+      "handle": "TakaS",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "FR",
+      "accounts": [
+        {
+          "puuid": "9e322a2e-b6bc-5857-945a-0cca5cefc533"
+        }
+      ]
+    },
+    {
+      "handle": "TenTen",
+      "team": null,
+      "teamCode": null,
+      "region": "Pacific",
+      "baseRegion": "Pacific",
+      "countryCode": "KR",
+      "accounts": [
+        {
+          "puuid": "d19da49f-0ea4-5a23-b2b9-a84eafa4d7c4"
         }
       ]
     },
@@ -3023,6 +4629,32 @@
       ]
     },
     {
+      "handle": "ticey",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "GB",
+      "accounts": [
+        {
+          "puuid": "f8ebd8e1-6abf-55d2-ace1-b84a9cf45113"
+        }
+      ]
+    },
+    {
+      "handle": "Tiezzi",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "IT",
+      "accounts": [
+        {
+          "puuid": "4d8d0c51-80ae-5b5d-ad47-91eb7bbaee08"
+        }
+      ]
+    },
+    {
       "handle": "Timotino",
       "team": "100 Thieves",
       "teamCode": "100T",
@@ -3036,6 +4668,58 @@
       ]
     },
     {
+      "handle": "TITOUNE",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "FR",
+      "accounts": [
+        {
+          "puuid": "81e0a228-6043-593c-823b-77913d81c38b"
+        }
+      ]
+    },
+    {
+      "handle": "tok1o",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "AR",
+      "accounts": [
+        {
+          "puuid": "6bbd13d1-709a-542f-9c76-7d21eb94993e"
+        }
+      ]
+    },
+    {
+      "handle": "tonza",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BG",
+      "accounts": [
+        {
+          "puuid": "26f29a38-26ed-583b-8f40-4a1e721a6ecc"
+        }
+      ]
+    },
+    {
+      "handle": "toozy",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "d2640ba6-41ba-5188-9abb-f3d972c02be4"
+        }
+      ]
+    },
+    {
       "handle": "trent",
       "team": "G2 Esports",
       "teamCode": "G2",
@@ -3045,6 +4729,19 @@
       "accounts": [
         {
           "puuid": "54d1c735-ddd5-5cad-b1bf-f226506d4603"
+        }
+      ]
+    },
+    {
+      "handle": "turkish",
+      "team": "MIBR",
+      "teamCode": "MIBR",
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "BR",
+      "accounts": [
+        {
+          "puuid": "6166c58e-072f-5bf3-8acf-09f4a5540cac"
         }
       ]
     },
@@ -3101,6 +4798,19 @@
       ]
     },
     {
+      "handle": "VdekJeNN",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
+      "accounts": [
+        {
+          "puuid": "46dfb6ec-d0f5-52e3-8f54-ff8b0c146d16"
+        }
+      ]
+    },
+    {
       "handle": "veqaj",
       "team": null,
       "teamCode": null,
@@ -3140,6 +4850,32 @@
       ]
     },
     {
+      "handle": "Vince",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "DE",
+      "accounts": [
+        {
+          "puuid": "2e1e242f-8e64-5c48-866a-7f9878c1f58a"
+        }
+      ]
+    },
+    {
+      "handle": "Virtyy",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "DO",
+      "accounts": [
+        {
+          "puuid": "3f22bcdb-5695-5722-a6db-f11912befac1"
+        }
+      ]
+    },
+    {
       "handle": "vora",
       "team": "100 Thieves",
       "teamCode": "100T",
@@ -3149,6 +4885,32 @@
       "accounts": [
         {
           "puuid": "e8cddaf0-2328-5c06-bd22-1abddd4587dc"
+        }
+      ]
+    },
+    {
+      "handle": "waddle",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "GB",
+      "accounts": [
+        {
+          "puuid": "5a69322c-b8ee-57c8-9e02-48ae1815fed4"
+        }
+      ]
+    },
+    {
+      "handle": "WanZeru",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "CZ",
+      "accounts": [
+        {
+          "puuid": "d59e472c-49b6-5ad6-b5b4-b24f0f6e6fd5"
         }
       ]
     },
@@ -3166,6 +4928,19 @@
       ]
     },
     {
+      "handle": "Weegle",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "b517b2de-4b0a-586f-89fe-df86dab2fb83"
+        }
+      ]
+    },
+    {
       "handle": "westside",
       "team": null,
       "teamCode": null,
@@ -3175,6 +4950,19 @@
       "accounts": [
         {
           "puuid": "f79a2ba9-77dd-5137-9bb4-513a48d88c9b"
+        }
+      ]
+    },
+    {
+      "handle": "wezzy",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
+      "accounts": [
+        {
+          "puuid": "09282f24-cbc2-59ff-98a3-2fadc4af5145"
         }
       ]
     },
@@ -3205,6 +4993,19 @@
       ]
     },
     {
+      "handle": "Wolfen",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "BG",
+      "accounts": [
+        {
+          "puuid": "83cd846e-29a2-57cf-acd1-eeffa03a0636"
+        }
+      ]
+    },
+    {
       "handle": "wolverine",
       "team": null,
       "teamCode": null,
@@ -3214,6 +5015,32 @@
       "accounts": [
         {
           "puuid": "2dfb8ea9-5c59-57ef-a1a7-6ffa0a8ee9a5"
+        }
+      ]
+    },
+    {
+      "handle": "wtex",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
+      "accounts": [
+        {
+          "puuid": "2f999667-bb46-5bbd-95ed-ccb7d1293559"
+        }
+      ]
+    },
+    {
+      "handle": "xccurate",
+      "team": null,
+      "teamCode": null,
+      "region": "Pacific",
+      "baseRegion": "Pacific",
+      "countryCode": null,
+      "accounts": [
+        {
+          "puuid": "15035ac9-4236-5b9a-bea2-430dc6e0efe4"
         }
       ]
     },
@@ -3240,6 +5067,19 @@
       "accounts": [
         {
           "puuid": "0b13e26a-4355-5e86-aa5a-2ce7c71facaa"
+        }
+      ]
+    },
+    {
+      "handle": "Xeppaa",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "c640b75c-fb8a-52b0-b02d-2675c66977cc"
         }
       ]
     },
@@ -3296,6 +5136,19 @@
       ]
     },
     {
+      "handle": "yatsuka",
+      "team": "ZETA DIVISION",
+      "teamCode": "ZETA",
+      "region": "Pacific",
+      "baseRegion": "Pacific",
+      "countryCode": "JP",
+      "accounts": [
+        {
+          "puuid": "cd3478ea-b5ed-567b-abe5-a26518d34c91"
+        }
+      ]
+    },
+    {
       "handle": "yetujey",
       "team": "FUT Esports",
       "teamCode": "FUT",
@@ -3305,6 +5158,19 @@
       "accounts": [
         {
           "puuid": "14c0198e-ebf1-54e6-ab4c-cfd1f0e0cbfb"
+        }
+      ]
+    },
+    {
+      "handle": "Yigox",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "TR",
+      "accounts": [
+        {
+          "puuid": "ea2b8ccb-f6f4-5b93-9ade-fdd8ff982ab6"
         }
       ]
     },
@@ -3331,6 +5197,45 @@
       "accounts": [
         {
           "puuid": "5b4a5dba-ba25-55d1-9c02-59dd41a9fe75"
+        }
+      ]
+    },
+    {
+      "handle": "ZachKappa",
+      "team": null,
+      "teamCode": null,
+      "region": "EMEA",
+      "baseRegion": "EMEA",
+      "countryCode": "GB",
+      "accounts": [
+        {
+          "puuid": "6a006c3a-b198-5d09-b231-f5519602b06d"
+        }
+      ]
+    },
+    {
+      "handle": "zaj",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "668ce7f6-d9d8-584e-aa56-1d26122ba7d4"
+        }
+      ]
+    },
+    {
+      "handle": "Zamal",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "CA",
+      "accounts": [
+        {
+          "puuid": "caa6efce-d8ce-57e4-ba79-84c4e8f1b108"
         }
       ]
     },
@@ -3435,6 +5340,19 @@
       "accounts": [
         {
           "puuid": "911f7b7f-5b97-558c-9b89-0f17d1650aaa"
+        }
+      ]
+    },
+    {
+      "handle": "Zoestol",
+      "team": null,
+      "teamCode": null,
+      "region": "Americas",
+      "baseRegion": "Americas",
+      "countryCode": "US",
+      "accounts": [
+        {
+          "puuid": "e7ebdaa0-54ad-577d-9081-2f38c25173f2"
         }
       ]
     },

@@ -65,6 +65,15 @@ for (const entry of roster.entries) {
   if (onPartnerRoster.has(fold(entry.name))) throw new Error(`${entry.name} is on two partnered rosters`);
   onPartnerRoster.set(fold(entry.name), { entry, team });
 }
+// Every current player on any rostermania roster, partnered or not, is a pro
+// the library expects to have (on request, 23 Nov 2026). Non-partnered teams
+// only count toward that expectation; they never give a player a team.
+const onAnyRoster = new Map(onPartnerRoster);
+for (const entry of roster.entries) {
+  const team = teams.get(entry.team);
+  if (entry.kind !== 'player' || !CURRENT.has(entry.status) || !team || onAnyRoster.has(fold(entry.name))) continue;
+  onAnyRoster.set(fold(entry.name), { entry, team });
+}
 
 const players = base.players
   .map(player => {
@@ -94,10 +103,29 @@ const output = {
   accountCount,
   resolvedPuuidCount: accountCount,
   partnerPlayerCount: players.filter(player => player.teamCode).length,
+  ...expectedCounts(),
   players,
 };
 
+function expectedCounts() {
+  const listed = new Set(players.map(player => fold(player.handle)));
+  const expected = [...onAnyRoster.values()];
+  const expectedListed = expected.filter(({ entry }) => listed.has(fold(entry.name))).length;
+  return {
+    expectedPlayerCount: expected.length,
+    expectedPartnerPlayerCount: onPartnerRoster.size,
+    expectedListedCount: expectedListed,
+    expectedMissingCount: expected.length - expectedListed,
+  };
+}
+
 await writeFile(outputPath, `${JSON.stringify(output, null, 2)}\n`, 'utf8');
-const missing = [...onPartnerRoster.values()].filter(({ entry }) => !players.some(player => fold(player.handle) === fold(entry.name)));
+const missingFrom = rosters => [...rosters.values()]
+  .filter(({ entry, team }) => (rosters === onPartnerRoster || !team.partner) && !players.some(player => fold(player.handle) === fold(entry.name)));
+const missingPartner = missingFrom(onPartnerRoster);
+const missingOther = missingFrom(onAnyRoster);
+const listMissing = missing => missing.map(({ entry, team }) => `${entry.name} (${team.code})`).join(', ');
 console.log(`Wrote ${players.length} pros / ${accountCount} accounts to ${outputPath}; ${output.partnerPlayerCount} on partnered rosters.`);
-console.log(`${missing.length} partnered-roster players have no known PUUID: ${missing.map(({ entry, team }) => `${entry.name} (${team.code})`).join(', ')}`);
+console.log(`Expected ${output.expectedPlayerCount} rostermania players (${output.expectedPartnerPlayerCount} partnered); ${output.expectedListedCount} listed, ${output.expectedMissingCount} without a known PUUID.`);
+console.log(`${missingPartner.length} partnered-roster players have no known PUUID: ${listMissing(missingPartner)}`);
+console.log(`${missingOther.length} non-partnered-roster players have no known PUUID: ${listMissing(missingOther)}`);
