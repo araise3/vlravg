@@ -176,6 +176,9 @@ export function TablePager({page,pageSize,total,noun,onPrevious,onNext,canPrevio
 // search on, and `detail(index)` makes rows expandable: a chevron in the row
 // header opens that row's detail in a full-width row under it (on phones, a
 // toggle under the card). `emptyText` is shown inside the frame when no rows are passed.
+// A column flagged `fit` (23 Nov 2026) keeps its narrowest width, so the spare
+// width goes to the other columns: a fit column sits close to the column
+// before it, which groups related figures (W–L beside Win rate).
 // `widths` (22 Nov 2026) fixes the column widths (CSS lengths, one per column)
 // with table-layout: fixed, so tables stacked on one page line up column for
 // column; without it columns size to their content.
@@ -259,7 +262,7 @@ export function SortableTable({id,caption,columns,rows,values,maxima=[],classNam
                   const Icon=state==='asc'?ArrowUp:state==='desc'?ArrowDown:ArrowUpDown;
                   return (
                     <TableHead key={column.id} scope="col" aria-sort={state==='asc'?'ascending':state==='desc'?'descending':'none'}
-                      className={cn('h-10 px-3',right(index)&&'text-right')}>
+                      className={cn('h-10 px-3',right(index)&&'text-right',col.fit&&'w-px pl-0')}>
                       <Hint asChild content={col.title}>
                       <Button variant="ghost" size="sm" onClick={column.getToggleSortingHandler()}
                         className={cn('group/sort h-7 gap-1 px-1.5 text-xs font-medium text-muted-foreground hover:bg-transparent hover:text-foreground',

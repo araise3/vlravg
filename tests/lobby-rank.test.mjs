@@ -36,6 +36,18 @@ test('lobby rank groups average each match team rank equally',()=>{
   assert.equal(rows[0].enemyRankSum/rows[0].enemyRankCount,14);
 });
 
+test('lobby rank groups weight ADR by rounds and skip matches without damage',()=>{
+  const matches=[
+    {myStats:{kills:1,deaths:1,adr:100,dmg:2000,rounds_played:20}},
+    {myStats:{kills:1,deaths:1,adr:200,dmg:2000,rounds_played:10}},
+    {myStats:{kills:1,deaths:1,adr:null,dmg:null,rounds_played:15}},
+  ];
+  const [row]=buildKdRankBuckets(()=>({tier:12,label:'Gold 1'}),{matches});
+  // 4000 damage over 30 rounds, not the mean of 100 and 200.
+  assert.equal(row.dmgSum/row.adrRounds,4000/30);
+  assert.equal(row.adrCount,2);
+});
+
 test('draws count as games but are excluded from win rate',()=>{
   const matches=[true,false,undefined].map(won=>({myStats:{kills:1,deaths:1},won}));
   const [row]=buildKdRankBuckets(()=>({tier:12,label:'Gold 1'}),{matches});

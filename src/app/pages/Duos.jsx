@@ -19,49 +19,63 @@ export const TABLE_PAGE_SIZE=10;
 // teammates tables stack on the Duos page, so they also share fixed column
 // widths (STAT_TABLE_WIDTHS, also used by Servers) and line up column for column.
 
+// W–L record, with draws as a third figure only when there are any.
+export function winLossLabel(wins,decided,total){
+  const draws=total-decided;
+  return `${wins}–${decided-wins}${draws?`–${draws}`:''}`;
+}
+
 // Your performance grouped by lobby rank (party=false) or by party size.
+// The lobby-rank table also shows ADR and the W–L record (23 Nov 2026, on
+// request); the party-size table keeps the shared Duos/Servers columns.
+// Its related columns sit closer together (`fit`, 23 Nov 2026, on request):
+// combat (K/D, ACS, PS, ADR) and results (W–L, Win rate) each form a group,
+// and the spare width goes to the gaps between groups.
 export function PerformanceTable({id,rows,party}){
   if(!rows.length)return null;
-  const columns=[
-    {label:party?'Party size':'Lobby rank'},{label:'Matches'},
-    ...(party?[{label:'Avg Lobby',wide:true,align:'left'}]:[]),
-    {label:'K/D'},{label:'ACS'},{label:'PS',title:'Avg PS across matches with available data'},{label:'Win rate'},
-    ...(party?[{label:'Total RR',title:'Your net RR change for this party size'}]:[]),
-  ];
-  const tableRows=rows.map(b=>{
-    const kd=b.totalDeaths>0?b.totalKills/b.totalDeaths:b.totalKills>0?b.totalKills:null;
-    const rate=decidedWinRate(b.wins,b.decided);
-    const cells=[
-      party
+  // Each column: its header, then per row its cell, cell props and sort value.
+  const spec=[
+    {column:{label:party?'Party size':'Lobby rank'},
+      cell:b=>party
         ?<span className="flex items-center gap-2"><PartyIcon size={b.tier}/><span>{b.label||rName(b.tier)}</span></span>
         :<span className="flex items-center gap-2"><RankIcon tier={b.tier} size={24}/><LobbyRankText tier={b.tier}>{b.label||rName(b.tier)}</LobbyRankText></span>,
-      b.total,
-      ...(party?[<LobbyValue sum={b.lobbySum} count={b.lobbyCount}/>]:[]),
-      kd==null?'—':kd.toFixed(2),
-      b.acsCount?Math.round(b.acsSum/b.acsCount):'—',
-      b.performanceCount?Math.round(b.performanceSum/b.performanceCount):'—',
-      winRateLabel(rate),
-      ...(party?[b.rrCount?rrSigned(b.rrTotal,0):'—']:[]),
-    ];
-    const offset=party?1:0;
-    const cellProps=[];
-    cellProps[2+offset]={className:toneClass(kd),title:`${b.totalKills} kills / ${b.totalDeaths} deaths`};
-    cellProps[4+offset]={title:`${b.performanceCount} of ${b.total} matches have Performance Score data`};
-    cellProps[5+offset]={className:toneOf(winRateTone(rate)),title:'Wins divided by wins plus losses; draws excluded'};
-    if(party)cellProps[7]={className:rrTone(b.rrCount,b.rrTotal),title:`${b.rrCount} of ${b.total} matches have recorded RR change`};
-    return{key:b.tier,cells,cellProps};
-  });
-  const values=rows.map(b=>[
-    b.tier,b.total,...(party?[b.lobbyCount?b.lobbySum/b.lobbyCount:null]:[]),
-    b.totalDeaths>0?b.totalKills/b.totalDeaths:b.totalKills>0?b.totalKills:null,
-    b.acsCount?b.acsSum/b.acsCount:null,
-    b.performanceCount?b.performanceSum/b.performanceCount:null,
-    decidedWinRate(b.wins,b.decided),
-    ...(party?[b.rrCount?b.rrTotal:null]:[]),
-  ]);
-  const maxima=party
-    ?[{column:2,label:'average lobby rank'},{column:3,label:'K/D'},{column:4,label:'average ACS'},{column:5,label:'Avg PS'},{column:6,label:'win rate'}]
-    :[{column:2,label:'K/D'},{column:3,label:'average ACS'},{column:4,label:'Avg PS'},{column:5,label:'win rate'}];
+      value:b=>b.tier},
+    {column:{label:'Matches',fit:!party},cell:b=>b.total,value:b=>b.total},
+    party&&{column:{label:'Avg Lobby',wide:true,align:'left'},max:'average lobby rank',
+      cell:b=><LobbyValue sum={b.lobbySum} count={b.lobbyCount}/>,value:b=>b.lobbyCount?b.lobbySum/b.lobbyCount:null},
+    {column:{label:'K/D'},max:'K/D',
+      cell:b=>b.kd==null?'—':b.kd.toFixed(2),
+      props:b=>({className:toneClass(b.kd),title:`${b.totalKills} kills / ${b.totalDeaths} deaths`}),value:b=>b.kd},
+    {column:{label:'ACS',fit:!party},max:'average ACS',
+      cell:b=>b.acsCount?Math.round(b.acsSum/b.acsCount):'—',value:b=>b.acsCount?b.acsSum/b.acsCount:null},
+    {column:{label:'PS',title:'Avg PS across matches with available data',fit:!party},max:'Avg PS',
+      cell:b=>b.performanceCount?Math.round(b.performanceSum/b.performanceCount):'—',
+      props:b=>({title:`${b.performanceCount} of ${b.total} matches have Performance Score data`}),
+      value:b=>b.performanceCount?b.performanceSum/b.performanceCount:null},
+    !party&&{column:{label:'ADR',title:'Average damage per round: total damage divided by total rounds',fit:true},max:'ADR',
+      cell:b=>b.adrRounds?Math.round(b.dmgSum/b.adrRounds):'—',
+      props:b=>({title:`${b.adrCount??0} of ${b.total} matches have damage data`}),
+      value:b=>b.adrRounds?b.dmgSum/b.adrRounds:null},
+    !party&&{column:{label:'W–L',title:'Wins–losses, then draws when there are any'},
+      cell:b=>winLossLabel(b.wins,b.decided,b.total),
+      props:b=>({title:`${b.wins}W ${b.decided-b.wins}L${b.total-b.decided?` ${b.total-b.decided}D`:''}`}),
+      value:b=>b.wins-(b.decided-b.wins)},
+    {column:{label:'Win rate',fit:!party},max:'win rate',
+      cell:b=>winRateLabel(b.rate),
+      props:b=>({className:toneOf(winRateTone(b.rate)),title:'Wins divided by wins plus losses; draws excluded'}),value:b=>b.rate},
+    party&&{column:{label:'Total RR',title:'Your net RR change for this party size'},
+      cell:b=>b.rrCount?rrSigned(b.rrTotal,0):'—',
+      props:b=>({className:rrTone(b.rrCount,b.rrTotal),title:`${b.rrCount} of ${b.total} matches have recorded RR change`}),
+      value:b=>b.rrCount?b.rrTotal:null},
+  ].filter(Boolean);
+  const derived=rows.map(b=>({...b,
+    kd:b.totalDeaths>0?b.totalKills/b.totalDeaths:b.totalKills>0?b.totalKills:null,
+    rate:decidedWinRate(b.wins,b.decided),
+  }));
+  const columns=spec.map(c=>c.column);
+  const tableRows=derived.map(b=>({key:b.tier,cells:spec.map(c=>c.cell(b)),cellProps:spec.map(c=>c.props?.(b)??null)}));
+  const values=derived.map(b=>spec.map(c=>c.value(b)));
+  const maxima=spec.flatMap((c,column)=>c.max?[{column,label:c.max}]:[]);
   return (
     <SortableTable id={id} rows={tableRows} values={values} columns={columns} maxima={maxima} standalone widths={party?STAT_TABLE_WIDTHS:undefined}
       caption={`Your performance grouped by ${party?'party size, including your total recorded RR change':'average lobby rank'}`}/>

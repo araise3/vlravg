@@ -3534,7 +3534,7 @@ function buildKdRankBuckets(bucketFn,{includeLobby,matches=statMatches}={}){
     const info=bucketFn(m);
     if(!info)return;
     const t=info.tier;
-    if(!rb[t])rb[t]={totalKills:0,totalDeaths:0,wins:0,decided:0,total:0,label:info.label,icon:info.icon,acsSum:0,acsCount:0,performanceSum:0,performanceCount:0,lobbySum:0,lobbyCount:0,teamRankSum:0,teamRankCount:0,enemyRankSum:0,enemyRankCount:0,rrTotal:0,rrCount:0};
+    if(!rb[t])rb[t]={totalKills:0,totalDeaths:0,wins:0,decided:0,total:0,label:info.label,icon:info.icon,acsSum:0,acsCount:0,performanceSum:0,performanceCount:0,lobbySum:0,lobbyCount:0,teamRankSum:0,teamRankCount:0,enemyRankSum:0,enemyRankCount:0,rrTotal:0,rrCount:0,dmgSum:0,adrRounds:0,adrCount:0};
     rb[t].total++;
     if(m.won===true||m.won===false)rb[t].decided++;
     if(Number.isFinite(m.myRR)){rb[t].rrTotal+=m.myRR;rb[t].rrCount++;}
@@ -3546,6 +3546,8 @@ function buildKdRankBuckets(bucketFn,{includeLobby,matches=statMatches}={}){
     if(m.myStats.deaths!=null)rb[t].totalDeaths+=m.myStats.deaths;
     if(Number.isFinite(m.myStats.performanceScore)){rb[t].performanceSum+=m.myStats.performanceScore;rb[t].performanceCount++;}
     if(m.myStats.acs!=null){rb[t].acsSum+=m.myStats.acs;rb[t].acsCount++;}
+    // ADR is total damage over total rounds, weighted like the Stats panel's.
+    if(m.myStats.adr!=null&&m.myStats.rounds_played>0){rb[t].dmgSum+=m.myStats.dmg;rb[t].adrRounds+=m.myStats.rounds_played;rb[t].adrCount++;}
   });
   return Object.keys(rb).map(Number).sort((a,b)=>a-b).map(tier=>({tier,...rb[tier]}));
 }

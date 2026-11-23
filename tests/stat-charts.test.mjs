@@ -344,13 +344,25 @@ test('data tables: an outside filter that leaves no rows shows its empty text in
 
 test('table lobby cells show the rank icon, then the rank name in its rank colour, as a left-aligned flex row',async()=>{
   const html=await renderHtml('/src/app/shared.jsx','LobbyValue',{sum:22,count:1});
-  // The icon, then Ascendant 2 in the engine's rank colour (RANK_COLORS, the --rank palette), then the RR in muted text.
+  // The icon, then Ascendant 2 in the engine's rank colour (RANK_COLORS, the --rank palette), then the RR in the foreground colour.
   assert.match(html,/^<span class="flex items-center gap-2 whitespace-nowrap" title="Ascendant 2 \(50 RR\)"><img [^>]*width="22"[^>]*\/><span><span class="font-medium" style="color:#2db87a" data-slot="lobby-rank-text">Ascendant 2<\/span>/);
   // Immortal and up show no RR.
   assert.doesNotMatch(await renderHtml('/src/app/shared.jsx','LobbyValue',{sum:25,count:1}),/ RR\)/);
   // The performance-by-lobby-rank table labels its rows the same way; the party-size table keeps its party icons.
   const byRank=await renderHtml('/src/app/pages/Duos.jsx','PerformanceTable',{id:'t',rows:[{tier:15,total:2,totalKills:4,totalDeaths:2,acsSum:0,acsCount:0,performanceSum:0,performanceCount:0,wins:1,decided:2}]});
   assert.match(byRank,/<img [^>]*width="24"[^>]*\/><span class="font-medium" style="color:#36b5c0" data-slot="lobby-rank-text">Platinum 1</);
+  // The lobby-rank table adds ADR and the W–L record; the party-size table does not.
+  assert.deepEqual([...byRank.matchAll(/aria-label="([^"]+): sort/g)].map(m=>m[1]),['Lobby rank','Matches','K/D','ACS','PS','ADR','W–L','Win rate']);
+  const withAdr=await renderHtml('/src/app/pages/Duos.jsx','PerformanceTable',{id:'t2',rows:[{tier:15,total:3,totalKills:4,totalDeaths:2,acsSum:0,acsCount:0,performanceSum:0,performanceCount:0,wins:1,decided:2,dmgSum:4000,adrRounds:30,adrCount:2}]});
+  // ADR 4000/30 rounds to 133; W–L 1–1 with one draw.
+  assert.match(flat(withAdr),/Platinum 1 3 2\.00 — — 133 1–1–1 50\.0%/);
+  assert.match(flat(byRank),/Platinum 1 2 2\.00 — — — 1–1 50\.0%/);
+  // Related columns sit close: Matches, ACS, PS, ADR and Win rate keep their
+  // narrowest width, so the spare width opens gaps before K/D and W–L.
+  const fitHeads=html=>[...html.matchAll(/<th [^>]*class="([^"]*)"[^>]*>.*?aria-label="([^"]+): sort/g)].filter(m=>/\bw-px\b/.test(m[1])).map(m=>m[2]);
+  assert.deepEqual(fitHeads(byRank),['Matches','ACS','PS','ADR','Win rate']);
+  const party=await renderHtml('/src/app/pages/Duos.jsx','PerformanceTable',{id:'p2',party:true,rows:[{tier:2,label:'Duo',total:3,totalKills:3,totalDeaths:3,acsSum:0,acsCount:0,performanceSum:0,performanceCount:0,wins:1,decided:2,lobbySum:0,lobbyCount:0,rrCount:0,rrTotal:0}]});
+  assert.deepEqual(fitHeads(party),[]);
   for(const file of ['Duos.jsx','Servers.jsx']){
     const source=readFileSync(new URL('../src/app/pages/'+file,import.meta.url),'utf8');
     assert.match(source,/label:'Avg Lobby',wide:true,align:'left'/,file);
