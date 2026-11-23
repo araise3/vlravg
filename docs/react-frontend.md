@@ -147,9 +147,19 @@ end of `src/index.css` (they outrank Tailwind's utility layer):
   (tile plus "Fracture" and "Brimstone") so the result follows 16px after it
   instead of after an empty stretch; K/D/A, ACS and PS form one performance
   group (14px apart); and the remaining groups (performance, server, RR) are
-  32px apart (18px and 10px below 760px of card width). Minimum widths keep K/D/A up to "20 / 22 / 14", the score and RR
-  whole, so the map column gives way first; below 640px of card width the
-  server column is dropped (it is in the opened card). (A first slim version kept fixed-width cells packed to
+  32px apart on wide cards, whose fixed columns line up from card to card.
+  Cards of 800px and less (23 Nov 2026, on request: columns may shift and
+  move closer instead of cutting or hiding values) drop the server column
+  (it is in the opened card) and become a flex row: each cell takes its own
+  width, agent, map and result stay together, and the spare width goes to
+  the gaps before the performance group and the lobby, which shrink to
+  14px (10px, with every other gap tightened, from 660px down). K/D/A, ACS
+  and PS keep their 94/48/48px column widths while those gaps have room (the
+  assists sat against the ACS value otherwise) and shrink towards their
+  values only after; a column is never narrower than its value. The longest
+  values together ("Fracture 10th", "20 / 22 / 14", "Ascendant 3",
+  "-30+12") fit whole down to the narrowest desktop card (592px); cells line
+  up less from card to card there. (A first slim version kept fixed-width cells packed to
   the right; they looked lost in the empty middle and were spread out on
   request.) The map splash is a faded backdrop on the right
   (opacity .2, .3 on hover or open), and the result colours the left edge and
@@ -157,24 +167,33 @@ end of `src/index.css` (they outrank Tailwind's utility layer):
   nothing from the closed row (22 Nov 2026, on request: no agent, no RR
   change, no team rounds; the first tile-less version looked empty). It is
   one strip of hairline tiles (`.mc-stats`, eight columns on desktop, three
-  where the card is under 640px): K/D (kills and deaths under it) and ACS,
-  asked for here although the closed row has K/D/A and ACS; ADR (total damage
-  under it); DDΔ, the damage delta per round (`ddDelta`: enemy damage dealt
-  minus enemy damage taken, from the round damage events, else the summary's
-  `damage.received`; green above zero, red below; damage taken under it);
-  HS% ("of hits"), KAST (rounds under it),
-  clutch win rate (won of situations under it; `clutchSummaryText`, the list
-  in its hint) and
-  the length, always as minutes and seconds ("35:07", `matchLengthText`) with
-  the start date and time under it. The server tile shows only where the
+  where the card is under 640px): K/D and ACS, asked for here although the
+  closed row has K/D/A and ACS; ADR; DDΔ, the damage delta per round
+  (`ddDelta`: enemy damage dealt minus enemy damage taken, from the round
+  damage events, else the summary's `damage.received`; green above zero, red
+  below); HS%, KAST, clutch win rate (`clutchSummaryText`) and the length,
+  always as minutes and seconds ("35:07", `matchLengthText`). The tiles show
+  values only (23 Nov 2026, on request): the notes that sat under them
+  (kills and deaths, total damage, damage taken, KAST rounds, clutches won)
+  are in the label hints (`matchInfoTiles`), and the start ("22 Nov, 21:12")
+  moved to the closed row: in small muted text over the map, with your
+  place right after the map name ("Bind 8th", on request, from a reference
+  layout; the place stays plain text, not a boxed badge, centred on the map
+  name's line). Phones show the time alone in the first line's
+  spare width, hidden when it does not fit. The server tile shows only where the
   closed row hides its server (`.mc-info-server`: phones and cards under
   640px). A tile without data shows a dash. The Rank tile (rank before →
-  after with a 100 RR bar) was removed the same day on request. Under the
-  strip, `RRNotes` (quiet text lines tinted by tone; pills were disliked)
-  lists only what
-  changed the RR beyond the payout: Rank Shield, placement, a non-zero
-  performance bonus or new-map forgiveness, refunds, reported AFK and party
-  penalties (verbatim, never converted to RR) and a replenished shield. The
+  after with a 100 RR bar) was removed the same day on request. Of the RR
+  details only the performance bonus and refunded RR are shown (`rrExtras`,
+  23 Nov 2026, on request), as smaller green or red figures right after the
+  closed card's RR change: "+16+4". Each has its own hint, and the card
+  button's label names them. The bonus is already part of the RR change and
+  is never added to it; a refund is applied on top. Before this, all RR
+  notes (placement, forgiveness, AFK and party penalties, a replenished
+  shield too) were text lines under the strip, then icons at the RR change
+  for an hour; both were too much. A Rank Shield that kept your rank turns
+  the RR change blue with a shield. The RR column's minimum width grew from
+  40px to 56px for the figures on wide cards. The
   old "Your RR details" grid (queue id, "No"/0 rows, payout restated, a
   footnote) was removed on 22 Nov 2026 on request as debug output. Then the
   roster, which puts each player's agent icon before their name; each team

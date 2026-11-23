@@ -24,41 +24,17 @@ export function useMapArt(){
   return maps;
 }
 
-// Only what changed this match's RR beyond the plain payout, as short notes;
-// zeros, "No" and the queue id are left out. Reported bonus, forgiveness and
-// penalties are already inside the RR change, so they are never added again.
-// Penalty units are not defined by the schema: AFK and party penalties show
-// the reported value verbatim and are never turned into RR.
-export function rrNotes(m){
-  const d=m.myRRDetails||{};
-  const notes=[];
-  const inside='Reported for this update and already part of its RR change';
-  if(m.myDerankProtected)notes.push({key:'shield',tone:'shield',text:'Rank Shield kept your rank',hint:'Rank Shield protected your displayed rank; the recorded RR loss still applied'});
-  if(d.placement)notes.push({key:'placement',text:'Placement match',hint:'Riot reported this as a placement match; it is left out of RR stats'});
-  if(d.bonus)notes.push({key:'bonus',tone:d.bonus>0?'gain':'loss',text:rrSigned(d.bonus,0)+' RR performance bonus',hint:inside});
-  if(d.mapForgiveness)notes.push({key:'forgiveness',tone:'gain',text:rrSigned(d.mapForgiveness,0)+' RR new-map forgiveness',hint:inside});
-  if(m.myRefundedRR)notes.push({key:'refund',tone:'gain',text:rrSigned(m.myRefundedRR,0)+' RR refunded',hint:'Refunded RR is applied on top of this match’s RR change'});
-  if(d.afkPenalty)notes.push({key:'afk',tone:'loss',text:'AFK penalty '+d.afkPenalty+' (reported)',hint:'Reported AFK penalty, shown as given'});
-  const party=d.penalty||m.myPartyPenalty;
-  if(party)notes.push({key:'party',tone:'loss',text:'Party RR penalty '+party+' (reported)',hint:'Reported party penalty factor, shown as given; not converted to RR'});
-  if(d.shieldReplenished)notes.push({key:'replenished',tone:'shield',text:'Rank Shield replenished'});
-  return notes;
-}
-
-// Quiet text lines in their tone colour under the stat strip (22 Nov 2026, on
-// request: pills were disliked; they sat in the Rank tile until that tile was
-// removed the same day).
-export function RRNotes({m}){
-  const notes=rrNotes(m);
-  if(!notes.length)return null;
-  return (
-    <ul className="mc-rr-notes" aria-label="RR notes" data-slot="rr-notes">
-      {notes.map(n=>{
-        const line=<span className={cn('mc-rr-note',n.tone)}>{n.tone==='shield'&&<Shield aria-hidden="true"/>}{n.text}</span>;
-        return <li key={n.key}>{n.hint?<Hint asChild content={n.hint}>{line}</Hint>:line}</li>;
-      })}
-    </ul>
-  );
+// The performance bonus and refunded RR after the RR change, "+16+4" (23 Nov
+// 2026, on request: only these two; the other RR notes were text lines under
+// the opened card's stats, then icons at the RR change, and both were too
+// much). A reported bonus is already part of the RR change, so it is shown
+// beside it and never added to it; a refund is applied on top. Zeros are left out.
+export function rrExtras(m){
+  const bonus=m.myRRDetails?.bonus,refund=m.myRefundedRR;
+  const extras=[];
+  if(bonus)extras.push({key:'bonus',value:bonus,text:rrSigned(bonus,0)+' RR performance bonus',hint:'Performance bonus: reported for this update and already part of its RR change'});
+  if(refund)extras.push({key:'refund',value:refund,text:rrSigned(refund,0)+' RR refunded',hint:'Refunded RR: applied on top of this match’s RR change'});
+  return extras;
 }
 
 // Long Riot IDs (22 Nov 2026, on request): the name column takes all the room
@@ -183,13 +159,18 @@ export function matchView(m,s){
     :`${placeText(place)} by ${basis} in the match`+(award==='team'?`; Team MVP: highest ${basis} on your team`:'');
   const kda=myStats?[myStats.kills,myStats.deaths,myStats.assists].join(' / '):'—';
   const score=myR!=null&&opR!=null?myR+'–'+opR:'—';
+  const time=startedAtMs!=null?new Date(startedAtMs).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):startedAt||null;
+  // "22 Nov, 21:12" on the closed card (23 Nov 2026, on request; it was the
+  // Length tile's note in the opened card). Narrow cards show the time alone.
+  const date=startedAtMs!=null?new Date(startedAtMs).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):null;
   return {
     rt,result:won===true?'win':won===false?'loss':'draw',award,awardLabel,place,placeHint,rank,myRank,performanceScore,acs:myAcs,
     shielded:!!myDerankProtected&&myRR<0,
-    time:startedAtMs!=null?new Date(startedAtMs).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):startedAt,
+    time,date,started:date&&time?`${date}, ${time}`:time,
     duration:matchLengthText(m.durationMs),
     me,
-    label:rt+' on '+mapName+', '+score+'. '+(m.myAgent?'Played '+m.myAgent+'. ':'')+(awardLabel?awardLabel+'. ':'')+kda+' KDA, '+myAcs+' ACS, '+performanceScore+' Performance Score.'+(rank?' Average lobby '+lobbyRankText(avgRank)+'.':''),
+    label:rt+' on '+mapName+', '+score+'. '+(m.myAgent?'Played '+m.myAgent+'. ':'')+(awardLabel?awardLabel+'. ':'')+kda+' KDA, '+myAcs+' ACS, '+performanceScore+' Performance Score.'+(rank?' Average lobby '+lobbyRankText(avgRank)+'.':'')
+      +rrExtras(m).map(n=>' '+n.text+'.').join(''),
   };
 }
 
@@ -248,14 +229,28 @@ function KdaValue({stats}){
   return <>{stats.kills}<span className="mc-kda-separator">/</span><span className="mc-deaths">{stats.deaths}</span><span className="mc-kda-separator">/</span>{stats.assists}</>;
 }
 
+// The RR change, then the performance bonus and refund as smaller figures
+// right after it ("+16+4", `rrExtras`), each with its own hint.
 function RRChange({m,v,className}){
   const {myRR}=m;
-  return (
+  const extras=rrExtras(m);
+  const change=(
     <Hint asChild content={myRR==null?'No RR data for this match':v.shielded?'Rank Shield protected your displayed rank; this recorded RR loss still applied':'Recorded RR change for this match'}>
-      <span className={cn('match-rr-change',myRR!=null&&(myRR>=0?'gain':'loss'),v.shielded&&'shielded',className)}>
+      <span className={cn('match-rr-change',myRR!=null&&(myRR>=0?'gain':'loss'),v.shielded&&'shielded',!extras.length&&className)}>
         {v.shielded&&<Shield aria-hidden="true"/>}{myRR!=null?(myRR>=0?'+':'')+myRR:'—'}
       </span>
     </Hint>
+  );
+  if(!extras.length)return change;
+  return (
+    <span className={cn('mc-rr-value',className)} data-slot="rr-value">
+      {change}
+      {extras.map(n=>(
+        <Hint key={n.key} asChild content={n.hint}>
+          <span className={cn('mc-rr-extra',n.value>0?'gain':'loss')} data-extra={n.key}>{rrSigned(n.value,0).replace('−','-')}</span>
+        </Hint>
+      ))}
+    </span>
   );
 }
 
@@ -269,27 +264,35 @@ export function clutchSummaryText(clutches){
 
 // The opened card's head (redesigned 22 Nov 2026, on request: the first
 // version looked empty). One strip of hairline tiles: K/D, ACS, ADR, damage
-// delta per round, headshot %, KAST, clutch win rate, and the game length with
-// the start under it. K/D and ACS were asked for here although the closed row
-// has K/D/A and ACS. The Rank tile (rank before and after) was removed the same
-// day on request. The server joins only where the closed row hides it
-// (`.mc-info-server`). The RR notes follow as quiet text lines.
-function MatchInfo({m,v}){
+// delta per round, headshot %, KAST, clutch win rate and the game length.
+// K/D and ACS were asked for here although the closed row has K/D/A and ACS.
+// The Rank tile (rank before and after) was removed the same day on request.
+// The notes under the values went on 23 Nov 2026 (on request); their counts
+// moved into the label hints, and the start time moved to the closed row.
+// The server joins only where the closed row hides it (`.mc-info-server`).
+// The RR notes follow as quiet text lines.
+export function matchInfoTiles(m,v){
   const st=m.myStats||{};
-  const started=[m.startedAtMs!=null?new Date(m.startedAtMs).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):null,v.time].filter(Boolean).join(', ');
   const clutch=clutchSummaryText(m.myClutches);
-  const tiles=[
-    {label:'K/D',value:Number.isFinite(st.kd)?st.kd.toFixed(2):null,foot:st.kills!=null&&st.deaths!=null?`${st.kills} K, ${st.deaths} D`:null,hint:'Kills divided by deaths'},
-    {label:'ACS',value:Number.isFinite(st.acs)?Math.round(st.acs):null,foot:'per round',hint:'Average combat score'},
-    {label:'ADR',value:st.adr,foot:Number.isFinite(st.dmg)?`${Math.round(st.dmg).toLocaleString('en-GB')} damage`:null,hint:'Average damage per round'},
+  const count=n=>Math.round(n).toLocaleString('en-GB');
+  const hint=(text,detail)=>detail?`${text} (${detail})`:text;
+  return [
+    {label:'K/D',value:Number.isFinite(st.kd)?st.kd.toFixed(2):null,hint:hint('Kills divided by deaths',st.kills!=null&&st.deaths!=null&&`${st.kills} kills, ${st.deaths} deaths`)},
+    {label:'ACS',value:Number.isFinite(st.acs)?Math.round(st.acs):null,hint:'Average combat score per round'},
+    {label:'ADR',value:st.adr,hint:hint('Average damage per round',Number.isFinite(st.dmg)&&`${count(st.dmg)} damage`)},
     {label:'DDΔ',value:Number.isFinite(st.ddDelta)?rrSigned(st.ddDelta,0):null,tone:Number.isFinite(st.ddDelta)&&st.ddDelta!==0?(st.ddDelta>0?'text-positive':'text-negative'):null,
-      foot:Number.isFinite(st.dmgTaken)?`${Math.round(st.dmgTaken).toLocaleString('en-GB')} taken`:null,hint:'Damage delta: damage dealt minus damage taken, per round'},
-    {label:'HS%',value:st.hsPct!=null?st.hsPct+'%':null,foot:'of hits',hint:'Headshots as a share of your hits'},
-    {label:'KAST',value:st.kast!=null?st.kast+'%':null,foot:st.kastRounds!=null?`${st.kastRounds} of ${st.kastTotalRounds} rounds`:null,hint:'Rounds with a kill, assist, survival or trade'},
-    {label:'Clutches',value:clutch?.total?Math.round(clutch.won/clutch.total*100)+'%':null,foot:clutch?(clutch.total?`${clutch.won} of ${clutch.total} won`:'No situations'):'No round data',hint:clutch?.detail||undefined},
-    {label:'Length',value:v.duration,foot:started||null},
+      hint:hint('Damage delta: damage dealt minus damage taken, per round',Number.isFinite(st.dmgTaken)&&`${count(st.dmgTaken)} taken`)},
+    {label:'HS%',value:st.hsPct!=null?st.hsPct+'%':null,hint:'Headshots as a share of your hits'},
+    {label:'KAST',value:st.kast!=null?st.kast+'%':null,hint:hint('Rounds with a kill, assist, survival or trade',st.kastRounds!=null&&`${st.kastRounds} of ${st.kastTotalRounds} rounds`)},
+    {label:'Clutches',value:clutch?.total?Math.round(clutch.won/clutch.total*100)+'%':null,
+      hint:!clutch?'No round data for this match':clutch.total?`${clutch.won} of ${clutch.total} won: ${clutch.detail}`:'No clutch situations'},
+    {label:'Length',value:v.duration},
     {label:'Server',value:m.serverName,className:'mc-info-server'},
   ];
+}
+
+function MatchInfo({m,v}){
+  const tiles=matchInfoTiles(m,v);
   return (
     <section className="space-y-3" aria-label="Match info" data-slot="match-info">
       <dl className="mc-stats" data-slot="match-stats">
@@ -297,11 +300,9 @@ function MatchInfo({m,v}){
           <div key={t.label} className={cn('mc-stat-tile',t.className)}>
             <dt className="mc-stat-label">{t.hint?<Hint content={t.hint}>{t.label}</Hint>:t.label}</dt>
             <dd className={cn('mc-stat-value',t.value==null?'text-muted-foreground':t.tone)}>{t.value??'—'}</dd>
-            {t.foot&&<dd className="mc-stat-foot">{t.foot}</dd>}
           </div>
         ))}
       </dl>
-      <RRNotes m={m}/>
     </section>
   );
 }
@@ -331,8 +332,15 @@ export function MobileMatchCard({m,s,maps,agents,open,onOpenChange}){
                 {m.myR!=null&&m.opR!=null?<>{m.myR}<span className="mx-0.5 text-sm font-normal text-zinc-500">:</span><span className="text-zinc-400">{m.opR}</span></>:'—'}
               </span>
               {m.postReset&&<Hint asChild content="Placement-week game after a total rank reset"><Badge variant="outline" className="px-1 py-0 text-[9px] uppercase">Plac.</Badge></Hint>}
-              <LobbyRank m={m} rank={v.rank} className="ml-auto shrink-0 text-xs font-semibold"/>
-              <RRChange m={m} v={v} className="text-[15px]"/>
+              {/* Phones show the start time only: the full date does not fit, and
+                  the day header above gives it. It takes only the line's spare
+                  width and hides when that is narrower than the time, so it never
+                  pushes the lobby or RR change out. */}
+              <span className="@container min-w-0 flex-1">
+                {v.time&&<span className="block text-xs whitespace-nowrap tabular-nums text-zinc-500 @max-[34px]:hidden" title={v.started||undefined} data-slot="match-started">{v.time}</span>}
+              </span>
+              <LobbyRank m={m} rank={v.rank} className="shrink-0 text-xs font-semibold"/>
+              <RRChange m={m} v={v} className="shrink-0 text-[15px]"/>
             </span>
             <span className="flex min-w-0 items-center gap-x-3 text-xs tabular-nums text-muted-foreground">
               <span className="min-w-0 truncate font-semibold text-foreground">{m.mapName}</span>
@@ -387,9 +395,12 @@ function DesktopMatchCard({m,s,maps,agents,open,onOpenChange}){
             <AgentIcon agents={agents} name={m.myAgent} id={m.myAgentId} size={44} className="rounded-lg"/>
             <TileRank rank={v.myRank}/>
           </span>
+          {/* The start in small muted text over the map, with your place right
+              after the map name (23 Nov 2026, on request). */}
           <span className="mc-cell mc-identity">
-            <span className="match-map">{m.mapName}</span>
-            <span className="mc-sub">
+            {v.started&&<span className="mc-started" title={v.started} data-slot="match-started">{v.date&&<span className="mc-started-date">{v.date}, </span>}{v.time}</span>}
+            <span className="mc-title">
+              <span className="match-map">{m.mapName}</span>
               <PlaceTag v={v}/>
               {m.postReset&&<Hint asChild content="Placement-week game after a total rank reset"><Badge variant="outline" className="px-1 py-0 text-[9px] uppercase">Placements</Badge></Hint>}
             </span>

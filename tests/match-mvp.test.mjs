@@ -54,7 +54,8 @@ const cell=(html,cls)=>{const from=html.indexOf(`mc-cell ${cls}`);return html.sl
 
 test('the desktop card shows your place where the agent name was: MVP in gold for first, else 3rd',async()=>{
   const card=m=>renderHtml(PAGE,'MatchCard',{m,s,maps:null,agents:null,open:false,onOpenChange(){}});
-  const sub=html=>html.slice(html.indexOf('class="mc-sub"'),html.indexOf('mc-cell mc-outcome'));
+  // Your place follows the map name (23 Nov 2026).
+  const sub=html=>html.slice(html.indexOf('class="mc-title"'),html.indexOf('mc-cell mc-outcome'));
   const first=await card({...match,scorePlaces:new Map([['p1',1]])});
   assert.match(sub(first),/<span class="mc-place mvp-match" data-slot="match-place"[^>]*>MVP<\/span>/);
   // The agent name is gone from the row (it stays in the label and the opened card).

@@ -2,7 +2,7 @@ import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
-import {closeRenderer,renderHtml} from './helpers/react-render.mjs';
+import {closeRenderer,load} from './helpers/react-render.mjs';
 
 after(closeRenderer);
 
@@ -16,8 +16,11 @@ function extract(name){
 const api=runInNewContext("const RR_RANGES=['all','50','30','20'];\n"+
   ['parseRRDetails','reportedRRStart','isRREligible','rrReportedStats','rrAdjustmentStats','rrDodgeEntry','rrDodgesInRange'].map(extract).join('\n')+
   '\n({parseRRDetails,reportedRRStart,isRREligible,rrReportedStats,rrAdjustmentStats,rrDodgeEntry,rrDodgesInRange})');
-// The opened match card's RR notes, rendered by React.
-const details=m=>renderHtml('/src/app/pages/Matches.jsx','RRNotes',{m});
+// The figures the match card shows after the RR change, as their text.
+const details=async m=>{
+  const {rrExtras}=await load('/src/app/pages/Matches.jsx');
+  return rrExtras(m).map(n=>n.text).join(' ');
+};
 const match=d=>({myRR:20,myTierId:18,partySize:1,myRRDetails:api.parseRRDetails(d)});
 
 test('unavailable fields stay null while reported zero and false are preserved',()=>{
@@ -64,14 +67,18 @@ test('dodges are MMR-history entries with a zero match length, scoped to the RR 
   assert.deepEqual(api.rrDodgesInRange(dodges,scoped,'20').map(d=>d.atMs),[at(14)]);
   assert.equal(api.rrDodgesInRange(dodges,[],'20').length,0);
 });
-test('RR notes show only what changed the RR, keep the fractional penalty verbatim, and drop zeros, "No" and the queue',async()=>{
+test('the match card shows only the performance bonus and refund, never re-added, and drops zeros and other details',async()=>{
+  // Only bonus and refund are shown (23 Nov 2026, on request); penalties, the queue and placement are not.
   const output=await details(match({rr_performance_bonus:5,rr_penalty:.25,queue_id:'<img src=x>',is_placement_match:false,new_map_incentive_rr_forgiven:0}));
-  const text=output.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
-  assert.equal(text,'+5 RR performance bonus Party RR penalty 0.25 (reported)');
+  assert.equal(output,'+5 RR performance bonus');
   assert.ok(!output.includes('<img'));
-  assert.match(await details(match({is_placement_match:true,was_derank_protection_replenished:true})),/Placement match[^]*Rank Shield replenished/);
-  assert.match(await details({...match({}),myDerankProtected:true,myRefundedRR:12}),/Rank Shield kept your rank[^]*\+12 RR refunded/);
-  // No notable fields: no notes at all, rather than an "unavailable" line.
+  assert.equal(await details(match({is_placement_match:true,was_derank_protection_replenished:true,afk_penalty:4})),'');
+  assert.equal(await details({...match({}),myDerankProtected:true,myRefundedRR:12}),'+12 RR refunded');
+  const {rrExtras}=await load('/src/app/pages/Matches.jsx');
+  // The bonus is shown beside the RR change, which already includes it.
+  assert.deepEqual(rrExtras(match({rr_performance_bonus:-3})).map(n=>[n.key,n.value]),[['bonus',-3]]);
+  assert.match(rrExtras(match({rr_performance_bonus:5}))[0].hint,/already part of its RR change/);
+  // No notable fields: nothing at all, rather than an "unavailable" line.
   assert.equal(await details(match({rr_performance_bonus:0,afk_penalty:0,is_placement_match:false})),'');
   assert.equal(await details(match({})),'');
   assert.equal(await details({}), '');

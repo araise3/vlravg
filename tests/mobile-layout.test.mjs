@@ -90,16 +90,19 @@ test('the phone match card keeps result, score, RR change, stats and the roster 
   const html=await renderHtml('/src/app/pages/Matches.jsx','MobileMatchCard',{m,s,maps:null,open:false,onOpenChange(){}});
   assert.match(html,/class="match-card mobile win"/);
   const t=text(html);
-  // Two lines since 22 Nov 2026: time, length and server are in the opened
-  // card; the average lobby (full rank name, no icon) sits before the RR change.
+  // Two lines since 22 Nov 2026: length and server are in the opened card;
+  // the start time (23 Nov 2026) takes the first line's spare width; the
+  // average lobby (full rank name, no icon) sits before the RR change.
   // ACS left the phone line (22 Nov 2026); it is in the roster.
-  assert.equal(t,`Win 13 : 7 ${avgLabel(tierRR(18.5).tier)} +24 Abyss 18 / 12 / 8 230 PS`);
+  assert.match(t,new RegExp(String.raw`^Win 13 : 7 \d\d:\d\d ${avgLabel(tierRR(18.5).tier)} \+24 Abyss 18 / 12 / 8 230 PS$`));
+  // The time hides when the line's spare width is narrower than it.
+  assert.match(html,/<span class="@container min-w-0 flex-1"><span class="[^"]*@max-\[34px\]:hidden" title="10 Oct, \d\d:\d\d" data-slot="match-started">\d\d:\d\d<\/span><\/span>/);
   assert.match(html,/data-slot="lobby-rank"[^>]*>Diamond 2<\/span>/);
   assert.match(html,/aria-label="Win on Abyss, 13–7\. 18 \/ 12 \/ 8 KDA, 240 ACS, 230 Performance Score\. Average lobby [^"]+\. Show match details and roster"/);
   const opened=text(await renderHtml('/src/app/pages/Matches.jsx','MobileMatchCard',{m,s,maps:null,open:true,onOpenChange(){}}));
-  // The opened card's tiles give the length (with seconds) over the start, and the server,
+  // The opened card's tiles give the length (with seconds) and the server,
   // which the phone's closed card does not show; the lobby is on the closed card.
-  assert.match(opened,/Length 35:00 10 Oct, \d\d:\d\d Server Frankfurt/);
+  assert.match(opened,/Length 35:00 Server Frankfurt/);
 });
 
 test('a narrow party-size table drops the Lobbies column and long rank label, putting the count under the party label',async()=>{

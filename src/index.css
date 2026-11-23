@@ -364,7 +364,7 @@
    aligned from card to card. The map splash is a faded backdrop on the
    right; the result colours the left edge and a faint wash behind the tile. */
 .mc-row { position: relative; isolation: isolate; display: grid; width: 100%; padding: 10px 16px 10px 14px; text-align: left; cursor: pointer;
-  --mc-gap: 32px; grid-template-columns: minmax(0, 140px) minmax(84px, .65fr) minmax(calc(228px + var(--mc-gap)), 1.75fr) minmax(0, 1.25fr) minmax(108px, .75fr) minmax(40px, .45fr) 16px; align-items: center; column-gap: 0;
+  --mc-gap: 32px; grid-template-columns: minmax(0, 172px) minmax(84px, .65fr) minmax(calc(228px + var(--mc-gap)), 1.75fr) minmax(0, 1.25fr) minmax(108px, .75fr) minmax(56px, .45fr) 16px; align-items: center; column-gap: 0;
   border-left: 3px solid var(--result-color); background: linear-gradient(90deg, color-mix(in oklab, var(--result-color) 10%, transparent), transparent 34%); }
 .mc-row:focus-visible { outline: 2px solid var(--brand); outline-offset: -3px; border-radius: 11px; }
 .mc-backdrop { position: absolute; inset: 0 0 0 auto; z-index: -1; width: min(64%, 560px); overflow: hidden; pointer-events: none; }
@@ -393,9 +393,13 @@
 /* Minimum widths keep K/D/A (up to 20 / 22 / 14), scores and RR whole; the
    map column gives way first. */
 .mc-cell { display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 0; }
-.mc-identity { gap: 4px; }
+.mc-identity { gap: 2px; }
 .match-map { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; font-weight: 750; letter-spacing: -.02em; line-height: 1.2; color: #fff; }
-.mc-sub { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 11.5px; font-weight: 500; color: #a1a1aa; white-space: nowrap; }
+/* The map with your place (and a placements badge) right after it,
+   centred on the map name's line (a baseline sat the small text low). The
+   map name gives way first; the place stays whole. */
+.mc-title { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.mc-title .mc-place, .mc-title [data-slot="badge"] { flex-shrink: 0; font-size: 11.5px; line-height: 1; }
 .mc-performance-stat { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .mc-performance-lbl { font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: #a1a1aa; white-space: nowrap; }
 .mc-performance-val { display: flex; align-items: center; gap: 5px; font-size: 15px; font-weight: 700; line-height: 1.25; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -406,28 +410,48 @@
 .mc-lobby-val { font-size: 14px; font-weight: 600; }
 /* Server names run up to "US West (N. California)" (about 152px here). Its
    column is the one that gives way: the other columns' minimums fit their
-   longest values (K/D/A, PS with place, "Ascendant 3"), and at the widest
-   card (910px) the server column has room for the longest name; narrower
-   cards cut it with an ellipsis and keep the full name in the tooltip. */
+   longest values (K/D/A, PS with place, "Ascendant 3"). Since the lead
+   column grew for the start time (23 Nov 2026) the widest card (910px) has
+   about 139px here: every name fits except "US West (N. California)", which
+   is cut with an ellipsis like on narrower cards and keeps the full name in
+   the tooltip. */
 .mc-server-val { display: block; overflow: hidden; text-overflow: ellipsis; font-size: 14px; font-weight: 600; }
 .mc-tile-rank { position: absolute; right: -6px; bottom: -6px; display: flex; filter: drop-shadow(0 2px 3px rgb(0 0 0 / .75)); }
 .mc-rr .match-rr-change { font-size: 17px; line-height: 1.25; }
 .mc-chevron { width: 16px; height: 16px; color: #71717a; transition: transform .2s; }
 .match-card[data-state="open"] .mc-chevron { transform: rotate(180deg); }
-/* Cards narrower than 800px drop the server column rather than show a sliver
-   of it (under 80px); it is still in the opened card. */
+/* Cards of 800px and less drop the server column (it is in the opened card)
+   and stop using fixed columns (23 Nov 2026, on request: columns may shift
+   and move closer rather than cut or hide anything). Each cell takes its
+   own width; agent, map and result stay together, and the spare width goes
+   to the gaps before the performance group and before the lobby, which
+   shrink to a 14px minimum. Cells line up less from card to card here. */
 @container (max-width: 800px) {
-  .mc-row { grid-template-columns: minmax(0, 140px) minmax(84px, .65fr) minmax(calc(228px + var(--mc-gap)), 1.75fr) minmax(108px, .75fr) minmax(40px, .45fr) 16px; }
-  .mc-lobby { margin-left: var(--mc-gap); }
+  .mc-row { display: flex; align-items: center; }
+  .mc-row > .mc-cell, .mc-row > .mc-chevron { flex: none; }
+  .mc-lead { flex: none; min-width: auto; }
+  .mc-outcome { margin-left: 16px; }
+  /* K/D/A, ACS and PS keep their wide-card column widths while there is
+     room (the assists sat right against the ACS value), and only shrink
+     towards their values once the side gaps are used up. */
+  .mc-perf { flex: 0 1 auto; grid-template-columns: minmax(auto, 94px) minmax(auto, 48px) minmax(auto, 48px); column-gap: 14px; margin-left: auto; padding-left: 14px; }
+  .mc-perf > .mc-cell { min-width: max-content; }
+  .mc-lobby { margin-left: auto; padding-left: 14px; }
+  .mc-rr { margin-left: 12px; }
+  .mc-chevron { margin-left: 10px; }
   .mc-server { display: none; }
   .match-card .mc-info-server { display: flex; }
   .match-card .mc-stat-tile.mc-info-server { display: flex; }
 }
-@container (max-width: 760px) {
-  .mc-row { --mc-gap: 18px; } .mc-outcome { margin-left: 12px; } .mc-perf { column-gap: 10px; }
-}
-@container (max-width: 640px) {
-  .mc-row { --mc-gap: 14px; grid-template-columns: minmax(0, 1fr) minmax(76px, .7fr) minmax(196px, 2fr) minmax(70px, .8fr) minmax(40px, .5fr) 16px; }
+/* The narrowest desktop cards (from about 590px): every gap tightens so the
+   longest values still fit whole. */
+@container (max-width: 660px) {
+  .mc-lead { gap: 8px; }
+  .mc-outcome { margin-left: 10px; }
+  .mc-perf { column-gap: 8px; padding-left: 10px; }
+  .mc-lobby { padding-left: 10px; }
+  .mc-rr { margin-left: 8px; }
+  .mc-chevron { margin-left: 6px; }
 }
 /* The opened card repeats nothing from the closed row: its server shows only
    where the row above hides it (the 800px rule above; phone cards are always
@@ -443,6 +467,9 @@
    "(MVP)" for first. */
 .mc-place { font-weight: 600; color: #a1a1aa; white-space: nowrap; }
 .mc-place.mvp-match { color: #f2cf80; }
+/* The match's start ("22 Nov, 21:12") in small muted text over the map
+   (23 Nov 2026). */
+.mc-started { overflow: hidden; text-overflow: ellipsis; font-size: 11.5px; font-weight: 500; line-height: 16px; color: #71717a; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .match-rr-change { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .match-rr-change.gain { color: #4ade80; }
 .match-rr-change.loss { color: #f87171; }
@@ -458,21 +485,18 @@
 .mc-stat-tile { display: flex; min-width: 0; flex-direction: column; gap: 4px; padding: 10px 12px; background: #18181b; }
 .mc-stat-label { font-size: 11px; color: #a1a1aa; white-space: nowrap; }
 .mc-stat-value { font-size: 18px; line-height: 1.15; font-weight: 650; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mc-stat-foot { margin-top: auto; font-size: 11px; color: #71717a; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Server names are words: a little smaller, and they wrap at spaces ("Washington DC") instead of being cut. */
 .mc-info-server .mc-stat-value { font-size: 14px; white-space: normal; overflow: visible; }
 @container (max-width: 640px) {
   .mc-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-/* RR notes: quiet text lines inside the Rank tile, tinted by tone. Each note
-   is block-level flex so a line that starts with an icon is not baseline-
-   aligned to its icon and sits level with one that starts with text. */
-.mc-rr-notes { display: flex; flex-wrap: wrap; gap: 2px 12px; }
-.mc-rr-note { display: flex; align-items: center; gap: 4px; line-height: 16px; font-size: 11px; font-weight: 500; color: #a1a1aa; white-space: nowrap; }
-.mc-rr-note.gain { color: #86efac; }
-.mc-rr-note.loss { color: #fca5a5; }
-.mc-rr-note.shield { color: #93c5fd; }
-.mc-rr-note svg { width: 11px; height: 11px; }
+/* The performance bonus and refund right after the RR change ("+16+4",
+   23 Nov 2026): smaller and lighter than the change, on its baseline. */
+.mc-rr-value { display: inline-flex; align-items: baseline; gap: 1px; white-space: nowrap; }
+.mc-rr .mc-rr-value { font-size: 17px; line-height: 1.25; }
+.mc-rr-extra { font-size: .72em; font-weight: 650; font-variant-numeric: tabular-nums; }
+.mc-rr-extra.gain { color: #86efac; }
+.mc-rr-extra.loss { color: #fca5a5; }
 @media (prefers-reduced-motion: reduce) { .match-card, .mc-chevron, .mc-backdrop img { transition: none; } }
 @media (max-width: 760px) {
   .match-day-stat { flex-direction: column; gap: 3px; }

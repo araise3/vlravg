@@ -54,15 +54,18 @@ only the chrome around them and the way some data is drawn differ.
   2026; it was three lines with a 72px map thumbnail): a 40px agent tile with
   your starting rank as an icon badge, the
   result-coloured left edge and the map splash as a faded backdrop, then
-  result, score, the average lobby (full rank name in its colour since 22 Nov
-  2026, short before) and RR change on one line and map, your place ("MVP"
-  in gold for first, else "3rd"), K/D/A and PS on the next;
+  result, score, the start time (23 Nov 2026; only in the line's spare
+  width, hidden when it does not fit), the average lobby (full rank name in
+  its colour since 22 Nov 2026, short before) and RR change, with any
+  performance bonus or refund right after it ("+35+5", `rrExtras`, 23 Nov
+  2026), on one line and map, your place ("MVP" in gold for first, else
+  "3rd"), K/D/A and PS on the next;
   older matches without PS show ACS there instead. ACS left this line on 22
   Nov 2026 to make room for the place; it is still in the roster. Desktop shows the same lobby as a "Lobby"
   cell between Server and RR. The opened card's `MatchInfo` strip is three
   columns on phones, three full rows: K/D, ACS, ADR, DDΔ, HS%, KAST, clutch
-  win rate, length and server (the phone's closed card has no server), then
-  the RR notes, above the roster; the roster uses
+  win rate, length and server (the phone's closed card has no server),
+  above the roster; the roster uses
   narrower columns, short rank names and agent icons, and drops the #tag
   (kept in the link) so names have room.
 - **Overview**: the lobby rank and top teammates cards stack; the lobby rows
