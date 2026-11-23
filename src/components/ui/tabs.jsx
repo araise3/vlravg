@@ -26,11 +26,18 @@ const BOX_KEYS = ["left", "top", "width", "height"]
 // mounted behind `hidden`). Hidden lists keep their last box instead of
 // collapsing to 0×0, and the first box after being hidden, or ever, snaps
 // (`snap: true`) so the indicator never slides in from the corner.
+// The indicator slides only when the active tab changes (`trigger`, the
+// active trigger's id). The same tab measuring differently is a layout change
+// (a popover settling its width while it opens, wrapping, a label or count
+// changing) and snaps: in the pro library the "All" highlight was measured
+// before the popover had its width and then stretched across the bar while
+// the panel zoomed in.
 function nextIndicatorBox(previous, measured) {
   if (measured === "hidden") return previous && !previous.hidden ? { ...previous, hidden: true } : previous
   if (!measured) return null
   if (previous && !previous.hidden && BOX_KEYS.every((key) => previous[key] === measured[key])) return previous
-  const next = { snap: !previous || Boolean(previous.hidden) }
+  const sameTrigger = Boolean(previous) && measured.trigger != null && previous.trigger === measured.trigger
+  const next = { snap: !previous || Boolean(previous.hidden) || sameTrigger, trigger: measured.trigger }
   for (const key of BOX_KEYS) next[key] = measured[key]
   return next
 }
@@ -46,6 +53,7 @@ function useActiveTriggerBox(listRef) {
     const measure = () => {
       const active = list.querySelector('[data-slot="tabs-trigger"][data-state="active"]')
       const measured = !list.getClientRects().length ? "hidden" : active && {
+        trigger: active.id || active.getAttribute("aria-controls") || active.textContent,
         left: active.offsetLeft,
         top: active.offsetTop,
         width: active.offsetWidth,

@@ -46,6 +46,30 @@ test('indicator snaps instead of animating on first show and after being hidden'
   assert.equal(nextIndicatorBox(moved,null),null);
 });
 
+// The pro library popover measured its "All" tab before it had its width
+// (57px), then at full width (146px); that resize slid the highlight across
+// the bar while the panel zoomed in. Only a change of tab may slide.
+test('indicator slides only when the active tab changes; resizing the same tab snaps',async()=>{
+  const {nextIndicatorBox}=await load('/src/components/ui/tabs.jsx');
+  const narrow={trigger:'t-all',left:3,top:3,width:57,height:30};
+  const first=nextIndicatorBox(null,narrow);
+  assert.equal(first.snap,true);
+  const widened=nextIndicatorBox(first,{...narrow,width:146});
+  assert.equal(widened.snap,true,'same tab, new size: no slide');
+  assert.equal(widened.width,146);
+  const switched=nextIndicatorBox(widened,{trigger:'t-emea',left:150,top:3,width:120,height:30});
+  assert.equal(switched.snap,false,'a different tab slides');
+  assert.equal(switched.trigger,'t-emea');
+  const relabelled=nextIndicatorBox(switched,{trigger:'t-emea',left:150,top:3,width:110,height:30});
+  assert.equal(relabelled.snap,true,'a count change on the same tab snaps');
+});
+
+test('the indicator keys its measurement on the active trigger',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const tabs=readFileSync(new URL('../src/components/ui/tabs.jsx',import.meta.url),'utf8');
+  assert.match(tabs,/trigger: active\.id/);
+});
+
 test('pages have no visible title or description; the title stays for screen readers and focus',async()=>{
   const {readFileSync,readdirSync}=await import('node:fs');
   const shared=readFileSync(new URL('../src/app/shared.jsx',import.meta.url),'utf8');
