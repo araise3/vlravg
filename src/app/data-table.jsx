@@ -181,7 +181,9 @@ export function TablePager({page,pageSize,total,noun,onPrevious,onNext,canPrevio
 // before it, which groups related figures (W–L beside Win rate).
 // `widths` (22 Nov 2026) fixes the column widths (CSS lengths, one per column)
 // with table-layout: fixed, so tables stacked on one page line up column for
-// column; without it columns size to their content.
+// column; without it columns size to their content. In a fixed-width table a
+// right-aligned header's sort arrow sits left of the label outside the
+// layout (23 Nov 2026), so it takes no column width from the name column.
 export function SortableTable({id,caption,columns,rows,values,maxima=[],className,pageSize,pageSizes,noun='rows',searchable=!!pageSize&&rows.length>pageSize,standalone=false,tools,detail,detailLabel,emptyText,widths}){
   const mobile=useIsMobile();
   const [expanded,setExpanded]=useState(()=>new Set());
@@ -266,9 +268,9 @@ export function SortableTable({id,caption,columns,rows,values,maxima=[],classNam
                       <Hint asChild content={col.title}>
                       <Button variant="ghost" size="sm" onClick={column.getToggleSortingHandler()}
                         className={cn('group/sort h-7 gap-1 px-1.5 text-xs font-medium text-muted-foreground hover:bg-transparent hover:text-foreground',
-                          right(index)?'-mr-1.5':'-ml-1.5',state&&'text-foreground')}
+                          right(index)?'-mr-1.5':'-ml-1.5',widths&&right(index)&&'relative',state&&'text-foreground')}
                         aria-label={`${col.label}: sort ${column.getNextSortingOrder()==='asc'?'ascending':'descending'}`}>
-                        {right(index)&&<Icon className={cn('size-3.5 transition-opacity',!state&&'opacity-0 group-hover/sort:opacity-60 group-focus-visible/sort:opacity-60')} aria-hidden="true"/>}
+                        {right(index)&&<Icon className={cn('size-3.5 transition-opacity',widths&&'absolute right-full mr-0.5',!state&&'opacity-0 group-hover/sort:opacity-60 group-focus-visible/sort:opacity-60')} aria-hidden="true"/>}
                         {col.label}
                         {!right(index)&&<Icon className={cn('size-3.5 transition-opacity',!state&&'opacity-0 group-hover/sort:opacity-60 group-focus-visible/sort:opacity-60')} aria-hidden="true"/>}
                       </Button>

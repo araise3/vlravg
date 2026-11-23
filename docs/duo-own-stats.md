@@ -29,8 +29,21 @@ down:
   (fixed table layout), so their columns line up. Elsewhere the RR-by-rank
   table now says Matches and Win rate (was Games and WR%), and Wintrading
   signals shows K/D, ACS, PS in that order. Default
-  order is matches together; every column sorts; ten rows per page with the
-  10/25/50 picker. Phones get the shared card list, as other tables do.
+  order is matches together; every column sorts. Phones get the shared card
+  list, as other tables do.
+- **All rows, full names** (23 Nov 2026, on request): every teammate shows at
+  once, with no pager, rows-per-page picker or search (it was ten rows per
+  page with a 10/25/50 picker, which also switched the search on). Names had
+  a 160px cap that cut "Khamzat Chimaev#WASD" short; they now fill the name
+  column, which `STAT_TABLE_WIDTHS` widened from 20% to 31% (Matches 9%, Avg
+  Lobby 21%, K/D, ACS, PS 7% each, Win rate and Total RR 9% each). The number
+  columns could only give up that room because, in fixed-width tables, a
+  right-aligned header's sort arrow no longer reserves ~18px of width: it is
+  positioned left of the label outside the layout (`SortableTable`). Measured
+  at the full 910px table, "Khamzat Chimaev#WASD" and even a 16-character
+  "WWWW…" name fit without truncation, and "Ascendant 3 (50 RR)" fits in Avg
+  Lobby; at 28% with the arrows still in flow, Matches, Win rate, Total RR and
+  "Diamond 1 (95 RR)" spilled out of their cells.
 - **Not shown**: your own stats with each teammate. The highlight tiles, the
   expandable you-vs-them comparison rows (`DuoComparison`) and the act
   baseline (`duoBaseline`) were removed.

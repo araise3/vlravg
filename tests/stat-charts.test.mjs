@@ -263,8 +263,6 @@ const duoMate=(key,extra={})=>({key,name:key,tag:'EU',games:3,wins:2,decided:3,k
 const flat=html=>html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
 
 test('teammates: a plain sortable table of shared results and the teammate\'s own stats, none of yours, only RR coloured',async()=>{
-  const {TEAMMATE_PAGE_SIZES}=await load('/src/app/pages/Duos.jsx');
-  assert.deepEqual(TEAMMATE_PAGE_SIZES,[10,25,50]);
   const teammates=Array.from({length:12},(_,i)=>duoMate('m'+i,{games:i===3?30:20-i,rrCount:i===0?0:3,performanceSum:i===1?600:0,performanceCount:i===1?3:0}));
   const html=await renderHtml('/src/app/pages/Duos.jsx','DuoRoster',{teammates});
   // Just the table, like the party-size table: no card, no card title around it.
@@ -278,13 +276,17 @@ test('teammates: a plain sortable table of shared results and the teammate\'s ow
   // Both Duos tables use the same fixed column widths, so they line up.
   const {STAT_TABLE_WIDTHS}=await load('/src/app/shared.jsx');
   assert.equal(STAT_TABLE_WIDTHS.length,8);
-  assert.match(html,/<table[^>]*class="[^"]*table-fixed[^"]*"[^>]*>.*?<colgroup><col style="width:20%"\/><col style="width:10%"\/><col style="width:20%"\/>/);
+  assert.match(html,/<table[^>]*class="[^"]*table-fixed[^"]*"[^>]*>.*?<colgroup><col style="width:31%"\/><col style="width:9%"\/><col style="width:21%"\/>/);
   const party=await renderHtml('/src/app/pages/Duos.jsx','PerformanceTable',{id:'p',party:true,rows:[{tier:2,label:'Duo',total:3,totalKills:3,totalDeaths:3,acsSum:0,acsCount:0,performanceSum:0,performanceCount:0,wins:1,decided:2,lobbySum:0,lobbyCount:0,rrCount:0,rrTotal:0}]});
   assert.deepEqual([...party.matchAll(/aria-label="([^"]+): sort/g)].map(m=>m[1]),['Party size','Matches','Avg Lobby','K/D','ACS','PS','Win rate','Total RR']);
-  assert.match(party,/<colgroup><col style="width:20%"\/>/);
-  // Default order: most matches together first; ten rows on the first page.
+  assert.match(party,/<colgroup><col style="width:31%"\/>/);
+  // Right-aligned headers keep their sort arrow out of the fixed layout.
+  assert.match(table,/aria-label="Matches: sort[^"]*"[^>]*>.*?<svg[^>]*class="[^"]*absolute right-full/);
+  // Default order: most matches together first; every teammate on one page.
   const names=[...table.matchAll(/scope="row"[^>]*>.*?title="([^"#]+)#EU"/g)].map(m=>m[1]);
-  assert.deepEqual(names,['m3','m0','m1','m2','m4','m5','m6','m7','m8','m9']);
+  assert.deepEqual(names,['m3','m0','m1','m2','m4','m5','m6','m7','m8','m9','m10','m11']);
+  // Names fill the name column instead of a fixed 160px cap.
+  assert.doesNotMatch(table,/max-w-40/);
   // Their figures: K/D 30/20, ACS 600/3, PS only where reported.
   assert.match(flat(table),/m1 #EU 19 — 1\.50 200 200 66\.7% \+12 /);
   assert.match(flat(table),/m3 #EU 30 — 1\.50 200 — 66\.7% \+12 /);
@@ -293,10 +295,10 @@ test('teammates: a plain sortable table of shared results and the teammate\'s ow
   // One teammates section: no separate card for your own stats with each teammate.
   const source=readFileSync(new URL('../src/app/pages/Duos.jsx',import.meta.url),'utf8');
   assert.doesNotMatch(source,/DuoForm|duo-form|duoBaseline|DuoComparison|DuoMatchup|myKd|myAcs/);
-  assert.match(table,/1–10 of 12 teammates/);
-  assert.deepEqual([...table.matchAll(/<option[^>]*value="(\d+)"/g)].map(m=>m[1]),['10','25','50']);
+  // No pager, rows-per-page picker or search.
+  assert.doesNotMatch(html,/table-pager|<option|type="search"|Search teammates/);
   // Colour is kept for RR only.
-  assert.doesNotMatch(table.slice(0,table.indexOf('data-slot="table-pager"')),/text-positive[^"]*"[^>]*>\d+\.\d%|text-negative[^"]*"[^>]*>\d+\.\d%/);
+  assert.doesNotMatch(table,/text-positive[^"]*"[^>]*>\d+\.\d%|text-negative[^"]*"[^>]*>\d+\.\d%/);
   assert.match(table,/class="[^"]*text-positive[^"]*"[^>]*>\+12</);
 });
 
@@ -305,7 +307,7 @@ test('servers: the Duos column order and widths, plus your net RR on each server
   const html=await renderHtml('/src/app/pages/Servers.jsx','ServersTable',{rows:[server('Frankfurt',{rrTotal:42,rrCount:4}),server('Paris',{rrTotal:-15,rrCount:3}),server('London')]});
   assert.deepEqual([...html.matchAll(/aria-label="([^"]+): sort/g)].map(m=>m[1]),['Server','Matches','Avg Lobby','K/D','ACS','PS','Win rate','Total RR']);
   // The server column fits "US West (N. California)" at full width.
-  assert.match(html,/table-fixed[^"]*"[^>]*>.*?<colgroup><col style="width:20%"\/><col style="width:10%"\/><col style="width:20%"\/>/);
+  assert.match(html,/table-fixed[^"]*"[^>]*>.*?<colgroup><col style="width:31%"\/><col style="width:9%"\/><col style="width:21%"\/>/);
   assert.match(html,/class="[^"]*text-positive[^"]*" title="4 of 4 matches have a recorded RR change"[^>]*>\+42</);
   assert.match(html,/class="[^"]*text-negative[^"]*" title="3 of 4 matches have a recorded RR change"[^>]*>−15</);
   assert.match(html,/title="0 of 4 matches have a recorded RR change"[^>]*>—</);

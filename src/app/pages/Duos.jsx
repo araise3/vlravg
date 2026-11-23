@@ -87,8 +87,8 @@ export function PerformanceTable({id,rows,party}){
 // highlight tiles and expandable comparison rows): what you did together and
 // how each teammate played (their K/D, ACS and PS in your shared matches).
 // Your own stats with each teammate are not shown. Colour stays on RR only,
-// where the sign is the point.
-export const TEAMMATE_PAGE_SIZES=[10,25,50];
+// where the sign is the point. Every teammate shows at once, with no pages or
+// search, and names use the whole name column (23 Nov 2026, on request).
 
 export function duoRows(teammates){
   return teammates.map(t=>({
@@ -109,7 +109,7 @@ export function DuoRoster({teammates}){
   const tableRows=rows.map(t=>{
     const losses=t.decided-t.wins,draws=t.games-t.decided;
     return {key:t.key,cells:[
-      <PlayerLink href={playerRouteUrl(t.name,t.tag)} name={t.name} tag={t.tag} className="max-w-40"/>,
+      <PlayerLink href={playerRouteUrl(t.name,t.tag)} name={t.name} tag={t.tag} className="max-w-full"/>,
       t.games,
       <LobbyValue sum={t.rankSum} count={t.rankCount}/>,
       t.kd.toFixed(2),
@@ -130,7 +130,6 @@ export function DuoRoster({teammates}){
     // Just the table, like the party-size table above it: no card around it.
     <TableSection label="Teammates">
       <SortableTable id="teammates-list" rows={tableRows} values={values} noun="teammates" standalone widths={STAT_TABLE_WIDTHS}
-        pageSize={TEAMMATE_PAGE_SIZES[0]} pageSizes={TEAMMATE_PAGE_SIZES}
         columns={[{label:'Teammate'},{label:'Matches'},{label:'Avg Lobby',wide:true,align:'left'},{label:'K/D',title:'Their K/D in your shared matches'},
           {label:'ACS',title:'Their average ACS in your shared matches'},{label:'PS',title:'Their average Performance Score in your shared matches'},
           {label:'Win rate'},{label:'Total RR',title:'Your net RR change in matches together'}]}

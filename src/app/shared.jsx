@@ -73,7 +73,10 @@ export function LobbyRankText({tier,className,children}){
 // they look the same and line up where they stack. The name column fits the
 // longest server name, "US West (N. California)", at the full 910px card
 // (about 175px with padding); Total RR gave up the room (22 Nov 2026).
-export const STAT_TABLE_WIDTHS=['20%','10%','20%','9%','9%','9%','12%','11%'];
+// Widened to 31% (23 Nov 2026, on request) so teammate names such as
+// "Khamzat Chimaev#WASD" show in full; the number columns gave up the room
+// once their headers' sort arrows stopped taking width (data-table.jsx).
+export const STAT_TABLE_WIDTHS=['31%','9%','21%','7%','7%','7%','9%','9%'];
 
 export function LobbyValue({sum,count}){
   if(!count)return '—';
