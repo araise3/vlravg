@@ -112,11 +112,11 @@ function archiveClient(binding,{hold=()=>null}={}){
   const calls=[],done=[];let inFlight=0,peak=0;
   const context={_analysisGen:1,API_BASE:'/api',...transport(async()=>Response.json({}))};
   context.fetchApiJson=async url=>{
-    const query=new URL(url,'https://example.test').search;
+    const target=new URL(url,'https://example.test'),query=target.search;
     calls.push(query);inFlight++;peak=Math.max(peak,inFlight);
     try{
       await hold(query);
-      const r=await archiveRequest(binding,query);
+      const r=await onRequestGet({request:new Request(target),env:{APP_DB:binding,MATCH_BUCKET:binding.bucket},waitUntil(){}});
       const j=await r.json();done.push(query);
       return{r,j};
     }finally{inFlight--;}
@@ -124,26 +124,66 @@ function archiveClient(binding,{hold=()=>null}={}){
   return{calls,done,peak:()=>peak,context,read:runInNewContext(archiveSource+'\nreadServerMatchArchive',context)};
 }
 
-test('a 200-match archive loads in parallel pages and publishes each page in order',async t=>{
+// archiveClient records the plan request (match-archive-pages) as ''.
+const PLAN='';
+
+test('a 200-match archive loads its planned pages in parallel and publishes them in order',async t=>{
   const {db,binding}=await archiveDb(Array.from({length:200},(_,id)=>({id})));
   t.after(()=>db.close());
   const client=archiveClient(binding),pages=[];
   let complete=false;
   const rows=await client.read(puuid,season,1,()=>true,{onPage:page=>pages.push([...page.map(row=>row.id)]),onComplete:()=>{complete=true;}});
   assert.deepEqual([...rows.map(row=>row.id)],Array.from({length:200},(_,id)=>id));
-  assert.deepEqual(pages.map(page=>page.length),[50,50,50,50]);
+  // Published batches follow each other with no gap or overlap.
+  assert.deepEqual(pages.flat(),Array.from({length:200},(_,id)=>id));
   assert.ok(complete);
-  assert.ok(client.peak()>1&&client.peak()<=3,`peak ${client.peak()}`);
-  // At most the other workers' chunks past the end are spent on empty pages.
-  assert.ok(client.calls.length>=4&&client.calls.length<=6,client.calls.join(' '));
+  // The plan and the first page load together, then the other three pages
+  // at once: no request is spent past the end.
+  assert.deepEqual(client.calls.slice(0,2),['?start=0&size=50',PLAN]);
+  assert.deepEqual(client.calls.slice(2).sort(),['?start=100&size=50','?start=150&size=50','?start=50&size=50']);
+  assert.ok(client.peak()>=3&&client.peak()<=7,`peak ${client.peak()}`);
 });
 
-test('an archive that fits one page costs exactly one request',async t=>{
+test('an archive that fits one page costs one page request beside the plan',async t=>{
   const {db,binding}=await archiveDb(Array.from({length:30},(_,id)=>({id})));
   t.after(()=>db.close());
   const client=archiveClient(binding);
-  assert.equal((await client.read(puuid,season,1)).length,30);
-  assert.deepEqual(client.calls,['?start=0&size=50']);
+  let complete=false;
+  assert.equal((await client.read(puuid,season,1,()=>true,{onComplete:()=>{complete=true;}})).length,30);
+  assert.deepEqual(client.calls,['?start=0&size=50',PLAN]);
+  assert.equal(client.peak(),2,'the plan does not delay the first page');
+  assert.ok(complete);
+});
+
+test('the page plan cuts pages exactly where cursor paging does',async t=>{
+  // Mixed compressed sizes: random padding does not compress.
+  const sizes=[0,40,300,0,0,250,120,0,90,0];
+  const {db,binding}=await archiveDb(Array.from({length:130},(_,id)=>({id,padding:randomBytes(sizes[id%10]*512).toString('base64')})));
+  t.after(()=>db.close());
+  const plan=(await (await onRequestGet({request:new Request(`https://example.test/api/match-archive-pages/${puuid}/${season}`),
+    env:{APP_DB:binding,MATCH_BUCKET:binding.bucket},waitUntil(){}})).json()).data;
+  const cursor=[];
+  for(let start=0;start!==null;){
+    const page=await (await archiveRequest(binding,`?start=${start}&size=50`)).json();
+    cursor.push([start,page.data.length]);
+    start=page.nextStart;
+  }
+  assert.equal(plan.total,130);
+  assert.deepEqual(plan.pages,cursor);
+  assert.ok(plan.pages.length>3,'the compressed budget cuts some pages short');
+  const empty=await onRequestGet({request:new Request(`https://example.test/api/match-archive-pages/${puuid}/${randomUUID()}`),
+    env:{APP_DB:binding,MATCH_BUCKET:binding.bucket},waitUntil(){}});
+  assert.deepEqual((await empty.json()).data,{total:0,pages:[]});
+});
+
+test('an empty archive reports completion after the first page and the plan',async t=>{
+  const {db,binding}=await archiveDb([]);
+  t.after(()=>db.close());
+  const client=archiveClient(binding);
+  let complete=false;
+  assert.equal((await client.read(puuid,season,1,()=>true,{onComplete:()=>{complete=true;}})).length,0);
+  assert.deepEqual(client.calls,['?start=0&size=50',PLAN]);
+  assert.ok(complete);
 });
 
 test('a later page that answers first is held until the earlier pages publish',async t=>{
@@ -159,7 +199,8 @@ test('a later page that answers first is held until the earlier pages publish',a
   assert.deepEqual(pages,[0],'chunk 100 must wait for chunk 50');
   slow.resolve();
   assert.equal((await result).length,150);
-  assert.deepEqual(pages,[0,50,100]);
+  // Chunks 50 and 100 are then both ready and publish as one update.
+  assert.deepEqual(pages,[0,50]);
 });
 
 test('budget-cut chunks are finished from the cursor without gaps or overlap',async t=>{
@@ -234,7 +275,9 @@ test('the archive client can talk to an older proxy and ignores superseded respo
   }};
   const read=runInNewContext(archiveSource+'\nreadServerMatchArchive',context);
   assert.equal((await read(puuid,season,1)).length,10);
-  assert.equal(calls,2);
+  // The first page, the plan request it does not understand, then the
+  // empty page that ends a cursorless archive.
+  assert.equal(calls,3);
   const pending=deferred();
   context.fetchApiJson=()=>pending.promise;
   const pages=[];
@@ -376,6 +419,19 @@ test('partial scans and a region transfer cannot enable incremental early stoppi
   await client.loadAll();
   assert.equal(client.urls.filter(url=>(url.includes('/history/')||url.includes('/history-by-puuid/'))).length,4);
   assert.ok(client.urls.some(url=>url.includes('/history-by-puuid/na/')));
+});
+
+test('the stored-matches index loads beside the live scan, not after it',async()=>{
+  const client=analysisClient();
+  await client.loadAll();
+  const firstStored=client.urls.findIndex(url=>url.includes('/stored-matches/'));
+  const lastLive=client.urls.findLastIndex(url=>url.includes('/history-by-puuid/'));
+  assert.ok(firstStored>=0&&firstStored<lastLive,client.urls.join('\n'));
+  // Recovery still requests nothing it already has, and the scan certifies.
+  assert.equal(client.urls.filter(url=>url.includes('/match-detail/')).length,0);
+  client.urls.length=0;
+  await client.loadAll();
+  assert.equal(client.urls.filter(url=>url.includes('/history-by-puuid/')).length,2);
 });
 
 test('another tab reuses durable coverage without a time window',async()=>{

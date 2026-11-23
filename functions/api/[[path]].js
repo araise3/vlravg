@@ -102,6 +102,9 @@ const MATCH_ARCHIVE_MAX_PAGE_SIZE = 50;
 const MATCH_ARCHIVE_COMPRESSED_BUDGET = 512 * 1024;
 const MATCH_ARCHIVE_JSON_BUDGET = 8 * 1024 * 1024;
 const MATCH_ARCHIVE_COUNTS_ROUTE = new RegExp(`^/match-archive-counts/(${UUID})$`, 'i');
+const MATCH_ARCHIVE_PAGES_ROUTE = new RegExp(`^/match-archive-pages/(${UUID})/(${UUID})$`, 'i');
+// R2 objects stored at once when a page of matches is archived.
+const MATCH_ARCHIVE_SAVE_PARALLEL = 5;
 const MATCH_COVERAGE_ROUTE = new RegExp(`^/match-coverage/(eu|na|ap|kr|latam|br)/(pc|console)/(${UUID})/(${UUID})$`, 'i');
 const coverageScope=m=>({region:m[1].toLowerCase(),platform:m[2].toLowerCase(),puuid:m[3].toLowerCase(),season_id:m[4].toLowerCase()});
 
@@ -196,30 +199,33 @@ async function saveMatchArchivePage(env, bodyText, puuid) {
   ).bind(puuid, ...ids).all();
   const indexed = new Map((existing || []).map(row => [row.match_id, row.payload]));
   const seen = new Set();
-  const statements = [];
-  for (const row of eligible) {
+  const unique = eligible.filter(row => !seen.has(row.metadata.match_id) && seen.add(row.metadata.match_id));
+  // Matches are independent R2 objects, so they are stored a few at a time.
+  // One at a time, a ten-match scan page spent about a second here before
+  // its response could be sent (23 Nov 2026).
+  const statements = (await mapLimit(unique, MATCH_ARCHIVE_SAVE_PARALLEL, async row => {
     const meta = row.metadata;
     const matchId = meta.match_id;
     const seasonId = meta.season?.id || meta.season_id;
-    if (seen.has(matchId)) continue;
-    seen.add(matchId);
     const legacy = indexed.get(matchId);
     // A pre-R2 copy of this row keeps its stats; the fresh row adds scores.
     const copies = hasInlinePayload(legacy) ? [await gunzipMatch(legacy), row] : [row];
     const bytes = await storeMatchPayload(env, matchId, copies);
-    if (bytes == null) continue;
+    if (bytes == null) return null;
     if (!indexed.has(matchId)) {
-      statements.push(env.APP_DB.prepare(
+      return env.APP_DB.prepare(
         "INSERT OR IGNORE INTO match_archive (puuid,season_id,match_id,started_at,payload,bytes) VALUES (?1,?2,?3,?4,X'',?5)"
-      ).bind(puuid, seasonId.toLowerCase(), matchId, meta.started_at || null, bytes));
-    } else if (hasInlinePayload(legacy)) {
+      ).bind(puuid, seasonId.toLowerCase(), matchId, meta.started_at || null, bytes);
+    }
+    if (hasInlinePayload(legacy)) {
       // Now in R2: empty the D1 copy. Compare-and-swap keeps a concurrent
       // migration or refresh from being undone.
-      statements.push(env.APP_DB.prepare(
+      return env.APP_DB.prepare(
         "UPDATE match_archive SET payload=X'',bytes=?1 WHERE puuid=?2 AND match_id=?3 AND payload=?4"
-      ).bind(bytes, puuid, matchId, legacy));
+      ).bind(bytes, puuid, matchId, legacy);
     }
-  }
+    return null;
+  })).filter(Boolean);
   if (statements.length) await env.APP_DB.batch(statements);
 }
 
@@ -278,6 +284,37 @@ async function readMatchArchive(env, puuid, seasonId, start, size, bounded = fal
     }
     const nextStart = consumed < (rows[0]?.total || 0) ? start + consumed : null;
     const res = json({ data: matches, nextStart }, 200);
+    res.headers.set('Cache-Control', 'no-store');
+    return res;
+  } catch {
+    return json({ error: 'Match archive unavailable' }, 503);
+  }
+}
+
+// The page plan for one player's act (23 Nov 2026): where each bounded
+// archive page starts and how many rows it holds, from the D1 index alone.
+// It applies the same row and compressed-size cut as readMatchArchive, so a
+// client can request every page at once instead of discovering each page's
+// end from the previous response. A page can still stop early at the JSON
+// budget; the client finishes it from the returned cursor.
+async function readMatchArchivePages(env, puuid, seasonId) {
+  if (!env.APP_DB) return json({ error: 'Match archive unavailable' }, 503);
+  try {
+    const { results } = await env.APP_DB.prepare(
+      'SELECT CASE WHEN length(payload)>0 THEN length(payload) ELSE COALESCE(bytes,0) END AS size '
+      + 'FROM match_archive WHERE puuid=?1 AND season_id=?2 ORDER BY started_at DESC, match_id DESC LIMIT ?3'
+    ).bind(puuid, seasonId, 5000 + MATCH_ARCHIVE_MAX_PAGE_SIZE).all();
+    const sizes = (results || []).map(row => Number(row.size) || 0);
+    const pages = [];
+    for (let start = 0; start < sizes.length;) {
+      // The first row always makes progress, as in readMatchArchive.
+      let end = start + 1, bytes = sizes[start];
+      while (end < sizes.length && end - start < MATCH_ARCHIVE_MAX_PAGE_SIZE
+        && bytes + sizes[end] <= MATCH_ARCHIVE_COMPRESSED_BUDGET) bytes += sizes[end++];
+      pages.push([start, end - start]);
+      start = end;
+    }
+    const res = json({ data: { total: sizes.length, pages } }, 200);
     res.headers.set('Cache-Control', 'no-store');
     return res;
   } catch {
@@ -987,6 +1024,9 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
 
   const archiveCountsMatch = requestPath.match(MATCH_ARCHIVE_COUNTS_ROUTE);
   if (archiveCountsMatch) return readMatchArchiveCounts(env, archiveCountsMatch[1].toLowerCase());
+
+  const archivePagesMatch = requestPath.match(MATCH_ARCHIVE_PAGES_ROUTE);
+  if (archivePagesMatch) return readMatchArchivePages(env, archivePagesMatch[1].toLowerCase(), archivePagesMatch[2].toLowerCase());
 
   const archiveMatch = requestPath.match(MATCH_ARCHIVE_ROUTE);
   if (archiveMatch) {

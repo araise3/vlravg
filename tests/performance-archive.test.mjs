@@ -12,6 +12,7 @@ const api=runInNewContext(source.slice(source.indexOf('async function gzipMatch(
   Blob,Response,Headers,CompressionStream,DecompressionStream,TextEncoder,Uint8Array,
   matchKey,hasInlinePayload,readArchivedPayload,mapLimit,
   MATCH_ARCHIVE_PAGE_SIZE:10,MATCH_ARCHIVE_COMPRESSED_BUDGET:512*1024,MATCH_ARCHIVE_JSON_BUDGET:8*1024*1024,
+  MATCH_ARCHIVE_SAVE_PARALLEL:5,MATCH_ARCHIVE_MAX_PAGE_SIZE:50,
   json:(body,status)=>Response.json(body,{status}),
 });
 const puuid='11111111-1111-4111-8111-111111111111',other='22222222-2222-4222-8222-222222222222',season='act';
@@ -74,6 +75,22 @@ test('players who share a match share one stored payload and one D1 index row ea
   assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM match_archive WHERE length(payload)>0').get().n,0,'D1 keeps no payload');
   await f.save(match({score:200}));
   assert.equal((await f.read(other)).players[0].performance.score,200,'enrichment is visible to every player of the match');
+});
+
+test('a page of matches is stored a few R2 objects at a time, each indexed once',async t=>{
+  const f=fixture(t);
+  let inFlight=0,peak=0;
+  const get=f.bucket.get.bind(f.bucket);
+  f.bucket.get=async key=>{
+    inFlight++;peak=Math.max(peak,inFlight);
+    await new Promise(resolve=>setTimeout(resolve,5));
+    try{return await get(key);}finally{inFlight--;}
+  };
+  const rows=Array.from({length:10},(_,i)=>match({score:i},`game-${i}`));
+  await api.save(f.env,JSON.stringify({data:[...rows,rows[0]]}),puuid);
+  assert.equal(peak,5,'five objects at once, not one at a time');
+  assert.equal(f.bucket.objects.size,10);
+  assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM match_archive').get().n,10);
 });
 
 test('no bucket means no archive write at all, so D1 cannot refill',async t=>{

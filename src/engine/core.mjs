@@ -307,22 +307,31 @@ let allTeammates=[],allEncounters=[],serverData=[],serverPartySize=0,serverFilte
 // several seconds. The archive is split into 50-row chunks; a chunk the
 // proxy cut short (its JSON budget) is finished from the returned cursor
 // before the chunk counts as done. Pages still publish strictly in order.
+//
+// Since 23 Nov 2026 the proxy also serves the page plan (match-archive-pages:
+// each page's start and size under its compressed budget, from the D1 index
+// alone). It is requested beside the first page; every other planned page
+// then loads up to six at a time, so a cached 200-match act no longer waits
+// for one budget-cut page to name where the next one starts. Rows that
+// become ready together publish as one update. Without a plan (an older
+// proxy, or the plan request failed) the 50-row chunks above are used.
 async function readServerMatchArchive(puuid,seasonId,generation,isRelevant=()=>true,opts={}){
-  const CHUNK=50,PARALLEL=3,MAX_START=5000;
+  const CHUNK=50,PARALLEL=3,PLANNED_PARALLEL=6,MAX_START=5000;
   const stale=()=>generation!==_analysisGen||!isRelevant();
   const chunks=[],published=[];
   let head=0,nextChunk=0,endFound=false,failed=null,fatal=null,cursorless=false;
   const flush=()=>{
+    const ready=[];
     while(chunks[head]){
       const chunk=chunks[head];
       if(chunk.rows.length>chunk.sent){
-        const page=chunk.rows.slice(chunk.sent);chunk.sent=chunk.rows.length;
-        published.push(...page);
-        if(page.length)opts.onPage?.(page);
+        ready.push(...chunk.rows.slice(chunk.sent));chunk.sent=chunk.rows.length;
       }
       if(!chunk.done)break;
       head++;
     }
+    published.push(...ready);
+    if(ready.length)opts.onPage?.(ready);
   };
   const fetchPage=async(start,size)=>{
     const {r:response,j}=await fetchApiJson(`${API_BASE}/match-archive/${encodeURIComponent(puuid)}/${encodeURIComponent(seasonId)}?start=${start}&size=${size}`,{cache:'no-store',signal:opts.signal});
@@ -337,16 +346,30 @@ async function readServerMatchArchive(puuid,seasonId,generation,isRelevant=()=>t
     cursorless=true;
     return{page,next:page.length<10?null:start+page.length};
   };
-  // Returns false once the read must stop (superseded or failed).
-  const runChunk=async index=>{
+  // The plan, or null when the proxy has none (older proxy, storage error).
+  const fetchPlan=async()=>{
+    try{
+      const {r:response,j}=await fetchApiJson(`${API_BASE}/match-archive-pages/${encodeURIComponent(puuid)}/${encodeURIComponent(seasonId)}`,{cache:'no-store',signal:opts.signal});
+      const pages=j?.data?.pages;
+      if(!response.ok||!Array.isArray(pages))return null;
+      let expected=0;
+      for(const page of pages){
+        if(!Array.isArray(page)||page[0]!==expected||!Number.isSafeInteger(page[1])||page[1]<1||page[1]>CHUNK)return null;
+        expected+=page[1];
+      }
+      return pages;
+    }catch(e){if(opts.signal?.aborted)throw e;return null;}
+  };
+  // Returns false once the read must stop (superseded or failed). `first`
+  // is this chunk's first request when it is already in flight.
+  const runChunk=async(index,start,end,first=null)=>{
     const chunk=chunks[index]={rows:[],sent:0,done:false};
-    const end=(index+1)*CHUNK;
-    let start=index*CHUNK;
     while(true){
       if(stale()||failed||fatal)return false;
       let result;
-      try{result=await fetchPage(start,Math.min(CHUNK,end-start));}
+      try{result=await (first||fetchPage(start,Math.min(CHUNK,end-start)));}
       catch(e){if(e?.fatal)fatal=fatal||e;else failed=failed||e;return false;}
+      first=null;
       if(stale())return false;
       chunk.rows.push(...result.page);
       if(result.next===null)endFound=true;
@@ -357,14 +380,43 @@ async function readServerMatchArchive(puuid,seasonId,generation,isRelevant=()=>t
   };
   const worker=async()=>{
     while(!endFound&&!failed&&!fatal&&!stale()&&nextChunk*CHUNK<=MAX_START){
-      if(!await runChunk(nextChunk++))return;
+      const index=nextChunk++;
+      if(!await runChunk(index,index*CHUNK,(index+1)*CHUNK))return;
     }
   };
-  // The first chunk runs alone: most archives fit in it, and its answer
-  // shows whether the proxy speaks cursors at all.
-  await runChunk(nextChunk++);
-  if(!endFound&&!failed&&!fatal&&!stale())
-    await Promise.all(Array.from({length:cursorless?1:PARALLEL},worker));
+  // The first page and the plan load together. The first page is the
+  // plan's first page too (same cut), so it is never requested twice.
+  const firstPage=fetchPage(0,CHUNK);
+  firstPage.catch(()=>{}); // Handled by runChunk; never an unhandled rejection.
+  const plan=await fetchPlan();
+  if(stale())return [];
+  if(plan){
+    if(!plan.length){
+      // An empty plan: the archive has no rows, which the first page confirms.
+      await runChunk(0,0,CHUNK,firstPage);
+    }else{
+      let next=1;
+      const planned=async()=>{
+        while(next<plan.length&&!failed&&!fatal&&!stale()){
+          const index=next++,[start,size]=plan[index];
+          if(!await runChunk(index,start,start+size))return;
+        }
+      };
+      const [start,size]=plan[0];
+      await Promise.all([runChunk(0,start,start+size,firstPage),
+        ...Array.from({length:Math.min(PLANNED_PARALLEL,plan.length-1)},planned)]);
+      // Every planned page loaded, so the archive is complete even if its
+      // last page did not report the end itself.
+      if(!failed&&!fatal&&!stale()&&chunks.length===plan.length&&chunks.every(c=>c.done))endFound=true;
+    }
+  }else{
+    // The first chunk runs alone: most archives fit in it, and its answer
+    // shows whether the proxy speaks cursors at all.
+    nextChunk=1;
+    await runChunk(0,0,CHUNK,firstPage);
+    if(!endFound&&!failed&&!fatal&&!stale())
+      await Promise.all(Array.from({length:cursorless?1:PARALLEL},worker));
+  }
   if(stale())return [];
   if(fatal)throw fatal;
   if(opts.signal?.aborted&&failed)throw failed;
@@ -2606,42 +2658,21 @@ async function findHistoryStartForAct(nextActStart,generation,onRateLimit,opts={
 // then fetch full details only for those IDs so every existing stat keeps its
 // normal full-match meaning. This is best-effort: an incomplete archive must
 // never discard the live matches already found.
+// `opts.storedIndex` is a readStoredSeasonIndex() promise loadAll started
+// early; without it the index is read here.
 async function recoverStoredSeasonMatches(collected,alreadySaved,myGen,onRateLimit,opts={}){
   if(!PUUID||!TARGET_SEASON)return false;
   const known=new Set([...alreadySaved,...collected.map(m=>m.metadata?.match_id||m.match_id).filter(Boolean)]);
+  const index=await (opts.storedIndex||readStoredSeasonIndex(myGen,onRateLimit,opts));
+  if(!index||myGen!==_analysisGen)return false;
+  let complete=index.complete;
   const missing=[];
-  const wanted=TARGET_SEASON.toLowerCase();
-  const region=encodeURIComponent(REGION);
-  const puuid=encodeURIComponent(PUUID);
-  let complete=false;
-  let storedSawTarget=false;
+  index.rows.forEach(row=>{
+    if(known.has(row.id))return;
+    known.add(row.id);
+    missing.push(row);
+  });
   const scanQuery=opts.scanId?`&scan=${encodeURIComponent(opts.scanId)}`:'';
-  for(let page=1;page<=100;page++){
-    if(myGen!==_analysisGen)return false;
-    setStatus('Checking older games…',true);
-    let payload;
-    try{
-      ({j:payload}=await apiGet(`${API_BASE}/stored-matches/${region}/${puuid}?page=${page}${scanQuery}`,{...opts,onRateLimit}));
-    }catch(_){break;} // no stored archive, or temporarily unavailable
-    if(myGen!==_analysisGen)return false;
-    if(!Array.isArray(payload?.data))break;
-    const rows=Array.isArray(payload?.data)?payload.data:[];
-    if(!rows.length){complete=true;break;}
-    if(rows.some(row=>row?.meta?.season?.id?.toLowerCase()===wanted))storedSawTarget=true;
-    rows.forEach(row=>{
-      const id=row?.meta?.id;
-      if(!id||row?.meta?.season?.id?.toLowerCase()!==wanted||
-         row?.stats?.puuid?.toLowerCase()!==PUUID.toLowerCase()||known.has(id))return;
-      known.add(id);
-      missing.push({id,region:row.meta.region||REGION});
-    });
-    const actStart=getActInfoByUuid(TARGET_SEASON)?.start;
-    if((!opts.scanId||storedSawTarget)&&Number.isFinite(actStart)&&rows.every(row=>{
-      const started=Date.parse(row?.meta?.started_at);
-      return Number.isFinite(started)&&started<actStart;
-    })){complete=true;break;}
-    if(payload?.results?.after===0){complete=true;break;}
-  }
   let failures=0;
   for(let i=0;i<missing.length;i++){
     if(myGen!==_analysisGen)return false;
@@ -2665,6 +2696,45 @@ async function recoverStoredSeasonMatches(collected,alreadySaved,myGen,onRateLim
     }
   }
   return complete;
+}
+// The selected act's rows from Henrik's stored-matches index, as
+// {rows:[{id,region}], complete}, or null once superseded. It needs nothing
+// the archive or live history return, so loadAll starts it as soon as the
+// act and scan are known (23 Nov 2026) instead of after both finish; the
+// scan's evidence pages are keyed by page number, so the order is free.
+async function readStoredSeasonIndex(myGen,onRateLimit,opts={}){
+  const rows=[];
+  const wanted=TARGET_SEASON.toLowerCase();
+  const region=encodeURIComponent(REGION);
+  const puuid=encodeURIComponent(PUUID);
+  let complete=false;
+  let storedSawTarget=false;
+  const scanQuery=opts.scanId?`&scan=${encodeURIComponent(opts.scanId)}`:'';
+  for(let page=1;page<=100;page++){
+    if(myGen!==_analysisGen)return null;
+    let payload;
+    try{
+      ({j:payload}=await apiGet(`${API_BASE}/stored-matches/${region}/${puuid}?page=${page}${scanQuery}`,{...opts,onRateLimit}));
+    }catch(_){break;} // no stored archive, or temporarily unavailable
+    if(myGen!==_analysisGen)return null;
+    if(!Array.isArray(payload?.data))break;
+    const pageRows=payload.data;
+    if(!pageRows.length){complete=true;break;}
+    if(pageRows.some(row=>row?.meta?.season?.id?.toLowerCase()===wanted))storedSawTarget=true;
+    pageRows.forEach(row=>{
+      const id=row?.meta?.id;
+      if(!id||row?.meta?.season?.id?.toLowerCase()!==wanted||
+         row?.stats?.puuid?.toLowerCase()!==PUUID.toLowerCase())return;
+      rows.push({id,region:row.meta.region||REGION});
+    });
+    const actStart=getActInfoByUuid(TARGET_SEASON)?.start;
+    if((!opts.scanId||storedSawTarget)&&Number.isFinite(actStart)&&pageRows.every(row=>{
+      const started=Date.parse(row?.meta?.started_at);
+      return Number.isFinite(started)&&started<actStart;
+    })){complete=true;break;}
+    if(payload?.results?.after===0){complete=true;break;}
+  }
+  return {rows,complete};
 }
 
 
@@ -2943,6 +3013,13 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       if(myGen!==_analysisGen)return;
       verifiedScan=serverScan?.coverage||null;
     }
+    // The stored-matches index loads beside the archive and live history;
+    // recovery below waits for it only once both of those are done.
+    let storedIndex=null;
+    if(PUUID&&TARGET_SEASON){
+      storedIndex=readStoredSeasonIndex(myGen,onRateLimit,{...requestOpts,scanId:serverScan?.scanId});
+      storedIndex.catch(()=>{});
+    }
     const targetActStart=getActInfoByUuid(TARGET_SEASON)?.start??null;
     if(TARGET_SEASON&&TARGET_SEASON.toLowerCase()!==liveCurrentActId&&targetActStart!=null){
       const actMeta=_actMeta&&Object.keys(_actMeta).length?_actMeta:HARDCODED_ACT_META;
@@ -3046,7 +3123,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       // paginated live list no longer contains them. Fresh nulls are complete.
       const completeIds=new Set([...rawMatches.keys()].filter(id=>!performanceRefreshNeeded.has(id)));
       try{recoveryComplete=await recoverStoredSeasonMatches(collected,completeIds,myGen,onRateLimit,
-        {...requestOpts,scanId:serverScan?.scanId});}catch(_){/* Keep live rows. */}
+        {...requestOpts,scanId:serverScan?.scanId,storedIndex});}catch(_){/* Keep live rows. */}
       if(myGen!==_analysisGen)return;
     }
     await rrPromise;
@@ -3056,10 +3133,6 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     // Provisional archive rows may have rendered before live act metadata.
     // Refresh placement flags even when the last pages added no new IDs.
     allMatches=tagActPlacements(tagPostResetPlacements(allMatches));
-    if(recoveryComplete&&!scanStoppedEarly&&!liveHistoryError){
-      await finishServerActScan(serverScan,requestOpts);
-      if(myGen!==_analysisGen)return;
-    }
     revealHeader();
     setSeasonMatchCount(TARGET_SEASON,allMatches.length,scanStoppedEarly?'partial':'found');
     if(myGen!==_analysisGen)return; // a newer analysis took over
@@ -3069,6 +3142,10 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     void refreshTeammateNames(lookupTeammateRows(allMatches));
     if(scanStoppedEarly&&allMatches.length)
       setStatus(`Showing ${allMatches.length} games. The live match scan stopped early; search again later to load more.`);
+    // Certifying coverage only helps the next search, so the finished
+    // results are shown first (23 Nov 2026).
+    if(recoveryComplete&&!scanStoppedEarly&&!liveHistoryError)
+      await finishServerActScan(serverScan,requestOpts);
   }catch(e){
     if(myGen!==_analysisGen)return; // superseded run — swallow its error
     if(headerRevealPending){

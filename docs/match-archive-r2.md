@@ -58,6 +58,14 @@ Budget cuts are common for large matches: the first page of a 540-match
 archive held only 17 rows. A full in-browser search with the new client has
 not been timed yet, because the refill needs the proxy change deployed.
 
+Budget cuts made those chunks slow in practice: on 23 Nov 2026 a 164-match
+act needed 12 requests, and each cut chunk could only ask for its next rows
+after the previous answer arrived. The proxy now serves a page plan
+(`GET /api/match-archive-pages/<puuid>/<act>`, D1 index only) with the same
+row and compressed-size cuts, and the client loads every planned page up to
+six at a time. Measurements and the other load-time changes are in
+[cached-load-speed.md](cached-load-speed.md).
+
 ## Writes
 
 `saveMatchArchivePage` (functions/api/[[path]].js) writes the object first,
