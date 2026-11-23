@@ -117,3 +117,16 @@ test('a narrow party-size table drops the Lobbies column and long rank label, pu
   assert.ok(table.includes(`<span class="truncate @max-[19rem]:hidden">${avgLabel(r.tier)}</span><span class="truncate @min-[19rem]:hidden">${avgLabelShort(r.tier)}</span>`));
   assert.match(table,new RegExp(`title="Duo: ${avgLabel(r.tier)} across 12 lobbies"`));
 });
+
+test('hidden pages stay mounted in a hidden Activity, so they render only when idle',async()=>{
+  const app=source('src/app/App.jsx');
+  const desktop=[...app.matchAll(/\['([a-z-]+)','[^']+'\]/g)].map(m=>m[1]);
+  const slots=[...app.matchAll(/<PageSlot id="([a-z-]+)" page=\{page\}>/g)].map(m=>m[1]);
+  assert.deepEqual(slots,desktop,'every page sits in a PageSlot');
+  assert.match(app,/<div hidden=\{!shown\}><Activity mode=\{shown\?'visible':'hidden'\}>\{children\}<\/Activity><\/div>/);
+  // Server renders show the active page only: the eight hidden slots are empty.
+  const html=await renderHtml('/src/app/App.jsx','default');
+  const hidden=[...html.matchAll(/<div hidden="">(.*?)<\/div>/g)];
+  assert.equal(hidden.length,8);
+  assert.ok(hidden.every(m=>m[1]===''),'hidden Activity content is not server-rendered');
+});

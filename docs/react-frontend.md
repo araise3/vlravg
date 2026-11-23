@@ -37,7 +37,12 @@ The pre-React inline script was split in two.
    `useSyncExternalStore`. Each page derives its view from the snapshot and
    calls engine actions (`runAnalysis`, `selectSeasonOption`,
    `setServerPartySize`, …). All pages stay mounted and hidden when inactive,
-   as before, so open match cards and table sorts survive navigation.
+   as before, so open match cards and table sorts survive navigation. Since
+   23 Nov 2026 each hidden page sits in a hidden `<Activity>` (`PageSlot` in
+   `App.jsx`): it keeps its state and DOM, but React renders its updates only
+   when the main thread is idle, and its effects pause until it is shown.
+   Re-rendering all nine pages on every engine update had blocked the main
+   thread for seconds during a search ([cached-load-speed.md](cached-load-speed.md)).
 
 shadcn components used: Card, Table (with a sortable wrapper that keeps each
 table's sort across reloads, as `initTableSorting` did), Tabs (page

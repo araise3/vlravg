@@ -126,7 +126,7 @@ test('agent tiles use the agent colour and icon, and fall back to the initial',a
 test('Clutches is a routed page in the nav, the phone More sheet and the redirects',()=>{
   const app=readFileSync(new URL('../src/app/App.jsx',import.meta.url),'utf8');
   assert.match(app,/\['rr','RR Breakdown'\],\['clutches','Clutches'\]/);
-  assert.match(app,/<div hidden=\{page!=='clutches'\}><ClutchesPage\/><\/div>/);
+  assert.match(app,/<PageSlot id="clutches" page=\{page\}><ClutchesPage\/><\/PageSlot>/);
   assert.match(readFileSync(new URL('../src/app/MobileShell.jsx',import.meta.url),'utf8'),/page:'clutches',label:'Clutches'/);
   assert.match(readFileSync(new URL('../_redirects',import.meta.url),'utf8'),/^\/clutches \/index\.html 200$/m);
   assert.equal(playerRouteUrl('Me','EU','clutches'),'/player/Me/EU/clutches');

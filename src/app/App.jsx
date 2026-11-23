@@ -1,4 +1,4 @@
-import {useEffect,useRef} from 'react';
+import {Activity,useEffect,useRef} from 'react';
 import {AlertCircle} from 'lucide-react';
 import {hexToRgb,navigateToPage} from '@/engine/core.mjs';
 import {useEngine,useIsMobile,useSignal} from '@/app/hooks.js';
@@ -47,6 +47,19 @@ function PageNav({navRef,mobile}){
       </Tabs>
     </nav>
   );
+}
+
+// One page of the shared dataset. Every page stays mounted, so navigation keeps
+// open matches, sorting and scroll state, but a hidden page sits in a hidden
+// <Activity> (23 Nov 2026): React keeps its state and DOM and renders its
+// updates only when the main thread is idle, in small interruptible slices.
+// During a search the engine publishes dozens of updates, and re-rendering
+// all nine pages on each one blocked the main thread for seconds (Duos,
+// Match History and RR Breakdown cost the most while hidden). Effects inside
+// a hidden page pause and run again when it is shown.
+function PageSlot({id,page,children}){
+  const shown=id===page;
+  return <div hidden={!shown}><Activity mode={shown?'visible':'hidden'}>{children}</Activity></div>;
 }
 
 export default function App(){
@@ -100,16 +113,17 @@ export default function App(){
               <AlertDescription>{mobile?'Search again in a moment.':'Check the browser console (F12) for details.'}</AlertDescription>
             </Alert>
           )}
-          {/* Pages stay mounted so navigation keeps open matches and scroll state. */}
-          <div hidden={page!=='overview'}><OverviewPage/></div>
-          <div hidden={page!=='duos'}><DuosPage/></div>
-          <div hidden={page!=='lobby-rank'}><LobbyRankPage/></div>
-          <div hidden={page!=='servers'}><ServersPage active={page==='servers'}/></div>
-          <div hidden={page!=='rr'}><RRPage/></div>
-          <div hidden={page!=='clutches'}><ClutchesPage/></div>
-          <div hidden={page!=='matches'}><MatchesPage/></div>
-          <div hidden={page!=='names'}><NamesPage/></div>
-          <div hidden={page!=='replays'}><ReplaysPage active={page==='replays'}/></div>
+          {/* Pages stay mounted so navigation keeps open matches and scroll state;
+              hidden pages render at idle priority (PageSlot). */}
+          <PageSlot id="overview" page={page}><OverviewPage/></PageSlot>
+          <PageSlot id="duos" page={page}><DuosPage/></PageSlot>
+          <PageSlot id="lobby-rank" page={page}><LobbyRankPage/></PageSlot>
+          <PageSlot id="servers" page={page}><ServersPage active={page==='servers'}/></PageSlot>
+          <PageSlot id="rr" page={page}><RRPage/></PageSlot>
+          <PageSlot id="clutches" page={page}><ClutchesPage/></PageSlot>
+          <PageSlot id="matches" page={page}><MatchesPage/></PageSlot>
+          <PageSlot id="names" page={page}><NamesPage/></PageSlot>
+          <PageSlot id="replays" page={page}><ReplaysPage active={page==='replays'}/></PageSlot>
         </div>
       </div>
     </TooltipProvider>
