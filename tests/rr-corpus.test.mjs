@@ -4,12 +4,14 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {collectRR,matchFeatures,saveFeatures,trackRRAccount} from '../lib/rr-corpus.mjs';
 import {collectPlayers,collectMatchFeatures,corpusReport,puuidSliceBounds} from '../.github/scripts/collect-rr-corpus.mjs';
-import {retryOnD1Overload} from '../.github/scripts/d1-query.mjs';
+import {retryOnD1Overload,pacedQuery,recentDateBound,d1Query,D1_MS} from '../.github/scripts/d1-query.mjs';
 import {onRequestGet} from '../functions/api/[[path]].js';
 import {pollingPolicy,selectPollingPlayers,selectDiscoveryCandidates,discoverMatchPlayers,DISCOVERY_BAND_TARGET} from '../lib/rr-activity.mjs';
 import {loadActivity,loadCandidates} from '../.github/scripts/rr-activity-query.mjs';
 import {loadFeaturePlan} from '../.github/scripts/rr-feature-plan.mjs';
 
+// Pacing sleeps are skipped in tests; the pacing itself has its own tests.
+const noPause={pauseMs:0,sleep:async()=>{}};
 const puuid='11111111-1111-4111-8111-111111111111',mid='22222222-2222-4222-8222-222222222222',season='33333333-3333-4333-8333-333333333333';
 const entry=(id=mid)=>({match_id:id,date:'2026-10-03T00:00:00Z',last_change:20,tier:{id:12},rr:50,season:{id:season,short:'test'}});
 const payload=history=>({data:{account:{puuid,name:'Alpha',tag:'EU'},history}});
@@ -33,18 +35,18 @@ test('D1 feature plan skips saved evidence and prioritizes archives over upstrea
   for(const id of ['archived','waiting'])sql.prepare('INSERT INTO rr_feature_retry VALUES (?,?,1,?)').run(puuid,id,'2099-01-01');
   sql.prepare('INSERT INTO rr_history VALUES (?,?,?,?)').run('unknown','no-region','{}',entry().date);
   const query=async(_env,text,params=[]) => (await db.prepare(text).bind(...params).all()).results;
-  const plan=await loadFeaturePlan({},10,query);
+  const plan=await loadFeaturePlan({},10,query,noPause);
   assert.deepEqual({...plan.inventory},{total:5,saved:1,missing:4,missingRegion:1,archived:1,waitingRetry:1});
   assert.deepEqual(plan.rows.map(r=>r.match_id),['archived','ready']);
   assert.equal(plan.rows[0].archived,1);
-  assert.deepEqual((await loadFeaturePlan({},1,query)).rows.map(r=>r.match_id),['archived']);
-  assert.deepEqual((await loadFeaturePlan({},0,query)).rows,[]);
+  assert.deepEqual((await loadFeaturePlan({},1,query,noPause)).rows.map(r=>r.match_id),['archived']);
+  assert.deepEqual((await loadFeaturePlan({},0,query,noPause)).rows,[]);
 });
 
 test('empty D1 inventory reports zeros and no pending features',async t=>{
   const {db}=database(t);
   const query=async(_env,text,params=[]) => (await db.prepare(text).bind(...params).all()).results;
-  const plan=await loadFeaturePlan({},10,query);
+  const plan=await loadFeaturePlan({},10,query,noPause);
   assert.deepEqual({...plan.inventory},{total:0,saved:0,missing:0,missingRegion:0,archived:0,waitingRetry:0});
   assert.deepEqual(plan.rows,[]);
 });
@@ -144,9 +146,11 @@ test('collector activity query finds the latest act through indexes, not a JSON 
   const plan=sql.prepare(`EXPLAIN QUERY PLAN ${text}`).all().map(row=>row.detail);
   const shown=plan.join('\n');
   assert.ok(plan.some(line=>/rr_history.* USING INDEX rr_history_date\b/.test(line)),shown);
-  assert.ok(plan.some(line=>/USING COVERING INDEX rr_history_season_date \(<expr>=\?\)/.test(line)),shown);
+  assert.ok(plan.some(line=>/USING COVERING INDEX rr_history_season_date \(<expr>=\?( AND date>\?)?\)/.test(line)),shown);
   const scans=plan.filter(line=>/^SCAN (rr_history|h)\b/.test(line));
   assert.ok(scans.every(line=>/ USING (COVERING )?INDEX /.test(line)),shown);
+  // The act's first game is read straight from the index, not sorted.
+  assert.ok(!plan.some(line=>/TEMP B-TREE/.test(line)),shown);
 });
 
 test('new-act Unrated placement rosters still supply trusted competitive discovery',async t=>{
@@ -232,7 +236,7 @@ test('D1 failed probe survives runs, applies a one-day cooldown and clears after
   assert.equal(pollingPolicy(player,now+24*3600000).due,true);
   assert.equal(pollingPolicy({...player,candidate_observed_at:iso(.5),candidate_played_at:iso(.5)},now).due,true);
   assert.equal(pollingPolicy({...player,checked_at:iso(0)},now).cohort,'dormant');
-  const report=await corpusReport({},query,{pauseMs:0});
+  const report=await corpusReport({},query,noPause);
   assert.equal(report.health.stale,0);
 });
 
@@ -250,12 +254,12 @@ test('transient capture failures get one final retry before optional enrichment'
 test('coverage SQL reports staleness using UTC timestamps and returns act sample counts',async t=>{
   const {db}=database(t);
   await collectRR(db,payload([entry()]),{puuid,region:'eu',platform:'pc'});
-  const report=await corpusReport({},async(_env,query,params=[])=>{const s=db.prepare(query);return (await s.bind(...params).all()).results;},{pauseMs:0});
+  const report=await corpusReport({},async(_env,query,params=[])=>{const s=db.prepare(query);return (await s.bind(...params).all()).results;},noPause);
   assert.equal(report.health.stale,0);assert.equal(report.ranks[0].payouts,1);
   assert.equal(report.competitiveUpdates.bonus_known,0);
   await collectRR(db,payload([{...entry(),tier_before_update:{id:12},rr_before_update:30,
     rr_performance_bonus:0,afk_penalty:0,rr_penalty:.25,is_placement_match:false}]),{puuid,region:'eu',platform:'pc'});
-  const enriched=await corpusReport({},async(_env,query,params=[])=>{const s=db.prepare(query);return (await s.bind(...params).all()).results;},{pauseMs:0});
+  const enriched=await corpusReport({},async(_env,query,params=[])=>{const s=db.prepare(query);return (await s.bind(...params).all()).results;},noPause);
   assert.equal(enriched.competitiveUpdates.reported_start,1);
   assert.equal(enriched.competitiveUpdates.bonus_known,1);
   assert.equal(enriched.competitiveUpdates.bonus_nonzero,0);
@@ -623,7 +627,7 @@ test('sliced act census matches one whole-table statement',async t=>{
     .run(odd,mid,JSON.stringify(entry()),entry().date);
   const statements=[];
   const query=async(_env,text,params=[])=>{statements.push(params);return (await db.prepare(text).bind(...params).all()).results;};
-  const whole=await corpusReport({},query,{slices:1,pauseMs:0});
+  const whole=await corpusReport({},query,{slices:1,...noPause});
   statements.length=0;
   const pauses=[];
   const sliced=await corpusReport({},query,{slices:16,pauseMs:5,sleep:async ms=>{pauses.push(ms);}});
@@ -631,7 +635,8 @@ test('sliced act census matches one whole-table statement',async t=>{
   assert.deepEqual(sliced.currentAct,whole.currentAct);
   assert.deepEqual(sliced.competitiveUpdates,whole.competitiveUpdates);
   assert.equal(statements.length,17);// 16 census slices plus the health query
-  assert.equal(pauses.length,15);
+  // Every statement after the first waits, the health query included.
+  assert.equal(pauses.length,16);
   assert.equal(sliced.ranks.reduce((n,row)=>n+row.players,0),10);
   assert.equal(sliced.ranks.find(row=>row.act==='test'&&row.ending_tier===12).players,4);
 });
@@ -671,4 +676,108 @@ test('teammate-name lookups spend the workflow key and pool, never the public qu
   await lookup('account/Alpha/EU',teammate,both);                      // the header only applies to PUUID lookups
   await lookup(`account-by-puuid/${puuid}`,teammate,{HENRIK_KEY:'public'}); // no collector key: local development
   assert.deepEqual(keys,['collector','public','public','public']);
+});
+
+test('paced reads wait a multiple of the previous read, within bounds, never before the first',async()=>{
+  let clock=0;const waits=[];
+  const durations=[100,1000,20000,0];
+  const query=async()=>{clock+=durations.shift();return [];};
+  const paced=pacedQuery(query,{factor:4,minPauseMs:500,maxPauseMs:20000,now:()=>clock,sleep:async ms=>{waits.push(ms);}});
+  for(let i=0;i<4;i++)await paced();
+  // 4×100 ms is under the floor; 4×1 s; 4×20 s hits the cap.
+  assert.deepEqual(waits,[500,4000,20000]);
+  // A failed read still sets the next pause.
+  const failing=pacedQuery(async()=>{clock+=2000;throw new Error('D1 query failed (500)');},{now:()=>clock,sleep:async ms=>{waits.push(ms);}});
+  await assert.rejects(failing(),/500/);await assert.rejects(failing(),/500/);
+  assert.equal(waits.at(-1),8000);
+});
+
+test('last-week filters read the date window from an index, not every rr_history row',async t=>{
+  // A bare julianday(date) filter cannot use an index: on 23 Nov 2026 the
+  // health report read 5.1 million rows and the activity query 2.2 million.
+  // Each player's last week is now a range on the (puuid,date) index, which
+  // holds both columns, so no table row is read.
+  const {sql}=database(t);
+  const plan=text=>sql.prepare(`EXPLAIN QUERY PLAN ${text}`).all().map(row=>row.detail);
+  let activity;
+  await loadActivity({},[],async(_env,query)=>{activity=query;return [];});
+  const recent=plan(activity);
+  assert.ok(recent.some(line=>/^SEARCH h USING COVERING INDEX idx_rr_history_puuid_date \(puuid=\? AND date>\?\)/.test(line)),recent.join('\n'));
+  assert.ok(!recent.some(line=>/^SCAN rr_history USING COVERING INDEX idx_rr_history_puuid_date$/.test(line)),recent.join('\n'));
+  const statements=[];
+  await corpusReport({},async(_env,query)=>{statements.push(query);return [];},{slices:1,pauseMs:0,sleep:async()=>{}});
+  const health=plan(statements.at(-1));
+  assert.ok(health.filter(line=>/rr_history|\bh\b/.test(line)).length>=2,health.join('\n'));
+  assert.ok(health.filter(line=>/\bh\b/.test(line)).every(line=>/^SEARCH h USING (COVERING )?INDEX idx_rr_history_puuid_date \(puuid=\?( AND date>\?)?\)/.test(line)),health.join('\n'));
+  assert.ok(health.some(line=>/idx_rr_history_puuid_date \(puuid=\? AND date>\?\)/.test(line)),health.join('\n'));
+});
+
+test('the date-index bound keeps every format of a date inside the window',t=>{
+  const {sql}=database(t);
+  const keep=sql.prepare(`SELECT ?1>=${recentDateBound(7)} AND julianday(?1)>=julianday('now','-7 days') AS exact,
+    julianday(?1)>=julianday('now','-7 days') AS old`);
+  const at=ms=>new Date(Date.now()-7*86400000+ms).toISOString();
+  for(const ms of [50,999,1500,60000,3*86400000]){
+    const iso=at(ms);
+    for(const date of [iso,iso.replace(/\.\d+Z$/,'Z'),iso.replace(/(\.\d\d)\dZ$/,'$1Z'),iso.replace(/(\.\d)\d\dZ$/,'$1Z')]){
+      const row=keep.get(date);
+      assert.equal(row.exact,row.old,date);
+    }
+  }
+  assert.equal(keep.get(at(-60000)).exact,0);
+});
+
+test('the sliced feature inventory matches one whole-table statement',async t=>{
+  const {db,sql}=database(t);
+  const ids=['0aaaaaaa-1111-4111-8111-111111111111','3bbbbbbb-1111-4111-8111-111111111111',
+    '9ccccccc-1111-4111-8111-111111111111','ffdddddd-1111-4111-8111-111111111111'];
+  for(const [i,id] of ids.entries()){
+    const history=Array.from({length:6},(_,j)=>({...entry(`4444444${i}-4444-4444-8444-00000000000${j}`),date:`2026-10-0${1+j}T0${i}:00:00Z`}));
+    await collectRR(db,{data:{account:{puuid:id,name:`P${i}`,tag:'EU'},history}},{puuid:id,region:'eu',platform:'pc'});
+    sql.prepare('INSERT INTO rr_match_features VALUES (?,?,?,?,?,?)').run(id,history[0].match_id,season,null,'{}',new Date().toISOString());
+    sql.prepare('INSERT INTO match_archive (puuid,season_id,match_id,started_at,payload) VALUES (?,?,?,?,?)').run(id,season,history[5-i].match_id,null,new Uint8Array([1]));
+    sql.prepare('INSERT INTO rr_feature_retry VALUES (?,?,1,?)').run(id,history[2].match_id,'2099-01-01');
+  }
+  sql.prepare('INSERT INTO rr_history VALUES (?,?,?,?)').run('ZZ-unknown','no-region','{}',entry().date);
+  const query=async(_env,text,params=[])=>(await db.prepare(text).bind(...params).all()).results;
+  for(const limit of [0,3,7,50]){
+    const whole=await loadFeaturePlan({},limit,query,{slices:1,...noPause});
+    const sliced=await loadFeaturePlan({},limit,query,{slices:16,...noPause});
+    assert.deepEqual(sliced,whole,`limit ${limit}`);
+  }
+  const plan=await loadFeaturePlan({},50,query,{slices:16,...noPause});
+  assert.deepEqual({...plan.inventory},{total:25,saved:4,missing:21,missingRegion:1,archived:4,waitingRetry:3});
+  assert.equal(plan.rows.length,17);// 21 missing, less 1 without a region and 3 waiting for retry
+  assert.deepEqual(plan.rows.slice(0,4).map(row=>row.archived),[1,1,1,1]);
+});
+
+test('the activity query counts last-week games and finds the act start as before',async t=>{
+  const {db,sql}=database(t);
+  const now=Date.now(),iso=days=>new Date(now-days*86400000).toISOString();
+  const other='66666666-6666-4666-8666-666666666666';
+  const history=[0.5,2,6.9,7.1,30].map((days,i)=>({...entry(`77777777-7777-4777-8777-00000000000${i}`),date:iso(days),
+    season:{id:i<4?'new-act':'old-act',short:'x'}}));
+  await collectRR(db,{data:{account:{puuid,name:'A',tag:'EU'},history}},{puuid,region:'eu',platform:'pc'});
+  // Same act, earlier, from another player; a row without a date is ignored.
+  await collectRR(db,{data:{account:{puuid:other,name:'B',tag:'EU'},history:[{...entry('88888888-8888-4888-8888-000000000000'),date:iso(9),season:{id:'NEW-ACT',short:'x'}}]}},
+    {puuid:other,region:'eu',platform:'pc'});
+  sql.prepare('INSERT INTO rr_history(puuid,match_id,data,date) VALUES(?,?,?,NULL)').run(other,'undated',JSON.stringify({season:{id:'new-act'}}));
+  const query=async(_env,text,params=[])=>(await db.prepare(text).bind(...params).all()).results;
+  const rows=await loadActivity({},[{puuid,platform:'pc'},{puuid:other,platform:'pc'}],query);
+  assert.equal(rows[0].games_7d,3);
+  assert.equal(rows[1].games_7d,0);
+  assert.equal(rows[0].last_played_at,iso(0.5));
+  assert.equal(rows[0].season_started_at,iso(9),'the earliest dated game of the latest act, any player');
+});
+
+test('pacing uses the time D1 reports for a statement, not the network round trip',async()=>{
+  const env={CF_API_TOKEN:'t',CF_ACCOUNT_ID:'a',CF_D1_DATABASE_ID:'d'};
+  const fetchImpl=async()=>Response.json({success:true,result:[{success:true,results:[{n:1}],meta:{duration:250}}]});
+  const rows=await d1Query(env,'SELECT 1',[],fetchImpl);
+  assert.equal(rows[D1_MS],250);
+  assert.deepEqual(JSON.parse(JSON.stringify(rows)),[{n:1}],'the timing is not part of the rows');
+  let clock=0;const waits=[];
+  const paced=pacedQuery(async()=>{clock+=3000;return rows;},{now:()=>clock,sleep:async ms=>{waits.push(ms);}});
+  await paced();await paced();
+  assert.deepEqual(waits,[1000],'4 × 250 ms of D1 time, although the call took 3 s');
 });

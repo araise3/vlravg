@@ -2,7 +2,8 @@ import {pathToFileURL} from 'node:url';
 import {mkdir,writeFile,appendFile} from 'node:fs/promises';
 import {listPlayers,refreshPlayer,requestJSON} from './refresh-rr-history.mjs';
 import {createRequestScheduler} from './request-scheduler.mjs';
-import {d1Query,retryOnD1Overload,assertD1Headroom} from './d1-query.mjs';
+import {d1Query,retryOnD1Overload,assertD1Headroom,pacedQuery,PACE_FACTOR,recentDateBound} from './d1-query.mjs';
+import {puuidSliceBounds,puuidSliceWhere} from './puuid-slices.mjs';
 import {randomUUID} from 'node:crypto';
 import {readQuotaAudit,quotaCheckReport} from './workflow-quota-check.mjs';
 import {loadActivity,loadCandidates} from './rr-activity-query.mjs';
@@ -104,14 +105,7 @@ export async function collectMatchFeatures(rows,{origin,fetchImpl,log=console.lo
 // A PUUID falls in exactly one slice, so per-slice distinct players add up.
 const RANK_SUMS=['payouts','players','placements','with_features','gains','losses','reported_start','bonus_known',
   'bonus_nonzero','afk_penalty_known','rr_penalty_known','map_forgiveness_known','placement_known'];
-export function puuidSliceBounds(slices){
-  if(!Number.isSafeInteger(slices)||slices<1||slices>4096)throw new Error('Invalid PUUID slice count');
-  let width=0;while(16**width<slices)width++;
-  const bounds=[];
-  for(let i=1;i<slices;i++)bounds.push(Math.floor(i*16**width/slices).toString(16).padStart(width,'0'));
-  // Open-ended first and last slices cover any PUUID outside lowercase hex.
-  return Array.from({length:slices},(_,i)=>({from:i?bounds[i-1]:null,to:i<slices-1?bounds[i]:null}));
-}
+export {puuidSliceBounds,puuidSliceWhere};
 export function mergeRankSlices(slices){
   const groups=new Map();
   for(const rows of slices)for(const row of rows){
@@ -126,13 +120,15 @@ export function mergeRankSlices(slices){
   const order=(a,b)=>a===b?0:a==null?-1:b==null?1:a<b?-1:1;
   return [...groups.values()].sort((a,b)=>order(a.act,b.act)||order(a.ending_tier,b.ending_tier));
 }
-async function rankCensus(env,query,{slices=16,pauseMs=1000,sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms))}={}){
+// 16 slices with a fixed 1 s pause still overloaded D1 at the end of every
+// run on 23 Nov 2026, failing the site's own queries for minutes. Slices are
+// now four times smaller and paced by how long each one took (pacedQuery).
+export const CENSUS_SLICES=64;
+async function rankCensus(env,paced,slices=CENSUS_SLICES){
   const results=[];
-  for(const [index,{from,to}] of puuidSliceBounds(slices).entries()){
-    if(index&&pauseMs)await sleep(pauseMs);
-    const where=[from!=null?'h.puuid>=?1':null,to!=null?`h.puuid<?${from!=null?2:1}`:null].filter(Boolean);
-    const params=[from,to].filter(value=>value!=null);
-    results.push(await query(env,rankSliceSql(where.length?`WHERE ${where.join(' AND ')}`:''),params));
+  for(const slice of puuidSliceBounds(slices)){
+    const {where,params}=puuidSliceWhere(slice);
+    results.push(await paced(env,rankSliceSql(where?`WHERE ${where}`:''),params));
   }
   return mergeRankSlices(results);
 }
@@ -155,17 +151,25 @@ const rankSliceSql=where=>`SELECT json_extract(h.data,'$.season.id') AS season_i
     ${where}
     GROUP BY season_id,act,ending_tier`;
 
-export async function corpusReport(env,query=retryOnD1Overload(d1Query),census={}){
-  const ranks=await rankCensus(env,query,census);
+// `census`: {slices, pauseMs (the shortest pause), factor, sleep}. The health
+// query shares the census pacing, so it never follows a slice back to back.
+export async function corpusReport(env,query=retryOnD1Overload(d1Query),
+  {slices=CENSUS_SLICES,pauseMs=500,factor=PACE_FACTOR,sleep}={}){
+  query=pacedQuery(query,{factor,minPauseMs:pauseMs,sleep});
+  const ranks=await rankCensus(env,query,slices);
   const latest=ranks.filter(row=>row.season_id&&row.latest_game).sort((a,b)=>Date.parse(b.latest_game)-Date.parse(a.latest_game))[0];
   const currentRows=latest?ranks.filter(row=>row.season_id===latest.season_id):[];
   const currentAct=latest?{id:latest.season_id,act:latest.act,
     first_game:currentRows.map(row=>row.first_game).sort()[0],latest_game:latest.latest_game,
     payouts:currentRows.reduce((n,row)=>n+row.payouts,0),placements:currentRows.reduce((n,row)=>n+row.placements,0)}:null;
+  // Each player's latest game and last-week count are index seeks on
+  // (puuid,date); MAX(julianday(date)) and a bare julianday() filter read
+  // every row of every player, about a million rows per report.
   const health=await query(env,`WITH activity AS (
     SELECT p.puuid,c.checked_at,c.possible_gaps,failed.checked_at AS failed_probe_at,
-      (SELECT MAX(julianday(date)) FROM rr_history h WHERE h.puuid=p.puuid) AS last_game,
-      (SELECT COUNT(*) FROM rr_history h WHERE h.puuid=p.puuid AND julianday(date)>=julianday('now','-7 days')) AS games
+      (SELECT julianday(date) FROM rr_history h WHERE h.puuid=p.puuid ORDER BY date DESC LIMIT 1) AS last_game,
+      (SELECT COUNT(*) FROM rr_history h WHERE h.puuid=p.puuid AND h.date>=${recentDateBound(7)}
+        AND julianday(date)>=julianday('now','-7 days')) AS games
     FROM rr_players p LEFT JOIN rr_collection c ON c.puuid=p.puuid AND c.platform=p.platform
     LEFT JOIN rr_candidate_checks failed ON failed.puuid=p.puuid AND failed.platform=p.platform
   ) SELECT COUNT(*) AS tracked,

@@ -5,8 +5,14 @@ export async function d1Query(env,sql,params=[],fetchImpl=fetch) {
     body:JSON.stringify({sql,params}),signal:AbortSignal.timeout(60000)});
   const body=await response.json();
   if(!response.ok||!body.success||!body.result?.[0]?.success)throw new Error(`D1 query failed (${response.status}): ${JSON.stringify(body.errors||[])}`);
-  return body.result[0].results||[];
+  const results=body.result[0].results||[];
+  // D1's own time for the statement, for pacedQuery (not enumerable, so the
+  // rows read the same everywhere else).
+  const ms=body.result[0].meta?.duration;
+  if(Number.isFinite(ms))Object.defineProperty(results,D1_MS,{value:ms});
+  return results;
 }
+export const D1_MS=Symbol('d1Ms');
 
 // D1 rejects work when a database consumes too much in a 10-second window
 // (HTTP 429, code 7429). Read-only callers can wait out the window and retry.
@@ -26,6 +32,37 @@ export function retryOnD1Overload(query,{delays=[15000,30000,60000],
     }
   };
 }
+
+// Pace a series of heavy reads (sliced whole-table passes). Before each read
+// it waits `factor` times as long as the previous read kept D1 busy, at least
+// `minPauseMs`, so the collector holds D1 for at most about 1/(1+factor) of
+// the time and the site's own queries keep fitting in D1's 10-second window.
+// D1 reports its own time per statement (d1Query attaches it); without that
+// report (a failed read) the whole round trip is used, which errs on the slow
+// side. 16 census slices of about 4.4 s each with a fixed 1 s pause kept D1
+// about 80% busy and overloaded it at the end of every run (23 Nov 2026,
+// docs/rr-collector-d1-load.md).
+export const PACE_FACTOR=4;
+export function pacedQuery(query,{factor=PACE_FACTOR,minPauseMs=500,maxPauseMs=20000,
+  sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms)),now=Date.now}={}){
+  let wait=0;
+  const paced=async(...args)=>{
+    if(wait)await sleep(wait);
+    const started=now();
+    let busy=null;
+    try{const rows=await query(...args);busy=rows?.[D1_MS]??null;return rows;}
+    finally{wait=Math.min(maxPauseMs,Math.max(minPauseMs,factor*(busy??now()-started)));}
+  };
+  return paced;
+}
+
+// A lower bound for "date is within the last `days` days" that SQLite can
+// answer from a date index. rr_history dates are ISO UTC strings
+// (YYYY-MM-DDTHH:MM:SS[.fff]Z); a bound one second early, cut to whole
+// seconds, sorts at or below every such string in the window, so pairing it
+// with the exact julianday() test keeps the same rows while reading only the
+// window instead of every row.
+export const recentDateBound=days=>`strftime('%Y-%m-%dT%H:%M:%SZ','now','-${Number(days)} days','-1 second')`;
 
 // D1's per-database size limit (10 GB on Workers Paid). Every query result
 // reports the database size, so a trivial read is enough to check it.

@@ -206,6 +206,13 @@ start, which a query-plan test pins. Startup reads also retry an overload after
 15, 30 and 60 s, like coverage reads. Keep the season expression in
 `rr-activity-query.mjs` identical to the index, or SQLite falls back to the
 JSON scan.
+
+On 23 November 2026 the end of every run still overloaded D1 for minutes, and
+the site's archive, coverage and name-history routes returned 503 meanwhile.
+The census now runs in 64 slices paced by D1's own reported time, the feature
+inventory is sliced and paced the same way, and the health and startup queries
+seek indexes instead of reading every row. Measurements and changes are in
+[rr-collector-d1-load.md](rr-collector-d1-load.md).
 Reports identify the latest observed act, its date range, payouts and placements.
 
 With repository variable `RR_REPORT_EXPORT_ENABLED=true`, each run uploads
