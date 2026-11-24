@@ -335,6 +335,9 @@ from tracker's pages, holds everything needed:
   a player's match list, 20 a page, with `roundsPlayed` and `kAST` per match (`kasted` is
   null).
 
+How to call these, the act-totals endpoint and the rate limits are in
+[tracker-gg-api.md](tracker-gg-api.md).
+
 ### Fresh matches, scored blind
 
 The 10 most recent matches of THE MyXoN#Vicay (16 to 23 Nov 2026, patch 13.10, 100 rows) were
