@@ -164,8 +164,14 @@ end of `src/index.css` (they outrank Tailwind's utility layer):
   the cells are: agent and map share one lead cell (12px), capped at 140px
   (tile plus "Fracture" and "Brimstone") so the result follows 16px after it
   instead of after an empty stretch; K/D/A, ACS and PS form one performance
-  group (14px apart); and the remaining groups (performance, server, RR) are
+  group; and the remaining groups (performance, server, RR) are
   32px apart on wide cards, whose fixed columns line up from card to card.
+  Since 24 Nov 2026 (on request: after ADR left, the stretched columns put
+  21px after K/D/A but 39px after ACS) the result track is a fixed 76px
+  (the widest score, "26 : 24", is 56px) and the performance track a fixed
+  218px plus the gap, with K/D/A, ACS and PS in 94/44/44px columns 18px
+  apart; spare width goes to server, lobby and RR. On a 910px card with a
+  long server name the visible gaps run 52, 47, 34, 33, 47, 47 and 43px.
   Cards of 880px and less (800px until ADR joined, when the server column
   would have been squeezed to a few letters; 23 Nov 2026, on request: columns may shift and
   move closer instead of cutting or hiding values) drop the server column
@@ -173,7 +179,7 @@ end of `src/index.css` (they outrank Tailwind's utility layer):
   width, agent, map and result stay together, and the spare width goes to
   the gaps before the performance group and the lobby, which shrink to
   14px (10px, with every other gap tightened, from 660px down). K/D/A, ACS
-  and PS keep their 94/48/48px column widths while those gaps have room (the
+  and PS keep their 94/44/44px column widths while those gaps have room (the
   assists sat against the ACS value otherwise) and shrink towards their
   values only after; a column is never narrower than its value. The longest
   values together ("Fracture 10th", "20 / 22 / 14", "Ascendant 3",

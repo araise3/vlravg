@@ -35,9 +35,12 @@ test('the closed desktop card is one short row of labelled cells: agent, map ove
   assert.match(narrow,/\.mc-perf \{[^}]*margin-left: auto; padding-left: 14px; \}/);
   assert.match(narrow,/@container \(max-width: 660px\)/);
   // Three performance columns at both widths: ADR was a fourth from 23 to 24 Nov 2026 (removed on request).
-  assert.match(css,/\.mc-perf \{ display: grid; grid-template-columns: (minmax\([^)]+\) ?){3};/);
-  assert.match(narrow,/\.mc-perf \{ flex: 0 1 auto; grid-template-columns: (minmax\([^)]+\) ?){3};/);
-  assert.match(css,/minmax\(calc\(228px \+ var\(--mc-gap\)\), 1\.75fr\)/);
+  // Wide cards: fixed result and performance tracks and fixed K/D/A, ACS and PS
+  // columns, so the three sit evenly apart and line up from card to card (24 Nov
+  // 2026, on request: stretched columns left 21px after K/D/A but 39px after ACS).
+  assert.match(css,/\.mc-perf \{ display: grid; grid-template-columns: 94px 44px 44px; column-gap: 18px;/);
+  assert.match(css,/grid-template-columns: minmax\(0, 172px\) 76px calc\(218px \+ var\(--mc-gap\)\) minmax\(0, 1\.25fr\)/);
+  assert.match(narrow,/\.mc-perf \{ flex: 0 1 auto; grid-template-columns: minmax\(auto, 94px\) minmax\(auto, 44px\) minmax\(auto, 44px\);/);
   assert.deepEqual([...narrow.matchAll(/([.\w -]+) \{ display: none; \}/g)].map(m=>m[1].trim()),['.mc-server']);
   // The average lobby is the full rank name in the rank colour, without an icon, between server and RR.
   assert.match(html,/<span class="mc-cell mc-lobby">[^]*?<span class="text-fuchsia-300" data-slot="lobby-rank"[^>]*>Diamond 2<\/span>/);

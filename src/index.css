@@ -356,7 +356,7 @@
    aligned from card to card. The map splash is a faded backdrop on the
    right; the result colours the left edge and a faint wash behind the tile. */
 .mc-row { position: relative; isolation: isolate; display: grid; width: 100%; padding: 10px 16px 10px 14px; text-align: left; cursor: pointer;
-  --mc-gap: 32px; grid-template-columns: minmax(0, 172px) minmax(84px, .65fr) minmax(calc(228px + var(--mc-gap)), 1.75fr) minmax(0, 1.25fr) minmax(108px, .75fr) minmax(56px, .45fr) 16px; align-items: center; column-gap: 0;
+  --mc-gap: 32px; grid-template-columns: minmax(0, 172px) 76px calc(218px + var(--mc-gap)) minmax(0, 1.25fr) minmax(108px, .75fr) minmax(56px, .45fr) 16px; align-items: center; column-gap: 0;
   border-left: 3px solid var(--result-color); background: linear-gradient(90deg, color-mix(in oklab, var(--result-color) 10%, transparent), transparent 34%); }
 .mc-row:focus-visible { outline: 2px solid var(--brand); outline-offset: -3px; border-radius: 11px; }
 .mc-backdrop { position: absolute; inset: 0 0 0 auto; z-index: -1; width: min(64%, 560px); overflow: hidden; pointer-events: none; }
@@ -379,8 +379,13 @@
 .mc-lobby { margin-left: 16px; }
 .mc-rr { margin-left: 12px; }
 .mc-chevron { margin-left: 14px; }
-/* K/D/A, ACS and PS (ADR was a fourth column 23-24 Nov 2026). */
-.mc-perf { display: grid; grid-template-columns: minmax(94px, 1.25fr) minmax(34px, .75fr) minmax(34px, .75fr); column-gap: 14px; min-width: 0; }
+/* K/D/A, ACS and PS (ADR was a fourth column 23-24 Nov 2026) in fixed
+   columns, so they line up from card to card and sit evenly apart: K/D/A's
+   94px fits "20 / 22 / 14", and ACS takes 44px, leaving about as much room
+   after a three-digit score as after a long K/D/A. The group's track is
+   fixed too; when they stretched with the card, the spare width went to
+   K/D/A and ACS unevenly (24 Nov 2026, on request). */
+.mc-perf { display: grid; grid-template-columns: 94px 44px 44px; column-gap: 18px; min-width: 0; }
 /* Minimum widths keep K/D/A (up to 20 / 22 / 14), scores and RR whole; the
    map column gives way first. */
 .mc-cell { display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 0; }
@@ -427,7 +432,7 @@
   /* K/D/A, ACS and PS keep their wide-card column widths while there is
      room (the assists sat right against the ACS value), and only shrink
      towards their values once the side gaps are used up. */
-  .mc-perf { flex: 0 1 auto; grid-template-columns: minmax(auto, 94px) minmax(auto, 48px) minmax(auto, 48px); column-gap: 14px; margin-left: auto; padding-left: 14px; }
+  .mc-perf { flex: 0 1 auto; grid-template-columns: minmax(auto, 94px) minmax(auto, 44px) minmax(auto, 44px); column-gap: 14px; margin-left: auto; padding-left: 14px; }
   .mc-perf > .mc-cell { min-width: max-content; }
   .mc-lobby { margin-left: auto; padding-left: 14px; }
   .mc-rr { margin-left: 12px; }
