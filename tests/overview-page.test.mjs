@@ -98,7 +98,9 @@ test('act stats keep all eight figures in one grid',async()=>{
   assert.doesNotMatch(html.slice(html.indexOf('<dl')),/ title="/);
   assert.match(html,/sm:grid-cols-4/);
   const t=text(html);
-  assert.match(t,/Matches 4 2W 1L 1D/);
+  // The match count stands alone, without its win/loss/draw split.
+  assert.match(t,/Matches 4 Win rate/);
+  assert.doesNotMatch(t,/\d+W \d+L/);
   assert.match(t,/Win rate 66\.7%/);
   assert.match(t,/KAST 69\.9%/);
 });

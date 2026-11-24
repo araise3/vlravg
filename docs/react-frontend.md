@@ -269,7 +269,8 @@ pickers, and every toggle.
   `TEAMMATES_MIN_ROWS`, 4) whenever the box resizes. Phones stack the cards
   and keep four.
 - Act stats: the eight act figures (K/D, ACS, PS, ADR, KAST, playtime,
-  matches with W/L/D, win rate) as one 4×2 hairline grid, 2×4 on phones.
+  matches, win rate) as one 4×2 hairline grid, 2×4 on phones. The match
+  count lost its W/L/D split on 24 Nov 2026, on request.
 - Clutch stats: 1v1–1v5 win rate with a `Progress` bar and counts (five
   columns at every width), the attempted share as a badge, and the
   won/lost/saved split as one segmented bar. The tiles have the pre-React

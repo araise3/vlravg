@@ -196,12 +196,12 @@ export function KpiCards({s}){
 export function ActStatsCard({s}){
   const o=s.overviewStats;
   const wins=s.allMatches.filter(m=>m.won===true).length,losses=s.allMatches.filter(m=>m.won===false).length;
-  const draws=s.allMatches.length-wins-losses;
   const items=[
     ['K/D',o.kd],['Avg ACS',o.acs],['Avg PS',o.performance,o.performanceTitle],
     ['Avg ADR',o.adr,'Damage to enemies per round; friendly fire and self-damage excluded'],
     ['KAST',o.kast,o.kastTitle],['Playtime',o.playtime.value,o.playtime.title],
-    ['Matches',s.allMatches.length,null,`${wins}W ${losses}L${draws?` ${draws}D`:''}`],
+    // Just the count; the W/L/D split beside it was removed on request (24 Nov 2026).
+    ['Matches',s.allMatches.length],
     ['Win rate',winRateLabel(decidedWinRate(wins,wins+losses)),'Wins divided by wins plus losses; draws excluded'],
   ];
   return (
