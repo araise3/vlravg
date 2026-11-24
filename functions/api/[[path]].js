@@ -92,6 +92,8 @@ import { SITE_NAME_LOOKUP_RUN } from "../../lib/workflow-quota-audit.mjs";
 import { maintenance } from "../../lib/site-flags.mjs";
 import { matchKey, hasInlinePayload, readArchivedPayload, mapLimit } from "../../lib/match-store.mjs";
 import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, acquireProfilePermit, observePublicQuota, acquireBorrowedPublicPermit } from "../../lib/upstream-pacing.mjs";
+import { readSavedAccount } from "../../lib/saved-account.mjs";
+import { publicQuotaEvent, recordPublicQuotaEvent } from "../../lib/public-quota-audit.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
 const PREFIX = "/api";
@@ -978,6 +980,24 @@ function hasFreshCurrentName(snapshot, now = Date.now()) {
   return Number.isFinite(lastSeen) && lastSeen >= now - NAME_HISTORY_REFRESH_MS;
 }
 
+// A search's account lookup that cannot reach upstream (public window spent,
+// or HenrikDev answered 429) is answered from saved, server-fetched identity
+// evidence instead, so a saved profile still opens (lib/saved-account.mjs).
+// Never edge-cached: the next live lookup replaces it.
+async function savedAccountResponse(env, route, match) {
+  if (!env.APP_DB) return null;
+  try {
+    const decode = (v) => decodeURIComponent(v);
+    const account = await readSavedAccount(env.APP_DB, route.accountByPuuid
+      ? { puuid: match[1] } : { name: decode(match[1]), tag: decode(match[2]) });
+    if (!account) return null;
+    const res = json({ status: 200, data: account }, 200);
+    res.headers.set('Cache-Control', 'no-store');
+    res.headers.set('X-Account-Source', 'saved');
+    return res;
+  } catch { return null; }
+}
+
 function savedNameHistoryResponse(snapshot, source, refreshDeferred = false) {
   const data = refreshDeferred ? { ...snapshot, refreshDeferred: true } : snapshot;
   const res = json({ data }, 200);
@@ -1247,8 +1267,25 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
   if(workflow&&!permit.retryAfterMs)admission.pool=borrowed?'public':'workflow';
   const upstreamKey=namePool?env.HENRIK_WORKFLOW_KEY:borrowed?env.HENRIK_KEY:henrikKey;
   const ownPool=namePool||(workflow&&!borrowed);
+  // Public-pool diagnostics (lib/public-quota-audit.mjs): written after the
+  // response, and a failed write never affects it.
+  const routeLabel=(borrowed?'borrowed:':'')+(requestPath.split('/')[1]||'');
+  const auditPublic=fields=>{
+    const job=(async()=>{
+      let gateRemaining=fields.gateRemaining;
+      if(gateRemaining===undefined)gateRemaining=(await env.APP_DB.prepare('SELECT remaining FROM rate_quota WHERE id=1').first())?.remaining??null;
+      await recordPublicQuotaEvent(env.APP_DB,{...fields,gateRemaining,route:routeLabel,profile:profileLookup});
+    })().catch(()=>{});
+    context.waitUntil?.(job);
+  };
+  const savedAccountOr429=async retryAfterMs=>{
+    const saved=await savedAccountResponse(env,route,match);
+    auditPublic({event:'profile-refused',retryAfterMs,servedSaved:!!saved});
+    return saved||json({error:'Rate limited',retryAfterMs},429);
+  };
   if(permit.retryAfterMs){
     if(route.nameHistory&&storedNameHistory.history.length)return savedNameHistoryResponse(storedNameHistory,'SAVED-REFRESH-DEFERRED',true);
+    if(profileLookup)return savedAccountOr429(permit.retryAfterMs);
     return json({error:'Rate limited',retryAfterMs:permit.retryAfterMs},429);
   }
 
@@ -1277,11 +1314,17 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
       expectedRemaining:permit.quota.remaining,expectedResetAt:permit.quota.resetAt,
       runId:namePool?SITE_NAME_LOOKUP_RUN:ownPool?request.headers.get('X-Workflow-Run'):null});}
   catch{return json({error:'Upstream quota update failed'},503);}
+  if(!ownPool){
+    const event=publicQuotaEvent(parsed,upstream.status);
+    if(event)auditPublic({event,gateRemaining:permit.quota.remaining,headerRemaining:parsed.remaining,
+      resetAt:parsed.resetAt,retryAfterMs:upstream.status===429?upstreamRetryMs:null});
+  }
 
   if (upstream.status === 429) {
     if (route.nameHistory && storedNameHistory.history.length) {
       return savedNameHistoryResponse(storedNameHistory, 'SAVED-REFRESH-DEFERRED', true);
     }
+    if (profileLookup) return savedAccountOr429(upstreamRetryMs);
     return json({ error: "Rate limited", retryAfterMs: upstreamRetryMs }, 429);
   }
 

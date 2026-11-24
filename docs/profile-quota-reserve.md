@@ -48,3 +48,91 @@ lookups can still spend the reserve itself.
 
 Not verified against production traffic: the local proxy cannot reproduce a
 spent shared window with real searches.
+
+## Follow-up, 24 Nov 2026: saved account answers and a public quota audit
+
+`lib/saved-account.mjs`, `lib/public-quota-audit.mjs`, migration
+`0013_saved_account_quota_audit.sql`.
+
+### Why the reserve was not enough
+
+A search for a saved profile still stalled on its account lookup with
+"Rate limit reached — waiting 43s", so the profile header (tracker link,
+region) never appeared. The reserve only limits what the gate admits. The
+stored count can still reach zero three ways:
+
+- HenrikDev's headers lower it: every response sets
+  `remaining = MIN(our count, header)`, so calls the gate never saw (the same
+  key used elsewhere, or HenrikDev counting differently) skip the reserve.
+- A real upstream 429 sets it to 0 and holds every caller until the reset.
+- Account lookups may spend the reserve themselves, down to 0.
+
+Which of these happened in production is unknown: the public pool kept no
+record. That is what the audit below is for.
+
+### Saved account answers
+
+When a search's account lookup (`/account/{name}/{tag}` or
+`/account-by-puuid/{puuid}`, not teammate names) is refused by the gate or
+gets a 429 from HenrikDev, the proxy answers from D1 instead:
+
+- the identity is the account's current row in `player_name_history`
+  (`ended_at IS NULL`), which only server-fetched HenrikDev account responses
+  write; the region comes from `rr_players`;
+- a Riot ID matches case-insensitively (SQLite `lower()`, ASCII only; other
+  case differences miss and get the 429 as before), through the new partial
+  index `player_name_history_current_riot_id`;
+- it is served only when exactly one account currently claims the Riot ID,
+  the identity was observed in the last 30 days (`SAVED_ACCOUNT_MAX_AGE_MS`),
+  and a region is saved. Otherwise the client gets the 429, as before;
+- the response has the client's usual `{data:{puuid,name,tag,region}}`
+  shape plus `vlravg_source: "saved-account"` and `observed_at`, header
+  `X-Account-Source: saved`, `Cache-Control: no-store`, and is never put in
+  the edge cache. It does not enrol the account (no fresh response).
+
+So a saved profile opens with no upstream call: header, saved matches,
+counts and coverage. Rank and new matches still wait for the reset.
+
+Risk kept narrow, not removed: within 30 days, a Riot ID that was renamed
+away and taken by another account, without either change reaching D1, would
+open the old owner until a live lookup succeeds. The 30-day limit is a
+judgment call, not measured.
+
+### Public quota audit
+
+Table `public_quota_audit` (14 days, pruned on write, no player identity):
+
+| event | written when |
+| --- | --- |
+| `upstream-429` | HenrikDev refused a public-pool call the gate admitted |
+| `low-window` | a public response's header shows `PUBLIC_PROFILE_RESERVE` (6) or fewer left |
+| `profile-refused` | a search's account lookup could not reach upstream; `served_saved` says whether D1 answered |
+
+Each row keeps the route's first path segment (`borrowed:` prefix for
+collector loans), `gate_remaining` (our count after admitting the call, or
+the stored count for refusals), `header_remaining`, `reset_in_ms` and
+`retry_after_ms`. Reading it:
+
+- `header_remaining` well below `gate_remaining`: something outside the gate
+  spent the key, or HenrikDev counts differently. A difference of one or two
+  can be our own concurrent calls arriving out of order.
+- `low-window`/`profile-refused` rows on `account` driving the count to 0:
+  account lookups spent the reserve.
+
+```bash
+npx wrangler d1 execute vlravg-calib --remote --command "SELECT * FROM public_quota_audit ORDER BY id DESC LIMIT 50"
+```
+
+Apply migration 0013 before deploying (the audit table is also created
+lazily; the index is not).
+
+### Tests
+
+`tests/workflow-api-key.test.mjs`: a spent window serves a saved account by
+Riot ID (case-insensitive) and by PUUID, uncached; unknown, renamed-away,
+40-day-old, region-less and doubly-claimed identities still get the 429;
+teammate names and other routes never get the fallback; a real upstream 429
+falls back and writes `upstream-429` and `profile-refused`; responses inside
+the reserve write `low-window` with both counts, others write nothing.
+
+Not verified against production traffic.

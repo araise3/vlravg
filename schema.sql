@@ -25,6 +25,22 @@ CREATE TABLE IF NOT EXISTS workflow_rate_quota (
   next_start_at INTEGER NOT NULL DEFAULT 0
 );
 
+-- Public-pool quota diagnostics (lib/public-quota-audit.mjs), no player
+-- identity; rows older than 14 days are pruned on write.
+CREATE TABLE IF NOT EXISTS public_quota_audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  observed_at TEXT NOT NULL,
+  event TEXT NOT NULL,            -- upstream-429 | low-window | profile-refused
+  route TEXT NOT NULL,            -- first path segment, 'borrowed:' for collector loans
+  profile INTEGER NOT NULL DEFAULT 0,
+  gate_remaining INTEGER,         -- our count (after admitting this call)
+  header_remaining INTEGER,       -- HenrikDev's header
+  reset_in_ms INTEGER,
+  retry_after_ms INTEGER,
+  served_saved INTEGER            -- profile-refused: 1 when D1 answered it
+);
+CREATE INDEX IF NOT EXISTS public_quota_audit_observed ON public_quota_audit(observed_at);
+
 -- Server-only counters; initialized lazily by the workflow proxy on deployment.
 CREATE TABLE IF NOT EXISTS workflow_quota_audit (
   run_id TEXT PRIMARY KEY,
@@ -188,6 +204,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS player_name_history_current
   ON player_name_history(puuid) WHERE ended_at IS NULL;
 CREATE INDEX IF NOT EXISTS player_name_history_player_dates
   ON player_name_history(puuid,first_seen DESC);
+-- Saved-account answers by Riot ID when the public quota is spent
+-- (lib/saved-account.mjs). Riot IDs match case-insensitively.
+CREATE INDEX IF NOT EXISTS player_name_history_current_riot_id
+  ON player_name_history(lower(name),lower(tag)) WHERE ended_at IS NULL;
 
 -- The old player index only retained its latest identity observation.
 -- Preserve that evidence without claiming knowledge of earlier names/dates.

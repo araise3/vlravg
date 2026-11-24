@@ -19,22 +19,24 @@ function fixture(t){
   t.after(()=>sql.close());
   const APP_DB={prepare(query){let values=[];const s={bind(...v){values=v;return s;},
     async first(){return sql.prepare(query).get(...values)||null;},
+    async all(){return {results:sql.prepare(query).all(...values)};},
     async run(){return sql.prepare(query).run(...values);}};return s;}};
   const env={APP_DB,HENRIK_KEY:publicKey,HENRIK_WORKFLOW_KEY:workflowKey};
   const upstream=[],cacheReads=[],cacheWrites=[];
   const oldCaches=globalThis.caches;
   globalThis.caches={default:{async match(key){cacheReads.push(key);return null;},async put(key){cacheWrites.push(key);}}};
   t.after(()=>{if(oldCaches===undefined)delete globalThis.caches;else globalThis.caches=oldCaches;});
+  const f={respond:()=>Response.json({data:{}},{headers:{'x-ratelimit-remaining':'7','x-ratelimit-reset':'60'}})};
   t.mock.method(globalThis,'fetch',async (target,options)=>{
     upstream.push({target,options});
-    return Response.json({data:{}},{headers:{'x-ratelimit-remaining':'7','x-ratelimit-reset':'60'}});
+    return f.respond(target,options);
   });
   async function request(key,target=url,headers={}){
     const jobs=[];
     const response=await onRequestGet({env,request:new Request(target,{headers:key===undefined?headers:{...headers,'X-Workflow-Key':key}}),waitUntil:p=>jobs.push(p)});
     await Promise.all(jobs);return response;
   }
-  return {sql,env,upstream,cacheReads,cacheWrites,request};
+  return Object.assign(f,{sql,env,upstream,cacheReads,cacheWrites,request});
 }
 
 test('authenticated workflows use the dedicated upstream key, bypass caches, and cannot change public quota',async t=>{
@@ -356,4 +358,93 @@ test('with the public window down to its reserve, a search still resolves its ac
   assert.equal(account.status,200);
   assert.equal(f.upstream.length,1);
   assert.equal(f.upstream[0].options.headers.Authorization,publicKey);
+});
+
+const savedPuuid='22222222-2222-4222-8222-222222222222';
+function saveIdentity(f,{puuid=savedPuuid,name='Alpha',tag='EU',region='eu',lastSeen=new Date().toISOString(),ended=null}={}){
+  f.sql.prepare('INSERT INTO player_name_history (puuid,name,tag,first_seen,last_seen,ended_at) VALUES(?,?,?,?,?,?)')
+    .run(puuid,name,tag,lastSeen,lastSeen,ended);
+  f.sql.prepare('INSERT OR REPLACE INTO rr_players (puuid,region,platform,name,tag,updated_at) VALUES(?,?,?,?,?,?)')
+    .run(puuid,region,'pc',name,tag,lastSeen);
+}
+const spendPublicWindow=f=>f.sql.prepare('INSERT OR REPLACE INTO rate_quota (id,remaining,reset_at,last_request_at,next_start_at) VALUES(1,0,?,0,0)')
+  .run(Date.now()+45000);
+const auditRows=f=>f.sql.prepare('SELECT event,route,profile,gate_remaining,header_remaining,served_saved FROM public_quota_audit ORDER BY id').all()
+  .map(row=>({...row}));
+
+test('with the public window spent, a saved profile resolves its account from D1',async t=>{
+  const f=fixture(t);
+  saveIdentity(f);
+  spendPublicWindow(f);
+  const response=await f.request(undefined,origin+'/api/account/alpha/eu');
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get('X-Account-Source'),'saved');
+  assert.equal(response.headers.get('Cache-Control'),'no-store');
+  const {data}=await response.json();
+  assert.deepEqual({puuid:data.puuid,name:data.name,tag:data.tag,region:data.region,source:data.vlravg_source},
+    {puuid:savedPuuid,name:'Alpha',tag:'EU',region:'eu',source:'saved-account'});
+  assert.equal(f.upstream.length,0);
+  assert.equal(f.cacheWrites.length,0,'a saved answer is never edge-cached');
+  assert.deepEqual(auditRows(f),[{event:'profile-refused',route:'account',profile:1,gate_remaining:0,header_remaining:null,served_saved:1}]);
+
+  const byPuuid=await f.request(undefined,origin+`/api/account-by-puuid/${savedPuuid.toUpperCase()}`);
+  assert.equal(byPuuid.status,200);
+  assert.equal((await byPuuid.json()).data.name,'Alpha');
+});
+
+test('saved account answers need one recent current identity with a region',async t=>{
+  const cases=[
+    ['unknown player',()=>{}],
+    ['renamed away',f=>saveIdentity(f,{ended:new Date().toISOString()})],
+    ['not seen for 40 days',f=>saveIdentity(f,{lastSeen:new Date(Date.now()-40*86400000).toISOString()})],
+    ['no saved region',f=>saveIdentity(f,{region:null})],
+    ['two accounts claim the Riot ID',f=>{saveIdentity(f);saveIdentity(f,{puuid:'33333333-3333-4333-8333-333333333333',name:'ALPHA'});}],
+  ];
+  for(const [label,seed] of cases){
+    await t.test(label,async t=>{
+      const f=fixture(t);
+      seed(f);
+      spendPublicWindow(f);
+      const response=await f.request(undefined,origin+'/api/account/Alpha/EU');
+      assert.equal(response.status,429);
+      assert.ok((await response.json()).retryAfterMs>40000);
+      assert.equal(auditRows(f)[0].served_saved,0);
+    });
+  }
+});
+
+test('teammate names and other routes never get the saved account answer',async t=>{
+  const f=fixture(t);
+  delete f.env.HENRIK_WORKFLOW_KEY;
+  saveIdentity(f);
+  spendPublicWindow(f);
+  const teammate=await f.request(undefined,origin+`/api/account-by-puuid/${savedPuuid}`,{'X-Name-Lookup':'teammate'});
+  assert.equal(teammate.status,429);
+  assert.equal((await f.request(undefined)).status,429);
+  assert.deepEqual(auditRows(f),[],'only search account lookups are audited as refused');
+});
+
+test('a real upstream 429 on an account lookup falls back to the saved account and is audited',async t=>{
+  const f=fixture(t);
+  saveIdentity(f);
+  f.respond=()=>Response.json({errors:[{code:0}]},{status:429,headers:{'x-ratelimit-remaining':'0','x-ratelimit-reset':'40','retry-after':'40'}});
+  f.sql.prepare('INSERT OR REPLACE INTO rate_quota (id,remaining,reset_at,last_request_at,next_start_at) VALUES(1,20,?,0,0)').run(Date.now()+40000);
+  const response=await f.request(undefined,origin+'/api/account/Alpha/EU');
+  assert.equal(response.status,200);
+  assert.equal(response.headers.get('X-Account-Source'),'saved');
+  assert.equal(f.upstream.length,1);
+  assert.deepEqual(auditRows(f).map(r=>[r.event,r.gate_remaining,r.header_remaining,r.served_saved]),
+    [['upstream-429',19,0,null],['profile-refused',0,null,1]]);
+});
+
+test('public responses in the reserve are audited with our count beside the header',async t=>{
+  const f=fixture(t);
+  f.respond=()=>Response.json({data:{}},{headers:{'x-ratelimit-remaining':'3','x-ratelimit-reset':'30'}});
+  f.sql.prepare('INSERT OR REPLACE INTO rate_quota (id,remaining,reset_at,last_request_at,next_start_at) VALUES(1,12,?,0,0)').run(Date.now()+30000);
+  assert.equal((await f.request(undefined)).status,200);
+  assert.deepEqual(auditRows(f),[{event:'low-window',route:'rank',profile:0,gate_remaining:11,header_remaining:3,served_saved:null}]);
+  f.respond=()=>Response.json({data:{}},{headers:{'x-ratelimit-remaining':'40','x-ratelimit-reset':'30'}});
+  f.sql.prepare('UPDATE rate_quota SET remaining=50,next_start_at=0').run();
+  assert.equal((await f.request(undefined,origin+'/api/rank/eu/pc/Beta/EU')).status,200);
+  assert.equal(auditRows(f).length,1,'responses with quota to spare write nothing');
 });
