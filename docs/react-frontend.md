@@ -391,8 +391,9 @@ All hand-built charts follow one system, checked against the dataviz method:
   is still driven by the player's current rank (`--rank`). The search area
   (`SearchHeader.jsx`) is built from shadcn parts (17 Nov 2026): an
   `InputGroup` (search icon, input, Ctrl/⌘ K `Kbd` hint, submit
-  `InputGroupButton`) beside a `ButtonGroup` with the pro library and act
-  picker (outline `Button`s opening `Popover` + `Command`). The landing page
+  `InputGroupButton`) beside the pro library and act picker, two separate
+  outline `Button`s opening `Popover` + `Command` (a joined `ButtonGroup`
+  until 24 Nov 2026, split into two boxes on request). The landing page
   keeps the centered intro above it; once a player loads it sits in a `Card`
   with a `Spinner` + `Progress` status line. The account's current rank,
   region and the Tracker.gg link slide into the right end of the input as

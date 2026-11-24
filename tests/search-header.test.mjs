@@ -13,11 +13,14 @@ test('search bar is a shadcn input group with a submit button beside a button gr
   // Engine state is shared across test files (isolation=none), so the header
   // may render empty or with an account already loaded: the input's right
   // end then holds either the shortcut hint or the account badges, never both.
-  const end=html.slice(html.indexOf('data-align="inline-end"'),html.indexOf('data-slot="button-group"'));
+  const end=html.slice(html.indexOf('data-align="inline-end"'),html.indexOf('data-slot="search-options"'));
   assert.equal(/data-slot="kbd"/.test(end)+/data-slot="account-badges"/.test(end),1);
-  const group=html.slice(html.indexOf('data-slot="button-group"'));
+  const group=html.slice(html.indexOf('data-slot="search-options"'));
   assert.match(group,/Pro players/);
   assert.match(group,/aria-label="Act: /);
+  // Two separate boxes with a gap, not a joined ButtonGroup.
+  assert.doesNotMatch(html,/data-slot="button-group"/);
+  assert.match(html,/<div role="group" class="flex gap-2[^"]*" aria-label="Search options" data-slot="search-options">/);
 });
 
 test('a loaded account slides its rank, region and Tracker.gg link into the search input',async()=>{

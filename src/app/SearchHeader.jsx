@@ -10,7 +10,6 @@ import {ProAccount,ProGroupHeading,ProRegionFilter,filterProRegion,limitProGroup
 import {MobileSearchSheet,MobileTopBar} from '@/app/MobileShell.jsx';
 import {cn} from '@/lib/utils';
 import {Button} from '@/components/ui/button';
-import {ButtonGroup} from '@/components/ui/button-group';
 import {Card,CardContent} from '@/components/ui/card';
 import {Command,CommandEmpty,CommandGroup,CommandInput,CommandItem,CommandList} from '@/components/ui/command';
 import {InputGroup,InputGroupAddon,InputGroupButton,InputGroupInput} from '@/components/ui/input-group';
@@ -20,7 +19,8 @@ import {Progress} from '@/components/ui/progress';
 import {Spinner} from '@/components/ui/spinner';
 
 // Search built from shadcn parts: an InputGroup (icon, input, shortcut hint,
-// submit button) beside a ButtonGroup holding the pro library and act picker.
+// submit button) beside the pro library and act picker, two separate outline
+// buttons (a joined ButtonGroup until 24 Nov 2026, split on request).
 // On the landing page it sits under the intro; once a player loads it moves
 // into a Card with the account's rank and region badges and the status line.
 
@@ -92,7 +92,7 @@ function ProLibraryPanel({onPick}){
   );
 }
 
-// Act picker: an outline Button (inside the ButtonGroup) opening a Command
+// Act picker: an outline Button (beside the pro library button) opening a Command
 // list of played acts with their match counts.
 export function ActPicker({className}){
   const s=useEngine();
@@ -239,21 +239,21 @@ export function SearchHeader(){
               </InputGroupButton>
             </InputGroupAddon>
           </InputGroup>
-          <ButtonGroup className="max-sm:w-full" aria-label="Search options">
+          <div role="group" className="flex gap-2 max-sm:w-full" aria-label="Search options" data-slot="search-options">
             {mobile
               // Phones open the full-screen search sheet (pro list included)
               // instead of a popover that would cover the landing page.
-              ?<Button type="button" variant="outline" aria-haspopup="dialog" className={cn(height,'flex-1')} onClick={()=>setSheetOpen(true)}>
+              ?<Button type="button" variant="outline" aria-haspopup="dialog" className={cn(height,'flex-auto')} onClick={()=>setSheetOpen(true)}>
                 <Users aria-hidden="true"/>Pro players<ChevronDown className="opacity-60" aria-hidden="true"/>
               </Button>
               :<PopoverTrigger asChild>
-                <Button type="button" variant="outline" aria-haspopup="dialog" className={cn(height,'max-sm:flex-1',proOpen&&'bg-accent dark:bg-input/50')}>
+                <Button type="button" variant="outline" aria-haspopup="dialog" className={cn(height,'max-sm:flex-auto',proOpen&&'bg-accent dark:bg-input/50')}>
                   <Users aria-hidden="true"/>Pro players
                   <ChevronDown className={cn('opacity-60 transition-transform',proOpen&&'rotate-180')} aria-hidden="true"/>
                 </Button>
               </PopoverTrigger>}
-            <ActPicker className={cn(height,'max-w-48 max-sm:max-w-none max-sm:flex-1')}/>
-          </ButtonGroup>
+            <ActPicker className={cn(height,'max-w-48 max-sm:max-w-none max-sm:flex-auto')}/>
+          </div>
         </form>
       </PopoverAnchor>
       {/* The list shrinks to the space Radix measures on the side it opens
