@@ -436,15 +436,17 @@ test('a real upstream 429 on an account lookup falls back to the saved account a
   assert.equal(response.headers.get('X-Account-Source'),'saved');
   assert.equal(f.upstream.length,1);
   assert.deepEqual(auditRows(f).map(r=>[r.event,r.gate_remaining,r.header_remaining,r.served_saved]),
-    [['upstream-429',19,0,null],['profile-refused',0,null,1]]);
+    [['upstream-429',18,0,null],['profile-refused',0,null,1]],'an account lookup reserves two units');
 });
 
 test('public responses in the reserve are audited with our count beside the header',async t=>{
   const f=fixture(t);
   f.respond=()=>Response.json({data:{}},{headers:{'x-ratelimit-remaining':'3','x-ratelimit-reset':'30'}});
-  f.sql.prepare('INSERT OR REPLACE INTO rate_quota (id,remaining,reset_at,last_request_at,next_start_at) VALUES(1,12,?,0,0)').run(Date.now()+30000);
+  f.sql.prepare('INSERT OR REPLACE INTO rate_quota (id,remaining,reset_at,last_request_at,next_start_at) VALUES(1,20,?,0,0)').run(Date.now()+30000);
   assert.equal((await f.request(undefined)).status,200);
-  assert.deepEqual(auditRows(f),[{event:'low-window',route:'rank',profile:0,gate_remaining:11,header_remaining:3,served_saved:null}]);
+  assert.deepEqual(auditRows(f),[{event:'low-window',route:'rank',profile:0,gate_remaining:18,header_remaining:3,served_saved:null}]);
+  assert.equal(f.sql.prepare('SELECT cost FROM public_quota_audit').get().cost,2,'the estimate is kept beside the counts');
+  assert.equal(f.sql.prepare('SELECT remaining FROM rate_quota').get().remaining,3,'the newest header sets the count');
   f.respond=()=>Response.json({data:{}},{headers:{'x-ratelimit-remaining':'40','x-ratelimit-reset':'30'}});
   f.sql.prepare('UPDATE rate_quota SET remaining=50,next_start_at=0').run();
   assert.equal((await f.request(undefined,origin+'/api/rank/eu/pc/Beta/EU')).status,200);

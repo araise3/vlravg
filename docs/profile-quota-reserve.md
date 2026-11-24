@@ -263,3 +263,66 @@ When D1 fails during admission or the quota update, the proxy still answers
 path segment only, message cut to 300 characters). Read it with
 `npx wrangler pages deployment tail <deployment-id> --project-name vlravg`
 or in the Pages Function logs. Test: `tests/workflow-api-key.test.mjs`.
+
+## Counting HenrikDev units, 24 Nov 2026
+
+`lib/upstream-pacing.mjs`, `lib/upstream-cost.mjs`, migration
+`0015_public_quota_audit_cost.sql`.
+
+### Why
+
+HenrikDev's rate-limit docs (docs.henrikdev.xyz, general/rate-limiting):
+limits are "tied to your API key and are enforced globally per key", and cost
+is "1 request to the API = +1" plus "1 background request to Riot = +1". The
+site key has 60 units a minute and the workflow key 30. The gate counted one
+per call. Evidence that real costs are higher:
+
+- Workflow quota audit: on about 90% of comparable calls HenrikDev reported
+  one more unit used than the collector's count (419 of 458 samples in the
+  run of 24 Nov, similar in every run since 23 Nov). About 4,760 calls in
+  5.3 h, roughly 15 a minute: 30 units at about 2 each.
+- Public audit, gate count minus header at low windows: `account` (by Riot
+  ID) 0, `account-by-puuid` (`force=true`) 1.25 on average, `rank` during a
+  bulk drain 10.5 (up to 14). In the last drain the header was already 12
+  below our count; the gate admitted calls HenrikDev had no units for and
+  its 429 stopped the pool for 60 s.
+
+Inference, not measured per call: a call HenrikDev fetches from Riot costs 2;
+answers from its store cost 1.
+
+### What changed
+
+- Each call reserves its estimated units (`upstreamCost`): 1 for stored
+  endpoints (`stored-matches`, `stored-mmr-history`, `rr-heal`, the stored
+  name-backfill phase); 1 + size for live match lists (`history`,
+  `history-by-puuid`, the live name-backfill phase; size from the query,
+  capped at 10, a full page assumed when absent); 2 for everything else
+  (account, rank, RR history, match details). These are upper estimates.
+- A call is admitted only when the window holds its units; reserves are now
+  units left after the call: `PUBLIC_PROFILE_RESERVE` 12 (six account
+  lookups at 2) for non-account public calls, `PUBLIC_BORROW_RESERVE` 30 for
+  collector loans.
+- Spacing stays per call (remaining units spread over the window), so costly
+  calls widen the gaps on their own; the collector's 2.1 s floor stays.
+- The newest admitted call's response header now sets the count both ways
+  (it was `MIN(count, header)`), so a cached answer gives back the units its
+  estimate over-reserved. Older responses are still ignored.
+- `public_quota_audit.cost` records each audited call's estimate; the
+  workflow audit's expected count now includes the estimate, so its
+  "unexplained" figure measures estimate error.
+
+### Trade-offs and risks
+
+- Pessimistic match-list estimates: with fewer than 23 units left (11 for a
+  page plus the 12-unit reserve), live history pages wait for the reset even
+  when HenrikDev would have answered from its store. Edge-cache hits are
+  unaffected.
+- Setting the count from the newest header assumes earlier calls already
+  reached HenrikDev and that it charges the Riot unit when the request
+  arrives. If it charges on completion, the count can briefly run high;
+  `upstream-429` rows with `gate_remaining` above 0 would show it.
+
+Tests: `tests/upstream-cost.test.mjs` (estimates per route, audit column
+upgrade), `tests/upstream-pacing.test.mjs` (units reserved, reserve after the
+call, header settles the real cost both ways), and the updated proxy and
+reserve tests in `tests/workflow-api-key.test.mjs`. Not verified live.

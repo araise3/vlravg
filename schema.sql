@@ -38,7 +38,8 @@ CREATE TABLE IF NOT EXISTS public_quota_audit (
   header_remaining INTEGER,       -- HenrikDev's header
   reset_in_ms INTEGER,
   retry_after_ms INTEGER,
-  served_saved INTEGER            -- profile-refused: 1 when D1 answered it
+  served_saved INTEGER,           -- profile-refused: 1 when D1 answered it
+  cost INTEGER                    -- the call's estimated HenrikDev units (lib/upstream-cost.mjs)
 );
 CREATE INDEX IF NOT EXISTS public_quota_audit_observed ON public_quota_audit(observed_at);
 

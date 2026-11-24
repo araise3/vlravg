@@ -93,6 +93,7 @@ import { maintenance } from "../../lib/site-flags.mjs";
 import { matchKey, hasInlinePayload, readArchivedPayload, mapLimit } from "../../lib/match-store.mjs";
 import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, acquireProfilePermit, observePublicQuota, acquireBorrowedPublicPermit, RESET_GUARD_MS } from "../../lib/upstream-pacing.mjs";
 import { readSavedAccount } from "../../lib/saved-account.mjs";
+import { upstreamCost } from "../../lib/upstream-cost.mjs";
 import { publicQuotaEvent, recordPublicQuotaEvent } from "../../lib/public-quota-audit.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
@@ -1267,17 +1268,18 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
   // A search's account lookup may use the public reserve
   // (lib/upstream-pacing.mjs PUBLIC_PROFILE_RESERVE); teammate names may not.
   const profileLookup=!workflow&&!!route.trackAccount&&!teammateLookup;
+  const cost=upstreamCost(route,match,url,requestPath);
   let permit,borrowed=false;
   try{
-    if(namePool)permit=await acquireWorkflowPermit(env.APP_DB);
+    if(namePool)permit=await acquireWorkflowPermit(env.APP_DB,{cost});
     else if(workflow){
-      permit=await acquireWorkflowPermit(env.APP_DB,{maxWaitMs:0});
+      permit=await acquireWorkflowPermit(env.APP_DB,{maxWaitMs:0,cost});
       if(permit.retryAfterMs&&env.HENRIK_KEY&&!admission.noBorrow){
-        const loan=await acquireBorrowedPublicPermit(env.APP_DB);
+        const loan=await acquireBorrowedPublicPermit(env.APP_DB,{cost});
         if(!loan.retryAfterMs){permit=loan;borrowed=true;}
       }
-      if(!borrowed&&permit.retryAfterMs)permit=await acquireWorkflowPermit(env.APP_DB);
-    }else permit=await (profileLookup?acquireProfilePermit:acquirePublicPermit)(env.APP_DB);
+      if(!borrowed&&permit.retryAfterMs)permit=await acquireWorkflowPermit(env.APP_DB,{cost});
+    }else permit=await (profileLookup?acquireProfilePermit:acquirePublicPermit)(env.APP_DB,{cost});
   }catch(error){logGateFailure('admission',requestPath,error);return json({error:'Upstream quota storage unavailable'},503);}
   if(workflow&&!permit.retryAfterMs)admission.pool=borrowed?'public':'workflow';
   const upstreamKey=namePool?env.HENRIK_WORKFLOW_KEY:borrowed?env.HENRIK_KEY:henrikKey;
@@ -1289,7 +1291,7 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
     const job=(async()=>{
       let gateRemaining=fields.gateRemaining;
       if(gateRemaining===undefined)gateRemaining=(await env.APP_DB.prepare('SELECT remaining FROM rate_quota WHERE id=1').first())?.remaining??null;
-      await recordPublicQuotaEvent(env.APP_DB,{...fields,gateRemaining,route:routeLabel,profile:profileLookup});
+      await recordPublicQuotaEvent(env.APP_DB,{...fields,gateRemaining,route:routeLabel,profile:profileLookup,cost});
     })().catch(()=>{});
     context.waitUntil?.(job);
   };
