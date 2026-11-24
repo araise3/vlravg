@@ -326,3 +326,49 @@ Tests: `tests/upstream-cost.test.mjs` (estimates per route, audit column
 upgrade), `tests/upstream-pacing.test.mjs` (units reserved, reserve after the
 call, header settles the real cost both ways), and the updated proxy and
 reserve tests in `tests/workflow-api-key.test.mjs`. Not verified live.
+
+## Measured costs instead of estimates, 24 Nov 2026
+
+`lib/upstream-cost.mjs`, `lib/upstream-pacing.mjs`, migration
+`0016_measured_quota_costs.sql`. Replaces the per-route estimates of the
+previous section (1 stored, 2 single objects, 1 + size for match lists).
+
+HenrikDev reports no cost per call. Its responses carry the key's remaining
+count (`ratelimit`, `x-ratelimit-remaining`), the window's reset and
+`x-cache-status` (`HIT`, `NONE` seen), nothing more (checked on two calls,
+24 Nov 2026). So the gate measures:
+
+- Every admission stores the previous admission (`prev_request_at`); every
+  response raises `observed_request_at`; the newest call's response stores
+  HenrikDev's count (`header_remaining`, `header_reset_at`).
+- A call is a clean sample when the previous call's response had arrived
+  before it was admitted and its own response is the newest: between the two
+  headers nothing else of ours used the key. If both headers belong to one
+  window (resets within `SAME_WINDOW_MS`, 1500 ms) and the count did not
+  rise, the drop is the call's cost.
+- Samples go to `quota_cost_samples` with pool, route key (path segment;
+  `history:10`-style page size for match lists; phase for name backfill),
+  HenrikDev's `x-cache-status`, status and cost. Kept 14 days. A failed
+  sample write never fails the request.
+- Admission reserves the route's 90th percentile over its newest 30 samples,
+  so a single call that shared the key with something outside the gate does
+  not set the price. A route without samples reserves the highest measured
+  route cost; with no samples at all, 1 (HenrikDev's documented minimum).
+  The table is read at most once a minute per isolate.
+- The newest header still sets the count both ways after every response.
+
+Limits:
+
+- Calls that overlap are not measured. The collector's spaced calls and
+  quiet-hour site traffic give most samples; busy minutes give few.
+- Usage of the key outside the gate (another tool with the same key) makes
+  a sample too high; the percentile limits its effect. The two header
+  checks above used the local development key (`.dev.vars`) directly;
+  whether it is the production site key is unknown, so those calls may
+  themselves have been such outside usage.
+- Until a route has samples, it reserves the highest measured cost, or 1 on
+  an empty table; the first minutes after deploy behave like counting calls.
+
+Tests: `tests/upstream-cost.test.mjs` (route keys, sample rule, serial calls
+measured and overlapping ones skipped, percentile, fallback, cache refresh,
+pruning).

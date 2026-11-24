@@ -39,7 +39,7 @@ test('atomic reservations serialize concurrent callers and keep every rolling mi
 
 test('quota reservations include in-flight calls and headers stretch spacing when budget is scarce',async t=>{
   const {db,sql}=database(t);let clock=100000;
-  sql.prepare('INSERT INTO workflow_rate_quota VALUES(1,2,110000,0,0)').run();
+  sql.prepare('INSERT INTO workflow_rate_quota (id,remaining,reset_at,last_request_at,next_start_at) VALUES(1,2,110000,0,0)').run();
   const first=await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0});
   assert.equal(first.quota.remaining,1);
   assert.equal(sql.prepare('SELECT next_start_at FROM workflow_rate_quota').get().next_start_at,105000);
@@ -122,10 +122,11 @@ test('public quota pauses, missing headers and late replies cannot replenish res
   await observePublicQuota(db,{remaining:29,resetAt:160000},{startedAt:first.startedAt,now:()=>clock,status:200});
   clock+=2100;const second=await acquirePublicPermit(db,{now:()=>clock});
   assert.equal(second.quota.remaining,28);
-  const before=sql.prepare('SELECT * FROM rate_quota').get();
+  const quota=()=>({...sql.prepare('SELECT remaining,reset_at,last_request_at,next_start_at,header_remaining,header_reset_at FROM rate_quota').get()});
+  const before=quota();
   await observePublicQuota(db,{remaining:null,resetAt:null},{startedAt:second.startedAt,now:()=>clock,status:200});
   await observePublicQuota(db,{remaining:29,resetAt:180000},{startedAt:first.startedAt,now:()=>clock,status:200});
-  assert.deepEqual(sql.prepare('SELECT * FROM rate_quota').get(),before);
+  assert.deepEqual(quota(),before);
   assert.ok(before.next_start_at-clock>=Math.ceil((160000-clock)*1.05/29));
   assert.equal(await observePublicQuota(db,{remaining:null,resetAt:null},
     {startedAt:first.startedAt,now:()=>clock,status:429,retryAfterMs:90000}),90000);

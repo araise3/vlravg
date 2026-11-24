@@ -116,7 +116,7 @@ test('exhausted workflow quota with no idle site slot returns only retryAfterMs 
 
 test('a busy workflow pool borrows an idle site-key slot through the public schedule',async t=>{
   const f=fixture(t);
-  f.sql.prepare('INSERT INTO workflow_rate_quota VALUES(1,NULL,0,0,?)').run(Date.now()+60000);
+  f.sql.prepare('INSERT INTO workflow_rate_quota (id,remaining,reset_at,last_request_at,next_start_at) VALUES(1,NULL,0,0,?)').run(Date.now()+60000);
   const workflowBefore=f.sql.prepare('SELECT * FROM workflow_rate_quota').get();
   const response=await f.request(workflowKey);
   assert.equal(response.status,200);
@@ -130,7 +130,7 @@ test('a busy workflow pool borrows an idle site-key slot through the public sche
 
 test('collector calls never borrow below the site reserve or when their own slot is free',async t=>{
   const f=fixture(t);
-  f.sql.prepare('INSERT INTO workflow_rate_quota VALUES(1,NULL,0,0,?)').run(Date.now()+60000);
+  f.sql.prepare('INSERT INTO workflow_rate_quota (id,remaining,reset_at,last_request_at,next_start_at) VALUES(1,NULL,0,0,?)').run(Date.now()+60000);
   f.sql.prepare('UPDATE rate_quota SET remaining=?,reset_at=? WHERE id=1').run(PUBLIC_BORROW_RESERVE-1,Date.now()+60000);
   const busy=await f.request(workflowKey);
   assert.equal(busy.status,429);assert.equal(f.upstream.length,0);
@@ -150,7 +150,7 @@ test('workflow quota storage is created automatically for existing databases',as
 
 test('D1-only routes bypass an exhausted workflow gate without advancing its next slot',async t=>{
   const f=fixture(t);
-  f.sql.prepare('INSERT INTO workflow_rate_quota VALUES(1,0,?,0,?)').run(Date.now()+60000,Date.now()+30000);
+  f.sql.prepare('INSERT INTO workflow_rate_quota (id,remaining,reset_at,last_request_at,next_start_at) VALUES(1,0,?,0,?)').run(Date.now()+60000,Date.now()+30000);
   const before=f.sql.prepare('SELECT * FROM workflow_rate_quota').get();
   assert.equal((await f.request(workflowKey,origin+'/api/calib-model')).status,200);
   assert.deepEqual(f.sql.prepare('SELECT * FROM workflow_rate_quota').get(),before);
@@ -436,7 +436,7 @@ test('a real upstream 429 on an account lookup falls back to the saved account a
   assert.equal(response.headers.get('X-Account-Source'),'saved');
   assert.equal(f.upstream.length,1);
   assert.deepEqual(auditRows(f).map(r=>[r.event,r.gate_remaining,r.header_remaining,r.served_saved]),
-    [['upstream-429',18,0,null],['profile-refused',0,null,1]],'an account lookup reserves two units');
+    [['upstream-429',19,0,null],['profile-refused',0,null,1]],'an unmeasured route reserves the minimum of one unit');
 });
 
 test('public responses in the reserve are audited with our count beside the header',async t=>{
@@ -444,8 +444,8 @@ test('public responses in the reserve are audited with our count beside the head
   f.respond=()=>Response.json({data:{}},{headers:{'x-ratelimit-remaining':'3','x-ratelimit-reset':'30'}});
   f.sql.prepare('INSERT OR REPLACE INTO rate_quota (id,remaining,reset_at,last_request_at,next_start_at) VALUES(1,20,?,0,0)').run(Date.now()+30000);
   assert.equal((await f.request(undefined)).status,200);
-  assert.deepEqual(auditRows(f),[{event:'low-window',route:'rank',profile:0,gate_remaining:18,header_remaining:3,served_saved:null}]);
-  assert.equal(f.sql.prepare('SELECT cost FROM public_quota_audit').get().cost,2,'the estimate is kept beside the counts');
+  assert.deepEqual(auditRows(f),[{event:'low-window',route:'rank',profile:0,gate_remaining:19,header_remaining:3,served_saved:null}]);
+  assert.equal(f.sql.prepare('SELECT cost FROM public_quota_audit').get().cost,1,'the reserved cost is kept beside the counts');
   assert.equal(f.sql.prepare('SELECT remaining FROM rate_quota').get().remaining,3,'the newest header sets the count');
   f.respond=()=>Response.json({data:{}},{headers:{'x-ratelimit-remaining':'40','x-ratelimit-reset':'30'}});
   f.sql.prepare('UPDATE rate_quota SET remaining=50,next_start_at=0').run();

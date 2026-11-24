@@ -48,7 +48,7 @@ test('unknown headers never report exclusive key use and audit initializes exist
 
 test('real admissions carry expected quota and late responses cannot become external-usage evidence',async t=>{
   const {db,sql,query}=database(t);let clock=100000;
-  sql.prepare('INSERT INTO workflow_rate_quota VALUES(1,10,160000,0,0)').run();
+  sql.prepare('INSERT INTO workflow_rate_quota (id,remaining,reset_at,last_request_at,next_start_at) VALUES(1,10,160000,0,0)').run();
   const before=await readQuotaAudit({},'run-1',query);
   const permit=await acquireWorkflowPermit(db,{now:()=>clock});
   await observeWorkflowQuota(db,{remaining:7,resetAt:160000},{startedAt:permit.startedAt,now:()=>clock,status:200,

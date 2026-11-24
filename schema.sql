@@ -12,7 +12,11 @@ CREATE TABLE IF NOT EXISTS rate_quota (
   reset_at INTEGER,
   last_request_at INTEGER,
   next_start_at INTEGER NOT NULL DEFAULT 0,
-  priority_until INTEGER NOT NULL DEFAULT 0 -- a waiting account lookup's claim on the next slot
+  priority_until INTEGER NOT NULL DEFAULT 0, -- a waiting account lookup's claim on the next slot
+  prev_request_at INTEGER NOT NULL DEFAULT 0,     -- the admission before the newest one
+  observed_request_at INTEGER NOT NULL DEFAULT 0, -- newest call whose response was seen
+  header_remaining INTEGER,                       -- HenrikDev's count after the newest call
+  header_reset_at INTEGER
 );
 INSERT OR IGNORE INTO rate_quota (id, remaining, reset_at, last_request_at) VALUES (1, NULL, 0, 0);
 
@@ -23,8 +27,26 @@ CREATE TABLE IF NOT EXISTS workflow_rate_quota (
   remaining INTEGER,
   reset_at INTEGER,
   last_request_at INTEGER,
-  next_start_at INTEGER NOT NULL DEFAULT 0
+  next_start_at INTEGER NOT NULL DEFAULT 0,
+  prev_request_at INTEGER NOT NULL DEFAULT 0,     -- the admission before the newest one
+  observed_request_at INTEGER NOT NULL DEFAULT 0, -- newest call whose response was seen
+  header_remaining INTEGER,                       -- HenrikDev's count after the newest call
+  header_reset_at INTEGER
 );
+
+-- Measured HenrikDev units per call (lib/upstream-cost.mjs): one row per
+-- call that had its key to itself between two headers of one window.
+CREATE TABLE IF NOT EXISTS quota_cost_samples (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  observed_at TEXT NOT NULL,
+  pool TEXT NOT NULL,     -- public | workflow
+  route TEXT NOT NULL,    -- cost key: path segment, plus size or phase
+  cache_status TEXT,      -- HenrikDev x-cache-status
+  status INTEGER,
+  cost INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS quota_cost_samples_route ON quota_cost_samples(route,id);
+CREATE INDEX IF NOT EXISTS quota_cost_samples_observed ON quota_cost_samples(observed_at);
 
 -- Public-pool quota diagnostics (lib/public-quota-audit.mjs), no player
 -- identity; rows older than 14 days are pruned on write.

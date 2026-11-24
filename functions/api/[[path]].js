@@ -93,7 +93,7 @@ import { maintenance } from "../../lib/site-flags.mjs";
 import { matchKey, hasInlinePayload, readArchivedPayload, mapLimit } from "../../lib/match-store.mjs";
 import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, acquireProfilePermit, observePublicQuota, acquireBorrowedPublicPermit, RESET_GUARD_MS } from "../../lib/upstream-pacing.mjs";
 import { readSavedAccount } from "../../lib/saved-account.mjs";
-import { upstreamCost } from "../../lib/upstream-cost.mjs";
+import { costKey, measuredCost } from "../../lib/upstream-cost.mjs";
 import { publicQuotaEvent, recordPublicQuotaEvent } from "../../lib/public-quota-audit.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
@@ -1268,9 +1268,11 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
   // A search's account lookup may use the public reserve
   // (lib/upstream-pacing.mjs PUBLIC_PROFILE_RESERVE); teammate names may not.
   const profileLookup=!workflow&&!!route.trackAccount&&!teammateLookup;
-  const cost=upstreamCost(route,match,url,requestPath);
-  let permit,borrowed=false;
+  // The route's measured HenrikDev units (lib/upstream-cost.mjs).
+  const priceKey=costKey(route,match,url,requestPath);
+  let cost=1,permit,borrowed=false;
   try{
+    cost=(await measuredCost(env.APP_DB,priceKey)).cost;
     if(namePool)permit=await acquireWorkflowPermit(env.APP_DB,{cost});
     else if(workflow){
       permit=await acquireWorkflowPermit(env.APP_DB,{maxWaitMs:0,cost});
@@ -1329,7 +1331,8 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
   try{upstreamRetryMs=await (ownPool?observeWorkflowQuota:observePublicQuota)(env.APP_DB,parsed,
     {startedAt:permit.startedAt,status:upstream.status,retryAfterMs,
       expectedRemaining:permit.quota.remaining,expectedResetAt:permit.quota.resetAt,
-      runId:namePool?SITE_NAME_LOOKUP_RUN:ownPool?request.headers.get('X-Workflow-Run'):null});}
+      runId:namePool?SITE_NAME_LOOKUP_RUN:ownPool?request.headers.get('X-Workflow-Run'):null,
+      baseline:permit.baseline,costKey:priceKey,cacheStatus:upstream.headers.get('x-cache-status')});}
   catch(error){logGateFailure('update',requestPath,error);return json({error:'Upstream quota update failed'},503);}
   if(!ownPool){
     const event=publicQuotaEvent(parsed,upstream.status);
