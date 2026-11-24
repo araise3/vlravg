@@ -130,6 +130,12 @@ handle over its full PUUID in one alphabetical list.
   order, each with team and country. The PUUID is shown only when the search
   matched it rather than the handle; it is always in the row's accessible name.
 - Desktop shows keyboard hints (arrows, Enter, Esc) under the list.
+- Desktop rows are one line (24 Nov 2026, on request: the two-line rows with
+  32px avatars looked too open): a 24px avatar, the handle, and the country
+  (or team and country in search results) on the right, 36px per row. Team
+  lists use three columns where the popover is at least 640px wide, two from
+  420px; search results stop at two. A PUUID match keeps the PUUID on a
+  second line. The phone sheet keeps its two-line rows.
 
 ### Region logos and colours (22 Nov 2026)
 

@@ -32,6 +32,26 @@ test('team headings carry the region logo in its colour; avatars take the player
   assert.match(none,/bg-zinc-700\/70/);
 });
 
+test('desktop rows are one line with the country on the right; the phone sheet and PUUID matches stack',async()=>{
+  const desktop=await renderHtml('/src/app/pro-library.jsx','ProAccount',{row:row('asuna','100 Thieves','Americas'),flat:false,query:''});
+  assert.match(desktop,/data-slot="avatar"[^>]*class="[^"]*size-6/);
+  assert.match(desktop,/data-layout="inline"/);
+  assert.match(desktop,/class="[^"]*ml-auto[^"]*" data-slot="pro-detail"/);
+  const phone=await renderHtml('/src/app/pro-library.jsx','ProAccount',{row:row('asuna','100 Thieves','Americas'),flat:false,query:'',size:'lg'});
+  assert.match(phone,/data-slot="avatar"[^>]*class="[^"]*size-9/);
+  assert.match(phone,/data-layout="stacked"/);
+  // A PUUID match needs the room of a second line.
+  const byName=await renderHtml('/src/app/pro-library.jsx','ProAccount',{row:row('asuna','100 Thieves','Americas'),flat:true,query:'asu'});
+  assert.match(byName,/data-layout="inline"/);
+  const hit=await renderHtml('/src/app/pro-library.jsx','ProAccount',{row:row('asuna','100 Thieves','Americas'),flat:true,query:'0000-0000'});
+  assert.match(hit,/data-layout="stacked"/);
+  // Team lists use up to three columns; search results, which also name the team, two.
+  const {readFileSync}=await import('node:fs');
+  const source=readFileSync(new URL('../src/app/SearchHeader.jsx',import.meta.url),'utf8');
+  assert.match(source,/@min-\[420px\]\/pro:\[&_\[cmdk-group-items\]\]:grid-cols-2/);
+  assert.match(source,/!group\.flat&&'@min-\[640px\]\/pro:\[&_\[cmdk-group-items\]\]:grid-cols-3'/);
+});
+
 test('the region filter is the site Tabs with each league logo, the chosen label in its colour',async()=>{
   const html=await renderHtml('/src/app/pro-library.jsx','ProRegionFilter',{value:'Pacific',onChange(){},counts:{all:4,Americas:1,EMEA:1,Pacific:1,China:1}});
   assert.match(html,/data-slot="tabs-list"[^>]*aria-label="Filter pro players by region"|aria-label="Filter pro players by region"[^>]*data-slot="tabs-list"/);

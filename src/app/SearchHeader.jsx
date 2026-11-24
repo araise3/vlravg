@@ -72,11 +72,14 @@ function ProLibraryPanel({onPick}){
         {s.proLibraryState==='error'&&<div className="py-6 text-center text-sm text-muted-foreground">The pro library could not be loaded.</div>}
         {ready&&<CommandEmpty>No pro players match that search{region!=='all'?` in ${region}`:''}.</CommandEmpty>}
         {groups.map(group=>(
+          // One-line rows in up to three columns by team; search results, whose
+          // rows also name the team, stop at two (24 Nov 2026).
           <CommandGroup key={group.key} heading={<ProGroupHeading group={group}/>}
-            className="border-border not-first:border-t [&_[cmdk-group-items]]:grid [&_[cmdk-group-items]]:gap-0.5 @min-[520px]/pro:[&_[cmdk-group-items]]:grid-cols-2">
+            className={cn('border-border not-first:border-t [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-items]]:grid [&_[cmdk-group-items]]:gap-x-1 @min-[420px]/pro:[&_[cmdk-group-items]]:grid-cols-2',
+              !group.flat&&'@min-[640px]/pro:[&_[cmdk-group-items]]:grid-cols-3')}>
             {group.rows.map(row=>(
               <CommandItem key={row.puuid} value={row.puuid} onSelect={()=>onPick(row)} aria-label={proAccountLabel(row)}
-                className="min-w-0 gap-2.5 py-2 data-[selected=true]:bg-foreground/10">
+                className="min-w-0 gap-2 py-1.5 data-[selected=true]:bg-foreground/10">
                 <ProAccount row={row} flat={group.flat} query={query}/>
               </CommandItem>
             ))}

@@ -111,12 +111,13 @@ export function TeamLogo({code,className}){
 
 // The team logo sits centred in a column as wide as the player avatars below,
 // with the same gap, so the logo lines up with the avatars and the team name
-// with the player names (22 Nov 2026, on request). `size` matches ProAccount.
+// with the player names (22 Nov 2026, on request). `size` matches ProAccount:
+// the desktop list's 24px avatars, the phone sheet's 36px.
 export function ProGroupHeading({group,size='default'}){
   return (
     <span className="flex items-baseline justify-between gap-3">
-      <span className={cn('flex min-w-0 items-center self-center',size==='lg'?'gap-3':'gap-2.5')}>
-        {group.teamCode&&<span className={cn('flex shrink-0 justify-center',size==='lg'?'w-9':'w-8')}><TeamLogo code={group.teamCode}/></span>}
+      <span className={cn('flex min-w-0 items-center self-center',size==='lg'?'gap-3':'gap-2')}>
+        {group.teamCode&&<span className={cn('flex shrink-0 justify-center',size==='lg'?'w-9':'w-6')}><TeamLogo code={group.teamCode}/></span>}
         <span className="truncate font-semibold text-foreground">{group.heading}</span>
       </span>
       {group.region&&(
@@ -150,27 +151,31 @@ export function ProRegionFilter({value,onChange,counts,className}){
   );
 }
 
-// The row's content: avatar initial, handle with a Main/Alt badge, and under
-// it the country (by team) or team and country (search results), or the
-// PUUID when the search matched it.
+// The row's content: avatar initial, handle with a Main/Alt badge, and the
+// country (by team) or team and country (search results), or the PUUID when
+// the search matched it. The phone sheet (`lg`) puts the details under the
+// handle. The desktop list keeps each row to one line, details on the right,
+// so a team's players sit close together (24 Nov 2026, on request: the
+// two-line rows looked too open); only a PUUID match still takes two lines.
 export function ProAccount({row,flat,query,size='default'}){
   const q=query.trim().toLowerCase();
   const puuidHit=q.length>=4&&row.puuid.includes(q)&&!row.handle.toLowerCase().includes(q);
   const parts=puuidHit?[row.puuid]:[flat?row.team:null,countryName(row.countryCode)].filter(Boolean);
+  const inline=size!=='lg'&&!puuidHit;
   return (
     <>
       {/* Tinted in the player's league colour; pros without a region stay grey. */}
-      <Avatar className={size==='lg'?'size-9':'size-8'} aria-hidden="true" style={regionVar(row.region)}>
+      <Avatar className={size==='lg'?'size-9':'size-6'} aria-hidden="true" style={regionVar(row.region)}>
         <AvatarFallback className={cn('font-semibold uppercase ring-1 ring-inset',PRO_REGION_STYLE[row.region]
           ?'bg-[color-mix(in_oklab,var(--region)_16%,var(--popover))] text-(--region) ring-[color-mix(in_oklab,var(--region)_45%,transparent)]'
-          :'bg-zinc-700/70 text-zinc-100 ring-white/10',size==='lg'?'text-sm':'text-xs')}>{row.handle.slice(0,1)}</AvatarFallback>
+          :'bg-zinc-700/70 text-zinc-100 ring-white/10',size==='lg'?'text-sm':'text-[11px]')}>{row.handle.slice(0,1)}</AvatarFallback>
       </Avatar>
-      <span className="flex min-w-0 flex-1 flex-col">
+      <span className={cn('flex min-w-0 flex-1',inline?'items-center gap-3':'flex-col')} data-layout={inline?'inline':'stacked'}>
         <span className="flex min-w-0 items-center gap-1.5">
           <span className={cn('truncate font-medium text-foreground',size==='lg'&&'text-base')}>{row.handle}</span>
           {row.accountCount>1&&<Badge variant="secondary" className="shrink-0 px-1.5 py-0 text-[10px]">{row.accountIndex===0?'Main':`Alt ${row.accountIndex}`}</Badge>}        </span>
         {parts.length>0&&(
-          <span className={cn('flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground',puuidHit&&'font-mono text-[11px]')} data-slot="pro-detail">
+          <span className={cn('flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground',puuidHit&&'font-mono text-[11px]',inline&&'ml-auto max-w-[60%] justify-end')} data-slot="pro-detail">
             {parts.map((part,i)=><span key={i} className={cn('flex min-w-0 items-center gap-1.5',i===parts.length-1&&'shrink-0')}>{i>0&&<Sep/>}<span className="truncate">{part}</span></span>)}
           </span>
         )}
