@@ -481,3 +481,14 @@ test('a visitor mmr-history request with another region leaves the saved region 
   assert.equal(f.sql.prepare('SELECT COUNT(*) AS n FROM rr_history WHERE puuid=?').get(savedPuuid).n,1,'the RR window is still saved');
   assert.equal(f.sql.prepare('SELECT region FROM rr_players WHERE puuid=?').get(savedPuuid).region,'ap');
 });
+
+test('gate storage failures log what D1 said, without player identity',async t=>{
+  const f=fixture(t);
+  const logged=[];t.mock.method(console,'error',(...args)=>logged.push(args.join(' ')));
+  f.env.APP_DB={prepare(){throw new Error('D1_ERROR: Too many requests queued.\n retry later');}};
+  const response=await f.request(undefined,origin+'/api/account/Alpha/EU');
+  assert.equal(response.status,503);
+  assert.deepEqual(await response.json(),{error:'Upstream quota storage unavailable'});
+  assert.deepEqual(logged,['Quota gate admission failed on account: D1_ERROR: Too many requests queued. retry later']);
+  assert.ok(!logged[0].includes('Alpha'));
+});

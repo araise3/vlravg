@@ -254,3 +254,12 @@ region) and `tests/workflow-api-key.test.mjs` (an `eu` visitor request for an
 fix.
 
 Future drain tests must not use RR or other evidence-writing routes.
+
+## Gate failure logging
+
+When D1 fails during admission or the quota update, the proxy still answers
+503 (fail closed) and now also logs
+`Quota gate <admission|update> failed on <route>: <D1 message>` (route's first
+path segment only, message cut to 300 characters). Read it with
+`npx wrangler pages deployment tail <deployment-id> --project-name vlravg`
+or in the Pages Function logs. Test: `tests/workflow-api-key.test.mjs`.

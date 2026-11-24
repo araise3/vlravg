@@ -985,6 +985,16 @@ function hasFreshCurrentName(snapshot, now = Date.now()) {
   return Number.isFinite(lastSeen) && lastSeen >= now - NAME_HISTORY_REFRESH_MS;
 }
 
+// The gate fails closed (503) when D1 fails. Log what D1 said, so bursts of
+// "Upstream quota storage unavailable" can be diagnosed from the Function
+// logs (24 Nov 2026: two bursts during load tests, cause unknown). Only the
+// route's first path segment, never names or PUUIDs.
+function logGateFailure(stage, requestPath, error) {
+  const route = String(requestPath).split('/')[1] || 'other';
+  const message = String(error?.message || error).replace(/\s+/g, ' ').slice(0, 300);
+  console.error(`Quota gate ${stage} failed on ${route}: ${message}`);
+}
+
 // A search's account lookup that cannot reach upstream (public window spent,
 // or HenrikDev answered 429) is answered from saved, server-fetched identity
 // evidence instead, so a saved profile still opens (lib/saved-account.mjs).
@@ -1268,7 +1278,7 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
       }
       if(!borrowed&&permit.retryAfterMs)permit=await acquireWorkflowPermit(env.APP_DB);
     }else permit=await (profileLookup?acquireProfilePermit:acquirePublicPermit)(env.APP_DB);
-  }catch{return json({error:'Upstream quota storage unavailable'},503);}
+  }catch(error){logGateFailure('admission',requestPath,error);return json({error:'Upstream quota storage unavailable'},503);}
   if(workflow&&!permit.retryAfterMs)admission.pool=borrowed?'public':'workflow';
   const upstreamKey=namePool?env.HENRIK_WORKFLOW_KEY:borrowed?env.HENRIK_KEY:henrikKey;
   const ownPool=namePool||(workflow&&!borrowed);
@@ -1318,7 +1328,7 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
     {startedAt:permit.startedAt,status:upstream.status,retryAfterMs,
       expectedRemaining:permit.quota.remaining,expectedResetAt:permit.quota.resetAt,
       runId:namePool?SITE_NAME_LOOKUP_RUN:ownPool?request.headers.get('X-Workflow-Run'):null});}
-  catch{return json({error:'Upstream quota update failed'},503);}
+  catch(error){logGateFailure('update',requestPath,error);return json({error:'Upstream quota update failed'},503);}
   if(!ownPool){
     const event=publicQuotaEvent(parsed,upstream.status);
     if(event)auditPublic({event,gateRemaining:permit.quota.remaining,headerRemaining:parsed.remaining,
