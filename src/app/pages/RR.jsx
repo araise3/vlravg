@@ -394,7 +394,9 @@ export function RRSessionChart({matches}){
   );
 }
 
-// The session chart's card, with its own match range.
+// The session chart's card, with its own range: all time or the last 20/10/7
+// sessions (24 Nov 2026, on request; it was the last 50/30/20 games, which
+// could cut the oldest session part-way).
 export function RRSessionCard({matches,range='all'}){
   return (
     <section aria-labelledby="rr-session-title">
@@ -412,15 +414,17 @@ export function RRSessionCard({matches,range='all'}){
 // A card's own match range: all time or the 50/30/20 most recent matches, as
 // a small menu in the card header. Each card keeps its own (setRRRange), so
 // changing one never rescopes another. 50 is offered only above 50 matches.
-export function rrRangeOptions(total){
+// RR by session offers the last 20/10/7 sessions instead (RR_SESSION_RANGES).
+export function rrRangeOptions(total,card){
+  if(card==='sessions')return [['all',`All time (${total})`],['20s','Last 20 sessions'],['10s','Last 10 sessions'],['7s','Last 7 sessions']];
   return [['all',`All time (${total})`],...(total>50?[['50','Last 50']]:[]),['30','Last 30'],['20','Last 20']];
 }
 export function RRRangeSelect({card,value,total,label}){
-  const options=rrRangeOptions(total);
+  const options=rrRangeOptions(total,card);
   const current=options.find(([key])=>key===value)??options[0];
   return (
     <Select value={current[0]} onValueChange={next=>setRRRange(card,next)}>
-      <SelectTrigger size="sm" className="h-8 text-xs" aria-label={`Match range for ${label}`} data-rr-range={card}>
+      <SelectTrigger size="sm" className="h-8 text-xs" aria-label={`${card==='sessions'?'Session':'Match'} range for ${label}`} data-rr-range={card}>
         <SelectValue>{current[1]}</SelectValue>
       </SelectTrigger>
       <SelectContent position="popper" align="end">

@@ -3963,15 +3963,21 @@ function setRRMovementZoomTier(tier){
 // until then the summary's tabs drove the trend and session charts too).
 const RR_RANGE_CARDS=['summary','trend','sessions'];
 const RR_RANGES=['all','50','30','20'];
+// RR by session scopes by sessions instead (24 Nov 2026, on request): the
+// last 20/10/7 play sessions, whole, so no session is cut part-way.
+const RR_SESSION_RANGES=['all','20s','10s','7s'];
+const rrRangesFor=card=>card==='sessions'?RR_SESSION_RANGES:RR_RANGES;
 const rrDefaultRanges=()=>Object.fromEntries(RR_RANGE_CARDS.map(card=>[card,'all']));
 let rrRanges=rrDefaultRanges();
 function setRRRange(card,value){
-  if(!RR_RANGE_CARDS.includes(card)||!RR_RANGES.includes(value)||(value==='50'&&allMatches.length<=50))return;
+  if(!RR_RANGE_CARDS.includes(card)||!rrRangesFor(card).includes(value)||(value==='50'&&allMatches.length<=50))return;
   if(rrRanges[card]===value)return;
   rrRanges={...rrRanges,[card]:value};
   emit();
 }
 function rrScopedMatches(matches,range){
+  if(RR_SESSION_RANGES.includes(range)&&range!=='all')
+    return rrSessionRows(matches).slice(-parseInt(range,10)).flatMap(s=>s.matches);
   return range==='all'||!RR_RANGES.includes(range)?matches:[...matches]
     .sort((a,b)=>(b.startedAtMs||0)-(a.startedAtMs||0))
     .slice(0,Number(range));
@@ -4501,7 +4507,7 @@ export {
   seasonOptionCountText,playerRouteUrl,PUUID_RE,
   nameHistoryActRange,computeWintradeSignals,overviewRecentMatches,decidedWinRate,
   winRateLabel,winRateTone,rrSigned,computeRRStats,isRREligible,rrPositionFromElo,
-  rrMovementRows,rrMovementXAxis,rrPayoutEstimates,rrMarginAdjusted,RR_MARGIN_REFERENCE,rrPayoutEvenPoint,rrPayoutSegments,rrScopedMatches,RR_RANGES,
+  rrMovementRows,rrMovementXAxis,rrPayoutEstimates,rrMarginAdjusted,RR_MARGIN_REFERENCE,rrPayoutEvenPoint,rrPayoutSegments,rrScopedMatches,RR_RANGES,RR_SESSION_RANGES,
   rrDuoInfo,rrSessionRows,RR_SESSION_BREAK_MS,rrReportedStats,rrAdjustmentStats,rrDodgesInRange,rrDodgeEntry,buildRRScoreRows,rrRankRows,clutchTotals,clutchBreakdown,roundAttackers,lobbyTeamsChartRows,
   lobbyTeamsGapLabel,loadMatchMapMetadata,loadAgentMetadata,parseAgentMetadata,matchAward,pickMvps,placeText,matchCardPlayerRank,dayHeaderLabel,
   scoreMarginDistribution,dayPerformance,

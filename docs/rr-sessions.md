@@ -34,9 +34,11 @@ so the new chart shows the net result of each sitting.
   Values sit at the bar ends once bars are at least 28px apart (24px on
   phones). Date labels thin out to stay 64px apart (52px on phones). Hover or
   focus shows net RR, games and record, rank after, and the date and time span.
-- **Range**: the card's own range menu (all time, or the 50/30/20 most recent
-  matches; independent of the summary and trend cards since 21 Nov 2026). With
-  a recent-matches range, the oldest session can be cut part-way.
+- **Range**: the card's own range menu (independent of the summary and trend
+  cards since 21 Nov 2026): all time, or the last 20, 10 or 7 sessions
+  (`RR_SESSION_RANGES`; since 24 Nov 2026, on request, replacing the 50/30/20
+  most recent matches). Sessions are kept whole, so unlike a match count the
+  range never cuts the oldest session part-way.
 
 ## Limits
 
