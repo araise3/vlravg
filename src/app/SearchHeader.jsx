@@ -145,7 +145,7 @@ export function ActPicker({className}){
 // separate pills (current rank, region, Tracker.gg), one after another. Phones
 // lack the width, so there the same pills slide in on their own row below.
 const SLIDE='animate-in fade-in-0 slide-in-from-right-4 duration-300 ease-out fill-mode-backwards motion-reduce:animate-none';
-const PILL='inline-flex h-6 shrink-0 items-center gap-1.5 rounded-md border bg-background/60 px-2.5 text-xs font-medium whitespace-nowrap shadow-xs dark:bg-input/40';
+const PILL='inline-flex h-7 shrink-0 items-center gap-1.5 rounded-md border bg-background/60 px-3 text-[13px] font-medium whitespace-nowrap shadow-xs dark:border-input dark:bg-input/40';
 
 export function AccountBadges({info}){
   const current=info.current;
@@ -155,8 +155,10 @@ export function AccountBadges({info}){
   return (
     <>
       {hasRank&&(
-        <span data-slot="account-pill" className={cn(SLIDE,PILL,'pl-1.5 text-foreground')} aria-label={`Current rank: ${rankName}${showRR?`, ${current.rr} RR`:''}`}>
-          <RankIcon tier={current.tier.id} size={14}/>
+        <span data-slot="account-pill" className={cn(SLIDE,PILL,'pl-2 text-foreground')} aria-label={`Current rank: ${rankName}${showRR?`, ${current.rr} RR`:''}`}>
+          {/* Up 1px: Geist's tall ascent puts the text's visual centre above
+              its line box centre, so a centred icon read 1px low (24 Nov 2026). */}
+          <RankIcon tier={current.tier.id} size={16} className="-translate-y-px"/>
           <span style={{color:rColor(current.tier.id)}}>{rankName}</span>
           {showRR&&<span className="font-normal text-muted-foreground tabular-nums">{current.rr} RR</span>}
         </span>
@@ -165,10 +167,10 @@ export function AccountBadges({info}){
       {info.showTracker&&info.trackerHref&&(
         // A Button (outline) rendered as the link, sized down to the shared pill.
         <Button data-slot="account-pill" variant="outline" size="sm" asChild
-          className={cn(SLIDE,PILL,'text-muted-foreground [animation-delay:180ms] has-[>svg]:px-2.5 hover:text-foreground max-sm:ml-auto')}>
+          className={cn(SLIDE,PILL,'text-muted-foreground [animation-delay:180ms] has-[>svg]:px-3 hover:text-foreground max-sm:ml-auto')}>
           <a href={info.trackerHref} target="_blank" rel="noopener noreferrer" aria-label={`Open ${info.riotId} on Tracker.gg`}>
-            <img src="/assets/tracker-gg.svg" alt="" className="h-3 w-[67px]"/>
-            <ExternalLink className="size-3" aria-hidden="true"/>
+            <img src="/assets/tracker-gg.svg" alt="" className="h-3.5 w-[78px]"/>
+            <ExternalLink className="size-3.5" aria-hidden="true"/>
           </a>
         </Button>
       )}
@@ -232,7 +234,7 @@ export function SearchHeader(){
               autoComplete="off" spellCheck={false} className="max-sm:text-base"/>
             <InputGroupAddon align="inline-end">
               {info
-                ?<span key={info.riotId} className="flex items-center gap-1.5 max-sm:hidden" data-slot="account-badges"><AccountBadges info={info}/></span>
+                ?<span key={info.riotId} className="flex items-center gap-2 max-sm:hidden" data-slot="account-badges"><AccountBadges info={info}/></span>
                 :<KbdGroup className="max-sm:hidden" aria-hidden="true"><Kbd>{IS_MAC?'⌘':'Ctrl'}</Kbd><Kbd>K</Kbd></KbdGroup>}
               <InputGroupButton type="submit" variant="default" size="sm" aria-label="Search">
                 <span className="max-sm:hidden">Search</span><ArrowRight className="sm:hidden" aria-hidden="true"/>

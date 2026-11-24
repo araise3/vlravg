@@ -36,6 +36,13 @@ test('a loaded account slides its rank, region and Tracker.gg link into the sear
   // Rank, region and Tracker.gg are three separate pills sharing one style,
   // rounded like the rest of the controls (rounded-md, not fully round).
   assert.match(source,/const PILL='inline-flex[^']*rounded-md border[^']*'/);
+  // Sized to read at a glance inside the 40px input (24 Nov 2026).
+  assert.match(source,/const PILL='inline-flex h-7 [^']*px-3 text-\[13px\] /);
+  // The same border as the outline Button the Tracker.gg pill is built from,
+  // so rank, region and Tracker.gg match in dark mode.
+  assert.match(source,/const PILL='[^']* border [^']*dark:border-input[^']*'/);
+  assert.match(source,/<RankIcon tier=\{current\.tier\.id\} size=\{16\} className="-translate-y-px"\/>/);
+  assert.match(source,/tracker-gg\.svg" alt="" className="h-3\.5 w-\[78px\]"/);
   const badges=source.slice(source.indexOf('function AccountBadges'),source.indexOf('function StatusBar'));
   assert.equal(badges.match(/data-slot="account-pill" [^>]*?className=\{cn\(SLIDE,PILL,/gs)?.length,3);
   assert.match(badges,/aria-label=\{`Current rank: /);
