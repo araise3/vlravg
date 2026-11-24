@@ -1,3 +1,4 @@
+import {useDeferredValue} from 'react';
 import {Avatar,AvatarFallback} from '@/components/ui/avatar';
 import {Badge} from '@/components/ui/badge';
 import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs';
@@ -76,6 +77,30 @@ export function proGroups(rows,query){
       :{key,heading:list[0].team,teamCode:key,region:list[0].region??null,flat:false,rows:list})
     .sort((a,b)=>(a.key===OTHER_PLAYERS)-(b.key===OTHER_PLAYERS)||byName(a.heading,b.heading))
     .map(group=>({...group,rows:group.rows.slice().sort((a,b)=>byName(a.handle,b.handle)||a.accountIndex-b.accountIndex)}));
+}
+
+// Opening the list mounted all ~400 rows (cmdk items on desktop) in one
+// frame, so the popover appeared about half a second after the click
+// (24 Nov 2026, on request). The first render now shows the first
+// PRO_FIRST_ROWS rows, more than the list shows without scrolling, and
+// useDeferredValue renders the rest in a background pass right after.
+export const PRO_FIRST_ROWS=48;
+export function useProRowLimit(){
+  return useDeferredValue(Infinity,PRO_FIRST_ROWS);
+}
+
+// The groups cut to their first `limit` rows in order; headings and counts
+// are unchanged.
+export function limitProGroups(groups,limit){
+  if(!(limit<Infinity))return groups;
+  const out=[];
+  let left=limit;
+  for(const group of groups){
+    if(left<=0)break;
+    out.push(group.rows.length<=left?group:{...group,rows:group.rows.slice(0,left)});
+    left-=group.rows.length;
+  }
+  return out;
 }
 
 export function TeamLogo({code,className}){

@@ -6,7 +6,7 @@ import {analyzeProAccount,proSearchResults,rColor,rName,setSearchText,submitSear
 import {useEngine,useSignal} from '@/app/hooks.js';
 import {PageLink,RankIcon,Sep} from '@/app/shared.jsx';
 import {ActPicker,StatusBar} from '@/app/SearchHeader.jsx';
-import {ProAccount,ProGroupHeading,ProRegionFilter,filterProRegion,proAccountLabel,proGroups,proRegionCounts} from '@/app/pro-library.jsx';
+import {ProAccount,ProGroupHeading,ProRegionFilter,filterProRegion,limitProGroups,proAccountLabel,proGroups,proRegionCounts,useProRowLimit} from '@/app/pro-library.jsx';
 import {cn} from '@/lib/utils';
 import {Button} from '@/components/ui/button';
 import {InputGroup,InputGroupAddon,InputGroupButton,InputGroupInput} from '@/components/ui/input-group';
@@ -48,6 +48,28 @@ function rankSummary(info){
 
 /* ── Search sheet ─────────────────────────────────────────── */
 const PRO_LIMIT=50;
+
+// Its own component so it mounts with the sheet's content: the first frame
+// after opening draws only the first rows, the rest follow (useProRowLimit).
+function SheetProGroups({groups,query,onPick}){
+  return limitProGroups(groups,useProRowLimit()).map(group=>(
+    <section key={group.key} aria-label={group.flat?'Search results':group.heading} className="border-border pb-1 not-first-of-type:border-t">
+      <h3 className="px-[9px] pt-2.5 pb-1 text-xs"><ProGroupHeading group={group} size="lg"/></h3>
+      <ul className="flex flex-col">
+        {group.rows.map(row=>(
+          <li key={row.puuid}>
+            <Item asChild size="sm" className="w-full min-w-0 flex-nowrap gap-3 rounded-lg px-2 py-2.5 text-left text-base hover:bg-foreground/10 active:bg-foreground/15">
+              <button type="button" onClick={()=>onPick(row)} aria-label={proAccountLabel(row)}>
+                <ProAccount row={row} flat={group.flat} query={query} size="lg"/>
+                <ItemActions><ChevronRight className="size-4 text-muted-foreground/60" aria-hidden="true"/></ItemActions>
+              </button>
+            </Item>
+          </li>
+        ))}
+      </ul>
+    </section>
+  ));
+}
 
 export function MobileSearchSheet({open,onOpenChange}){
   const s=useEngine();
@@ -112,23 +134,7 @@ export function MobileSearchSheet({open,onOpenChange}){
               {looksLikeId?<>No pro matches. Tap <span className="font-medium text-foreground">Search</span> to look up <span className="font-medium text-foreground break-all">{query}</span>.</>:`No pro players match that search${region!=='all'?` in ${region}`:''}.`}
             </p>
           )}
-          {groups.map(group=>(
-            <section key={group.key} aria-label={group.flat?'Search results':group.heading} className="border-border pb-1 not-first-of-type:border-t">
-              <h3 className="px-[9px] pt-2.5 pb-1 text-xs"><ProGroupHeading group={group} size="lg"/></h3>
-              <ul className="flex flex-col">
-                {group.rows.map(row=>(
-                  <li key={row.puuid}>
-                    <Item asChild size="sm" className="w-full min-w-0 flex-nowrap gap-3 rounded-lg px-2 py-2.5 text-left text-base hover:bg-foreground/10 active:bg-foreground/15">
-                      <button type="button" onClick={()=>{submitted.current=false;onOpenChange(false);analyzeProAccount(row);}} aria-label={proAccountLabel(row)}>
-                        <ProAccount row={row} flat={group.flat} query={query} size="lg"/>
-                        <ItemActions><ChevronRight className="size-4 text-muted-foreground/60" aria-hidden="true"/></ItemActions>
-                      </button>
-                    </Item>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+          <SheetProGroups groups={groups} query={query} onPick={row=>{submitted.current=false;onOpenChange(false);analyzeProAccount(row);}}/>
           {flatHidden>0&&<p className="px-2 py-3 text-center text-xs text-muted-foreground">Showing {PRO_LIMIT} of {pros.length}. Keep typing to narrow it down.</p>}
         </div>
       </SheetContent>

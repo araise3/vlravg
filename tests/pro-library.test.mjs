@@ -83,3 +83,22 @@ test('pro-players.json takes teams from rostermania partnered rosters only',asyn
   // Pros off partnered rosters keep no team, so the library lists them as Other players.
   assert.ok(data.players.some(p=>!p.team&&!p.teamCode));
 });
+
+test('opening the list draws only its first rows; the rest follow in a deferred render',async()=>{
+  const {PRO_FIRST_ROWS,limitProGroups,proGroups}=await load('/src/app/pro-library.jsx');
+  const rows=Array.from({length:30},(_,i)=>row(`p${String(i).padStart(2,'0')}`,i<20?'Fnatic':'Sentinels',i<20?'EMEA':'Americas',{teamCode:i<20?'FNC':'SEN'}));
+  const groups=proGroups(rows,'');
+  assert.equal(limitProGroups(groups,Infinity),groups);
+  const cut=limitProGroups(groups,25);
+  assert.deepEqual(cut.map(g=>[g.heading,g.rows.length]),[['Fnatic',20],['Sentinels',5]]);
+  assert.deepEqual(cut[1].rows.map(r=>r.handle),groups[1].rows.slice(0,5).map(r=>r.handle));
+  assert.deepEqual(limitProGroups(groups,20).map(g=>g.heading),['Fnatic']);
+  assert.ok(PRO_FIRST_ROWS>=24&&PRO_FIRST_ROWS<100);
+  // Both lists apply the limit in a component that mounts when they open.
+  const {readFileSync}=await import('node:fs');
+  const desktop=readFileSync(new URL('../src/app/SearchHeader.jsx',import.meta.url),'utf8');
+  assert.match(desktop.slice(desktop.indexOf('function ProLibraryPanel('),desktop.indexOf('<Command shouldFilter')),/limitProGroups\(proGroups\(results,query\),useProRowLimit\(\)\)/);
+  const mobile=readFileSync(new URL('../src/app/MobileShell.jsx',import.meta.url),'utf8');
+  assert.match(mobile,/function SheetProGroups\(\{groups,query,onPick\}\)\{\n  return limitProGroups\(groups,useProRowLimit\(\)\)/);
+  assert.match(mobile.slice(mobile.indexOf('<SheetContent side="top"'),mobile.indexOf('</SheetContent>')),/<SheetProGroups groups=\{groups\}/);
+});

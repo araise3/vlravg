@@ -139,3 +139,16 @@ so the outline showed open on the left). Team
 headings show the region's logo and name in its colour, and each player's
 avatar is tinted in their region's colour. Pros without a region keep a grey
 avatar. On phones narrower than 380px the filter drops the logos to fit.
+
+### Opening speed (24 Nov 2026)
+
+Opening the list mounted all 416 rows at once (cmdk items on desktop, Items in
+the phone sheet), so it appeared after a visible pause. Measured on the dev
+machine from click to first frame: desktop ~150 ms in a production build
+(~415 ms in dev), the phone sheet ~250 ms in dev. Slower devices take longer.
+The first render now draws only the first `PRO_FIRST_ROWS` (48) rows, more than
+either list shows without scrolling, and `useDeferredValue` renders the rest in
+a background pass right after (`useProRowLimit`, `limitProGroups` in
+`src/app/pro-library.jsx`). After the change: desktop ~27 ms in a production
+build, the phone sheet ~50–70 ms in dev. Focus, the first-row selection and
+the full row count are unchanged.

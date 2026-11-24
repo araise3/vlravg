@@ -6,7 +6,7 @@ import {
 } from '@/engine/core.mjs';
 import {useEngine,useIsMobile,useSignal} from '@/app/hooks.js';
 import {RankIcon} from '@/app/shared.jsx';
-import {ProAccount,ProGroupHeading,ProRegionFilter,filterProRegion,proAccountLabel,proGroups,proRegionCounts} from '@/app/pro-library.jsx';
+import {ProAccount,ProGroupHeading,ProRegionFilter,filterProRegion,limitProGroups,proAccountLabel,proGroups,proRegionCounts,useProRowLimit} from '@/app/pro-library.jsx';
 import {MobileSearchSheet,MobileTopBar} from '@/app/MobileShell.jsx';
 import {cn} from '@/lib/utils';
 import {Button} from '@/components/ui/button';
@@ -50,7 +50,7 @@ function ProLibraryPanel({onPick}){
   const ready=s.proLibraryState==='ready';
   const all=ready?proSearchResults(query):[];
   const results=filterProRegion(all,region);
-  const groups=proGroups(results,query);
+  const groups=limitProGroups(proGroups(results,query),useProRowLimit());
   const count=s.proLibraryState==='loading'?'Loading':s.proLibraryState==='error'?'Unavailable'
     :`${results.length} ${results.length===1?'account':'accounts'}`;
   return (
