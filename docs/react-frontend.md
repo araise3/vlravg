@@ -401,7 +401,11 @@ All hand-built charts follow one system, checked against the dataviz method:
   controls; 24px tall with 12px text, a 14px rank icon and a 12px Tracker.gg
   logo. A 28px/13px size was tried on 24 Nov 2026 and reverted on request; its
   dark-mode border match stayed), replacing the shortcut hint: 16px from the right with a fade,
-  90ms apart, off under reduced motion. Phones replace this card with the app
+  90ms apart, off under reduced motion. When the typed name no longer fits
+  beside them, the Tracker.gg pill shrinks to its square logo and the link
+  icon (`useCompactTracker`: the input's text is measured in its own font
+  against the input's inner width; it widens again only once the name would
+  fit beside the full wordmark, so it does not flicker at the edge). Phones replace this card with the app
   bar described in [mobile-layout.md](mobile-layout.md); the phone landing page
   keeps the full form, its "Pro players" button opening the search sheet.
 - Pages have no visible title or description (17 Nov 2026, on request): the

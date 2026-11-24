@@ -27,7 +27,7 @@ test('a loaded account slides its rank, region and Tracker.gg link into the sear
   const source=(await import('node:fs')).readFileSync(new URL('../src/app/SearchHeader.jsx',import.meta.url),'utf8');
   // Inside the InputGroup's inline-end addon, replacing the Ctrl/⌘ K hint.
   const addon=source.slice(source.indexOf('<InputGroupAddon align="inline-end">'),source.indexOf('</InputGroupAddon>',source.indexOf('align="inline-end"')));
-  assert.match(addon,/info\s*\n?\s*\?<span key=\{info\.riotId\}[^>]*data-slot="account-badges"><AccountBadges info=\{info\}\/>/);
+  assert.match(addon,/info\s*\n?\s*\?<span key=\{info\.riotId\}[^>]*data-slot="account-badges"><AccountBadges info=\{info\} compactTracker=\{compactTracker\}\/>/);
   assert.match(addon,/:<KbdGroup/);
   // Each item slides in from the right, staggered, and respects reduced motion.
   assert.match(source,/const SLIDE='animate-in fade-in-0 slide-in-from-right-4 duration-300[^']*fill-mode-backwards motion-reduce:animate-none'/);
@@ -42,12 +42,25 @@ test('a loaded account slides its rank, region and Tracker.gg link into the sear
   // so rank, region and Tracker.gg match in dark mode.
   assert.match(source,/const PILL='[^']* border [^']*dark:border-input[^']*'/);
   assert.match(source,/<RankIcon tier=\{current\.tier\.id\} size=\{14\}\/>/);
-  assert.match(source,/tracker-gg\.svg" alt="" className="h-3 w-\[67px\]"/);
+  assert.match(source,/tracker-gg\.svg" alt="" data-compact=\{compactTracker\|\|undefined\}\s*className=\{compactTracker\?'size-3 object-cover object-left':'h-3 w-\[67px\]'\}/);
   const badges=source.slice(source.indexOf('function AccountBadges'),source.indexOf('function StatusBar'));
   assert.equal(badges.match(/data-slot="account-pill" [^>]*?className=\{cn\(SLIDE,PILL,/gs)?.length,3);
   assert.match(badges,/aria-label=\{`Current rank: /);
   assert.match(badges,/aria-label=\{`Region: /);
   assert.match(badges,/aria-label=\{`Open \$\{info\.riotId\} on Tracker\.gg`\}/);
+});
+
+test('a name too long for the input shrinks the Tracker.gg pill to its logo and link icon',async()=>{
+  const {trackerNeedsCompact}=await load('/src/app/SearchHeader.jsx');
+  // Full wordmark while the text fits.
+  assert.equal(trackerNeedsCompact(100,200,false),false);
+  assert.equal(trackerNeedsCompact(200,200,false),false);
+  assert.equal(trackerNeedsCompact(201,200,false),true);
+  // Compact, the input is 55px wider; it stays compact until the text would
+  // fit beside the full wordmark again, so it never flickers at the edge.
+  assert.equal(trackerNeedsCompact(200,255,true),false);
+  assert.equal(trackerNeedsCompact(201,255,true),true);
+  assert.equal(trackerNeedsCompact(230,255,true),true);
 });
 
 test('the pro player list shrinks to the space beside the search instead of running off screen',async()=>{

@@ -1,4 +1,4 @@
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {ArrowRight,CalendarDays,Check,ChevronDown,ExternalLink,Search,Users} from 'lucide-react';
 import {
   analyzeProAccount,proSearchResults,requestSeasonDropdown,rColor,rName,
@@ -147,7 +147,51 @@ export function ActPicker({className}){
 const SLIDE='animate-in fade-in-0 slide-in-from-right-4 duration-300 ease-out fill-mode-backwards motion-reduce:animate-none';
 const PILL='inline-flex h-6 shrink-0 items-center gap-1.5 rounded-md border bg-background/60 px-2.5 text-xs font-medium whitespace-nowrap shadow-xs dark:border-input dark:bg-input/40';
 
-export function AccountBadges({info}){
+// The Tracker.gg wordmark is 67px wide; compact, only its 12px square logo
+// shows, giving the typed name 55px more room.
+const TRACKER_WORDMARK_SAVING=67-12;
+
+// Compact once the input's text no longer fits beside the full wordmark. While
+// compact, the room it would have with the wordmark is the current room minus
+// the saving, so the pill does not flip back and forth at the boundary.
+export function trackerNeedsCompact(textWidth,room,compact){
+  return textWidth>room-(compact?TRACKER_WORDMARK_SAVING:0);
+}
+
+let measureContext;
+function inputTextWidth(input){
+  measureContext??=document.createElement('canvas').getContext('2d');
+  const style=getComputedStyle(input);
+  measureContext.font=`${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+  return measureContext.measureText(input.value).width;
+}
+
+// Whether the Tracker.gg pill shrinks to its logo, rechecked as the name is
+// typed, the account changes, the input resizes or the web font loads.
+function useCompactTracker(inputRef,info,text){
+  const [compact,setCompact]=useState(false);
+  const active=!!(info?.showTracker&&info.trackerHref);
+  useLayoutEffect(()=>{
+    const input=inputRef.current;
+    if(!active||!input){setCompact(false);return;}
+    let live=true;
+    const check=()=>{
+      if(!live)return;
+      const style=getComputedStyle(input);
+      const room=input.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight);
+      const width=inputTextWidth(input);
+      setCompact(prev=>trackerNeedsCompact(width,room,prev));
+    };
+    check();
+    const observer=typeof ResizeObserver==='undefined'?null:new ResizeObserver(check);
+    observer?.observe(input);
+    document.fonts?.ready.then(check);
+    return()=>{live=false;observer?.disconnect();};
+  },[inputRef,active,info?.riotId,text]);
+  return compact;
+}
+
+export function AccountBadges({info,compactTracker=false}){
   const current=info.current;
   const hasRank=current?.tier?.name||Number.isInteger(current?.tier?.id);
   const rankName=hasRank?(current.tier.id<=2?'Unranked':current.tier.name||rName(current.tier.id)):'';
@@ -167,7 +211,9 @@ export function AccountBadges({info}){
         <Button data-slot="account-pill" variant="outline" size="sm" asChild
           className={cn(SLIDE,PILL,'text-muted-foreground [animation-delay:180ms] has-[>svg]:px-2.5 hover:text-foreground max-sm:ml-auto')}>
           <a href={info.trackerHref} target="_blank" rel="noopener noreferrer" aria-label={`Open ${info.riotId} on Tracker.gg`}>
-            <img src="/assets/tracker-gg.svg" alt="" className="h-3 w-[67px]"/>
+            {/* Compact: the wordmark cropped to its square logo at the left. */}
+            <img src="/assets/tracker-gg.svg" alt="" data-compact={compactTracker||undefined}
+              className={compactTracker?'size-3 object-cover object-left':'h-3 w-[67px]'}/>
             <ExternalLink className="size-3" aria-hidden="true"/>
           </a>
         </Button>
@@ -201,6 +247,7 @@ export function SearchHeader(){
   const [sheetOpen,setSheetOpen]=useState(false);
   const landing=!s.hasAnalysis&&s.activePage==='overview';
   const info=s.headerInfo;
+  const compactTracker=useCompactTracker(inputRef,info,s.searchText);
   useSignal(s.searchShakeSignal,()=>{setShaking(false);requestAnimationFrame(()=>setShaking(true));});
   useSignal(s.searchFocusSignal,()=>inputRef.current?.focus());
   useEffect(()=>{
@@ -232,7 +279,7 @@ export function SearchHeader(){
               autoComplete="off" spellCheck={false} className="max-sm:text-base"/>
             <InputGroupAddon align="inline-end">
               {info
-                ?<span key={info.riotId} className="flex items-center gap-1.5 max-sm:hidden" data-slot="account-badges"><AccountBadges info={info}/></span>
+                ?<span key={info.riotId} className="flex items-center gap-1.5 max-sm:hidden" data-slot="account-badges"><AccountBadges info={info} compactTracker={compactTracker}/></span>
                 :<KbdGroup className="max-sm:hidden" aria-hidden="true"><Kbd>{IS_MAC?'⌘':'Ctrl'}</Kbd><Kbd>K</Kbd></KbdGroup>}
               <InputGroupButton type="submit" variant="default" size="sm" aria-label="Search">
                 <span className="max-sm:hidden">Search</span><ArrowRight className="sm:hidden" aria-hidden="true"/>
