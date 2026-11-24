@@ -349,7 +349,14 @@ All hand-built charts follow one system, checked against the dataviz method:
   never rescopes another. Until then the summary's range tabs drove the trend
   and session charts too, which was not wanted.
 - **Hover/focus**: one shared `ChartTooltip` (value first). RR trend uses a
-  crosshair that snaps to the nearest match. The payout chart has no hover
+  crosshair that snaps to the nearest match. Since 24 Nov 2026 (on request)
+  its tooltip is two short lines, the RR change with map and score, then the
+  rank after ("Rad 666 RR"); result, duo, date and match number stay in the
+  point's aria-label. It trails the pointer: moving right it sits left of the
+  point, moving left on the right, unless that side lacks room
+  (`chartTooltipPlacement`, measured on the tooltip's own width). Keyboard
+  focus and the other charts keep the old placement (right, flipping left
+  near the right edge). The payout chart has no hover
   readout (removed on request); its curve points keep their aria-labels. The
   score-margin chart has no tooltip either (removed on request); lobby
   dot-plot rows show their own tooltip. All keep their aria-labels.

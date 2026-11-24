@@ -88,3 +88,27 @@ test('ranks below Immortal get no RR scale',async()=>{
   assert.doesNotMatch(svg,/rr-tick/);
   assert.match(svg,/class="rank-tick">Dia 1</);
 });
+
+test('the RR trend tooltip trails the pointer and falls back to the side that fits',async()=>{
+  const {chartTooltipPlacement}=await load('/src/app/shared.jsx');
+  const at=(x,side)=>chartTooltipPlacement({x,width:800,tipWidth:120,side});
+  // Moving right puts it on the left of the point; moving left, on the right.
+  assert.deepEqual(at(400,'left'),{right:414});
+  assert.deepEqual(at(400,'right'),{left:414});
+  // Too close to an edge for the chosen side: the other side.
+  assert.deepEqual(at(60,'left'),{left:74});
+  assert.deepEqual(at(740,'right'),{right:74});
+  // Without a side (keyboard focus, other charts): right, flipping left near the right edge as before.
+  assert.deepEqual(chartTooltipPlacement({x:400,width:800}),{left:414});
+  assert.deepEqual(chartTooltipPlacement({x:600,width:800}),{right:214});
+});
+
+test('the RR trend tooltip is two short lines: change with map and score, then the rank after',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const source=readFileSync(new URL('../src/app/pages/RR.jsx',import.meta.url),'utf8');
+  const tooltip=source.slice(source.indexOf('<ChartTooltip x={tip.xx}'),source.indexOf('</ChartTooltip>',source.indexOf('<ChartTooltip x={tip.xx}')));
+  assert.match(tooltip,/side=\{heading==='right'\?'left':heading==='left'\?'right':undefined\} className="tt-compact"/);
+  assert.equal((tooltip.match(/className="tt-row"/g)||[]).length,2);
+  assert.match(tooltip,/\{avgLabelShort\(tip\.rank\.tier\)\} \{tip\.rank\.rr\} RR<\/div>/);
+  for(const gone of [/RR after/,/Match \{active\+1\}/,/tip\.duo/,/tt-key/])assert.doesNotMatch(tooltip,gone);
+});

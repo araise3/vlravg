@@ -273,6 +273,10 @@
 .chart-tooltip .tt-row { display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; }
 .chart-tooltip .tt-key { width: 12px; height: 2px; border-radius: 1px; flex-shrink: 0; }
 .chart-tooltip .tt-muted { color: var(--chart-muted); font-size: 11px; }
+/* Two short lines, sized to their text (RR trend, 24 Nov 2026). */
+.chart-tooltip.tt-compact { min-width: 0; padding: 5px 8px; line-height: 1.35; white-space: nowrap; }
+.chart-tooltip.tt-compact .tt-row { gap: 6px; }
+.chart-tooltip.tt-compact .tt-value { font-size: 13px; }
 
 /* EU ping map (assets/ping-map/map.css is shared with legacy/): match the
    shadcn surfaces here only. The extra .map-panel class outranks map.css. */

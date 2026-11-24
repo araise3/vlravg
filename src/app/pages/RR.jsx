@@ -1,4 +1,4 @@
-import {Fragment,useId,useState} from 'react';
+import {Fragment,useId,useRef,useState} from 'react';
 import {
   avgLabel,avgLabelShort,buildRRScoreRows,computeRRStats,rrDuoInfo,rrMovementRows,rrMovementXAxis,
   RR_MARGIN_REFERENCE,rrPayoutEstimates,rrPayoutEvenPoint,rrPayoutSegments,rrPositionFromElo,rrRankRows,rrReportedStats,rrAdjustmentStats,rrDodgesInRange,rrSessionRows,RR_SESSION_BREAK_MS,rrScopedMatches,rrSigned,
@@ -110,6 +110,9 @@ export function placeEndLabel({ys,x,left,top,bottom,textWidth,dotRadius=0}){
 export function RRTrendChart({matches,range}){
   const [ref,measured]=useElementWidth();
   const [active,setActive]=useState(null);
+  // Which way the pointer last moved over the chart; the tooltip sits behind it.
+  const [heading,setHeading]=useState(null);
+  const lastPointerX=useRef(null);
   const fillId=`rr-trend-fill-${useId().replace(/[^\w-]/g,'')}`;
   const compact=useIsMobile();
   const showDuos=range!=='all';
@@ -176,7 +179,13 @@ export function RRTrendChart({matches,range}){
     const duo=duoInfos[active],run=duoRunAt[active];
     return{match,rank,duo,run,xx:x(active),yy:y(value)};
   })():null;
+  // The tooltip trails the pointer: moving right it sits left of the point,
+  // moving left it sits right, so it never covers the matches ahead
+  // (24 Nov 2026, on request). Keyboard focus keeps the default (right).
   const pointerMove=event=>{
+    const dx=lastPointerX.current==null?0:event.clientX-lastPointerX.current;
+    lastPointerX.current=event.clientX;
+    if(dx)setHeading(dx>0?'right':'left');
     const bounds=event.currentTarget.getBoundingClientRect();
     const plotX=(event.clientX-bounds.left)*width/bounds.width;
     if(plotX<left-spacing/2||plotX>width-right+spacing/2){setActive(null);return;}
@@ -186,7 +195,7 @@ export function RRTrendChart({matches,range}){
     <div ref={ref} className="relative" role="region" aria-label="RR trend across matches" tabIndex={0}>
       <svg className="chart-svg rr-trend-svg" width={width} height={height} viewBox={`0 0 ${width} ${height}`}
         aria-label={`Rank and RR trend across ${points.length} matches, net ${rrSigned(running,0)} RR${duoCount?`; ${duoCount} duo games net ${rrSigned(duoNet,0)} RR`:''}`}
-        onPointerMove={pointerMove} onPointerDown={pointerMove} onPointerLeave={()=>setActive(null)} style={{touchAction:'pan-y'}}>
+        onPointerMove={pointerMove} onPointerDown={pointerMove} onPointerLeave={()=>{setActive(null);lastPointerX.current=null;}} style={{touchAction:'pan-y'}}>
         <defs>
           <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="var(--series-1)" stopOpacity=".22"/>
@@ -264,20 +273,20 @@ export function RRTrendChart({matches,range}){
           const result=match.won===true?'Win':match.won===false?'Loss':'Draw';
           const label=`Match ${i+1} of ${points.length}, ${dateLabel(match)}, ${matchLabel(match)}, ${result}: ${avgLabel(rank.tier)}, ${rank.rr} RR after ${rrSigned(match.myRR,0)} RR change${duo?`; ${duo.label}${run?`, ${rrSigned(run.net,0)} RR across ${run.count} games`:''}`:''}`;
           return (
-            <g key={i} tabIndex={0} aria-label={label} onFocus={()=>setActive(i)} onBlur={()=>setActive(null)}>
+            <g key={i} tabIndex={0} aria-label={label} onFocus={()=>{setHeading(null);setActive(i);}} onBlur={()=>setActive(null)}>
               <circle cx={x(i)} cy={y(value)} r={Math.min(11,Math.max(3,spacing/2))} fill="transparent"/>
             </g>
           );
         })}
       </svg>
       {tip&&(
-        <ChartTooltip x={tip.xx} y={Math.max(0,tip.yy-40)} width={width}>
-          <div className={cn('tt-value',toneClass(tip.match.myRR,0))}>{rrSigned(tip.match.myRR,0)} RR</div>
-          <div className="tt-row"><span className="tt-key" style={{background:`var(--chart-${resultClass(tip.match)})`}}/>
-            {tip.match.won===true?'Win':tip.match.won===false?'Loss':'Draw'}{matchLabel(tip.match)?` on ${matchLabel(tip.match)}`:''}</div>
-          <div className="tt-row"><RankIcon tier={tip.rank.tier} size={14}/>{avgLabel(tip.rank.tier)}, {tip.rank.rr} RR after</div>
-          {tip.duo&&<div className="tt-muted">{tip.duo.label}{tip.run?`, ${rrSigned(tip.run.net,0)} RR across ${tip.run.count} games`:''}</div>}
-          <div className="tt-muted">Match {active+1} of {points.length}, {dateLabel(tip.match)}</div>
+        // Minimal (24 Nov 2026, on request): the change with the map and
+        // score, then the rank after. Result, duo, date and match number
+        // stay in the point's aria-label; the line and duo bands show them.
+        <ChartTooltip x={tip.xx} y={Math.max(0,tip.yy-30)} width={width} side={heading==='right'?'left':heading==='left'?'right':undefined} className="tt-compact">
+          <div className="tt-row"><span className={cn('tt-value',toneClass(tip.match.myRR,0))}>{rrSigned(tip.match.myRR,0)}</span>
+            {matchLabel(tip.match)&&<span className="tt-muted">{matchLabel(tip.match)}</span>}</div>
+          <div className="tt-row"><RankIcon tier={tip.rank.tier} size={14}/>{avgLabelShort(tip.rank.tier)} {tip.rank.rr} RR</div>
         </ChartTooltip>
       )}
     </div>

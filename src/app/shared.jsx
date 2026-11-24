@@ -1,3 +1,4 @@
+import {useLayoutEffect,useRef,useState} from 'react';
 import {ChevronDown} from 'lucide-react';
 import {RANK_ICONS} from '@/engine/rank-icons.mjs';
 import {avgLabel,lobbyRankText,lobbyRR,navigateToPage,pageHref,PARTY_LABELS,rColor,tierRR,toggleIncludeReset} from '@/engine/core.mjs';
@@ -175,15 +176,29 @@ export function ChartFrame({className,children,...props}){
 }
 
 // Key figures in one hairline-divided row: items are [label, value, className?, title?].
+// Where the tooltip sits beside the point at `x`: on `side` ('right' or
+// 'left') when it fits within the chart's `width`, else on the other side.
+// Without a side it goes right and flips left near the right edge.
+const TOOLTIP_GAP=14;
+export function chartTooltipPlacement({x,width,tipWidth=260,side}){
+  const fitsRight=width==null||x+TOOLTIP_GAP+tipWidth<=width;
+  const fitsLeft=x-TOOLTIP_GAP-tipWidth>=0;
+  const left=side==='left'?(fitsLeft||!fitsRight):!fitsRight&&(side==null||fitsLeft);
+  return left?{right:Math.max(0,(width??0)-x+TOOLTIP_GAP)}:{left:x+TOOLTIP_GAP};
+}
+
 // Hover/focus readout for the hand-built charts. `x`/`y` are CSS pixels inside
-// the chart's `relative` container; it flips to the left near the right edge.
+// the chart's `relative` container. `side` picks a side (see
+// chartTooltipPlacement); the tooltip's own width decides whether it fits.
 // Decorative: every value it shows is also in the mark's aria-label or a table.
-export function ChartTooltip({x,y,width,children}){
+export function ChartTooltip({x,y,width,side,className,children}){
+  const ref=useRef(null);
+  const [tipWidth,setTipWidth]=useState(null);
+  useLayoutEffect(()=>{if(ref.current)setTipWidth(ref.current.offsetWidth);});
   if(x==null||y==null)return null;
-  const flip=width!=null&&x+14+260>width;
   return (
-    <div className="chart-tooltip" aria-hidden="true"
-      style={{top:Math.max(0,y),...(flip?{right:Math.max(0,width-x+14)}:{left:x+14})}}>
+    <div ref={ref} className={cn('chart-tooltip',className)} aria-hidden="true"
+      style={{top:Math.max(0,y),...chartTooltipPlacement({x,width,tipWidth:side&&tipWidth?tipWidth:260,side})}}>
       {children}
     </div>
   );
