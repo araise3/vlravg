@@ -135,7 +135,26 @@ export function MobileRowList({id,caption,columns,rows,values,order,best,sort,ch
 // Previous/next under a long table, as in shadcn's data-table example; the
 // range on the left says where you are.
 // `pageSizes` adds a rows-per-page picker (a native select, the OS picker on phones).
-export function TablePager({page,pageSize,total,noun,onPrevious,onNext,canPrevious,canNext,controls,pageSizes,onPageSize}){
+// Numbered pages (24 Nov 2026, on request, for Encounters): every page when
+// there are at most seven, else the first, the last and the current page
+// with its neighbours (the first or last five near either end), with an
+// ellipsis for the pages between. Indexes are 0-based; null marks an ellipsis.
+export function pageNumbers(page,pages){
+  if(pages<=7)return Array.from({length:pages},(_,i)=>i);
+  const keep=new Set([0,pages-1,page-1,page,page+1].filter(i=>i>=0&&i<pages));
+  if(page<=3)[1,2,3,4].forEach(i=>keep.add(i));
+  if(page>=pages-4)[pages-5,pages-4,pages-3,pages-2].forEach(i=>keep.add(i));
+  const sorted=[...keep].sort((a,b)=>a-b),out=[];
+  sorted.forEach((i,k)=>{
+    const prev=sorted[k-1];
+    if(k&&i-prev===2)out.push(i-1);
+    else if(k&&i-prev>2)out.push(null);
+    out.push(i);
+  });
+  return out;
+}
+
+export function TablePager({page,pageSize,total,noun,onPrevious,onNext,canPrevious,canNext,controls,pageSizes,onPageSize,onPage}){
   const pages=Math.max(1,Math.ceil(total/pageSize)),start=page*pageSize;
   return (
     <nav className="flex flex-wrap items-center justify-between gap-3 pt-3 max-sm:px-4 max-sm:pb-1" aria-label={`${noun} pages`} data-slot="table-pager">
@@ -150,9 +169,23 @@ export function TablePager({page,pageSize,total,noun,onPrevious,onNext,canPrevio
             </NativeSelect>
           </span>
         )}
-        <span className="text-sm text-muted-foreground tabular-nums max-sm:hidden">Page {page+1} of {pages}</span>
-        <Button variant="outline" size="sm" onClick={onPrevious} disabled={!canPrevious} aria-label="Previous page" aria-controls={controls}><ChevronLeft aria-hidden="true"/>Previous</Button>
-        <Button variant="outline" size="sm" onClick={onNext} disabled={!canNext} aria-label="Next page" aria-controls={controls}>Next<ChevronRight aria-hidden="true"/></Button>
+        {onPage?(
+          <div className="flex items-center gap-1" data-slot="page-numbers">
+            <Button variant="outline" size="icon-sm" onClick={onPrevious} disabled={!canPrevious} aria-label="Previous page" aria-controls={controls}><ChevronLeft aria-hidden="true"/></Button>
+            {pageNumbers(page,pages).map((index,k)=>index==null
+              ?<span key={'gap'+k} className="w-6 text-center text-sm text-muted-foreground" aria-hidden="true">…</span>
+              :<Button key={index} variant={index===page?'outline':'ghost'} size="sm" onClick={()=>onPage(index)} aria-controls={controls}
+                aria-current={index===page?'page':undefined} aria-label={`Page ${index+1}`}
+                className={cn('min-w-8 px-2 tabular-nums',index!==page&&'text-muted-foreground')}>{index+1}</Button>)}
+            <Button variant="outline" size="icon-sm" onClick={onNext} disabled={!canNext} aria-label="Next page" aria-controls={controls}><ChevronRight aria-hidden="true"/></Button>
+          </div>
+        ):(
+          <>
+            <span className="text-sm text-muted-foreground tabular-nums max-sm:hidden">Page {page+1} of {pages}</span>
+            <Button variant="outline" size="sm" onClick={onPrevious} disabled={!canPrevious} aria-label="Previous page" aria-controls={controls}><ChevronLeft aria-hidden="true"/>Previous</Button>
+            <Button variant="outline" size="sm" onClick={onNext} disabled={!canNext} aria-label="Next page" aria-controls={controls}>Next<ChevronRight aria-hidden="true"/></Button>
+          </>
+        )}
       </div>
     </nav>
   );
@@ -176,6 +209,8 @@ export function TablePager({page,pageSize,total,noun,onPrevious,onNext,canPrevio
 // search on, and `detail(index)` makes rows expandable: a chevron in the row
 // header opens that row's detail in a full-width row under it (on phones, a
 // toggle under the card). `emptyText` is shown inside the frame when no rows are passed.
+// `numberedPages` (24 Nov 2026) swaps Previous/Next for numbered page buttons
+// between arrow buttons (pageNumbers).
 // A column flagged `fit` (23 Nov 2026) keeps its narrowest width, so the spare
 // width goes to the other columns: a fit column sits close to the column
 // before it, which groups related figures (W–L beside Win rate).
@@ -246,7 +281,8 @@ export function SortableTable({id,caption,columns,rows,values,maxima=[],classNam
   const more=paged
     ?<TablePager page={pageIndex} pageSize={pagination.pageSize} total={filteredCount} noun={noun} controls={id}
       pageSizes={pageSizes} onPageSize={size=>setPagination({pageIndex:0,pageSize:size})}
-      onPrevious={()=>table.previousPage()} onNext={()=>table.nextPage()} canPrevious={table.getCanPreviousPage()} canNext={table.getCanNextPage()}/>
+      onPrevious={()=>table.previousPage()} onNext={()=>table.nextPage()} canPrevious={table.getCanPreviousPage()} canNext={table.getCanNextPage()}
+      onPage={numberedPages?index=>table.setPageIndex(index):undefined}/>
     :null;
   const choose=next=>table.setSorting(next?[{id:String(next.column),desc:next.direction==='descending'}]:[]);
   if(mobile)return <>{toolbar}{empty||<MobileRowList {...{id,caption,columns,rows,values,order:shown,best,sort,choose,className,detail,detailLabel,expanded,toggle}}/>}{more}</>;
@@ -275,6 +311,14 @@ export function SortableTable({id,caption,columns,rows,values,maxima=[],classNam
                         {!right(index)&&<Icon className={cn('size-3.5 transition-opacity',!state&&'opacity-0 group-hover/sort:opacity-60 group-focus-visible/sort:opacity-60')} aria-hidden="true"/>}
                       </Button>
                       </Hint>
+                  );
+                  return (
+                    <TableHead key={column.id} scope="col" aria-sort={state==='asc'?'ascending':state==='desc'?'descending':'none'}
+                      className={cn('h-10 px-3',right(index)&&'text-right',col.fit&&'w-px pl-0')}>
+                      {/* A header wider than a narrow fixed column overflows
+                          leftward into its own padding, keeping the label
+                          over its figures, not into the next column. */}
+                      {right(index)?<div className="flex justify-end">{sortButton}</div>:sortButton}
                     </TableHead>
                   );
                 })}
@@ -311,14 +355,6 @@ export function SortableTable({id,caption,columns,rows,values,maxima=[],classNam
                   </TableRow>
                   {open&&(
                     <TableRow className="bg-muted/20 hover:bg-muted/20" data-slot="row-detail">
-                  );
-                  return (
-                    <TableHead key={column.id} scope="col" aria-sort={state==='asc'?'ascending':state==='desc'?'descending':'none'}
-                      className={cn('h-10 px-3',right(index)&&'text-right',col.fit&&'w-px pl-0')}>
-                      {/* A header wider than a narrow fixed column overflows
-                          leftward into its own padding, keeping the label
-                          over its figures, not into the next column. */}
-                      {right(index)?<div className="flex justify-end">{sortButton}</div>:sortButton}
                       <TableCell id={`${id}-detail-${index}`} colSpan={columns.length} className="px-4 py-4 whitespace-normal">{detail(index)}</TableCell>
                     </TableRow>
                   )}

@@ -412,6 +412,12 @@ All hand-built charts follow one system, checked against the dataviz method:
   both RR trends, Recent matches, Top teammates, RR by result). Encounters
   and Wintrading signals keep theirs (who counts, and the "heuristic, not
   proof" caveat), and Clutch stats keeps its won-of-opportunities figure.
+- Encounters (24 Nov 2026, on request): the same-team / opposing filter is
+  the site's `Tabs` (it was an outline `ToggleGroup`), and the table pages
+  with numbered buttons between arrow buttons (`SortableTable`'s
+  `numberedPages`, `pageNumbers` in `data-table.jsx`: every page up to seven,
+  else the ends, the current page and its neighbours, with ellipses). Other
+  paged tables keep Previous/Next.
 - No dot (`·`) separators anywhere in the UI (17 Nov 2026, on request; a
   test enforces it). Inline visual lists use `Sep`, a thin vertical rule
   (`shared.jsx`); text, tooltips and screen-reader labels use commas, colons

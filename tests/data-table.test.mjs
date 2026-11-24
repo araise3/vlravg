@@ -95,3 +95,17 @@ test('opening a Radix menu or dialog keeps the scrollbar gutter, so the page doe
   assert.match(css,/body \{ scrollbar-gutter: stable; \}/);
   assert.match(css,/html body\[data-scroll-locked\] \{ margin-right: 0 !important; \}/);
 });
+
+test('numbered pages show every page up to seven, then the ends and the current page with ellipses',async()=>{
+  const {pageNumbers}=await load(MODULE);
+  const show=(page,pages)=>pageNumbers(page,pages).map(i=>i==null?'…':i+1).join(' ');
+  assert.equal(show(0,1),'1');
+  assert.equal(show(3,7),'1 2 3 4 5 6 7');
+  assert.equal(show(0,20),'1 2 3 4 5 … 20');
+  assert.equal(show(9,20),'1 … 9 10 11 … 20');
+  assert.equal(show(19,20),'1 … 16 17 18 19 20');
+  // Near either end the first or last five stay, so the row keeps seven slots.
+  assert.equal(show(3,10),'1 2 3 4 5 … 10');
+  assert.equal(show(4,10),'1 … 4 5 6 … 10');
+  assert.equal(show(6,10),'1 … 6 7 8 9 10');
+});

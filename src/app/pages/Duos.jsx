@@ -7,7 +7,7 @@ import {EmptyState,InlineEmpty,LobbyValue,PageHeading,PartyIcon,PlacementToggle,
 import {cn} from '@/lib/utils';
 import {Card,CardContent,CardDescription,CardHeader,CardTitle} from '@/components/ui/card';
 import {Progress} from '@/components/ui/progress';
-import {ToggleGroup,ToggleGroupItem} from '@/components/ui/toggle-group';
+import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs';
 
 const toneOf=tone=>tone==='rank-positive'?'text-positive':tone==='rank-negative'?'text-negative':'';
 const rrTone=(count,total)=>!count||total===0?'':total>0?'text-positive':'text-negative';
@@ -140,7 +140,8 @@ export function DuoRoster({teammates}){
 }
 
 /* ── Encounters ────────────────────────────────────────────── */
-// A database-style table (20 Nov 2026): search, a same-team / opposing filter,
+// A database-style table (20 Nov 2026): search, a same-team / opposing filter
+// (Tabs), numbered pages (24 Nov 2026),
 // sortable columns including each player's same-team share, and a
 // rows-per-page picker. Players who ever queued in your party are excluded
 // by the engine (computeEncounters).
@@ -164,11 +165,13 @@ export function EncountersTable({s}){
   ],cellProps:[null,null,null,null,{title:`${e.sameTeam} of ${e.games} encounters on your team`}]}));
   const values=list.map(row=>[`${row.name}#${row.tag}`,row.games,row.sameTeam,row.opponents,share(row),row.lastSeen||null]);
   const tools=(
-    <ToggleGroup type="single" variant="outline" size="sm" value={filter} onValueChange={value=>value&&setFilter(value)} aria-label="Show encounters">
-      {ENCOUNTER_FILTERS.map(([value,label])=>(
-        <ToggleGroupItem key={value} value={value} className="h-8 px-3 text-xs data-[state=on]:text-foreground">{label}</ToggleGroupItem>
-      ))}
-    </ToggleGroup>
+    // The site's Tabs, like the other filters (24 Nov 2026, on request; it was
+    // an outline ToggleGroup).
+    <Tabs value={filter} onValueChange={value=>value&&setFilter(value)}>
+      <TabsList aria-label="Show encounters">
+        {ENCOUNTER_FILTERS.map(([value,label])=><TabsTrigger key={value} value={value} className="px-3 text-xs">{label}</TabsTrigger>)}
+      </TabsList>
+    </Tabs>
   );
   return (
     <SortableTable key={filter} id="encounters-list" rows={tableRows} values={values} searchable tools={tools}
@@ -176,7 +179,7 @@ export function EncountersTable({s}){
       columns={[{label:'Player'},{label:'Encounters'},{label:'Same team'},{label:'Opposing'},{label:'Same team %',title:'Share of your encounters with this player where they were on your team'},{label:'Last seen'}]}
       maxima={[{column:1,label:'encounters'}]}
       caption="Players encountered in at least two matches who were never in your party this act"
-      pageSize={ENCOUNTER_PAGE_SIZES[0]} pageSizes={ENCOUNTER_PAGE_SIZES} noun="players"/>
+      pageSize={ENCOUNTER_PAGE_SIZES[0]} pageSizes={ENCOUNTER_PAGE_SIZES} noun="players" numberedPages/>
   );
 }
 

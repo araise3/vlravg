@@ -327,6 +327,14 @@ test('encounters: a database-style table with search, a same-team / opposing fil
   // Search is always on, with the filter beside it.
   assert.match(html,/data-slot="table-toolbar"><input[^>]*type="search"[^>]*aria-label="Search players"/);
   assert.match(html,/aria-label="Show encounters"[\s\S]*>All<[\s\S]*>Same team<[\s\S]*>Opposing</);
+  // The filter is the site's Tabs, not a ToggleGroup.
+  assert.match(html,/data-slot="tabs-list"[^>]*aria-label="Show encounters"|aria-label="Show encounters"[^>]*data-slot="tabs-list"/);
+  assert.equal((html.match(/data-slot="tabs-trigger"/g)||[]).length,3);
+  assert.doesNotMatch(html,/data-slot="toggle-group"/);
+  // Numbered pages between arrow buttons: page 1 current, page 2 to go.
+  const pager=html.slice(html.indexOf('data-slot="table-pager"'));
+  assert.match(pager,/aria-label="Previous page"[\s\S]*aria-current="page" aria-label="Page 1"[^>]*>1<[\s\S]*aria-label="Page 2"[^>]*>2<[\s\S]*aria-label="Next page"/);
+  assert.doesNotMatch(pager,/>Previous<|>Next<|Page 1 of 2/);
   const heads=[...html.matchAll(/aria-label="([^"]+): sort/g)].map(m=>m[1]);
   assert.deepEqual(heads,['Player','Encounters','Same team','Opposing','Same team %','Last seen']);
   // P1 met once on your team and twice as an opponent: 33%.
