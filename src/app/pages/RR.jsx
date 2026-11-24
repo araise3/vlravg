@@ -1,4 +1,4 @@
-import {Fragment,useId,useRef,useState} from 'react';
+import {Fragment,memo,useId,useRef,useState} from 'react';
 import {
   avgLabel,avgLabelShort,buildRRScoreRows,computeRRStats,rrDuoInfo,rrMovementRows,rrMovementXAxis,
   RR_MARGIN_REFERENCE,rrPayoutEstimates,rrPayoutEvenPoint,rrPayoutSegments,rrPositionFromElo,rrRankRows,rrReportedStats,rrAdjustmentStats,rrDodgesInRange,rrSessionRows,RR_SESSION_BREAK_MS,rrScopedMatches,rrSigned,
@@ -415,8 +415,9 @@ export function RRSessionChart({matches}){
 
 // The session chart's card, with its own range: all time or the last 20/10/7
 // sessions (24 Nov 2026, on request; it was the last 50/30/20 games, which
-// could cut the oldest session part-way).
-export function RRSessionCard({matches,range='all'}){
+// could cut the oldest session part-way). Memoized: it sits above the match
+// log, which re-renders whenever a match card opens or closes (24 Nov 2026).
+export const RRSessionCard=memo(function RRSessionCard({matches,range='all'}){
   return (
     <section aria-labelledby="rr-session-title">
       <Card>
@@ -428,7 +429,7 @@ export function RRSessionCard({matches,range='all'}){
       </Card>
     </section>
   );
-}
+});
 
 // A card's own match range: all time or the 50/30/20 most recent matches, as
 // a small menu in the card header. Each card keeps its own (setRRRange), so

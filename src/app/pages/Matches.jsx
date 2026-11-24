@@ -1,4 +1,4 @@
-import {Fragment,useEffect,useState} from 'react';
+import {Fragment,memo,useCallback,useEffect,useState} from 'react';
 import {ChevronDown,Shield} from 'lucide-react';
 import {
   avgLabel,avgLabelShort,dayHeaderLabel,loadMatchMapMetadata,loadMoreMatches,matchAward,placeText,
@@ -366,6 +366,18 @@ export function MatchCard({m,s,maps,agents,open,onOpenChange}){
   return <DesktopMatchCard m={m} s={s} maps={maps} agents={agents} open={open} onOpenChange={onOpenChange}/>;
 }
 
+// A card in the match log. Opening or closing one used to re-render the whole
+// log (every card, day recap and the session chart), so a toggle cost grew
+// with the number of cards shown: about 23 ms with 15 and 79 ms with 120 in a
+// production build (24 Nov 2026, docs/match-card-expand-speed.md). Memoized
+// with a stable `onToggle(matchId,open)`, only the toggled card renders; the
+// rest re-render on engine changes as before (`s` is the engine snapshot).
+export const MatchLogCard=memo(function MatchLogCard({m,s,maps,agents,open,onToggle}){
+  const id=m.matchId;
+  const onOpenChange=useCallback(next=>onToggle(id,next),[onToggle,id]);
+  return <MatchCard m={m} s={s} maps={maps} agents={agents} open={open} onOpenChange={onOpenChange}/>;
+});
+
 // The map's splash as a faded backdrop on the card's right side, so the map
 // reads at a glance without its own panel. Decorative.
 function MapBackdrop({art}){
@@ -492,7 +504,7 @@ function DayRecapItem({item,stat}){
   );
 }
 
-function DayHeader({ms,stat,first}){
+const DayHeader=memo(function DayHeader({ms,stat,first}){
   const matchCount=stat?.matches??0;
   const {result,performance}=dayRecapItems(stat);
   return (
@@ -513,6 +525,15 @@ function DayHeader({ms,stat,first}){
       </div>
     </section>
   );
+});
+
+// The set of opened match ids after a card opens or closes. An unchanged
+// state returns the same set, so React skips the re-render.
+export function toggleExpanded(previous,matchId,next){
+  if(previous.has(matchId)===next)return previous;
+  const copy=new Set(previous);
+  if(next)copy.add(matchId);else copy.delete(matchId);
+  return copy;
 }
 
 export function MatchesPage(){
@@ -520,6 +541,7 @@ export function MatchesPage(){
   const maps=useMapArt();
   const agents=useAgentArt();
   const [expanded,setExpanded]=useState(()=>new Set());
+  const toggle=useCallback((matchId,next)=>setExpanded(previous=>toggleExpanded(previous,matchId,next)),[]);
   const ready=s.analysisState==='ready';
   const hasMatches=ready&&s.allMatches.length>0;
   const data=s.mhData;
@@ -547,11 +569,7 @@ export function MatchesPage(){
               return (
                 <Fragment key={m.matchId}>
                   {header}
-                  <MatchCard m={m} s={s} maps={maps} agents={agents} open={expanded.has(m.matchId)} onOpenChange={next=>setExpanded(previous=>{
-                    const copy=new Set(previous);
-                    if(next)copy.add(m.matchId);else copy.delete(m.matchId);
-                    return copy;
-                  })}/>
+                  <MatchLogCard m={m} s={s} maps={maps} agents={agents} open={expanded.has(m.matchId)} onToggle={toggle}/>
                 </Fragment>
               );
             })}
