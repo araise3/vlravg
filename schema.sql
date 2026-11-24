@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS public_quota_audit (
   header_remaining INTEGER,       -- HenrikDev's header
   reset_in_ms INTEGER,
   retry_after_ms INTEGER,
-  served_saved INTEGER,           -- profile-refused: 1 when D1 answered it
+  served_saved INTEGER,           -- 24 Nov 2026 only: 1 when a saved identity answered (removed)
   cost INTEGER                    -- the call's estimated HenrikDev units (lib/upstream-cost.mjs)
 );
 CREATE INDEX IF NOT EXISTS public_quota_audit_observed ON public_quota_audit(observed_at);
@@ -228,10 +228,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS player_name_history_current
   ON player_name_history(puuid) WHERE ended_at IS NULL;
 CREATE INDEX IF NOT EXISTS player_name_history_player_dates
   ON player_name_history(puuid,first_seen DESC);
--- Saved-account answers by Riot ID when the public quota is spent
--- (lib/saved-account.mjs). Riot IDs match case-insensitively.
-CREATE INDEX IF NOT EXISTS player_name_history_current_riot_id
-  ON player_name_history(lower(name),lower(tag)) WHERE ended_at IS NULL;
 
 -- The old player index only retained its latest identity observation.
 -- Preserve that evidence without claiming knowledge of earlier names/dates.

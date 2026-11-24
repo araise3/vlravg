@@ -92,7 +92,6 @@ import { SITE_NAME_LOOKUP_RUN } from "../../lib/workflow-quota-audit.mjs";
 import { maintenance } from "../../lib/site-flags.mjs";
 import { matchKey, hasInlinePayload, readArchivedPayload, mapLimit } from "../../lib/match-store.mjs";
 import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, acquireProfilePermit, observePublicQuota, acquireBorrowedPublicPermit, RESET_GUARD_MS } from "../../lib/upstream-pacing.mjs";
-import { readSavedAccount } from "../../lib/saved-account.mjs";
 import { costKey, measuredCost } from "../../lib/upstream-cost.mjs";
 import { publicQuotaEvent, recordPublicQuotaEvent } from "../../lib/public-quota-audit.mjs";
 
@@ -996,24 +995,6 @@ function logGateFailure(stage, requestPath, error) {
   console.error(`Quota gate ${stage} failed on ${route}: ${message}`);
 }
 
-// A search's account lookup that cannot reach upstream (public window spent,
-// or HenrikDev answered 429) is answered from saved, server-fetched identity
-// evidence instead, so a saved profile still opens (lib/saved-account.mjs).
-// Never edge-cached: the next live lookup replaces it.
-async function savedAccountResponse(env, route, match) {
-  if (!env.APP_DB) return null;
-  try {
-    const decode = (v) => decodeURIComponent(v);
-    const account = await readSavedAccount(env.APP_DB, route.accountByPuuid
-      ? { puuid: match[1] } : { name: decode(match[1]), tag: decode(match[2]) });
-    if (!account) return null;
-    const res = json({ status: 200, data: account }, 200);
-    res.headers.set('Cache-Control', 'no-store');
-    res.headers.set('X-Account-Source', 'saved');
-    return res;
-  } catch { return null; }
-}
-
 function savedNameHistoryResponse(snapshot, source, refreshDeferred = false) {
   const data = refreshDeferred ? { ...snapshot, refreshDeferred: true } : snapshot;
   const res = json({ data }, 200);
@@ -1297,14 +1278,15 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
     })().catch(()=>{});
     context.waitUntil?.(job);
   };
-  const savedAccountOr429=async retryAfterMs=>{
-    const saved=await savedAccountResponse(env,route,match);
-    auditPublic({event:'profile-refused',retryAfterMs,servedSaved:!!saved});
-    return saved||json({error:'Rate limited',retryAfterMs},429);
+  // A search's account lookup is answered live or not at all: a refusal is
+  // recorded and the client waits for the quota like any other call.
+  const refuseProfile=retryAfterMs=>{
+    auditPublic({event:'profile-refused',retryAfterMs});
+    return json({error:'Rate limited',retryAfterMs},429);
   };
   if(permit.retryAfterMs){
     if(route.nameHistory&&storedNameHistory.history.length)return savedNameHistoryResponse(storedNameHistory,'SAVED-REFRESH-DEFERRED',true);
-    if(profileLookup)return savedAccountOr429(permit.retryAfterMs);
+    if(profileLookup)return refuseProfile(permit.retryAfterMs);
     return json({error:'Rate limited',retryAfterMs:permit.retryAfterMs},429);
   }
 
@@ -1344,7 +1326,7 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
     if (route.nameHistory && storedNameHistory.history.length) {
       return savedNameHistoryResponse(storedNameHistory, 'SAVED-REFRESH-DEFERRED', true);
     }
-    if (profileLookup) return savedAccountOr429(upstreamRetryMs);
+    if (profileLookup) return refuseProfile(upstreamRetryMs);
     return json({ error: "Rate limited", retryAfterMs: upstreamRetryMs }, 429);
   }
 

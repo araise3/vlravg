@@ -372,3 +372,20 @@ Limits:
 Tests: `tests/upstream-cost.test.mjs` (route keys, sample rule, serial calls
 measured and overlapping ones skipped, percentile, fallback, cache refresh,
 pruning).
+
+## Saved-account answers removed, 24 Nov 2026
+
+The fallback that answered a refused account lookup from D1 (section
+"Saved account answers" above, `lib/saved-account.mjs`) is gone; migration
+`0017_drop_saved_account_index.sql` drops its Riot-ID index.
+
+Why (user decision): the account lookup is meant to work live, which is
+what the reserve, slot priority and measured costs are for. In the last
+drain refusals came only at window ends with waits of 11 s or less. The
+fallback answered from stored identity and region, and the region proved
+fragile (the drain incident above). It never set the rank badge, which comes
+only from the live `rank` call.
+
+Now a refused search account lookup gets the 429 like any other call and is
+recorded as `profile-refused` (`served_saved` stays empty on new rows).
+Tests: `tests/workflow-api-key.test.mjs`.
