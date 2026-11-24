@@ -4,6 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {collectRR,healRR,rankBreaks,rankCoordinate,storedGapEntries,HEAL_ATTEMPTS,HEAL_MAX_PAGES,HEAL_PAGE_SIZE} from '../lib/rr-corpus.mjs';
 import {scanGaps,loadOpenGaps,gapSummary} from '../.github/scripts/rr-gap-queries.mjs';
+import {D1_MS} from '../.github/scripts/d1-query.mjs';
 import {onRequestGet} from '../functions/api/[[path]].js';
 
 const puuid='11111111-1111-4111-8111-111111111111',season='33333333-3333-4333-8333-333333333333';
@@ -203,6 +204,16 @@ test('the daily scan queues unwitnessed rank discontinuities once and matches on
   assert.equal((await scanGaps({},query,{slices:16,pauseMs:0,sleep:async()=>{}})).found,0,'an existing gap is not queued again');
   sql.exec('DELETE FROM rr_gaps');
   assert.equal((await scanGaps({},query,{slices:16,pauseMs:0,sleep:async()=>{}})).found,1,'slices find the same gap');
+  // Ranges resize to the scan's D1 time and still find the same gap.
+  const timed=ms=>async(...args)=>{const rows=await query(...args);Object.defineProperty(rows,D1_MS,{value:ms});return rows;};
+  for(const [ms,more] of [[1000,true],[10,false]]){
+    sql.exec('DELETE FROM rr_gaps');
+    const scanned=await scanGaps({},timed(ms),{slices:16,pauseMs:0,sleep:async()=>{}});
+    assert.equal(scanned.found,1,`${ms} ms ranges find the same gap`);
+    assert.ok(more?scanned.ranges>16:scanned.ranges<16,`${ms} ms: ${scanned.ranges} ranges`);
+  }
+  sql.exec('DELETE FROM rr_gaps');
+  await scanGaps({},query,{slices:16,pauseMs:0,sleep:async()=>{}});
   const open=await loadOpenGaps({},10,query);
   assert.deepEqual(open.map(g=>g.after_match_id),[id(9)]);
   const summary=await gapSummary({},query);

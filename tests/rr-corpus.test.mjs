@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {collectRR,matchFeatures,saveFeatures,trackRRAccount} from '../lib/rr-corpus.mjs';
-import {collectPlayers,corpusReport,puuidSliceBounds} from '../.github/scripts/collect-rr-corpus.mjs';
+import {collectPlayers,corpusReport} from '../.github/scripts/collect-rr-corpus.mjs';
 import {retryOnD1Overload,pacedQuery,recentDateBound,d1Query,D1_MS} from '../.github/scripts/d1-query.mjs';
 import {onRequestGet} from '../functions/api/[[path]].js';
 import {pollingPolicy,selectPollingPlayers,selectDiscoveryCandidates,discoverMatchPlayers,DISCOVERY_BAND_TARGET,POLL_HOURS} from '../lib/rr-activity.mjs';
@@ -611,17 +611,6 @@ test('activity queries see durable latest RR, count unique candidate games, and 
   assert.deepEqual(await loadCandidates({},query),[]);
 });
 
-test('PUUID slices are contiguous and open-ended',()=>{
-  const slices=puuidSliceBounds(16);
-  assert.equal(slices.length,16);
-  assert.deepEqual(slices[0],{from:null,to:'1'});
-  assert.deepEqual(slices[15],{from:'f',to:null});
-  for(let i=1;i<slices.length;i++)assert.equal(slices[i].from,slices[i-1].to);
-  assert.deepEqual(puuidSliceBounds(1),[{from:null,to:null}]);
-  assert.equal(puuidSliceBounds(32)[1].to,'10');
-  assert.throws(()=>puuidSliceBounds(0));
-});
-
 test('sliced act census matches one whole-table statement',async t=>{
   const {db,sql}=database(t);
   const ids=['0aaaaaaa-1111-4111-8111-111111111111','7bbbbbbb-1111-4111-8111-111111111111',
@@ -649,6 +638,17 @@ test('sliced act census matches one whole-table statement',async t=>{
   assert.equal(pauses.length,15);
   assert.equal(sliced.ranks.reduce((n,row)=>n+row.players,0),10);
   assert.equal(sliced.ranks.find(row=>row.act==='test'&&row.ending_tier===12).players,4);
+  // The ranges resize to their D1 time: slow ones split, fast ones merge,
+  // and the census stays the same either way.
+  const timed=ms=>async(...args)=>{const rows=await query(...args);Object.defineProperty(rows,D1_MS,{value:ms});return rows;};
+  const slow=await corpusReport({},timed(1000),{slices:16,...noPause});
+  const fast=await corpusReport({},timed(10),{slices:16,...noPause});
+  assert.ok(slow.ranges>16,`slow: ${slow.ranges} ranges`);
+  assert.ok(fast.ranges<16,`fast: ${fast.ranges} ranges`);
+  for(const report of [slow,fast]){
+    assert.deepEqual(report.ranks,whole.ranks);
+    assert.deepEqual(report.competitiveUpdates,whole.competitiveUpdates);
+  }
 });
 
 test('D1 overload retries wait out the window; other errors fail at once',async()=>{

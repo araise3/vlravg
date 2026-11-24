@@ -73,23 +73,34 @@ export const D1_META=Symbol('d1Meta');
 // lands in exactly one range whatever its case; inner bounds are 8-digit
 // lowercase hex prefixes. After each range the next one is resized so that it
 // should take about targetMs of D1 time (at most doubled or quartered per
-// step); without a reported time the size stays. The 24 Nov 2026 player read
-// was 2.2 s in one statement and grows with every tracked account.
+// step); without a reported time the size stays. `parts` is only the first
+// guess. The 24 Nov 2026 player read was 2.2 s in one statement and grows
+// with every tracked account; the census and gap scan grow with rr_history.
+// forEachPuuidRange hands each range's result to the caller (the census
+// merges per-range groups, the gap scan inserts per range) and resizes by the
+// D1 time attached to what `run` returns; it returns the number of ranges.
 export const SLICE_TARGET_MS=250;
 const PUUID_SPACE=2**32;
 const puuidBound=n=>Math.floor(n).toString(16).padStart(8,'0');
-export async function readByPuuidRange(run,{parts=16,targetMs=SLICE_TARGET_MS,maxParts=65536}={}){
-  const rows=[];
+export async function forEachPuuidRange(run,{parts=16,targetMs=SLICE_TARGET_MS,maxParts=65536}={}){
   let position=0,width=PUUID_SPACE/parts,slices=0;
   while(position<PUUID_SPACE){
     const end=Math.min(PUUID_SPACE,position+Math.max(PUUID_SPACE/maxParts,Math.floor(width)));
     const part=await run(position?puuidBound(position):'',end>=PUUID_SPACE?'~':puuidBound(end));
-    for(const row of part)rows.push(row);
     slices++;
     const ms=part?.[D1_MS];
     if(Number.isFinite(ms))width*=Math.min(2,Math.max(0.25,targetMs/Math.max(ms,1)));
     position=end;
   }
+  return slices;
+}
+export async function readByPuuidRange(run,options){
+  const rows=[];
+  const slices=await forEachPuuidRange(async(lo,hi)=>{
+    const part=await run(lo,hi);
+    for(const row of part)rows.push(row);
+    return part;
+  },options);
   Object.defineProperty(rows,'slices',{value:slices});
   return rows;
 }

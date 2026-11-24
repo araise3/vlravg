@@ -22,8 +22,7 @@ import {mkdir,writeFile,appendFile} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import {refreshPlayer,requestJSON} from './refresh-rr-history.mjs';
 import {createRequestScheduler} from './request-scheduler.mjs';
-import {d1Query,retryOnD1Overload,assertD1Headroom,pacedQuery,PACE_FACTOR,d1Governor} from './d1-query.mjs';
-import {puuidSliceBounds,puuidSliceWhere} from './puuid-slices.mjs';
+import {d1Query,retryOnD1Overload,assertD1Headroom,pacedQuery,PACE_FACTOR,d1Governor,forEachPuuidRange,SLICE_TARGET_MS} from './d1-query.mjs';
 import {readQuotaAudit,quotaCheckReport} from './workflow-quota-check.mjs';
 import {loadTracked,loadCandidates} from './rr-activity-query.mjs';
 import {loadFeatureQueue} from './rr-feature-plan.mjs';
@@ -329,7 +328,6 @@ export async function runCollector({origin,fetchImpl,deadline,now=Date.now,log=c
 // falls in exactly one slice, so per-slice distinct players add up.
 const RANK_SUMS=['payouts','players','placements','with_features','gains','losses','reported_start','bonus_known',
   'bonus_nonzero','afk_penalty_known','rr_penalty_known','map_forgiveness_known','placement_known','stored'];
-export {puuidSliceBounds,puuidSliceWhere};
 export function mergeRankSlices(slices){
   const groups=new Map();
   for(const rows of slices)for(const row of rows){
@@ -344,6 +342,9 @@ export function mergeRankSlices(slices){
   const order=(a,b)=>a===b?0:a==null?-1:b==null?1:a<b?-1:1;
   return [...groups.values()].sort((a,b)=>order(a.act,b.act)||order(a.ending_tier,b.ending_tier));
 }
+// The first guess at the number of PUUID ranges; they then resize to about
+// SLICE_TARGET_MS of D1 time each (forEachPuuidRange). One 1/64 range
+// measured 248 ms on 23 Nov 2026.
 export const CENSUS_SLICES=64;
 const rankSliceSql=where=>`SELECT json_extract(h.data,'$.season.id') AS season_id,
     json_extract(h.data,'$.season.short') AS act,json_extract(h.data,'$.tier.id') AS ending_tier,
@@ -366,13 +367,14 @@ const rankSliceSql=where=>`SELECT json_extract(h.data,'$.season.id') AS season_i
     GROUP BY season_id,act,ending_tier`;
 
 export async function corpusReport(env,query=retryOnD1Overload(d1Query),
-  {slices=CENSUS_SLICES,pauseMs=500,factor=PACE_FACTOR,sleep}={}){
+  {slices=CENSUS_SLICES,targetMs=SLICE_TARGET_MS,pauseMs=500,factor=PACE_FACTOR,sleep}={}){
   const paced=pacedQuery(query,{factor,minPauseMs:pauseMs,sleep});
   const results=[];
-  for(const slice of puuidSliceBounds(slices)){
-    const {where,params}=puuidSliceWhere(slice);
-    results.push(await paced(env,rankSliceSql(where?`WHERE ${where}`:''),params));
-  }
+  const ranges=await forEachPuuidRange(async(lo,hi)=>{
+    const rows=await paced(env,rankSliceSql('WHERE h.puuid>=?1 AND h.puuid<?2'),[lo,hi]);
+    results.push(rows);
+    return rows;
+  },{parts:slices,targetMs});
   const ranks=mergeRankSlices(results);
   const latest=ranks.filter(row=>row.season_id&&row.latest_game).sort((a,b)=>Date.parse(b.latest_game)-Date.parse(a.latest_game))[0];
   const currentRows=latest?ranks.filter(row=>row.season_id===latest.season_id):[];
@@ -383,7 +385,7 @@ export async function corpusReport(env,query=retryOnD1Overload(d1Query),
   for(const field of ['payouts','reported_start','bonus_known','bonus_nonzero','afk_penalty_known','rr_penalty_known','map_forgiveness_known','placement_known','stored']){
     competitiveUpdates[field]=ranks.reduce((sum,row)=>sum+(Number(row[field])||0),0);
   }
-  return {at:new Date().toISOString(),currentAct,ranks,competitiveUpdates,
+  return {at:new Date().toISOString(),currentAct,ranks,competitiveUpdates,ranges,
     note:'Rank buckets use ending tier for collection monitoring. Model evaluation reconstructs starting rank and excludes ambiguous rows. "stored" counts payouts filled from stored RR history.'};
 }
 

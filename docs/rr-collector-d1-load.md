@@ -243,6 +243,30 @@ Not measured against production yet: the number of ranges and the D1 time per
 range of a real reload. The collector's report and the slow-statement warning
 will show both.
 
+### The census and gap scan in the same ranges (25 Nov 2026)
+
+The two daily whole-table passes over `rr_history`, the census
+(`corpusReport` in
+[.github/scripts/collect-rr-corpus.mjs](../.github/scripts/collect-rr-corpus.mjs))
+and the gap scan (`scanGaps` in
+[.github/scripts/rr-gap-queries.mjs](../.github/scripts/rr-gap-queries.mjs)),
+used 64 fixed PUUID slices (`puuidSliceBounds`, now removed). They now go
+through `forEachPuuidRange`, the loop under `readByPuuidRange`: 64 ranges is
+only the first guess, and each next range is resized to about 250 ms of D1
+time. The census merges the per-range groups as before; the gap scan inserts
+each range's gaps before reading the next, and only the scan's own D1 time
+sizes the range, not the inserts. Both still run through `pacedQuery`. Both
+reports gain `ranges`, the number of statements used.
+
+Each range is `h.puuid>=?1 AND h.puuid<?2` on `rr_history`'s primary key
+(checked with `EXPLAIN QUERY PLAN` for the census: a covering-index search).
+The first and last ranges are bounded by `''` and `'~'` instead of being
+open-ended, which covers the same strings.
+
+Tests: the census and the gap scan return the same result as one statement
+with no reported time (16 ranges), with slow ranges (1 s each, more than 16
+ranges) and with fast ones (10 ms each, fewer than 16).
+
 ### Site side: retrying a brief overload
 
 [lib/d1-retry.mjs](../lib/d1-retry.mjs) wraps `env.APP_DB` for every request
@@ -283,12 +307,11 @@ before running it, so a retried write has not run twice.
 
 ### Not yet done or verified
 
-- Deployed on 25 Nov 2026 (commits 09bc1b6 and 0d37c60). The collector picks
-  up the scripts at its next run; the current run keeps the old ones.
+- Deployed on 25 Nov 2026 (commits 09bc1b6 and 0d37c60; self-sizing census
+  and gap scan in a later commit). The collector picks up the scripts at its
+  next run; the current run keeps the old ones.
 - Whether the 503 bursts stop has to be checked with a quota drain that
   overlaps a reload (about :20 or :50 past the hour while a run is going).
 - `wrangler d1 execute` and other ad-hoc queries bypass the governor. Heavy
   one-off reads should go through a script that uses `d1Query`.
-- The census and inventory reads still use fixed slices (`pacedQuery`). They
-  are paced and get the slow-statement warning, but do not resize themselves.
 - The gate's polling (most of a drain's D1 statements) is untouched.

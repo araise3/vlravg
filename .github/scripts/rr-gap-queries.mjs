@@ -1,5 +1,4 @@
-import {d1Query,retryOnD1Overload,pacedQuery,PACE_FACTOR} from './d1-query.mjs';
-import {puuidSliceBounds,puuidSliceWhere} from './puuid-slices.mjs';
+import {d1Query,retryOnD1Overload,pacedQuery,PACE_FACTOR,forEachPuuidRange,SLICE_TARGET_MS} from './d1-query.mjs';
 // Gap bookkeeping for the RR collector (docs/rr-collector-gap-healing.md).
 // Every statement here is idempotent, so a D1 overload is waited out.
 const query=retryOnD1Overload(d1Query);
@@ -38,15 +37,15 @@ export async function writeState(env,name,value,run=query){
 // upstream never listed the two together. Either games are missing between
 // them or the rank changed without a game (decay); healing tells them apart.
 // Pairs witnessed adjacent in one live window (rr_predecessors) cannot hide a
-// game. PUUID slices keep every player's rows in one statement.
-const scanSQL=where=>`WITH s AS (
+// game. PUUID ranges keep every player's rows in one statement.
+const scanSQL=`WITH s AS (
     SELECT h.puuid,h.match_id,h.date,
       LOWER(json_extract(h.data,'$.season.id')) AS season,
       json_extract(h.data,'$.tier_before_update.id') AS tb,json_extract(h.data,'$.rr_before_update') AS rb,
       LAG(h.match_id) OVER w AS prev_id,LAG(h.date) OVER w AS prev_date,
       LAG(LOWER(json_extract(h.data,'$.season.id'))) OVER w AS prev_season,
       LAG(json_extract(h.data,'$.tier.id')) OVER w AS prev_tier,LAG(json_extract(h.data,'$.rr')) OVER w AS prev_rr
-    FROM rr_history h WHERE h.date IS NOT NULL${where?` AND ${where}`:''}
+    FROM rr_history h WHERE h.date IS NOT NULL AND h.puuid>=?1 AND h.puuid<?2
     WINDOW w AS (PARTITION BY h.puuid ORDER BY h.date,h.match_id)
   ) SELECT s.puuid,s.prev_id AS after_match_id,s.prev_date AS after_date,s.match_id AS before_match_id,s.date AS before_date,
     p.region,p.platform
@@ -58,15 +57,18 @@ const scanSQL=where=>`WITH s AS (
     AND p.region IN ('eu','na','ap','kr','latam','br') AND p.platform IN ('pc','console')
     AND NOT EXISTS (SELECT 1 FROM rr_predecessors r WHERE r.puuid=s.puuid AND r.match_id=s.match_id AND r.previous_match_id=s.prev_id)
     AND NOT EXISTS (SELECT 1 FROM rr_gaps g WHERE g.puuid=s.puuid AND g.after_match_id=s.prev_id)`;
+// The first guess; the ranges then resize to about SLICE_TARGET_MS of D1
+// time each (forEachPuuidRange).
 export const SCAN_SLICES=64;
 const INSERT_CHUNK=200;
 
-export async function scanGaps(env,run=query,{slices=SCAN_SLICES,pauseMs=500,factor=PACE_FACTOR,sleep}={}){
+export async function scanGaps(env,run=query,{slices=SCAN_SLICES,targetMs=SLICE_TARGET_MS,pauseMs=500,factor=PACE_FACTOR,sleep}={}){
   const paced=pacedQuery(run,{factor,minPauseMs:pauseMs,sleep});
   let found=0;
-  for(const slice of puuidSliceBounds(slices)){
-    const {where,params}=puuidSliceWhere(slice,'h.puuid');
-    const rows=await paced(env,scanSQL(where),params);
+  // Each range is sized by the scan's D1 time; the inserts that follow it are
+  // paced but do not resize the next range.
+  const ranges=await forEachPuuidRange(async(lo,hi)=>{
+    const rows=await paced(env,scanSQL,[lo,hi]);
     for(let i=0;i<rows.length;i+=INSERT_CHUNK){
       await paced(env,`INSERT INTO rr_gaps(puuid,after_match_id,after_date,before_match_id,before_date,region,platform,source,detected_at,next_attempt_at)
         SELECT json_extract(value,'$.puuid'),json_extract(value,'$.after_match_id'),json_extract(value,'$.after_date'),
@@ -75,6 +77,7 @@ export async function scanGaps(env,run=query,{slices=SCAN_SLICES,pauseMs=500,fac
         FROM json_each(?1) WHERE 1 ON CONFLICT(puuid,after_match_id) DO NOTHING`,[JSON.stringify(rows.slice(i,i+INSERT_CHUNK))]);
     }
     found+=rows.length;
-  }
-  return {found};
+    return rows;
+  },{parts:slices,targetMs});
+  return {found,ranges};
 }
