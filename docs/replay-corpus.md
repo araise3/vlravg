@@ -71,7 +71,7 @@ On this workstation:
 ```powershell
 $review = '.local/replay-transcripts/8dac718f-24f5-4042-99a7-4a2a27f2d22f/review'
 .venv-replay/Scripts/python.exe scripts/build-replay-corpus.py `
-  'C:/Users/leona/AppData/Local/VALORANT/Saved/Demos' --jobs 2
+  "$env:LOCALAPPDATA/VALORANT/Saved/Demos" --jobs 2
 .venv-replay/Scripts/python.exe scripts/build-replay-corpus-extras.py `
   .local/replay-transcripts/corpus/corpus.json --out "$review/library" --jobs 2
 .venv-replay/Scripts/python.exe scripts/build-replay-library.py `

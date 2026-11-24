@@ -35,7 +35,7 @@ The Windows workflow keeps the vrfkit checkout, Rust toolchain, virtual environm
 ```powershell
 .\scripts\setup-replay-analysis.ps1
 .\scripts\parse-replay.ps1 -ReplayPath 'C:\path\to\match.vrf'
-.\scripts\batch-replays.ps1 -ReplayDirectory 'C:\Users\leona\AppData\Local\VALORANT\Saved\Demos'
+.\scripts\batch-replays.ps1 -ReplayDirectory "$env:LOCALAPPDATA\VALORANT\Saved\Demos"
 ```
 
 When a manually verified positive is known, identify it by the generated replay slot and rank other post-plant last-survivor kill sequences against it:

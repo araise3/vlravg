@@ -4,6 +4,7 @@ hidden-mmr-research/
 HANDOFF.md
 .claude/
 CLAUDE.md
+AGENTS.md
 .local/
 .tools/
 .venv-replay/
