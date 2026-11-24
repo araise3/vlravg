@@ -130,6 +130,144 @@ no duplicate match IDs; an opened match card stays open across page
 switches; hidden Duos and RR Breakdown pages show current data when opened;
 phone width (375 px) has no sideways scroll.
 
+## Live history look-ahead (24 Nov 2026)
+
+After the saved matches appear, the status reads "Checking for more
+matches…" while `loadAll` pages through live history. Timed in production
+that day, every `history-by-puuid` page (ten full matches, about 3.7 MB)
+took 4–6 s, and the pages were requested one at a time. A full scan of an
+act from offset 113 took 5–8 s per page; a cached player with verified
+coverage still waited for two or three such pages in a row. The proxy's
+inline archive and evidence writes account for about 0.4–0.6 s of a page
+(an edge-cached page took 66–156 ms without a scan and 433–632 ms with
+one), so the time is upstream.
+
+`loadAll` now requests live pages ahead of the one it is reading and still
+reads them strictly in order:
+
+- A full scan keeps three pages in flight (`LIVE_PAGES_AHEAD=2`).
+- A search with verified coverage keeps two (`LIVE_PAGES_AHEAD_VERIFIED=1`),
+  since it usually ends after two pages.
+- Look-ahead pauses after a short page, a page that reaches another act,
+  or a page already covered, because the next page probably ends the scan.
+
+Cost in upstream calls, from the tests: verified searches request exactly
+what they did before (2 pages with no new games, 3 with a few). A full scan
+that reaches the previous act asks for one page past the end; one whose
+history runs out inside the act asks for two. The request pool per search
+went from two slots to four (three live pages plus the stored-matches
+index). Upstream pacing is unchanged; it stays in the proxy.
+
+Off-chain pages: a look-ahead request after a short page lands at an offset
+the scan never reads. `verifyPages` (`lib/match-coverage.mjs`) now follows
+the chain of page offsets from the first one and ignores pages off it,
+instead of failing on them. A missing link in the chain still fails
+verification.
+
+Timed locally against the deployed API (`npm run dev:live`) for a
+current-act player with 46 saved matches: pages 0 and 10 were requested
+together at 3.2 s and answered at 10.4 and 10.9 s, page 20 at 15.4 s, and
+the scan finished with 49 matches. That is a single run with no
+before/after pair on the same player, so the saving is not measured. Going
+by the per-page times, it should be about one page latency (4–7 s) per
+search with new games, and more on full scans.
+
+### Starting the scan beside the rank request
+
+The first live page used to wait for the rank request, the act dates and
+the coverage ledger: in the production run above it went out at 3.2 s,
+after rank answered at about 2.9 s. When the act is certain to be the
+current one, `loadAll` now opens the coverage ledger and requests the
+scan's first pages (two with verified coverage, three without) right after
+the account resolves, beside rank. "Certain" means the route names the
+current act, or no act is named and the current act already has saved
+matches (`match-archive-counts`); the act picker then selects it, since it
+is the newest act with games. In every other case, including a first visit
+with nothing saved, the scan starts after rank as before, so no request is
+spent on an act the search will not read. Pages are keyed by URL, so the
+scan reuses the early ones; request counts in the tests are unchanged. The
+per-search request pool went to six slots, because rank, RR history and
+name history now share it with the early pages.
+
+Timed locally (`npm run dev:live`) for the same player, a minute later:
+the coverage ledger opened at 0.87 s and pages 0 and 10 went out at 0.99 s.
+Rank and both pages were edge-cache hits in that run, so it shows the new
+order, not the saving: the search finished at 4.3 s, and its tail was the
+saved-archive read. The saving is whatever rank takes on a cache miss
+(1-2.5 s in the runs above).
+
+### Finding an older act's start
+
+An older act (not the current one) is scanned from the offset where it
+begins in the live match list. `findHistoryStartForAct` found that offset
+by binary-searching 0–5000 with one-match probes
+(`/history/…?size=1&start=N`): 12–13 requests in a row, about 12 s in
+production that day, all under "Finding this act's matches…" and before
+the first live page.
+
+The offset is the first one whose match started before the next act (or
+lies past the end of the list). It is still decided only by live probes:
+two neighbouring probes, one newer and one older than the boundary, prove
+it. What changed is where the search probes. Each round guesses the offset
+and probes the two matches on either side of it together, so a right guess
+settles the search in one round of two requests. The guesses, in order:
+
+1. **MMR games of the later acts** (`rank`, already loaded). These totals
+   belong to the account's current region and can be wrong after a region
+   transfer, which is why they were never used as the offset itself. Here
+   they are only a guess, so a wrong one costs one round of probes.
+2. **The stored-matches index**, which already loads beside the scan
+   (`readStoredSeasonIndex`, 100 rows a page, newest first, with
+   `started_at`). Its pages now also feed a timeline
+   (`createStoredTimeline`). From the nearest probed match, the number of
+   stored rows between that match and the boundary predicts how far away
+   the boundary is. The search waits for the index only until a page passes
+   the boundary, not for the whole act.
+3. After three guesses, or with neither source, it gallops (offset steps of
+   10, 20, 40, …) until a probe lands past the act, then bisects, as before.
+
+Options looked at and not used: the saved archive counts cover only matches
+this site has saved, so they are a weaker version of guess 1; probing many
+offsets at once without a guess would cut the rounds but raise the upstream
+calls on the shared quota.
+
+The result is unchanged: the scan starts one full page (`BATCH`) before the
+act's first match, so its first page is entirely newer-act matches and
+`verifyPages` still sees the scan begin before the act.
+
+How the two sources matched the live list for hiro#luna on 24 Nov 2026: the
+stored-index rows newer than the boundary between the current act and the
+one before it numbered 164, the same as the live offset the binary search
+found (164) and the MMR games of the current act (164). For one act
+further back, the stored count was 287 and the MMR games 164 + 123 = 287.
+That is one account; other accounts (region transfers, matches missing
+from Henrik's store) can differ, which the tests cover.
+
+Measured locally against the deployed API (`npm run dev:live`), hiro#luna,
+single runs, times from navigation start:
+
+| Act (live offset of its start) | Before: old probe sequence | After: in the app |
+| --- | --- | --- |
+| V26 Act V (164) | 12 probes in a row, 12.7 s | 2 probes together at 1.79 s, answered 3.06 and 3.40 s; first page requested at 3.41 s (1.6 s searching) |
+| V26 Act IV (287) | 12 probes in a row, 7.7 s | 2 probes, 47 ms: edge-cache hits after the "before" run, so not a cold time |
+| V26 Act III (330) | 12 probes in a row, 12.8 s; the last two (48 and 50 ms) were edge-cache hits after the "after" run | 2 probes together at 0.38 s, answered 0.78 and 0.88 s; first page requested at 0.89 s (0.5 s searching) |
+
+"Before" replays the old search's exact request sequence from the page
+(same probes, same order, one at a time), since the old code is no longer
+in the build; probes cost 0.5–1.7 s each in those runs. "After" is the
+real search in the app. In all three, the MMR guess was right, so the
+stored-index path did not run against the live API; it and the fallback
+are covered by tests only. Act V then loaded 123 matches, the act's MMR
+game count.
+
+Cost in upstream calls, from the tests: a right guess costs 2 probes in one
+round instead of 12–13 in a row. Over 300 generated cases (wrong guesses
+by up to 40, a tenth of stored rows missing, extra stored rows, no MMR or
+no stored index in a quarter of cases each, short lists, empty acts), every
+case found the binary search's offset, in 1,593 rounds and 1,799 probes,
+where the binary search needed 3,705 probes in a row; the worst case was 8
+rounds.
+
 ## Tests
 
 - `tests/fetch-efficiency.test.mjs`: planned pages load in parallel and
@@ -137,6 +275,25 @@ phone width (375 px) has no sideways scroll.
   page request beside the plan; the plan cuts pages exactly where cursor
   paging does; an empty archive completes; the stored-matches index is
   requested before the live scan ends.
+- `tests/fetch-efficiency.test.mjs` (look-ahead): a full scan keeps three
+  live pages in flight and publishes every match once, in order; a verified
+  search keeps two and requests only pages 0 and 10; look-ahead pauses at
+  the previous act.
+- `tests/fetch-efficiency.test.mjs` (early start): a current-act search
+  requests pages 0 and 10 before rank answers and reuses them; with no act
+  named, saved current-act matches start it early and an empty archive does
+  not; a search for an older act never starts the current act early.
+- `tests/fetch-efficiency.test.mjs` (older-act start): a right MMR guess
+  costs one round of two probes where the binary search needed 12; a wrong,
+  zero or missing guess is corrected from the stored index in one more
+  round; the search waits for the stored index only until it passes the
+  boundary; with no usable guess it still proves the offset, and unreadable
+  dates still mean a scan from the newest match; 300 generated cases give
+  the binary search's offset in under half its requests in a row; in
+  `loadAll`, an older act is found with two probes and its scan starts on a
+  page of newer-act matches.
+- `tests/match-coverage.test.mjs`: look-ahead pages off the chain neither
+  block nor fake coverage.
 - `tests/performance-archive.test.mjs`: a page of ten matches is stored five
   at a time and indexed once each.
 - `tests/mobile-layout.test.mjs`: every page sits in a `PageSlot`, and server

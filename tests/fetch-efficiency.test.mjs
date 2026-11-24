@@ -379,7 +379,8 @@ test('live matches load before the archive and RR finish, then RR is attached',a
   const client=analysisClient({count:30,archiveWait,rrWait});
   const pending=client.loadAll();
   await tick();
-  assert.equal(client.urls.filter(url=>(url.includes('/history/')||url.includes('/history-by-puuid/'))).length,4);
+  // Three pages and the empty end page, plus the two look-ahead pages past it.
+  assert.equal(client.urls.filter(url=>(url.includes('/history/')||url.includes('/history-by-puuid/'))).length,6);
   assert.equal(client.context.allMatches.length,30);
   assert.equal(client.context.allMatches.find(row=>row.id==='match-0').myRR,null);
   archiveWait.resolve();rrWait.resolve();
@@ -387,10 +388,112 @@ test('live matches load before the archive and RR finish, then RR is attached',a
   assert.equal(client.context.allMatches.find(row=>row.id==='match-0').myRR,20);
 });
 
+// Counts live history requests in flight; each answer waits a few turns so
+// requests issued together overlap.
+function trackLivePages(client){
+  const apiGet=client.context.apiGet;
+  const live={now:0,max:0};
+  client.context.apiGet=async(url,...rest)=>{
+    if(!url.includes('/history-by-puuid/')&&!url.includes('/history/'))return apiGet(url,...rest);
+    live.now++;live.max=Math.max(live.max,live.now);
+    try{await tick();await tick();return await apiGet(url,...rest);}finally{live.now--;}
+  };
+  client.context.fetchWithRetry=(...args)=>client.context.apiGet(...args);
+  return live;
+}
+const livePageStarts=urls=>urls.filter(url=>url.includes('/history-by-puuid/'))
+  .map(url=>Number(new URL(url,'https://example.test').searchParams.get('start')));
+
+test('a full scan keeps three live pages in flight and still publishes every match once',async()=>{
+  const client=analysisClient();
+  const live=trackLivePages(client);
+  await client.loadAll();
+  assert.equal(live.max,3);
+  assert.equal(client.context.allMatches.length,200);
+  assert.deepEqual([...client.context.allMatches.map(m=>m.id)],client.state.rows.map(m=>m.metadata.match_id));
+});
+
+test('a verified search looks one page ahead and costs no extra live request',async()=>{
+  const client=analysisClient();
+  await client.loadAll();
+  const live=trackLivePages(client);
+  client.urls.length=0;
+  await client.loadAll();
+  assert.equal(live.max,2);
+  assert.deepEqual(livePageStarts(client.urls),[0,10]);
+});
+
+test('look-ahead pauses at the previous act, so a full scan asks for one page past it',async()=>{
+  const client=analysisClient({count:25});
+  const older=client.makeRows(40).map((row,i)=>({...row,metadata:{...row.metadata,match_id:`older-${i}`,
+    season:{id:'99999999-9999-4999-8999-999999999999'},started_at:new Date(2000000000000-(100+i)*1000).toISOString()}}));
+  client.state.rows.push(...older);
+  await client.loadAll();
+  // Page 20 reaches the previous act and page 30 ends the scan; page 40 was
+  // already requested when page 20 arrived, nothing after it.
+  assert.deepEqual(livePageStarts(client.urls),[0,10,20,30,40]);
+  assert.equal(client.context.allMatches.length,25);
+});
+
+// Holds the rank response until released, to see what starts before it.
+function holdRank(client){
+  const rank=deferred(),apiGet=client.context.apiGet;
+  client.context.apiGet=async(url,...rest)=>{
+    if(url.includes('/rank/'))await rank.promise;
+    return apiGet(url,...rest);
+  };
+  client.context.fetchWithRetry=(...args)=>client.context.apiGet(...args);
+  return rank;
+}
+const settle=async()=>{for(let i=0;i<20;i++)await tick();};
+
+test('a current-act search starts its live scan before the rank request answers',async()=>{
+  const client=analysisClient();
+  await client.loadAll();
+  const rank=holdRank(client);
+  client.urls.length=0;
+  const pending=client.loadAll();
+  await settle();
+  assert.deepEqual(livePageStarts(client.urls),[0,10]);
+  rank.resolve();await pending;
+  // The scan reused both early pages and requested nothing more.
+  assert.deepEqual(livePageStarts(client.urls),[0,10]);
+  assert.equal(client.context.allMatches.length,200);
+});
+
+test('without a chosen act, saved current-act matches start the scan early; none, and it waits for rank',async()=>{
+  const client=analysisClient({count:30});
+  client.context.TARGET_SEASON='';
+  let rank=holdRank(client);
+  const first=client.loadAll();
+  await settle();
+  assert.deepEqual(livePageStarts(client.urls),[],'nothing saved yet: the act is not certain before rank');
+  rank.resolve();await first;
+  client.context.TARGET_SEASON='';
+  client.context.readSavedMatchCounts=async()=>({[season]:30});
+  client.urls.length=0;
+  const second=client.loadAll();
+  await settle();
+  assert.deepEqual(livePageStarts(client.urls),[0,10]);
+});
+
+test('an older act never starts the current act early',async()=>{
+  const client=analysisClient({count:30});
+  client.context.currentActId=()=>'99999999-9999-4999-8999-999999999999';
+  client.context.readSavedMatchCounts=async()=>({'99999999-9999-4999-8999-999999999999':5,[season]:30});
+  const rank=holdRank(client);
+  const pending=client.loadAll();
+  await settle();
+  assert.equal(client.urls.filter(url=>url.includes('/history')).length,0);
+  rank.resolve();await pending;
+  assert.ok(client.urls.every(url=>!url.includes('history-by-puuid')||!url.includes('99999999')));
+});
+
 test('verified repeat searches refresh only new pages and retain all matches',async()=>{
   const client=analysisClient();
   await client.loadAll();
-  assert.equal(client.urls.filter(url=>(url.includes('/history/')||url.includes('/history-by-puuid/'))).length,21);
+  // A full scan: 20 pages, the empty end page and two look-ahead pages past it.
+  assert.equal(client.urls.filter(url=>(url.includes('/history/')||url.includes('/history-by-puuid/'))).length,23);
   client.urls.length=0;
   await client.loadAll();
   assert.equal(client.urls.filter(url=>(url.includes('/history/')||url.includes('/history-by-puuid/'))).length,2);
@@ -425,13 +528,13 @@ test('partial scans and a region transfer cannot enable incremental early stoppi
   await client.loadAll();
   client.urls.length=0;
   await client.loadAll();
-  assert.equal(client.urls.filter(url=>(url.includes('/history/')||url.includes('/history-by-puuid/'))).length,4);
+  assert.equal(client.urls.filter(url=>(url.includes('/history/')||url.includes('/history-by-puuid/'))).length,6);
   client.state.storedFailure=false;
   await client.loadAll();
   client.state.region='na';
   client.urls.length=0;
   await client.loadAll();
-  assert.equal(client.urls.filter(url=>(url.includes('/history/')||url.includes('/history-by-puuid/'))).length,4);
+  assert.equal(client.urls.filter(url=>(url.includes('/history/')||url.includes('/history-by-puuid/'))).length,6);
   assert.ok(client.urls.some(url=>url.includes('/history-by-puuid/na/')));
 });
 
@@ -466,7 +569,7 @@ test('a partial archive read falls back to a full live scan despite durable cove
     const page=first.state.rows.slice(0,50);opts.onPage(page);return page;
   };
   await next.loadAll();
-  assert.equal(next.urls.filter(url=>url.includes('/history-by-puuid/')).length,21);
+  assert.equal(next.urls.filter(url=>url.includes('/history-by-puuid/')).length,23);
   assert.equal(next.context.allMatches.length,200);
 });
 
@@ -506,4 +609,149 @@ test('late RR from a superseded search cannot overwrite the active RR maps',asyn
   await oldRun;
   assert.equal(client.context._rrChangeByMatchId['match-0'],20);
   assert.equal(client.context.allMatches.find(row=>row.id==='match-0').myRR,20);
+});
+
+// ── Older-act start search (findHistoryStartForAct), 24 Nov 2026 ──
+const seekSource=extract('const MAX_HISTORY_OFFSET=',"// Henrik's stored-matches endpoint");
+const ACT_BOUNDARY=Date.parse('2026-10-14T00:00:00Z'),HOUR=3600000;
+// A live list, newest first: `newer` matches after the boundary, then `older`.
+function liveList(newer,older){
+  return Array.from({length:newer+older},(_,i)=>({metadata:{match_id:`m-${i}`,
+    started_at:new Date(i<newer?ACT_BOUNDARY+(newer-i)*HOUR:ACT_BOUNDARY-(i-newer+1)*HOUR).toISOString()}}));
+}
+// Probes answer a tick later, so probes sent together overlap; `rounds`
+// groups them by the requests in flight at once.
+function seekClient(list){
+  const probes=[],rounds=[];let inFlight=0;
+  const context={API_BASE:'/api',REGION:'eu',PLATFORM:'pc',PLAYER:'Example',TAG:'123',_analysisGen:1,BATCH:10,setStatus(){},
+    apiGet:async url=>{
+      assert.match(url,/[?&]size=1&/);
+      const offset=Number(new URL(url,'https://example.test').searchParams.get('start'));
+      probes.push(offset);
+      if(!inFlight)rounds.push([]);
+      rounds.at(-1).push(offset);inFlight++;
+      try{await tick();return{j:{data:list[offset]?[list[offset]]:[]}};}finally{inFlight--;}
+    }};
+  return{...runInNewContext(seekSource+'\n({findHistoryStartForAct,createStoredTimeline})',context),probes,rounds};
+}
+// A stored-matches timeline of the given rows, in 100-row pages.
+function storedTimeline(client,list){
+  const timeline=client.createStoredTimeline();
+  const rows=list.map(m=>({meta:{started_at:m.metadata.started_at}}));
+  for(let i=0;i<rows.length;i+=100)timeline.add(rows.slice(i,i+100),i+100>=rows.length);
+  timeline.close();
+  return timeline;
+}
+// The search this replaced: one-match probes in a row, bisecting 0..5000.
+function binarySearchStart(list,boundary){
+  let lo=0,hi=5000,probes=0;
+  while(lo<hi){
+    const mid=Math.floor((lo+hi)/2);probes++;
+    const match=list[mid];
+    if(match&&Date.parse(match.metadata.started_at)>=boundary)lo=mid+1;else hi=mid;
+  }
+  return{start:Math.max(0,lo-10),probes};
+}
+
+test('a right MMR guess finds an older act in one round of two probes (was 12 in a row)',async()=>{
+  // The production case: 164 games in the act after the selected one.
+  const list=liveList(164,300),client=seekClient(list);
+  assert.equal(await client.findHistoryStartForAct(ACT_BOUNDARY,1,()=>{},{},{estimate:164}),154);
+  assert.deepEqual(client.rounds,[[163,164]]);
+  const before=binarySearchStart(list,ACT_BOUNDARY);
+  assert.equal(before.start,154);
+  assert.equal(before.probes,12);
+});
+
+test('a wrong or missing MMR guess is corrected from the stored index in one more round',async()=>{
+  const list=liveList(164,300);
+  // A region transfer can leave the MMR totals too high, zero or absent.
+  for(const [estimate,rounds] of [[200,[[199,200],[163,164]]],[0,[[0],[163,164]]],[null,[[163,164]]]]){
+    const client=seekClient(list);
+    const start=await client.findHistoryStartForAct(ACT_BOUNDARY,1,()=>{},{},{estimate,storedTimeline:storedTimeline(client,list)});
+    assert.equal(start,154);
+    assert.deepEqual(client.rounds,rounds,`estimate ${estimate}`);
+  }
+});
+
+test('the act search waits for the stored index only until it passes the boundary',async()=>{
+  const list=liveList(164,300),client=seekClient(list);
+  const timeline=client.createStoredTimeline();
+  const rows=list.map(m=>({meta:{started_at:m.metadata.started_at}}));
+  const pending=client.findHistoryStartForAct(ACT_BOUNDARY,1,()=>{},{},{storedTimeline:timeline});
+  timeline.add(rows.slice(0,100));
+  await tick();await tick();
+  assert.equal(client.probes.length,0,'page 1 ends before the boundary');
+  timeline.add(rows.slice(100,200)); // the index goes on loading for the act itself
+  assert.equal(await pending,154);
+  assert.deepEqual(client.rounds,[[163,164]]);
+});
+
+test('without a usable guess the act search still proves the offset',async()=>{
+  const list=liveList(164,300);
+  // The stored index failed before the boundary, and there is no MMR guess.
+  const client=seekClient(list);
+  const timeline=client.createStoredTimeline();
+  timeline.close();
+  assert.equal(await client.findHistoryStartForAct(ACT_BOUNDARY,1,()=>{},{},{storedTimeline:timeline}),154);
+  assert.ok(client.rounds.every(round=>round.length===1));
+  // Unreadable dates still mean a scan from the newest match.
+  const bad=liveList(164,300);bad[163]={metadata:{started_at:'invalid'}};
+  const badClient=seekClient(bad);
+  assert.equal(await badClient.findHistoryStartForAct(ACT_BOUNDARY,1,()=>{},{},{estimate:164}),0);
+});
+
+test('the act search proves the same offset as the binary search for any guess',async t=>{
+  // Deterministic pseudo-random cases: wrong guesses, stored rows missing
+  // from or extra to the live list, short lists and empty acts.
+  let seed=12345;
+  const random=n=>{seed=(seed*1103515245+12345)%2147483648;return seed%n;};
+  let probes=0,rounds=0,before=0,worst=0;
+  for(let run=0;run<300;run++){
+    const newer=random(4)===0?random(12):random(700),older=random(4)===0?0:random(400);
+    const list=liveList(newer,older),client=seekClient(list);
+    const stored=list.filter(()=>random(10)!==0);
+    for(let k=random(20);k>0&&stored.length;k--){
+      const at=random(stored.length);
+      stored.splice(at,0,stored[at]); // a stored-only match at the same time
+    }
+    const kind=random(4);
+    const hints={estimate:kind===0?null:newer+random(81)-40,storedTimeline:kind===3?undefined:storedTimeline(client,stored)};
+    const expected=binarySearchStart(list,ACT_BOUNDARY);
+    assert.equal(await client.findHistoryStartForAct(ACT_BOUNDARY,1,()=>{},{},hints),expected.start,`run ${run}`);
+    probes+=client.probes.length;rounds+=client.rounds.length;before+=expected.probes;
+    worst=Math.max(worst,client.rounds.length);
+  }
+  t.diagnostic(`${rounds} rounds, ${probes} probes, worst ${worst} rounds; binary search ${before} probes`);
+  assert.ok(rounds<before/2,`${rounds} rounds (${probes} probes) against ${before} probes in a row`);
+  assert.ok(worst<=13,`worst case ${worst} rounds`); // the binary search took 12-13
+});
+
+test('an older-act search seeds from MMR and starts its scan on a newer-act overlap page',async()=>{
+  const NEWER='33333333-3333-4333-8333-333333333333',OLDER='44444444-4444-4444-8444-444444444444';
+  const targetStart=ACT_BOUNDARY-60*24*HOUR;
+  const client=analysisClient();
+  const make=(n,act,from)=>Array.from({length:n},(_,i)=>({metadata:{match_id:`${act.slice(0,4)}-${i}`,season:{id:act},
+    started_at:new Date(from-(i+1)*HOUR).toISOString()},players:[{puuid}]}));
+  const rows=[...make(37,NEWER,ACT_BOUNDARY+40*HOUR),...make(25,season,ACT_BOUNDARY),...make(30,OLDER,targetStart)];
+  const meta={[NEWER]:{start:ACT_BOUNDARY},[season]:{start:targetStart},[OLDER]:{start:targetStart-60*24*HOUR}};
+  Object.assign(client.context,{_actMeta:meta,currentActId:()=>NEWER,getActInfoByUuid:id=>meta[id.toLowerCase()]||null});
+  const original=client.context.apiGet;
+  client.context.apiGet=async(url,...rest)=>{
+    if(url.includes('/rank/')){client.urls.push(url);return{j:{data:{current:null,seasonal:[
+      {season:{id:NEWER},games:37},{season:{id:season},games:25},{season:{id:OLDER},games:30}]}}};}
+    const query=new URL(url,'https://example.test').searchParams,start=Number(query.get('start'));
+    if(url.includes('/history/')&&query.get('size')==='1'){client.urls.push(url);return{j:{data:rows.slice(start,start+1)}};}
+    if(url.includes('/history-by-puuid/')){client.urls.push(url);return{j:{data:rows.slice(start,start+10)}};}
+    if(url.includes('/stored-matches/')){client.urls.push(url);return{j:{data:rows.map(row=>({meta:{id:row.metadata.match_id,
+      season:row.metadata.season,started_at:row.metadata.started_at},stats:{puuid}})),results:{after:0}}};}
+    return original(url,...rest);
+  };
+  await client.loadAll();
+  const probeStarts=client.urls.filter(url=>url.includes('size=1&'))
+    .map(url=>Number(new URL(url,'https://example.test').searchParams.get('start')));
+  assert.deepEqual(probeStarts,[36,37]);
+  assert.equal(livePageStarts(client.urls)[0],27,'one page of overlap before the act');
+  assert.ok(rows.slice(27,37).every(row=>row.metadata.season.id===NEWER),'the first page is all newer act');
+  assert.equal(client.context.allMatches.length,25);
 });

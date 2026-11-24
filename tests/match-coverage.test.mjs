@@ -125,6 +125,19 @@ test('missing pages and a short last page do not establish coverage',async t=>{
   assert.deepEqual(await f.finish(second),{verified:false});
 });
 
+test('look-ahead pages off the chain are ignored, so they neither block nor fake coverage',async t=>{
+  const f=fixture(t),scan=await f.begin();
+  // A browser looking ahead also asked for 30 and 40, past the short page at 20.
+  for(const start of [0,10,20,30,40,23])await f.livePage(scan,start);
+  await f.storedPage(scan);
+  assert.deepEqual(await f.finish(scan),{verified:true});
+  // Stray pages cannot stand in for a missing link in the chain.
+  const second=await f.begin();
+  for(const start of [0,20,30,23])await f.livePage(second,start);
+  await f.storedPage(second);
+  assert.deepEqual(await f.finish(second),{verified:false});
+});
+
 test('failed archive writes cannot certify coverage even when match responses succeed',async t=>{
   const f=fixture(t),scan=await f.begin();
   assert.equal((await f.livePage(scan,0,{failWrites:true})).status,200);

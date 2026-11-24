@@ -2659,27 +2659,120 @@ function isKnownHistoryPage(rows,coverage){
   return !!(coverage&&rows.length&&rows.every(m=>coverage.liveIds.has(m.metadata?.match_id||m.match_id)));
 }
 const MAX_HISTORY_OFFSET=5000;
+// Live history pages requested beyond the one being read (see loadAll).
+const LIVE_PAGES_AHEAD=2,LIVE_PAGES_AHEAD_VERIFIED=1;
+// Start times from the stored-matches index, filled in by readStoredSeasonIndex
+// as its pages arrive. findHistoryStartForAct uses them only to guess where to
+// probe the live list; the live probes alone decide the offset.
+function createStoredTimeline(){
+  const times=[];
+  let oldest=Infinity,exhausted=false,closed=false,waiters=[];
+  const wake=()=>{waiters=waiters.filter(check=>!check());};
+  const timeline={
+    add(rows,last=false){
+      rows.forEach(row=>{
+        const started=Date.parse(row?.meta?.started_at);
+        if(Number.isFinite(started)){times.push(started);oldest=Math.min(oldest,started);}
+      });
+      if(last)exhausted=true;
+      wake();
+    },
+    close(){closed=true;wake();},
+    // Every stored row started at or after `ms` has arrived.
+    covers(ms){return exhausted||oldest<ms;},
+    // Resolves true once covers(ms), false if the index stopped first.
+    reach(ms){
+      return new Promise(resolve=>{
+        const check=()=>{
+          if(timeline.covers(ms)){resolve(true);return true;}
+          if(closed){resolve(false);return true;}
+          return false;
+        };
+        if(!check())waiters.push(check);
+      });
+    },
+    // Stored rows with from <= started < to (exclusive bounds when `open`).
+    count(from,to,open=false){
+      return times.filter(t=>(open?t>from:t>=from)&&t<to).length;
+    },
+  };
+  return timeline;
+}
+// Interpolated guesses allowed per search (the MMR seed counts as one).
+const ACT_START_GUESSES=3;
 // MMR season totals belong to the account's current region and can reset on a
 // transfer. The match list is keyed to the player across regions, so seek to
 // the selected act by its calendar boundary instead of using those totals as
 // either a skip offset or a stopping condition.
-async function findHistoryStartForAct(nextActStart,generation,onRateLimit,opts={}){
+//
+// The act starts at the first live offset whose match is older than the next
+// act (or past the end of the list). This used to be a plain binary search of
+// one-match probes, 12-13 in a row (about 12 s in production, 24 Nov 2026).
+// Now each round guesses that offset and probes the two matches either side
+// of it together; when the guess is right, the boundary is proven in one
+// round. Guesses, in order (hints):
+// - `estimate`: the MMR games of the acts after this one. Only a guess, for
+//   the reason above; a wrong one costs a round.
+// - `storedTimeline`: counted from the nearest probed match. Stored rows
+//   between that match and the boundary predict how far away it is.
+// After ACT_START_GUESSES misses (or with no hints) the search gallops while
+// it has no upper bound, then bisects, like before. Every offset it settles
+// on is proven by a probe on each side, as the binary search's was.
+async function findHistoryStartForAct(nextActStart,generation,onRateLimit,opts={},hints={}){
   if(!Number.isFinite(nextActStart)||nextActStart>Date.now())return 0;
-  let lo=0,hi=MAX_HISTORY_OFFSET;
-  while(lo<hi){
-    if(generation!==_analysisGen)return 0;
-    const mid=Math.floor((lo+hi)/2);
-    setStatus('Finding this act’s matches…',true);
-    const url=`${API_BASE}/history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}?mode=competitive&size=1&start=${mid}`;
+  // Offsets below L are proven newer; H is proven older or past the end
+  // (or the ceiling, while hiBound is false).
+  let L=0,H=MAX_HISTORY_OFFSET,hiBound=false,newerTime=Infinity,olderTime=null;
+  let guesses=0,step=BATCH;
+  const timeline=hints.storedTimeline||null;
+  const probe=async offset=>{
+    const url=`${API_BASE}/history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}?mode=competitive&size=1&start=${offset}`;
     const {j}=await apiGet(url,{...opts,onRateLimit});
-    if(generation!==_analysisGen)return 0;
     const match=j.data?.[0];
-    const started=match?Date.parse(match.metadata?.started_at):null;
-    if(match&&!Number.isFinite(started))return 0; // scan from newest if dates cannot be trusted
-    if(match&&started>=nextActStart)lo=mid+1;
-    else hi=mid;
+    if(!match)return{offset,older:true,time:null};
+    const time=Date.parse(match.metadata?.started_at);
+    return{offset,older:Number.isFinite(time)?time<nextActStart:null,time};
+  };
+  const guess=async()=>{
+    if(guesses>=ACT_START_GUESSES)return null;
+    if(guesses===0&&Number.isFinite(hints.estimate)&&hints.estimate>=0)return Math.round(hints.estimate);
+    if(!timeline||!await timeline.reach(nextActStart))return null;
+    // From the newer side: offsets L.. up to the act's start hold the live
+    // matches between the boundary and the match at L-1 (none probed yet:
+    // everything after the boundary).
+    const fromNewer=timeline.count(nextActStart,newerTime);
+    const options=[[fromNewer,L+fromNewer]];
+    // From the older side, when the stored rows reach back that far.
+    if(hiBound&&olderTime!=null&&timeline.covers(olderTime+1)){
+      const fromOlder=timeline.count(olderTime,nextActStart,true);
+      options.push([fromOlder,H-fromOlder]);
+    }
+    options.sort((a,b)=>a[0]-b[0]); // the shorter extrapolation
+    return options[0][1];
+  };
+  while(L<H){
+    if(generation!==_analysisGen)return 0;
+    setStatus('Finding this act’s matches…',true);
+    let offsets;
+    const guessed=await guess();
+    if(generation!==_analysisGen)return 0;
+    if(guessed!=null){
+      guesses++;
+      const e=Math.min(H,Math.max(L,guessed));
+      offsets=[e-1,e].filter(x=>x>=L&&x<H);
+    }else if(!hiBound){
+      offsets=[Math.min(H-1,L+step-1)];step*=2; // gallop until a probe lands past the act
+    }else offsets=[Math.floor((L+H)/2)];
+    const results=await Promise.all(offsets.map(probe));
+    if(generation!==_analysisGen)return 0;
+    for(const result of results){
+      if(result.older===null)return 0; // scan from newest if dates cannot be trusted
+      if(!result.older&&result.offset+1>L){L=result.offset+1;newerTime=result.time;}
+      if(result.older&&result.offset<H){H=result.offset;hiBound=true;olderTime=result.time;}
+    }
+    if(L>H)L=H; // out-of-order dates: settle on the earlier offset
   }
-  return Math.max(0,lo-BATCH); // overlap one page at the act boundary
+  return Math.max(0,L-BATCH); // overlap one page at the act boundary
 }
 
 // Henrik's stored-matches endpoint is a compact archive, not a v4 match
@@ -2727,7 +2820,8 @@ async function recoverStoredSeasonMatches(collected,alreadySaved,myGen,onRateLim
   return complete;
 }
 // The selected act's rows from Henrik's stored-matches index, as
-// {rows:[{id,region}], complete}, or null once superseded. It needs nothing
+// {rows:[{id,region}], complete}, or null once superseded. Every page's
+// start times also go to `opts.timeline` (createStoredTimeline). It needs nothing
 // the archive or live history return, so loadAll starts it as soon as the
 // act and scan are known (23 Nov 2026) instead of after both finish; the
 // scan's evidence pages are keyed by page number, so the order is free.
@@ -2748,7 +2842,8 @@ async function readStoredSeasonIndex(myGen,onRateLimit,opts={}){
     if(myGen!==_analysisGen)return null;
     if(!Array.isArray(payload?.data))break;
     const pageRows=payload.data;
-    if(!pageRows.length){complete=true;break;}
+    if(!pageRows.length){opts.timeline?.add([],true);complete=true;break;}
+    opts.timeline?.add(pageRows,payload?.results?.after===0);
     if(pageRows.some(row=>row?.meta?.season?.id?.toLowerCase()===wanted))storedSawTarget=true;
     pageRows.forEach(row=>{
       const id=row?.meta?.id;
@@ -2771,7 +2866,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
   const myGen=++_analysisGen; // supersede any in-flight analysis
   _analysisController?.abort();
   _analysisController=new AbortController();
-  const requestOpts={signal:_analysisController.signal,pool:createRequestPool(2)};
+  const requestOpts={signal:_analysisController.signal,pool:createRequestPool(6)}; // rank, RR, names, live pages and the stored index
   loadSeasonDates(); // fire off act-start dates now; awaited before we filter matches
   setProgress(null); // the match API supplies no reliable total
   const rawMatches=new Map(),processedMatches=new Map();
@@ -2884,6 +2979,46 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       archivePromise=startArchive(previewActId);
     }
 
+    // Live history pages, keyed by URL so the scan below reuses any page
+    // requested early. A page's error is handled when the scan reads it.
+    const livePages=new Map();
+    const liveHistoryUrl=(scan,serverArchive,offset)=>scan
+      ?`${API_BASE}/history-by-puuid/${REGION}/${PLATFORM}/${encodeURIComponent(PUUID)}?start=${offset}&scan=${encodeURIComponent(scan.scanId)}`
+      :`${API_BASE}/history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}?mode=competitive&size=${BATCH}&start=${offset}${serverArchive?`&puuid=${encodeURIComponent(PUUID)}`:''}`;
+    const requestLivePage=url=>{
+      if(!livePages.has(url)){
+        const request=fetchWithRetry(url,{...requestOpts,onRateLimit});
+        request.catch(()=>{});
+        livePages.set(url,request);
+      }
+      return livePages.get(url);
+    };
+    // A current-act search starts its live scan beside the rank request
+    // (24 Nov 2026); it used to wait about 3 s for rank, act dates and the
+    // coverage ledger before its first page. It starts only when the act is
+    // certain: chosen in the route, or the newest act with saved matches,
+    // which the act picker then selects. So it never spends a request on an
+    // act the search will not read. Otherwise the scan starts as before.
+    const earlyScan=(async()=>{
+      if(!PUUID)return null;
+      await loadSeasonDates();
+      const actId=currentActId();
+      if(!actId||myGen!==_analysisGen)return null;
+      if(TARGET_SEASON){
+        if(TARGET_SEASON.toLowerCase()!==actId)return null;
+      }else{
+        const counts=await savedCountsPromise;
+        if(myGen!==_analysisGen||TARGET_SEASON&&TARGET_SEASON.toLowerCase()!==actId)return null;
+        if(!(Number(counts[actId])>0))return null;
+      }
+      const scan=await beginServerActScan(PUUID,actId,requestOpts);
+      if(!scan||myGen!==_analysisGen)return null;
+      // The pages the scan's first step requests (see the loop below).
+      const pages=1+(scan.coverage?LIVE_PAGES_AHEAD_VERIFIED:LIVE_PAGES_AHEAD);
+      for(let k=0;k<pages;k++)requestLivePage(liveHistoryUrl(scan,true,k*BATCH));
+      return{actId,scan};
+    })().catch(()=>null);
+
     // Per-match RR gained/lost, keyed by match_id so processMatch
     // can attach it below. The proxy persists this server-side (see
     // mergeRRHistory), so it can cover more than upstream's live ~20-game
@@ -2956,6 +3091,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     let start=0;
     let finalCurrent=null;
     let useServerArchive=false;
+    let mmrSeasonStats=null; // MMR games per act, a guess for findHistoryStartForAct
     const revealHeader=()=>{
       if(myGen!==_analysisGen||!headerRevealPending)return;
       headerRevealPending=false;
@@ -2986,6 +3122,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
         if(!id)return;
         seasonStats[id]={games:s.games||0,short:s.season?.short||null};
       });
+      mmrSeasonStats=seasonStats;
 
       // Repopulate dropdown: only acts the player has played
       if(Object.keys(seasonStats).length||Object.keys(savedCounts).length){
@@ -3038,23 +3175,32 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       archivePromise=startArchive(TARGET_SEASON);
     }
     if(PUUID&&TARGET_SEASON){
-      serverScan=await beginServerActScan(PUUID,TARGET_SEASON,requestOpts);
+      const early=await earlyScan;
+      serverScan=early?.actId===TARGET_SEASON.toLowerCase()
+        ?early.scan:await beginServerActScan(PUUID,TARGET_SEASON,requestOpts);
       if(myGen!==_analysisGen)return;
       verifiedScan=serverScan?.coverage||null;
     }
     // The stored-matches index loads beside the archive and live history;
     // recovery below waits for it only once both of those are done.
     let storedIndex=null;
+    const storedTimeline=createStoredTimeline();
     if(PUUID&&TARGET_SEASON){
-      storedIndex=readStoredSeasonIndex(myGen,onRateLimit,{...requestOpts,scanId:serverScan?.scanId});
-      storedIndex.catch(()=>{});
-    }
+      storedIndex=readStoredSeasonIndex(myGen,onRateLimit,{...requestOpts,scanId:serverScan?.scanId,timeline:storedTimeline});
+      storedIndex.catch(()=>{}).finally(()=>storedTimeline.close());
+    }else storedTimeline.close();
     const targetActStart=getActInfoByUuid(TARGET_SEASON)?.start??null;
     if(TARGET_SEASON&&TARGET_SEASON.toLowerCase()!==liveCurrentActId&&targetActStart!=null){
       const actMeta=_actMeta&&Object.keys(_actMeta).length?_actMeta:HARDCODED_ACT_META;
       const nextActStart=Math.min(...Object.values(actMeta).map(info=>info?.start)
         .filter(value=>Number.isFinite(value)&&value>targetActStart));
-      try{start=await findHistoryStartForAct(nextActStart,myGen,onRateLimit,requestOpts);}catch(_){start=0;}
+      // The MMR games of every later act guess the act's start offset.
+      let estimate=null;
+      if(mmrSeasonStats)estimate=Object.entries(mmrSeasonStats).reduce((sum,[id,stats])=>{
+        const actStart=getActInfoByUuid(id)?.start;
+        return Number.isFinite(actStart)&&actStart>=nextActStart?sum+(Number(stats.games)||0):sum;
+      },0);
+      try{start=await findHistoryStartForAct(nextActStart,myGen,onRateLimit,requestOpts,{estimate,storedTimeline});}catch(_){start=0;}
       if(myGen!==_analysisGen)return;
     }
     if(liveCurrentActId){
@@ -3074,18 +3220,29 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     let liveHistoryError=null;
     let scanStoppedEarly=false;
     let knownPageStreak=0;
+    // Live pages are requested ahead of the one being read (24 Nov 2026):
+    // in production each 10-match page took 4-6 s upstream, and the pages
+    // were fetched one at a time. Pages are still read strictly in order.
+    // Look-ahead pauses once a page suggests the next one ends the scan (a
+    // short page, a page reaching another act, or a page already covered),
+    // so the usual stops cost no extra upstream call.
+    const requestPage=offset=>requestLivePage(liveHistoryUrl(serverScan,useServerArchive,offset));
+    let lookAhead=true;
     while(true){
       if(start>=MAX_HISTORY_OFFSET||++guardPages>MAX_PAGES){scanStoppedEarly=true;break;}
       setStatus(allMatches.length
         ?`Showing ${allMatches.length} matches, checking the rest of this act…`
         :'Checking competitive match history…',true);
 
-      const url=serverScan
-        ?`${API_BASE}/history-by-puuid/${REGION}/${PLATFORM}/${encodeURIComponent(PUUID)}?start=${start}&scan=${encodeURIComponent(serverScan.scanId)}`
-        :`${API_BASE}/history/${REGION}/${PLATFORM}/${encodeURIComponent(PLAYER)}/${TAG}?mode=competitive&size=${BATCH}&start=${start}${useServerArchive?`&puuid=${encodeURIComponent(PUUID)}`:''}`;
+      const page=requestPage(start);
+      // Verified coverage usually ends after two pages, so it looks one page
+      // ahead; a full scan reads the whole act and looks two ahead.
+      const ahead=lookAhead?(verifiedScan?LIVE_PAGES_AHEAD_VERIFIED:LIVE_PAGES_AHEAD):0;
+      for(let k=1;k<=ahead&&start+k*BATCH<MAX_HISTORY_OFFSET;k++)requestPage(start+k*BATCH);
       let j;
       try{
-        ({j}=await fetchWithRetry(url,{...requestOpts,onRateLimit}));
+        ({j}=await page);
+        livePages.delete(liveHistoryUrl(serverScan,useServerArchive,start));
       }catch(e){
         // Let the PUUID-keyed stored archive recover this act if live history
         // becomes unavailable, regardless of the account's current region.
@@ -3131,6 +3288,7 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       // Scrolled past the season — a full-ish page with zero matching games
       // means we've paged beyond the target act.
       if(TARGET_SEASON&&collected.length>0&&onPage.length===0)break;
+      lookAhead=data.length===BATCH&&onPage.length===data.length&&knownPageStreak===0;
 
       // Advance by the number of matches the API ACTUALLY returned (not the
       // requested size) — robust even if the API returns fewer than asked.
