@@ -354,9 +354,11 @@ All hand-built charts follow one system, checked against the dataviz method:
   rank after ("Rad 666 RR"); result, duo, date and match number stay in the
   point's aria-label. It trails the pointer: moving right it sits left of the
   point, moving left on the right, unless that side lacks room
-  (`chartTooltipPlacement`, measured on the tooltip's own width). Keyboard
-  focus and the other charts keep the old placement (right, flipping left
-  near the right edge). The payout chart has no hover
+  (`chartTooltipPlacement`, measured on the tooltip's own width). The
+  Overview's RR line (`RecentRRCard`) got the same tooltip and placement the
+  same day; its rank line shows only when the match recorded the rank after.
+  Keyboard focus and the other charts keep the old placement (right,
+  flipping left near the right edge). The payout chart has no hover
   readout (removed on request); its curve points keep their aria-labels. The
   score-margin chart has no tooltip either (removed on request); lobby
   dot-plot rows show their own tooltip. All keep their aria-labels.

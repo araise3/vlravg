@@ -1,7 +1,7 @@
 import {useLayoutEffect,useRef,useState} from 'react';
 import {ArrowUpRight} from 'lucide-react';
 import {
-  avgLabel,avgLabelShort,clutchTotals,computeRRStats,decidedWinRate,hexToRgb,lobbyRR,MIN_RATED,overviewRecentMatches,PARTY_LABELS,
+  avgLabel,avgLabelShort,clutchTotals,rrPositionFromElo,computeRRStats,decidedWinRate,hexToRgb,lobbyRR,MIN_RATED,overviewRecentMatches,PARTY_LABELS,
   playerRouteUrl,rColor,rrSigned,tierRR,winRateLabel,winRateTone,
 } from '@/engine/core.mjs';
 import {useElementWidth,useEngine,useIsMobile} from '@/app/hooks.js';
@@ -228,12 +228,14 @@ export function ActStatsCard({s}){
 // The recent window as a cumulative RR line, one dot per match coloured by
 // result, then the per-win/per-loss averages and the RR gained and lost. The
 // RR page keeps the full rank-axis chart and the longer ranges.
-const RESULT_LABEL={win:'Win',loss:'Loss',draw:'Draw'};
 const resultOf=m=>m.won===true?'win':m.won===false?'loss':'draw';
 
 export function RecentRRCard({matches}){
   const [ref,measured]=useElementWidth();
   const [active,setActive]=useState(null);
+  // Which way the pointer last moved over the line; the tooltip sits behind it.
+  const [heading,setHeading]=useState(null);
+  const lastPointerX=useRef(null);
   const ordered=matches.filter(m=>Number.isFinite(m.myRR)).sort((a,b)=>(a.startedAtMs||0)-(b.startedAtMs||0));
   const rr=computeRRStats(matches);
   const gained=ordered.reduce((sum,m)=>sum+Math.max(0,m.myRR),0);
@@ -249,13 +251,19 @@ export function RecentRRCard({matches}){
   const x=i=>left+i*spacing;
   const y=value=>bottom-(value-low)/span*(bottom-top);
   const line=points.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
+  // The tooltip trails the pointer like the RR page's trend (24 Nov 2026):
+  // moving right it sits left of the point, moving left on the right.
   const pointerMove=event=>{
+    const dx=lastPointerX.current==null?0:event.clientX-lastPointerX.current;
+    lastPointerX.current=event.clientX;
+    if(dx)setHeading(dx>0?'right':'left');
     const bounds=event.currentTarget.getBoundingClientRect();
     const plotX=(event.clientX-bounds.left)*width/bounds.width;
     setActive(Math.max(1,Math.min(points.length-1,Math.round((plotX-left)/spacing))));
   };
   const tip=active!=null?points[active]?.match&&points[active]:null;
-  const date=m=>Number.isFinite(m.startedAtMs)?new Date(m.startedAtMs).toLocaleDateString(undefined,{month:'short',day:'numeric'}):null;
+  const tipRank=tip&&Number.isFinite(tip.match.myPostRR)?rrPositionFromElo(tip.match.myPostRR,tip.match.myPostTierId):null;
+  const tipScore=tip?[tip.match.mapName,Number.isInteger(tip.match.myR)&&Number.isInteger(tip.match.opR)?`${tip.match.myR}–${tip.match.opR}`:null].filter(Boolean).join(', '):'';
   const figures=[
     ['Avg gain',rr.avgGain==null?'—':rrSigned(rr.avgGain,1),rr.avgGain!=null&&'text-positive',`${rr.wins} ${rr.wins===1?'win':'wins'}`],
     ['Avg loss',rr.avgLoss==null?'—':rrSigned(-rr.avgLoss,1),rr.avgLoss!=null&&'text-negative',`${rr.losses} ${rr.losses===1?'loss':'losses'}`],
@@ -277,7 +285,7 @@ export function RecentRRCard({matches}){
           ?<div ref={ref} className="relative" data-slot="recent-rr-line">
             <svg className="chart-svg rr-trend-svg block w-full" width={width} height={height} viewBox={`0 0 ${width} ${height}`}
               role="img" aria-label={`Cumulative RR across ${ordered.length} matches, net ${rrSigned(net,0)} RR`}
-              onPointerMove={pointerMove} onPointerDown={pointerMove} onPointerLeave={()=>setActive(null)} style={{touchAction:'pan-y'}}>
+              onPointerMove={pointerMove} onPointerDown={pointerMove} onPointerLeave={()=>{setActive(null);lastPointerX.current=null;}} style={{touchAction:'pan-y'}}>
               <defs>
                 <linearGradient id="recent-rr-fill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0" stopColor="var(--series-1)" stopOpacity=".2"/>
@@ -292,11 +300,12 @@ export function RecentRRCard({matches}){
               ))}
             </svg>
             {tip&&(
-              <ChartTooltip x={x(active)} y={Math.max(0,y(tip.value)-40)} width={width}>
-                <div className="tt-value">{rrSigned(tip.match.myRR,0)} RR</div>
-                <div className="tt-row"><span className="tt-key" style={{background:`var(--chart-${resultOf(tip.match)})`}}/>
-                  {RESULT_LABEL[resultOf(tip.match)]}{tip.match.mapName?` on ${tip.match.mapName}`:''}{Number.isInteger(tip.match.myR)&&Number.isInteger(tip.match.opR)?`, ${tip.match.myR}–${tip.match.opR}`:''}</div>
-                <div className="tt-muted">{rrSigned(tip.value,0)} RR so far, match {active} of {ordered.length}{date(tip.match)?`, ${date(tip.match)}`:''}</div>
+              // The RR page's minimal tooltip (24 Nov 2026, on request): the
+              // change with map and score, then the rank after when recorded.
+              <ChartTooltip x={x(active)} y={Math.max(0,y(tip.value)-30)} width={width} side={heading==='right'?'left':heading==='left'?'right':undefined} className="tt-compact">
+                <div className="tt-row"><span className={cn('tt-value',toneClass(tip.match.myRR,0))}>{rrSigned(tip.match.myRR,0)}</span>
+                  {tipScore&&<span className="tt-muted">{tipScore}</span>}</div>
+                {tipRank&&<div className="tt-row"><RankIcon tier={tipRank.tier} size={14}/>{avgLabelShort(tipRank.tier)} {tipRank.rr} RR</div>}
               </ChartTooltip>
             )}
           </div>

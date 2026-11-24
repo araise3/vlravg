@@ -205,3 +205,15 @@ test('cards whose title says it all carry no description line',async()=>{
   assert.match(duos,/<CardDescription>Repeated opponents with unusually low combat stats/);
   assert.match(overview,/<CardDescription>\{win\} won of \{total\} opportunities[{<]/);
 });
+
+test('the overview RR line uses the RR page tooltip: two short lines that trail the pointer',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const source=readFileSync(new URL('../src/app/pages/Overview.jsx',import.meta.url),'utf8');
+  const card=source.slice(source.indexOf('export function RecentRRCard'),source.indexOf('function useRowsThatFit'));
+  const tooltip=card.slice(card.indexOf('<ChartTooltip'),card.indexOf('</ChartTooltip>'));
+  assert.match(tooltip,/side=\{heading==='right'\?'left':heading==='left'\?'right':undefined\} className="tt-compact"/);
+  assert.equal((tooltip.match(/className="tt-row"/g)||[]).length,2);
+  assert.match(tooltip,/\{avgLabelShort\(tipRank\.tier\)\} \{tipRank\.rr\} RR<\/div>/);
+  for(const gone of [/so far/,/tt-key/,/RESULT_LABEL/,/match \{active\} of/])assert.doesNotMatch(tooltip,gone);
+  assert.match(card,/if\(dx\)setHeading\(dx>0\?'right':'left'\)/);
+});
