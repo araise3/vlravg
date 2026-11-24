@@ -90,6 +90,11 @@ node scripts/build-pro-player-library.mjs [vct-2026-data-analysis] [rostermania]
   server's VCT region (s0m Americas; xccurate, SkRossi and Karon Pacific;
   the rest EMEA). Only Karon is on a partnered roster; the rest are listed
   under "Other players".
+- **spikeziN (24 Nov 2026).** The user confirmed `articuno#ayra` as
+  spikeziN. Its PUUID was already listed under the handle "spike", without a
+  team, because rostermania spells him spikeziN. Renamed to spikeziN; the
+  rebuild matched him to Leviatán's roster (113 partnered players listed;
+  263 expected listed, 126 missing). The account's region is AP.
 - Partner team logos are rostermania's team icons, shrunk to 48px in
   `assets/teams/<code>.png`.
 

@@ -5,11 +5,11 @@
   "playerCount": 411,
   "accountCount": 416,
   "resolvedPuuidCount": 416,
-  "partnerPlayerCount": 112,
+  "partnerPlayerCount": 113,
   "expectedPlayerCount": 389,
   "expectedPartnerPlayerCount": 153,
-  "expectedListedCount": 262,
-  "expectedMissingCount": 127,
+  "expectedListedCount": 263,
+  "expectedMissingCount": 126,
   "players": [
     {
       "handle": "77even",
@@ -4369,12 +4369,12 @@
       ]
     },
     {
-      "handle": "spike",
-      "team": null,
-      "teamCode": null,
+      "handle": "spikeziN",
+      "team": "Leviatán",
+      "teamCode": "LEV",
       "region": "Americas",
       "baseRegion": "Americas",
-      "countryCode": "br",
+      "countryCode": "BR",
       "accounts": [
         {
           "puuid": "6cb5f959-0729-5e88-87a8-c27144902186"
