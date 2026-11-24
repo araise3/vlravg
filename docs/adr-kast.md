@@ -17,6 +17,11 @@ the KAST rules were then adjusted until they reproduced tracker.gg.
   just below the half), 170.955 → 170.95 → 170.9, and 146.545 → 146.55 → 146.6. With it,
   all 740 rows checked (71 November and 3 October matches) match exactly; on the first 360
   rows, a single rounding to 1 decimal misses 3.
+- **Act average (`profileFixed1`):** total enemy damage ÷ total rounds, rounded straight to 1
+  decimal. Tracker's profile API stores this unrounded (`damagePerRound` 146.04781… for
+  Top1Gunz, shown "146.0"), so the two-step rounding used per match would show 146.1 there.
+  The overview KAST goes the other way: tracker stores it to 2 decimals (67.95, 71.06) and shows
+  that to 1, so it uses `trackerFixed1`. See "ADR on whole acts".
 - The raw total misses tracker on 16 of the 100 November rows. Example: Agent X on match
   `0fe28182` was 165.5 from the raw total, is 160.7 now, and tracker shows 160.7.
 - Over 199 archived Sxllow matches, the act average went from 139.1 to 138.8.
@@ -402,6 +407,27 @@ before tracker's per-match values were compared, inside the page:
 | dmadoj (SHA-256 `6fcccd79…`) | 238 | 92 | 0 | **238/238** | 72.1% (3653/5068) | 72.1%* |
 
 \* Read on a second visit, after tracker's "Human Check" captcha had blocked the first.
+
+### ADR on whole acts
+
+The same four accounts, with the code as committed in `c275c8e`. Every match's enemy damage
+and round count (team rounds won, which leaves out surrender rounds) was computed and hashed
+(SHA-256 `b1b5269f…`), then compared with the `damage` and `roundsPlayed` in tracker's match
+lists, and the act average with tracker's profile:
+
+| Account | Matches | Damage and rounds equal | Act ADR | Tracker profile |
+| --- | --- | --- | --- | --- |
+| THE MyXoN | 211 | **211/211** | 143.5 | 143.5 |
+| kabzi | 319 | **319/319** | 145.5 | 145.5 |
+| Top1Gunz | 396 | **396/396** | 146.1 → **146.0** | 146.0 (397) |
+| dmadoj | 238 | **238/238** | 154.4 | 154.4 |
+
+Every match equals tracker exactly in total damage, not just in ADR to a decimal. Top1Gunz had
+played one more match by then (1,940 damage, 18 rounds; tracker's list). With it, the totals
+are 1,240,092 over 8,491 rounds, the same figures tracker's profile API returns, and 146.04781…
+rounds to 146.0 directly but to 146.1 through 146.05. The overview's ADR rounding changed to
+match (`profileFixed1`). These ADR results aren't pinned in full (the act fixtures carry no
+damage events); the rounding is tested with Top1Gunz's totals.
 
 Across the four accounts, 1,164 act matches were compared: 1,162 matched as first scored, and
 the 2 that didn't led to the assist rule. These two accounts aren't pinned as fixtures (no rule

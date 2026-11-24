@@ -192,6 +192,18 @@ test("overview KAST shows one decimal, as tracker's profile does",()=>{
   assert.equal(stats.kast,'71.2%');
 });
 
+test("act ADR and KAST round the way tracker's profile does",()=>{
+  // Top1Gunz#oren, A6 on 23 Nov 2026: 1,240,092 damage over 8,491 rounds.
+  // Tracker's profile API: damagePerRound 146.04781…, shown "146.0"; going
+  // through 2 decimals first (146.05) would show 146.1.
+  const adr=overviewStatValues([{myStats:{adr:146,dmg:1240092,rounds_played:8491,kastRounds:null,kastTotalRounds:null}}]).adr;
+  assert.equal(adr,'146.0');
+  // Its season KAST is stored to 2 decimals (67.95, 71.06) and shown from
+  // that: 67.946% is stored as 67.95 and shown as 68.0, not 67.9.
+  const kast=overviewStatValues([{myStats:{adr:1,dmg:1,rounds_played:1,kastRounds:67946,kastTotalRounds:100000}}]).kast;
+  assert.equal(kast,'68.0%');
+});
+
 test('before 27 Oct 2026 17:00 UTC a death is traded when the killer dies within 5 s, any way, any victim',()=>{
   const roster3=[...roster,{puuid:'mate2',team_id:'Red'}];
   const kills=[

@@ -2430,7 +2430,12 @@ function computeRoundStats(m,puuid){
 // - ADR goes to 2 decimals first, then 1: 135.952 → 135.95 → "135.9"
 //   (the double 135.95 sits just below the half).
 // - A KAST percentage exactly on .5 rounds to even: 15/24 = 62.5% → 62.
+// - Act figures (tracker's profile, 23 Nov 2026): its season KAST is stored
+//   to 2 decimals (67.95, 71.06) and shown to 1, so trackerFixed1; its
+//   damage per round is stored unrounded (146.04781…) and shown to 1
+//   directly ("146.0"), so profileFixed1.
 function trackerFixed1(v){return(Math.round(v*100)/100).toFixed(1);}
+function profileFixed1(v){return(Math.round(v*10)/10).toFixed(1);}
 function roundHalfEven(v){
   const f=Math.floor(v);
   return Math.abs(v-f-0.5)<1e-9?(f%2===0?f:f+1):Math.round(v);
@@ -3250,7 +3255,7 @@ function overviewStatValues(statsPanelMatches){
   const adrGames=statsPanelMatches.filter(m=>m.myStats?.adr!=null&&m.myStats?.rounds_played>0);
   const totalDmg=adrGames.reduce((a,m)=>a+m.myStats.dmg,0);
   const totalAdrRounds=adrGames.reduce((a,m)=>a+m.myStats.rounds_played,0);
-  const avgAdr=totalAdrRounds>0?trackerFixed1(totalDmg/totalAdrRounds):null;
+  const avgAdr=totalAdrRounds>0?profileFixed1(totalDmg/totalAdrRounds):null;
 
   // KAST — KAST rounds ÷ rounds over matches that carry round data, to one
   // decimal like tracker's profile overview (per-match KAST stays whole).
@@ -3264,7 +3269,7 @@ function overviewStatValues(statsPanelMatches){
     performance:avgPerformance==null?'—':avgPerformance.toFixed(1),
     performanceTitle:`Avg PS; ${performanceGames.length} of ${statsPanelMatches.length} matches have data`,
     adr:avgAdr!=null?avgAdr:'—',
-    kast:totalKastDenom>0?`${(totalKastRounds/totalKastDenom*100).toFixed(1)}%`:'—',
+    kast:totalKastDenom>0?`${trackerFixed1(totalKastRounds/totalKastDenom*100)}%`:'—',
     kastTitle:`Share of rounds with a kill, an assist, survived, or traded (killer died to a teammate within 3 s; before 27 Oct 2026, died at all within 5 s, as tracker.gg counted then); ${kastGames.length} of ${statsPanelMatches.length} matches have round data`,
   };
 }
