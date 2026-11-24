@@ -357,6 +357,9 @@ All hand-built charts follow one system, checked against the dataviz method:
   (`chartTooltipPlacement`, measured on the tooltip's own width). The
   Overview's RR line (`RecentRRCard`) got the same tooltip and placement the
   same day; its rank line shows only when the match recorded the rank after.
+  So did RR by session (`RRSessionChart`): the net with games and record
+  ("+30  5 games, 4–1"), then the rank after; the date and times stay in the
+  bar's aria-label.
   Keyboard focus and the other charts keep the old placement (right,
   flipping left near the right edge). The payout chart has no hover
   readout (removed on request); its curve points keep their aria-labels. The

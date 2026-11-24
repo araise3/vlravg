@@ -112,3 +112,16 @@ test('the RR trend tooltip is two short lines: change with map and score, then t
   assert.match(tooltip,/\{avgLabelShort\(tip\.rank\.tier\)\} \{tip\.rank\.rr\} RR<\/div>/);
   for(const gone of [/RR after/,/Match \{active\+1\}/,/tip\.duo/,/tt-key/])assert.doesNotMatch(tooltip,gone);
 });
+
+test('the RR by session tooltip matches the trend: two short lines that trail the pointer',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const source=readFileSync(new URL('../src/app/pages/RR.jsx',import.meta.url),'utf8');
+  const chart=source.slice(source.indexOf('export function RRSessionChart'),source.indexOf('// The session chart\'s card'));
+  const tooltip=chart.slice(chart.indexOf('<ChartTooltip'),chart.indexOf('</ChartTooltip>'));
+  assert.match(tooltip,/side=\{heading==='right'\?'left':heading==='left'\?'right':undefined\} className="tt-compact"/);
+  assert.equal((tooltip.match(/className="tt-row"/g)||[]).length,2);
+  assert.match(tooltip,/\{plural\(tip\.games,'game','games'\)\}, \{record\(tip\)\}/);
+  assert.match(tooltip,/\{avgLabelShort\(tipRank\.tier\)\} \{tipRank\.rr\} RR<\/div>/);
+  for(const gone of [/RR after/,/timeLabel/,/dateLabel/])assert.doesNotMatch(tooltip,gone);
+  assert.match(chart,/if\(dx\)setHeading\(dx>0\?'right':'left'\)/);
+});

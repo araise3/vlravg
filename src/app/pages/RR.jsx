@@ -307,6 +307,9 @@ export function rrSessionLabelStep(count,slot,minGap){
 export function RRSessionChart({matches}){
   const [ref,measured]=useElementWidth();
   const [active,setActive]=useState(null);
+  // Which way the pointer last moved over the bars; the tooltip sits behind it.
+  const [heading,setHeading]=useState(null);
+  const lastPointerX=useRef(null);
   const compact=useIsMobile();
   const rows=rrSessionRows(matches);
   if(!rows.length)return <div ref={ref} className="py-10 text-center text-sm text-muted-foreground">No recorded RR changes in this range.</div>;
@@ -339,7 +342,12 @@ export function RRSessionChart({matches}){
   const total=nets.reduce((a,b)=>a+b,0),average=total/rows.length;
   const best=rows.reduce((a,b)=>b.net>a.net?b:a),worst=rows.reduce((a,b)=>b.net<a.net?b:a);
   const winning=rows.filter(r=>r.net>0).length;
+  // The tooltip trails the pointer like the RR trend's (24 Nov 2026): moving
+  // right it sits left of the bar, moving left on the right.
   const pointerMove=event=>{
+    const dx=lastPointerX.current==null?0:event.clientX-lastPointerX.current;
+    lastPointerX.current=event.clientX;
+    if(dx)setHeading(dx>0?'right':'left');
     const bounds=event.currentTarget.getBoundingClientRect();
     const plotX=(event.clientX-bounds.left)*width/bounds.width;
     if(plotX<left||plotX>width-right){setActive(null);return;}
@@ -364,7 +372,7 @@ export function RRSessionChart({matches}){
         <div ref={ref} className="relative" role="region" aria-label="Net RR by session" tabIndex={0}>
           <svg className={cn('chart-svg rr-session-svg',tip&&'has-active')} width={width} height={height} viewBox={`0 0 ${width} ${height}`}
             aria-label={`Net RR for ${plural(rows.length,'play session','play sessions')}: ${winning} with a net gain, average ${rrSigned(average,1)} RR per session`}
-            onPointerMove={pointerMove} onPointerDown={pointerMove} onPointerLeave={()=>setActive(null)} style={{touchAction:'pan-y'}}>
+            onPointerMove={pointerMove} onPointerDown={pointerMove} onPointerLeave={()=>{setActive(null);lastPointerX.current=null;}} style={{touchAction:'pan-y'}}>
             {yTicks.map(value=>(
               <g key={value} aria-hidden="true">
                 <line className={value===0?'zero':'grid'} x1={left} y1={y(value)} x2={width-right} y2={y(value)}/>
@@ -375,7 +383,7 @@ export function RRSessionChart({matches}){
               const y0=y(0),y1=y(r.net),barTop=Math.min(y0,y1),barHeight=Math.max(2,Math.abs(y1-y0));
               const labelY=r.net>=0?barTop-6:barTop+barHeight+13;
               return (
-                <g key={r.startMs} tabIndex={0} role="img" aria-label={describe(r)} onFocus={()=>setActive(i)} onBlur={()=>setActive(null)}>
+                <g key={r.startMs} tabIndex={0} role="img" aria-label={describe(r)} onFocus={()=>{setHeading(null);setActive(i);}} onBlur={()=>setActive(null)}>
                   <rect x={cx(i)-slot/2} y={top} width={slot} height={bottom-top} fill="transparent"/>
                   <rect className={cn('bar',kind(r.net),i===active&&'active')} x={cx(i)-barWidth/2} y={r.net===0?y0-1:barTop} width={barWidth} height={barHeight}
                     rx={Math.min(3,barWidth/3)}/>
@@ -389,11 +397,13 @@ export function RRSessionChart({matches}){
             ))}
           </svg>
           {tip&&(
-            <ChartTooltip x={cx(active)} y={Math.max(0,Math.min(y(0),y(tip.net))-40)} width={width}>
-              <div className={cn('tt-value',toneClass(tip.net,0))}>{rrSigned(tip.net,0)} RR</div>
-              <div className="tt-row">{plural(tip.games,'game','games')}, {record(tip)}</div>
-              {tipRank&&<div className="tt-row"><RankIcon tier={tipRank.tier} size={14}/>{avgLabel(tipRank.tier)}, {tipRank.rr} RR after</div>}
-              <div className="tt-muted">{dateLabel(tip.startMs)}, {timeLabel(tip.startMs)}–{timeLabel(tip.endMs)}</div>
+            // The RR trend's minimal tooltip (24 Nov 2026, on request): the net
+            // with games and record, then the rank after. Date and times stay
+            // in the bar's aria-label; the axis shows the date.
+            <ChartTooltip x={cx(active)} y={Math.max(0,Math.min(y(0),y(tip.net))-30)} width={width} side={heading==='right'?'left':heading==='left'?'right':undefined} className="tt-compact">
+              <div className="tt-row"><span className={cn('tt-value',toneClass(tip.net,0))}>{rrSigned(tip.net,0)}</span>
+                <span className="tt-muted">{plural(tip.games,'game','games')}, {record(tip)}</span></div>
+              {tipRank&&<div className="tt-row"><RankIcon tier={tipRank.tier} size={14}/>{avgLabelShort(tipRank.tier)} {tipRank.rr} RR</div>}
             </ChartTooltip>
           )}
         </div>
