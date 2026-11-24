@@ -398,8 +398,9 @@ All hand-built charts follow one system, checked against the dataviz method:
   with a `Spinner` + `Progress` status line. The account's current rank,
   region and the Tracker.gg link slide into the right end of the input as
   three separate pills (`PILL`: bordered, `rounded-md` like the other
-  controls; 28px tall with 13px text, a 16px rank icon and a 14px Tracker.gg
-  logo since 24 Nov 2026, up from 24px/12px on request), replacing the shortcut hint: 16px from the right with a fade,
+  controls; 24px tall with 12px text, a 14px rank icon and a 12px Tracker.gg
+  logo. A 28px/13px size was tried on 24 Nov 2026 and reverted on request; its
+  dark-mode border match stayed), replacing the shortcut hint: 16px from the right with a fade,
   90ms apart, off under reduced motion. Phones replace this card with the app
   bar described in [mobile-layout.md](mobile-layout.md); the phone landing page
   keeps the full form, its "Pro players" button opening the search sheet.
