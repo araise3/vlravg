@@ -4,7 +4,8 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {acquireWorkflowPermit,observeWorkflowQuota,WORKFLOW_SPACING_MS,
   acquirePublicPermit,observePublicQuota,PUBLIC_UNKNOWN_SPACING_MS,
-  acquireBorrowedPublicPermit,PUBLIC_BORROW_RESERVE,acquireProfilePermit,PUBLIC_PROFILE_RESERVE} from '../lib/upstream-pacing.mjs';
+  acquireBorrowedPublicPermit,PUBLIC_BORROW_RESERVE,acquireProfilePermit,PUBLIC_PROFILE_RESERVE,
+  PRIORITY_CLAIM_MARGIN_MS} from '../lib/upstream-pacing.mjs';
 
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function database(t){
@@ -189,4 +190,54 @@ test('account lookups keep a reserve of every known window that other public cal
 test('an unknown window enforces no reserve, so the first call can learn the quota',async t=>{
   const {db}=database(t);
   assert.equal((await acquirePublicPermit(db,{now:()=>100000})).quota.remaining,null);
+});
+
+test('a waiting account lookup takes the next public slot ahead of other waiting calls',async t=>{
+  const {db,sql}=database(t);let clock=100000;
+  sql.prepare('UPDATE rate_quota SET remaining=40,reset_at=160000').run();
+  await acquirePublicPermit(db,{now:()=>clock});
+  const slot=sql.prepare('SELECT next_start_at FROM rate_quota').get().next_start_at;
+  assert.ok(slot>clock);
+  clock=100100;
+  let wake;const profile=acquireProfilePermit(db,{now:()=>clock,sleepImpl:ms=>new Promise(resolve=>{wake=resolve;clock+=ms;})});
+  await tick();await tick();await tick();
+  assert.equal(sql.prepare('SELECT priority_until FROM rate_quota').get().priority_until,slot+PRIORITY_CLAIM_MARGIN_MS,'claims the slot it waits for');
+  // At the slot, rank, history and collector loans all stand back.
+  const now=()=>slot;
+  assert.equal((await acquirePublicPermit(db,{now,maxWaitMs:0})).retryAfterMs,PRIORITY_CLAIM_MARGIN_MS);
+  assert.equal((await acquireBorrowedPublicPermit(db,{now})).retryAfterMs,PRIORITY_CLAIM_MARGIN_MS);
+  wake();
+  const permit=await profile;
+  assert.equal(permit.startedAt,slot);
+  assert.equal(sql.prepare('SELECT priority_until FROM rate_quota').get().priority_until,0,'admission clears the claim');
+  const next=sql.prepare('SELECT next_start_at FROM rate_quota').get().next_start_at;
+  assert.ok((await acquirePublicPermit(db,{now:()=>next,maxWaitMs:0})).quota,'the following slot is open to everyone');
+});
+
+test('a claim left by a lookup that gave up holds other calls back only until it lapses',async t=>{
+  const {db,sql}=database(t);
+  sql.prepare('UPDATE rate_quota SET remaining=40,reset_at=160000,next_start_at=0,priority_until=100300').run();
+  assert.equal((await acquirePublicPermit(db,{now:()=>100000,maxWaitMs:0})).retryAfterMs,300);
+  assert.ok((await acquireProfilePermit(db,{now:()=>100000,maxWaitMs:0})).quota,'another account lookup is not held back');
+  sql.prepare('UPDATE rate_quota SET next_start_at=0,priority_until=100300').run();
+  assert.ok((await acquirePublicPermit(db,{now:()=>100300,maxWaitMs:0})).quota);
+});
+
+test('an account lookup that will not wait for its slot leaves no claim',async t=>{
+  const {db,sql}=database(t);
+  sql.prepare('UPDATE rate_quota SET remaining=40,reset_at=160000,next_start_at=109000').run();
+  assert.equal((await acquireProfilePermit(db,{now:()=>100000})).retryAfterMs,9000,'beyond the 8 s wait');
+  assert.equal(sql.prepare('SELECT priority_until FROM rate_quota').get().priority_until,0);
+  sql.prepare('UPDATE rate_quota SET remaining=0').run();
+  assert.equal((await acquireProfilePermit(db,{now:()=>100000})).retryAfterMs,60000,'nor does one refused by an empty window');
+  assert.equal(sql.prepare('SELECT priority_until FROM rate_quota').get().priority_until,0);
+});
+
+test('five-column public quota tables gain the claim column; the workflow table does not',async t=>{
+  const {db,sql}=database(t);
+  sql.exec('DROP TABLE rate_quota; CREATE TABLE rate_quota(id INTEGER PRIMARY KEY,remaining INTEGER,reset_at INTEGER,last_request_at INTEGER,next_start_at INTEGER NOT NULL DEFAULT 0); INSERT INTO rate_quota VALUES(1,0,110000,100000,0)');
+  assert.equal((await acquirePublicPermit(db,{now:()=>100000,maxWaitMs:0})).retryAfterMs,10000,'exhaustion survives the upgrade');
+  assert.equal(sql.prepare('SELECT priority_until FROM rate_quota').get().priority_until,0);
+  await acquireWorkflowPermit(db,{now:()=>100000});
+  assert.ok(!sql.prepare('PRAGMA table_info(workflow_rate_quota)').all().some(c=>c.name==='priority_until'));
 });

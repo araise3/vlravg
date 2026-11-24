@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS rate_quota (
   remaining INTEGER,
   reset_at INTEGER,
   last_request_at INTEGER,
-  next_start_at INTEGER NOT NULL DEFAULT 0
+  next_start_at INTEGER NOT NULL DEFAULT 0,
+  priority_until INTEGER NOT NULL DEFAULT 0 -- a waiting account lookup's claim on the next slot
 );
 INSERT OR IGNORE INTO rate_quota (id, remaining, reset_at, last_request_at) VALUES (1, NULL, 0, 0);
 

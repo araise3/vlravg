@@ -136,3 +136,52 @@ falls back and writes `upstream-429` and `profile-refused`; responses inside
 the reserve write `low-window` with both counts, others write nothing.
 
 Not verified against production traffic.
+
+## Live drain test and slot priority, 24 Nov 2026
+
+### What the drain showed
+
+16 parallel uncached `mmr-history-by-puuid` calls ran against the live site
+for 150 s, with account lookups probed every 4 s. Results from
+`public_quota_audit`:
+
+- The reserve held: non-account calls stopped at our count 7 (header 6);
+  only account lookups took both windows down to 0.
+- HenrikDev's header matched our count within one throughout. No upstream
+  429. Our own traffic reached 0 only about 7 s before a reset, so a long
+  wait like the original 43 s points to a real upstream 429 or an early zero
+  in the headers (inference; the audit will now record either).
+- Seven account lookups were answered from saved identities, two of them
+  with our count at 0.
+- Most refused account lookups had 13 to 41 calls left, with 1 to 3 s retry
+  waits: every waiting request polls for the next slot, and with 16 pollers
+  an account lookup could lose every round for the gate's 8 s wait. The
+  reserve kept quota for them but gave them no turn.
+
+### Slot priority
+
+`lib/upstream-pacing.mjs`, migration `0014_quota_priority_claim.sql`
+(`rate_quota.priority_until`; the gate also adds it lazily).
+
+- A search account lookup that has to wait for a slot claims it: it sets
+  `priority_until` to that slot plus `PRIORITY_CLAIM_MARGIN_MS` (500 ms),
+  keeping a longer claim made by another lookup.
+- Other public calls and collector loans take no slot while a claim is live,
+  and wait until it lapses or is cleared. Account lookups ignore claims.
+- The lookup's admission clears the claim, so the following slot is open to
+  everyone. A claim left by a lookup that gave up lapses on its own, holding
+  other calls back at most the margin.
+- A lookup that would wait beyond its 8 s, or that an empty window refuses,
+  makes no claim. The workflow pool has no claims.
+
+Priority decides the order of waiting calls only; it adds no quota. Several
+account lookups at once still share the slots among themselves, and
+non-account calls lose at most one slot plus the margin per waiting lookup.
+
+Tests (`tests/upstream-pacing.test.mjs`): a waiting lookup claims its slot,
+public calls and collector loans stand back at it, admission clears the
+claim and the next slot is open; a left-behind claim lapses; a lookup that
+will not wait, or an empty window, leaves no claim; five-column public tables
+gain the column and the workflow table does not.
+
+Not yet verified on the live site.
