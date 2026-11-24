@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { readFile } from 'node:fs/promises';
 import { createRequestScheduler } from './request-scheduler.mjs';
 import {loadActivity} from './rr-activity-query.mjs';
+import {d1Query} from './d1-query.mjs';
 import {pollingPolicy} from '../../lib/rr-activity.mjs';
 
 const DELAY_MS = 0; // Request starts are paced centrally; no extra per-player pause.
@@ -145,15 +146,12 @@ export async function backfillPlayer(player, { origin, pages=2, fetchImpl=fetch,
   return last || {ok:true,skipped:true};
 }
 
-export async function listPlayers(env) {
-  const endpoint = `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/d1/database/${env.CF_D1_DATABASE_ID}/query`;
+export async function listPlayers(env, query = d1Query) {
   const players = [];
   let cursor = '';
   for (;;) {
-    const res = await fetch(endpoint, {
-      method: 'POST', signal: AbortSignal.timeout(30000),
-      headers: { Authorization: `Bearer ${env.CF_API_TOKEN}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sql: `SELECT p.puuid,p.region,p.platform,p.name,p.tag,
+    // Through d1Query, so the read is paced by the shared D1 governor.
+    const rows = await query(env, `SELECT p.puuid,p.region,p.platform,p.name,p.tag,
         COALESCE(b.complete,0) AS matchlist_complete,
         CASE WHEN COALESCE(b.complete,0)=1 AND COALESCE(b.stored_complete,0)=1
           AND COALESCE(b.stored_pending,'[]')='[]' THEN 1 ELSE 0 END AS backfill_complete,
@@ -162,11 +160,7 @@ export async function listPlayers(env) {
         CASE WHEN COALESCE(b.stored_pending,'[]')='[]' THEN 0 ELSE 1 END AS stored_pending_count,
         b.updated_at AS backfill_updated_at FROM rr_players p LEFT JOIN player_name_backfill b
         ON b.puuid=p.puuid AND b.region=p.region AND b.platform=p.platform
-        WHERE p.puuid>?1 ORDER BY p.puuid LIMIT 500`, params: [cursor] }),
-    });
-    const body = await res.json();
-    if (!res.ok || !body.success || !body.result?.[0]?.success) throw new Error(`D1 player query failed (${res.status})`);
-    const rows = body.result[0].results || [];
+        WHERE p.puuid>?1 ORDER BY p.puuid LIMIT 500`, [cursor]);
     players.push(...rows);
     if (rows.length < 500) return players;
     cursor = rows.at(-1).puuid;

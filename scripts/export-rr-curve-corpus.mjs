@@ -2,20 +2,20 @@
 // Uses the configured environment token without printing or saving it.
 import {mkdir,writeFile,readFile} from 'node:fs/promises';
 import {gunzipSync} from 'node:zlib';
-const base='https://api.cloudflare.com/client/v4/accounts/93c06b602c99e1f2aff33315515de690/d1/database/548b9cc8-9d01-4adf-8dbe-24f29f1b2d1b/query';
+import {d1Query,D1_META} from '../.github/scripts/d1-query.mjs';
+// Through d1Query, so these reads are paced like every other script's.
+const env={CF_API_TOKEN:process.env.CLOUDFLARE_API_TOKEN,CF_ACCOUNT_ID:'93c06b602c99e1f2aff33315515de690',
+  CF_D1_DATABASE_ID:'548b9cc8-9d01-4adf-8dbe-24f29f1b2d1b'};
 const directory=new URL('../.local/rr-curve-prod/',import.meta.url);
 await mkdir(directory,{recursive:true});
 const metadata=[];
 async function query(sql){
   if(!/^SELECT\b/i.test(sql))throw new Error('This export accepts SELECT statements only');
-  const response=await fetch(base,{method:'POST',headers:{Authorization:`Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,'Content-Type':'application/json'},body:JSON.stringify({sql}),signal:AbortSignal.timeout(60000)});
-  const json=await response.json();
-  if(!response.ok||!json.success||json.result.some(r=>!r.success))throw new Error(JSON.stringify(json.errors||json.result.map(r=>r.error)));
-  for(const r of json.result){
-    if(r.meta.rows_written||r.meta.changed_db||r.meta.changes)throw new Error('Unexpected database modification');
-    metadata.push({sql,meta:r.meta});
-  }
-  return json.result[0].results;
+  const rows=await d1Query(env,sql);
+  const meta=rows[D1_META];
+  if(meta.rows_written||meta.changed_db||meta.changes)throw new Error('Unexpected database modification');
+  metadata.push({sql,meta});
+  return rows;
 }
 const players=await query('SELECT puuid,name,tag,region,platform FROM rr_players ORDER BY puuid');
 const byPuuid=new Map(players.map(p=>[p.puuid,p]));

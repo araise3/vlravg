@@ -7,7 +7,7 @@ import {collectPlayers,corpusReport,puuidSliceBounds} from '../.github/scripts/c
 import {retryOnD1Overload,pacedQuery,recentDateBound,d1Query,D1_MS} from '../.github/scripts/d1-query.mjs';
 import {onRequestGet} from '../functions/api/[[path]].js';
 import {pollingPolicy,selectPollingPlayers,selectDiscoveryCandidates,discoverMatchPlayers,DISCOVERY_BAND_TARGET,POLL_HOURS} from '../lib/rr-activity.mjs';
-import {loadActivity,loadCandidates} from '../.github/scripts/rr-activity-query.mjs';
+import {loadActivity,loadCandidates,loadTracked} from '../.github/scripts/rr-activity-query.mjs';
 import {loadFeatureQueue} from '../.github/scripts/rr-feature-plan.mjs';
 
 // Pacing sleeps are skipped in tests; the pacing itself has its own tests.
@@ -750,6 +750,33 @@ test('the activity query counts last-week games and finds the act start as befor
   assert.equal(rows[1].games_7d,0);
   assert.equal(rows[0].last_played_at,iso(0.5));
   assert.equal(rows[0].season_started_at,iso(9),'the earliest dated game of the latest act, any player');
+});
+
+test('the player read in PUUID ranges returns what one statement returns, each range on the key',async t=>{
+  // 24 Nov 2026: one statement took 2.2 s of D1 time for 23,476 accounts.
+  const {db,sql}=database(t);
+  const now=Date.now(),iso=days=>new Date(now-days*86400000).toISOString();
+  for(let i=0;i<40;i++){
+    const id=crypto.randomUUID();
+    const history=[0.5,3,8].slice(0,1+i%3).map((days,j)=>({...entry(crypto.randomUUID()),date:iso(days+i/100),tier:{id:3+i%20},
+      season:{id:j?'old-act':'new-act',short:'x'}}));
+    await collectRR(db,{data:{account:{puuid:id,name:`P${i}`,tag:'EU'},history}},{puuid:id,region:i%2?'eu':'na',platform:'pc'});
+    if(i%4===0)sql.prepare('INSERT INTO rr_candidate_games VALUES(?,?,?,?,?,?,?)').run(id,'pc',`c${i}`,'eu',12,iso(0.2),iso(0.1));
+  }
+  const statements=[];
+  const query=async(_env,text,params=[])=>{statements.push([text,params]);return (await db.prepare(text).bind(...params).all()).results;};
+  const key=r=>`${r.puuid}:${r.platform}`;
+  const whole=(await loadTracked({},query,{parts:1})).sort((a,b)=>key(a)<key(b)?-1:1);
+  assert.equal(statements.length,1);
+  const sliced=(await loadTracked({},query,{parts:16})).sort((a,b)=>key(a)<key(b)?-1:1);
+  assert.equal(statements.length,17);
+  assert.equal(whole.length,40);
+  assert.deepEqual(sliced,whole);
+  assert.ok(whole.some(r=>r.candidate_played_at)&&whole.some(r=>r.games_7d>0));
+  const plan=sql.prepare(`EXPLAIN QUERY PLAN ${statements[1][0]}`).all().map(row=>row.detail);
+  const shown=plan.join('\n');
+  assert.ok(!plan.some(line=>/^SCAN (p|rr_players)\b/.test(line)),shown);
+  assert.ok(plan.some(line=>/^SEARCH p USING INDEX \S+ \(puuid>\? AND puuid<\?\)/.test(line)),shown);
 });
 
 test('pacing uses the time D1 reports for a statement, not the network round trip',async()=>{

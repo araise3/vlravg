@@ -106,6 +106,23 @@ test('reloads keep this run\'s newer checks over a lagging D1 read and pick up n
   assert.equal(report.polls.done,2);
 });
 
+// 24 Nov 2026: four workers each started the 30-minute reload while the first
+// was still reading, so three copies of the 568k-row player read ran at once
+// and D1 rejected the site's quota gate (docs/rr-collector-d1-load.md).
+test('a reload runs once at a time however many workers find it due',async()=>{
+  let loads=0,active=0,most=0;
+  const h=harness({players:[]});
+  const players=Array.from({length:40},(_,i)=>heavy(1+i,13));
+  const report=await h.run({concurrency:4,reloadMs:10*60000,loadPlayers:async()=>{
+    loads++;active++;most=Math.max(most,active);
+    try{await h.clock.sleep(2200);return players.map(p=>({...p}));}finally{active--;}
+  }});
+  assert.equal(most,1,'no reload overlaps another');
+  assert.ok(loads>=2&&loads<=7,`one load per ten-minute period in an hour, got ${loads}`);
+  assert.equal(report.reloads,loads);
+  assert.equal(report.polls.done,40);
+});
+
 test('the initial load is retried before the run gives up',async()=>{
   let loads=0;
   const h=harness({players:[]});
@@ -139,6 +156,7 @@ function fixture({collector,databaseFull=false}={}){
     assertD1Headroom:async()=>{events.push('headroom');if(databaseFull){const e=new Error('D1 database is full');e.code='WORKFLOW_STORAGE';throw e;}},
     createRequestScheduler:()=>Object.assign(()=>{},{pools:{workflow:3,public:0}}),
     loadTracked:async()=>[],loadOpenGaps:async()=>[],loadFeatureQueue:async()=>[],loadCandidates:async()=>[],
+    d1Governor:()=>({stats:{statements:12,busyMs:340.6,slow:0,slowest:{ms:90,sql:'SELECT 1'}}}),
     runCollector:async options=>{events.push('collect');assert.ok(options.deadline>Date.now());return collector?collector():{polls:{done:3},heals:{},backlog:{due:0,overdue2x:0}};},
     dailyAudit:async()=>{events.push('audit');return {skipped:true};},gapSummary:async()=>({total:0,byStatus:{}}),
     mkdir:async()=>{},writeFile:async(_path,json)=>writes.push(JSON.parse(json)),
@@ -155,6 +173,7 @@ test('a normal run writes its report, chains the next run and exits cleanly',asy
   assert.equal(report.chainNext,true);assert.deepEqual(f.outputs,['chain=true\n']);
   assert.equal(f.process.exitCode,0);
   assert.equal(f.writes.at(-1).polls.done,3);
+  assert.deepEqual(JSON.parse(JSON.stringify(report.d1)),{statements:12,busyMs:341,slow:0,slowest:{ms:90,sql:'SELECT 1'}},'the D1 governor count is reported');
 });
 
 test('failed polls never fail the workflow; a configuration stop does, without chaining',async()=>{

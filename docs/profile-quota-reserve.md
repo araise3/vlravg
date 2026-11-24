@@ -513,3 +513,20 @@ needs bounds that are safe, not exact. Changes:
   `cost` column now holds the fixed maximum).
 
 The sections above on measured costs and held maxima are kept as history.
+
+## Cause of the 503 bursts, 24 Nov 2026
+
+A sixth drain (23:20 UTC, 150 s, `rank` only, as at 22:52) got 98 `503 Upstream quota storage
+unavailable` responses within 6 s, and the gate-failure log gave the D1 error:
+"D1 DB is overloaded. Too many resources consumed within a 10 second window".
+Of the drains since 20:59, every one with 503s overlapped a minute with more
+than 0.6M D1 rows read, and the ones without did not. Those minutes match the RR
+collector's 30-minute player reload, which up to four of its workers ran at
+once. Details, measurements and the fix:
+[rr-collector-d1-load.md](rr-collector-d1-load.md#overlapping-player-reloads-24-nov-2026).
+
+In the same drain, 6 of 31 account lookups by PUUID were refused, all in the
+last 10 s of a window, with 2 or 4 units left. Each one holds 3 units and
+needs the 2-unit margin on top. The probes (about 15 forced lookups a minute,
+3 units each) used up the 12-unit reserve within the window. That is more
+than the reserve is meant to cover, not a gate fault.

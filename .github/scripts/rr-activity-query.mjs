@@ -1,4 +1,4 @@
-import {d1Query,retryOnD1Overload,recentDateBound} from './d1-query.mjs';
+import {d1Query,retryOnD1Overload,recentDateBound,readByPuuidRange} from './d1-query.mjs';
 // Startup reads are read-only, so a D1 overload waits out the window instead
 // of failing the run before any RR is captured.
 const readQuery=retryOnD1Overload(d1Query);
@@ -18,9 +18,13 @@ export async function loadActivity(env,players,query=readQuery){
   return players.map(p=>({...p,...byId.get(`${p.puuid}:${p.platform}`)}));
 }
 
-// Every tracked account with its region, platform and activity, in one read.
-export async function loadTracked(env,query=readQuery){
-  return query(env,`WITH latest_season AS (
+// Every tracked account with its region, platform and activity. Read in
+// PUUID ranges (readByPuuidRange): as one statement it took 2.2 s of D1 time
+// and 568,153 rows for 23,476 accounts on 24 Nov 2026, and it grows with
+// every account. Each range repeats the two act lookups, which are single
+// index seeks.
+export async function loadTracked(env,query=readQuery,options){
+  return readByPuuidRange((lo,hi)=>query(env,`WITH latest_season AS (
     SELECT LOWER(json_extract(data,'$.season.id')) AS id FROM rr_history
     WHERE COALESCE(json_extract(data,'$.season.id'),'')<>'' ORDER BY date DESC LIMIT 1
   ), season_start AS (
@@ -29,7 +33,8 @@ export async function loadTracked(env,query=readQuery){
       ORDER BY h.date LIMIT 1) AS started_at
   ), roster AS (
     SELECT puuid,platform,MAX(played_at) AS played_at,MAX(observed_at) AS observed_at
-    FROM rr_candidate_games WHERE played_at>=strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days') GROUP BY puuid,platform
+    FROM rr_candidate_games WHERE played_at>=strftime('%Y-%m-%dT%H:%M:%fZ','now','-2 days')
+      AND puuid>=?1 AND puuid<?2 GROUP BY puuid,platform
   ) SELECT p.puuid,p.region,p.platform,c.checked_at,c.window_from,failed.checked_at AS failed_probe_at,
     (SELECT COUNT(*) FROM rr_history h WHERE h.puuid=p.puuid AND h.date>=${recentDateBound(7)}
       AND julianday(h.date)>=julianday('now','-7 days')) AS games_7d,
@@ -41,7 +46,8 @@ export async function loadTracked(env,query=readQuery){
     LEFT JOIN rr_collection c ON c.puuid=p.puuid AND c.platform=p.platform
     LEFT JOIN rr_candidate_checks failed ON failed.puuid=p.puuid AND failed.platform=p.platform
     LEFT JOIN roster ON roster.puuid=p.puuid AND roster.platform=p.platform
-    CROSS JOIN season_start`);
+    CROSS JOIN season_start
+    WHERE p.puuid>=?1 AND p.puuid<?2`,[lo,hi]),options);
 }
 
 export async function loadCandidates(env,query=readQuery){

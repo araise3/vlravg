@@ -22,7 +22,7 @@ import {mkdir,writeFile,appendFile} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import {refreshPlayer,requestJSON} from './refresh-rr-history.mjs';
 import {createRequestScheduler} from './request-scheduler.mjs';
-import {d1Query,retryOnD1Overload,assertD1Headroom,pacedQuery,PACE_FACTOR} from './d1-query.mjs';
+import {d1Query,retryOnD1Overload,assertD1Headroom,pacedQuery,PACE_FACTOR,d1Governor} from './d1-query.mjs';
 import {puuidSliceBounds,puuidSliceWhere} from './puuid-slices.mjs';
 import {readQuotaAudit,quotaCheckReport} from './workflow-quota-check.mjs';
 import {loadTracked,loadCandidates} from './rr-activity-query.mjs';
@@ -152,7 +152,7 @@ export async function runCollector({origin,fetchImpl,deadline,now=Date.now,log=c
     reloads:0,failures:[],
   };
   const players=new Map();
-  let gaps=[],features=[],probes=null,due=[],planned=0,loaded=0,featuresLoadedAt=-Infinity;
+  let gaps=[],features=[],probes=null,due=[],planned=0,loaded=0,reloading=false,featuresLoadedAt=-Infinity;
   const busy=new Set(),healing=new Set(),cooling=new Map();
   let sinceHeal=0;
   const keep=list=>stats.failures.length<200&&stats.failures.push(list);
@@ -191,8 +191,14 @@ export async function runCollector({origin,fetchImpl,deadline,now=Date.now,log=c
   }
   async function next(){
     const t=now();
-    if(t-loaded>=reloadMs){
+    // One reload at a time: `loaded` moves only when it finishes, so without
+    // this every worker that asked meanwhile started its own copy of the
+    // player read, and three at once overloaded D1 (24 Nov 2026,
+    // docs/rr-collector-d1-load.md). Other workers carry on with the last plan.
+    if(!reloading&&t-loaded>=reloadMs){
+      reloading=true;
       try{await reload();}catch(error){if(fatal(error))throw error;log(`::warning::Player reload failed: ${error.message}`);loaded=t;}
+      finally{reloading=false;}
     }
     if(t-planned>=PLAN_MS)plan();
     const healDue=()=>{const i=gaps.findIndex(g=>(cooling.get(`gap:${g.puuid}:${g.after_match_id}`)||0)<=t&&!busy.has(g.puuid));
@@ -432,6 +438,8 @@ export async function main(env=process.env){
   // Collection is continuous: the next run waits in the concurrency group.
   // A configuration or storage stop does not chain into a loop of failures.
   report.chainNext=!fatalError;
+  // This run's D1 statements through the governor: count, D1 time, the slowest.
+  report.d1={...d1Governor().stats,busyMs:Math.round(d1Governor().stats.busyMs)};
   report.elapsedMinutes=Math.round((Date.now()-started)/MINUTE);
   report.at=new Date().toISOString();
   if(env.GITHUB_OUTPUT)await appendFile(env.GITHUB_OUTPUT,`chain=${report.chainNext}\n`);

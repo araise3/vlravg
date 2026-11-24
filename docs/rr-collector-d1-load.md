@@ -113,3 +113,94 @@ about 35 minutes past the 180-minute budget for them.
 - the sliced inventory equals one statement for limits 0, 3, 7 and 50;
 - the rewritten startup query returns the same last-week counts, latest game
   and act start as before (also run against the old query).
+
+## Overlapping player reloads (24 Nov 2026)
+
+### Symptom
+
+Two earlier live quota drains against the site
+([profile-quota-reserve.md](profile-quota-reserve.md)) got bursts of
+`503 Upstream quota storage unavailable`, and the drain at 23:20 UTC got one
+too: 98 responses from 23:20:14.8 to 23:20:20.8. The proxy's gate-failure log
+(`wrangler pages deployment tail`) gave the D1 error for the first time:
+
+```
+Quota gate admission failed on rank: D1_ERROR: D1 DB is overloaded. Too many resources consumed within a 10 second window.
+```
+
+The same error failed three of the collector's own `rr-collect` calls.
+Cloudflare describes this error as the database using too much CPU and memory
+within ten seconds (developers.cloudflare.com/d1/observability/debug-d1).
+
+### Where the load came from
+
+D1 analytics per minute (`d1AnalyticsAdaptiveGroups`, 20:50 to 23:30 UTC)
+normally show 5,000 to 20,000 rows read. Some minutes read far more:
+
+| UTC minute | rows read | drain at that time | 503s |
+| --- | --- | --- | --- |
+| 20:59 | 2,307,312 | second drain | yes |
+| 21:17 to 21:18 | 651,821 | fourth drain (logged as 21:13; its traffic shows in D1 at 21:16 to 21:18) | yes |
+| 21:48 to 21:49 | 2,295,364 | none | none to observe |
+| 22:19 | 1,717,052 | none | none to observe |
+| 22:49 to 22:50 | 2,322,124 | none (the next drain started at 22:52) | none to observe |
+| 23:20 | 1,710,066 | fifth drain | yes |
+
+The third drain (21:03) and the 22:52 drain fell in quiet minutes and had no
+503s. The collector run that was in progress started at 21:17:42 UTC. Its
+reload interval (`RELOAD_MS`) is 30 minutes, which matches the spikes at
+21:48, 22:19, 22:49 and 23:20. The 20:59 spike was during an earlier run
+(started 16:14 UTC, later cancelled); which statement caused it was not
+checked.
+
+The heavy statements do not appear in the per-query analytics
+(`d1QueriesAdaptiveGroups`) at all. There only the site's single-row
+statements show up, at well under a millisecond each. So the following
+attribution comes from timing and one measurement, not from per-query data.
+
+A reload reads every tracked account with its activity (`loadTracked` in
+[.github/scripts/rr-activity-query.mjs](../.github/scripts/rr-activity-query.mjs)).
+Measured once on D1 at 23:28 UTC, outside the drains: 568,153 rows read,
+2.2 s of D1 time, for 23,476 accounts (363,961 games in the last week). Its
+plan uses the intended indexes. D1's per-minute analytics counted it once (23:27:
+656,377 rows, which includes two `COUNT(*)` checks of 82,464 rows run just
+before it). The 1.71M rows of the 23:20 minute are about three times that.
+
+The cause is in the collector's scheduler (`runCollector` in
+[.github/scripts/collect-rr-corpus.mjs](../.github/scripts/collect-rr-corpus.mjs)).
+Four workers each ask `next()` for a task. A worker that finds the reload due
+runs it, but `loaded` moves only once the reload finishes. Every other worker
+that asked during those 2.2 s found it due too and started its own reload. In
+a test with four workers and a slow load, four reloads ran at once. So every
+30 minutes D1 got up to four copies of its heaviest regular statement at
+once. Inference: that alone uses up most of the ten-second budget, and the
+extra site traffic of a drain (about 19 gate statements a second) pushes it
+over.
+
+The drain's own gate load was also measured, as background. Over the 165 s
+drain the public gate ran 1,807 admission updates and 1,283 state reads,
+with 694 ms and 136 ms of D1 time. Only 90 of those updates admitted a call;
+the rest were waiting calls polling again. Cheap per statement, but most of
+the drain's D1 statements.
+
+### Change
+
+One reload at a time: a `reloading` flag is set while a reload runs, and
+other workers carry on with the current plan instead of starting their own.
+A fatal error still stops the run, and a failed reload still waits for the
+next interval.
+
+Test (`tests/rr-collector-workflow.test.mjs`): four workers and a load that
+takes 2.2 s run one reload at a time and one per interval. Without the fix,
+four overlapped.
+
+### Not yet done or verified
+
+- The collector picks this up at its next run; the current run keeps the
+  old script.
+- Whether the 503 bursts stop has to be checked with a drain that overlaps
+  a reload.
+- One reload is still a single 2.2 s statement. The 23 Nov target was under
+  about 1 s per statement. Slicing and pacing it like the census would get
+  there.
+- The gate's polling is untouched.
