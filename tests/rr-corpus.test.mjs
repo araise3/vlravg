@@ -763,3 +763,26 @@ test('pacing uses the time D1 reports for a statement, not the network round tri
   await paced();await paced();
   assert.deepEqual(waits,[1000],'4 × 250 ms of D1 time, although the call took 3 s');
 });
+
+test('a visitor RR request keeps the saved region; the collector still updates it',async t=>{
+  const {db,sql}=database(t);
+  const region=()=>sql.prepare('SELECT region FROM rr_players WHERE puuid=?').get(puuid).region;
+  sql.prepare('INSERT INTO rr_players(puuid,region,platform,name,tag,updated_at) VALUES(?,?,?,?,?,?)').run(puuid,'ap','pc','Alpha','EU','2026-11-01T00:00:00Z');
+  await collectRR(db,payload([entry()]),{puuid,region:'eu',platform:'pc',regionFromRequest:true});
+  assert.equal(region(),'ap','the URL region does not replace a saved one');
+  await collectRR(db,payload([entry()]),{puuid,region:'br',platform:'pc'});
+  assert.equal(region(),'br','a collector request (a region transfer) does');
+  sql.prepare('DELETE FROM rr_players').run();
+  await collectRR(db,payload([entry()]),{puuid,region:'eu',platform:'pc',regionFromRequest:true});
+  assert.equal(region(),'eu','with nothing saved, the request region is all there is');
+});
+
+test('a gap found by a visitor request takes the saved region, not the URL one',async t=>{
+  const {db,sql}=database(t),scope={puuid,region:'eu',platform:'pc',regionFromRequest:true};
+  const at=i=>new Date(1790985600000+i*60000).toISOString();
+  const window=(from,to)=>Array.from({length:to-from+1},(_,i)=>({...entry(`g-${to-i}`),date:at(to-i)}));
+  sql.prepare('INSERT INTO rr_players(puuid,region,platform,name,tag,updated_at) VALUES(?,?,?,?,?,?)').run(puuid,'na','pc','Alpha','EU','2026-11-01T00:00:00Z');
+  await collectRR(db,payload(window(0,19)),scope);
+  assert.ok((await collectRR(db,payload(window(30,49)),scope,at(60))).gap);
+  assert.equal(sql.prepare('SELECT region FROM rr_gaps').get().region,'na');
+});

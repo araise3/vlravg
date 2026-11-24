@@ -919,7 +919,8 @@ async function mergeRRHistory(env, bodyText, route) {
   const parsed=JSON.parse(bodyText);
   const puuid=parsed?.data?.account?.puuid?.toLowerCase();
   if(route.puuid&&puuid!==route.puuid)throw new Error('Wrong RR account');
-  await collectRR(env.APP_DB,parsed,{puuid,region:route.region,platform:route.platform});
+  // The visitor's URL chose this region; it never replaces a saved one.
+  await collectRR(env.APP_DB,parsed,{puuid,region:route.region,platform:route.platform,regionFromRequest:true});
 
   const stored = new Map();
   const { results } = await env.APP_DB

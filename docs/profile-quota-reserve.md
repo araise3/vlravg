@@ -215,3 +215,42 @@ then.
 Not yet verified live. The 503 burst from the second drain (20:59:07 to
 20:59:22 UTC, every route, fast responses) did not recur and its cause is
 unknown; the drain script now records 5xx bodies.
+
+## Drain side effect: pro regions, repaired; visitor RR requests keep saved regions
+
+A fourth drain (21:13 UTC, after the reset guard deployed) ran 150 s with no
+upstream 429. The `503 Upstream quota storage unavailable` burst came back
+(49 responses in about 2 s); it is a D1 failure in the gate, whose error the
+proxy does not log yet, so its cause is still unknown.
+
+The drains themselves damaged data. They called
+`/mmr-history-by-puuid/eu/pc/{puuid}` for pro accounts, and every 200 went
+through `collectRR`, which set `rr_players.region` to the region in the URL.
+HenrikDev answers RR history for the account whatever region the URL names
+(inference: for `kIt#1029`, an ap account, all 30 archived ap matches are in
+its RR rows), so the RR data looked right while the region was wrong. The
+saved-account answer then served `kIt#1029` as eu.
+
+Repair (24 Nov 2026): the 182 pro accounts the drains touched were looked up
+once each through the public account route, ignoring saved answers. 96 had the
+wrong region (68 na, 28 ap) and were set back, each update conditional on the
+backed-up value; 86 were right. The 2 still-open gaps the drains created now
+carry the live region; the 80 connected or healed ones keep `eu` (nothing
+reads a closed gap's region). Backup, SQL and report:
+`.local/repairs/rr_players-pro-regions-*-20261124.*` (local only).
+
+Fix (`lib/rr-corpus.mjs` `collectRR`, `regionFromRequest`): a visitor's
+`mmr-history` request no longer replaces a saved region, and a gap it finds
+takes the saved region. With nothing saved, the URL region is still stored.
+The collector's `rr-collect` requests still update the region, since their
+region comes from `rr_players` or a fresh account lookup; that is how region
+transfers are followed. Platform is unchanged: it selects which RR data
+HenrikDev returns.
+
+Tests: `tests/rr-corpus.test.mjs` (saved region kept, collector transfer
+still applies, nothing saved stores the URL region, gap takes the saved
+region) and `tests/workflow-api-key.test.mjs` (an `eu` visitor request for an
+`ap` account saves the RR window and keeps `ap`). All three fail without the
+fix.
+
+Future drain tests must not use RR or other evidence-writing routes.

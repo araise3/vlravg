@@ -20,7 +20,9 @@ function fixture(t){
   const APP_DB={prepare(query){let values=[];const s={bind(...v){values=v;return s;},
     async first(){return sql.prepare(query).get(...values)||null;},
     async all(){return {results:sql.prepare(query).all(...values)};},
-    async run(){return sql.prepare(query).run(...values);}};return s;}};
+    async run(){return sql.prepare(query).run(...values);}};return s;},
+    async batch(statements){sql.exec('BEGIN');try{const out=[];for(const s of statements)out.push(await s.run());sql.exec('COMMIT');return out;}
+      catch(e){sql.exec('ROLLBACK');throw e;}}};
   const env={APP_DB,HENRIK_KEY:publicKey,HENRIK_WORKFLOW_KEY:workflowKey};
   const upstream=[],cacheReads=[],cacheWrites=[];
   const oldCaches=globalThis.caches;
@@ -466,4 +468,16 @@ test('stated whole-second resets are stored a guard later, relative and epoch al
       assert.equal((await f.request(undefined,origin+'/api/rank/eu/pc/Beta/EU')).status,429);
     });
   }
+});
+
+test('a visitor mmr-history request with another region leaves the saved region alone',async t=>{
+  const f=fixture(t);
+  saveIdentity(f,{region:'ap'});
+  f.respond=()=>Response.json({status:200,data:{account:{puuid:savedPuuid,name:'Alpha',tag:'EU'},history:[{
+    match_id:'44444444-4444-4444-8444-444444444444',date:'2026-11-20T00:00:00Z',last_change:18,tier:{id:12},rr:40,
+    season:{id:'55555555-5555-4555-8555-555555555555',short:'e11a1'}}]}},{headers:{'x-ratelimit-remaining':'40','x-ratelimit-reset':'60'}});
+  const response=await f.request(undefined,origin+`/api/mmr-history-by-puuid/eu/pc/${savedPuuid}`);
+  assert.equal(response.status,200);
+  assert.equal(f.sql.prepare('SELECT COUNT(*) AS n FROM rr_history WHERE puuid=?').get(savedPuuid).n,1,'the RR window is still saved');
+  assert.equal(f.sql.prepare('SELECT region FROM rr_players WHERE puuid=?').get(savedPuuid).region,'ap');
 });
