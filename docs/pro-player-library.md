@@ -95,6 +95,17 @@ node scripts/build-pro-player-library.mjs [vct-2026-data-analysis] [rostermania]
   team, because rostermania spells him spikeziN. Renamed to spikeziN; the
   rebuild matched him to Leviatán's roster (113 partnered players listed;
   263 expected listed, 126 missing). The account's region is AP.
+- **ToBe Gaming (24 Nov 2026).** On request, `2B Zayce#KOR` and
+  `2B Ryan#2009` were added as Zayce and Ryan, both on ToBe Gaming's
+  rostermania roster (ONS, joined 20 Nov 2026). PUUIDs from `/api/account`
+  (both AP); country KR, region Pacific. ToBe Gaming is not partnered, so like
+  Cloudy they have no team here and are listed under "Other players". The
+  rebuild read a newer rostermania copy (updated 24 Nov 2026), which also put
+  killua on FULL SENSE: 418 accounts, 114 partnered players listed; 391
+  expected (154 partnered), 266 listed, 125 missing.
+  Rostermania's tracker.gg links need no change there: its daily cron
+  (06:00 UTC) reads the deployed `pro-players.json` and links rows by folded
+  name, so Zayce and Ryan get links on the first sync after this deploys.
 - Partner team logos are rostermania's team icons, shrunk to 48px in
   `assets/teams/<code>.png`.
 

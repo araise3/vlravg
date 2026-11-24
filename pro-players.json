@@ -1,15 +1,15 @@
 {
   "source": "vct-2026-data-analysis/src/lib/trackerLinks.json",
   "rosterSource": "rostermania/data/rostermania.json",
-  "rosterUpdatedAt": "2026-11-23T17:02:12.000Z",
-  "playerCount": 411,
-  "accountCount": 416,
-  "resolvedPuuidCount": 416,
-  "partnerPlayerCount": 113,
-  "expectedPlayerCount": 389,
-  "expectedPartnerPlayerCount": 153,
-  "expectedListedCount": 263,
-  "expectedMissingCount": 126,
+  "rosterUpdatedAt": "2026-11-24T16:10:53.000Z",
+  "playerCount": 413,
+  "accountCount": 418,
+  "resolvedPuuidCount": 418,
+  "partnerPlayerCount": 114,
+  "expectedPlayerCount": 391,
+  "expectedPartnerPlayerCount": 154,
+  "expectedListedCount": 266,
+  "expectedMissingCount": 125,
   "players": [
     {
       "handle": "77even",
@@ -2408,11 +2408,11 @@
     },
     {
       "handle": "killua",
-      "team": null,
-      "teamCode": null,
+      "team": "FULL SENSE",
+      "teamCode": "FS",
       "region": "Pacific",
       "baseRegion": "Pacific",
-      "countryCode": "th",
+      "countryCode": "TH",
       "accounts": [
         {
           "puuid": "dbab053d-77ec-50d4-b47e-54b27f866bf4"
@@ -3914,6 +3914,19 @@
       ]
     },
     {
+      "handle": "Ryan",
+      "team": null,
+      "teamCode": null,
+      "region": "Pacific",
+      "baseRegion": "Pacific",
+      "countryCode": "KR",
+      "accounts": [
+        {
+          "puuid": "ce6dc08a-f6df-5244-8716-b86075933396"
+        }
+      ]
+    },
+    {
       "handle": "s0m",
       "team": null,
       "teamCode": null,
@@ -5275,6 +5288,19 @@
       "accounts": [
         {
           "puuid": "087a4885-e157-5ad7-949b-2502e7c3938d"
+        }
+      ]
+    },
+    {
+      "handle": "Zayce",
+      "team": null,
+      "teamCode": null,
+      "region": "Pacific",
+      "baseRegion": "Pacific",
+      "countryCode": "KR",
+      "accounts": [
+        {
+          "puuid": "462d9d79-41d7-559e-b421-da431d4974cb"
         }
       ]
     },
