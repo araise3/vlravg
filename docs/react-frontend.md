@@ -219,7 +219,9 @@ end of `src/index.css` (they outrank Tailwind's utility layer):
   on every width (icons were tried the same day and reverted on request);
   the stat columns are only as wide as their numbers, and when a long Riot ID
   still does not fit, its #tag shrinks before the name, and the link's
-  tooltip has the full ID. The 210px map-art panel the redesign
+  tooltip has the full ID. Each team header's rule has 4px below it (24 Nov
+  2026): your highlighted row, when it led the list, sat flush on the 1px
+  rule and hid it. The 210px map-art panel the redesign
   replaced is gone (`mc-map-panel` and friends).
 - Clutches (22 Nov 2026): see [clutches-page.md](clutches-page.md).
 - Name History marks the current Riot ID in blue text.

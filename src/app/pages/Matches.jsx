@@ -81,7 +81,9 @@ function PlayersGrid({m,me,compact,agents}){
     <div className="grid gap-4 lg:grid-cols-2">
       {teams.map(([label,players,avg])=>(
         <div key={label} className="text-sm">
-          <div className={cn('grid items-end border-b',cols,'px-2 pb-2 text-xs text-muted-foreground uppercase')}>
+          {/* mb-1: your highlighted row, when it tops the list, sat flush on
+              this 1px rule and swallowed it (24 Nov 2026). */}
+          <div className={cn('mb-1 grid items-end border-b',cols,'px-2 pb-2 text-xs text-muted-foreground uppercase')} data-slot="team-header">
             <span className="truncate">{label}</span>
             <span className="text-right">ACS</span><span className="text-right"><Hint content="Performance Score">PS</Hint></span><span className="text-right">KD</span>
             {Number.isFinite(avg)

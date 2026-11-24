@@ -123,6 +123,8 @@ test('the opened card is a strip of tiles: K/D, ACS, ADR, damage delta, HS%, KAS
   assert.doesNotMatch(html,/Your RR details|Recorded payout|Queue|not added again/);
   // Each team header carries its average rank as a short name in its colour, not its rounds (the closed row has the score).
   const desktopRoster=html.slice(html.indexOf('Your team'));
+  // A gap under each team header's rule, so your highlighted row cannot sit on it and hide it.
+  assert.equal((html.match(/<div class="mb-1 grid items-end border-b [^"]*" data-slot="team-header">/g)||[]).length,2);
   assert.match(text(html),/Your team ACS PS KD Dia 1 Player #EU /);
   assert.match(text(html),/Enemy team ACS PS KD Dia 2 /);
   // Long names: the tag shrinks before the name, and the link carries the full Riot ID.
