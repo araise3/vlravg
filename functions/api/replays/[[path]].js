@@ -14,8 +14,10 @@
  *   REPLAY_UPLOADS_DISABLED=1     kill switch for new uploads
  */
 import { handleReplayRequest } from '../../../lib/replay-import.mjs';
+import { withD1RetryContext } from '../../../lib/d1-retry.mjs';
 
-export async function onRequest(context) {
+export async function onRequest(rawContext) {
+  const context = withD1RetryContext(rawContext);
   const path = new URL(context.request.url).pathname.replace(/^\/api\/replays/, '') || '/';
   return handleReplayRequest(context, path);
 }

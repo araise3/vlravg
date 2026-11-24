@@ -94,6 +94,7 @@ import { matchKey, hasInlinePayload, readArchivedPayload, mapLimit } from "../..
 import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, acquireProfilePermit, observePublicQuota, acquireBorrowedPublicPermit, releaseWorkflowLease, releasePublicLease, RESET_GUARD_MS } from "../../lib/upstream-pacing.mjs";
 import { maxUnits } from "../../lib/upstream-cost.mjs";
 import { publicQuotaEvent, recordPublicQuotaEvent } from "../../lib/public-quota-audit.mjs";
+import { withD1RetryContext } from "../../lib/d1-retry.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
 const PREFIX = "/api";
@@ -1003,7 +1004,9 @@ function savedNameHistoryResponse(snapshot, source, refreshDeferred = false) {
   return res;
 }
 
-export async function onRequestGet(context) {
+// Every D1 query of a request retries a brief D1 overload (lib/d1-retry.mjs).
+export async function onRequestGet(rawContext) {
+  const context = withD1RetryContext(rawContext);
   const { request, env } = context;
   const workflow=request.headers.has('X-Workflow-Key');
   if(workflow){
@@ -1505,7 +1508,8 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
   return res;
 }
 
-export async function onRequestPost({request,env}){
+export async function onRequestPost(rawContext){
+  const {request,env}=withD1RetryContext(rawContext);
   const postUrl=new URL(request.url);
   if(postUrl.pathname.slice(PREFIX.length)==='/match-archive-migrate'){
     // Moves already-trusted D1 payloads to R2; nothing is read from the body.
