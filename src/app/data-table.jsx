@@ -181,10 +181,12 @@ export function TablePager({page,pageSize,total,noun,onPrevious,onNext,canPrevio
 // before it, which groups related figures (W–L beside Win rate).
 // `widths` (22 Nov 2026) fixes the column widths (CSS lengths, one per column)
 // with table-layout: fixed, so tables stacked on one page line up column for
-// column; without it columns size to their content. In a fixed-width table a
-// right-aligned header's sort arrow sits left of the label outside the
-// layout (23 Nov 2026), so it takes no column width from the name column.
-export function SortableTable({id,caption,columns,rows,values,maxima=[],className,pageSize,pageSizes,noun='rows',searchable=!!pageSize&&rows.length>pageSize,standalone=false,tools,detail,detailLabel,emptyText,widths}){
+// column; without it columns size to their content. The sort arrow stays
+// inside its header button in every table: from 23 Nov 2026 fixed-width
+// tables drew it outside, left of the button, which looked detached from the
+// highlighted header (fixed 24 Nov 2026, on request). Fixed column widths do
+// not depend on content, so the arrow costs the name column nothing.
+export function SortableTable({id,caption,columns,rows,values,maxima=[],className,pageSize,pageSizes,noun='rows',searchable=!!pageSize&&rows.length>pageSize,standalone=false,tools,detail,detailLabel,emptyText,widths,numberedPages=false}){
   const mobile=useIsMobile();
   const [expanded,setExpanded]=useState(()=>new Set());
   const toggle=key=>setExpanded(previous=>{const next=new Set(previous);if(next.has(key))next.delete(key);else next.add(key);return next;});
@@ -262,15 +264,13 @@ export function SortableTable({id,caption,columns,rows,values,maxima=[],classNam
                   const index=Number(column.id),col=columns[index];
                   const state=column.getIsSorted();
                   const Icon=state==='asc'?ArrowUp:state==='desc'?ArrowDown:ArrowUpDown;
-                  return (
-                    <TableHead key={column.id} scope="col" aria-sort={state==='asc'?'ascending':state==='desc'?'descending':'none'}
-                      className={cn('h-10 px-3',right(index)&&'text-right',col.fit&&'w-px pl-0')}>
+                  const sortButton=(
                       <Hint asChild content={col.title}>
                       <Button variant="ghost" size="sm" onClick={column.getToggleSortingHandler()}
-                        className={cn('group/sort h-7 gap-1 px-1.5 text-xs font-medium text-muted-foreground hover:bg-transparent hover:text-foreground',
-                          right(index)?'-mr-1.5':'-ml-1.5',widths&&right(index)&&'relative',state&&'text-foreground')}
+                        className={cn('group/sort h-7 gap-1 px-1.5 has-[>svg]:px-1.5 text-xs font-medium text-muted-foreground hover:bg-transparent hover:text-foreground',
+                          right(index)?'-mr-1.5':'-ml-1.5',state&&'text-foreground')}
                         aria-label={`${col.label}: sort ${column.getNextSortingOrder()==='asc'?'ascending':'descending'}`}>
-                        {right(index)&&<Icon className={cn('size-3.5 transition-opacity',widths&&'absolute right-full mr-0.5',!state&&'opacity-0 group-hover/sort:opacity-60 group-focus-visible/sort:opacity-60')} aria-hidden="true"/>}
+                        {right(index)&&<Icon className={cn('size-3.5 transition-opacity',!state&&'opacity-0 group-hover/sort:opacity-60 group-focus-visible/sort:opacity-60')} aria-hidden="true"/>}
                         {col.label}
                         {!right(index)&&<Icon className={cn('size-3.5 transition-opacity',!state&&'opacity-0 group-hover/sort:opacity-60 group-focus-visible/sort:opacity-60')} aria-hidden="true"/>}
                       </Button>
@@ -311,6 +311,14 @@ export function SortableTable({id,caption,columns,rows,values,maxima=[],classNam
                   </TableRow>
                   {open&&(
                     <TableRow className="bg-muted/20 hover:bg-muted/20" data-slot="row-detail">
+                  );
+                  return (
+                    <TableHead key={column.id} scope="col" aria-sort={state==='asc'?'ascending':state==='desc'?'descending':'none'}
+                      className={cn('h-10 px-3',right(index)&&'text-right',col.fit&&'w-px pl-0')}>
+                      {/* A header wider than a narrow fixed column overflows
+                          leftward into its own padding, keeping the label
+                          over its figures, not into the next column. */}
+                      {right(index)?<div className="flex justify-end">{sortButton}</div>:sortButton}
                       <TableCell id={`${id}-detail-${index}`} colSpan={columns.length} className="px-4 py-4 whitespace-normal">{detail(index)}</TableCell>
                     </TableRow>
                   )}

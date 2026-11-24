@@ -280,8 +280,9 @@ test('teammates: a plain sortable table of shared results and the teammate\'s ow
   const party=await renderHtml('/src/app/pages/Duos.jsx','PerformanceTable',{id:'p',party:true,rows:[{tier:2,label:'Duo',total:3,totalKills:3,totalDeaths:3,acsSum:0,acsCount:0,performanceSum:0,performanceCount:0,wins:1,decided:2,lobbySum:0,lobbyCount:0,rrCount:0,rrTotal:0}]});
   assert.deepEqual([...party.matchAll(/aria-label="([^"]+): sort/g)].map(m=>m[1]),['Party size','Matches','Avg Lobby','K/D','ACS','PS','Win rate','Total RR']);
   assert.match(party,/<colgroup><col style="width:31%"\/>/);
-  // Right-aligned headers keep their sort arrow out of the fixed layout.
-  assert.match(table,/aria-label="Matches: sort[^"]*"[^>]*>.*?<svg[^>]*class="[^"]*absolute right-full/);
+  // The sort arrow sits inside its header button, before the label.
+  assert.match(table,/aria-label="Matches: sort[^"]*"[^>]*><svg[^>]*>.*?<\/svg>Matches<\/button>/);
+  assert.doesNotMatch(table,/absolute right-full/);
   // Default order: most matches together first; every teammate on one page.
   const names=[...table.matchAll(/scope="row"[^>]*>.*?title="([^"#]+)#EU"/g)].map(m=>m[1]);
   assert.deepEqual(names,['m3','m0','m1','m2','m4','m5','m6','m7','m8','m9','m10','m11']);

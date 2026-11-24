@@ -33,7 +33,7 @@ test('missing values sort last in both directions and ties keep the given order'
   setTableView('dt-desc',{sorting:[{id:'2',desc:true}]});
   const desc=await renderHtml(MODULE,'SortableTable',{id:'dt-desc',caption:'t',columns,rows,values:raw});
   assert.deepEqual(headers(desc),['Dee#EU','Bea#EU','Cy#EU','Al#EU']);
-  assert.match(desc,/aria-sort="descending"[^>]*><button[^>]*aria-label="K\/D: sort ascending"/);
+  assert.match(desc,/aria-sort="descending"[^>]*><div class="flex justify-end"><button[^>]*aria-label="K\/D: sort ascending"/);
   setTableView('dt-asc',{sorting:[{id:'2',desc:false}]});
   const asc=await renderHtml(MODULE,'SortableTable',{id:'dt-asc',caption:'t',columns,rows,values:raw});
   assert.deepEqual(headers(asc),['Cy#EU','Bea#EU','Dee#EU','Al#EU']);
@@ -54,7 +54,12 @@ test('desktop uses the shadcn data-table defaults: bordered frame, ghost sort bu
   assert.match(html,/<tr[^>]*class="[^"]*bg-muted\/40/);
   assert.match(html,/opacity-0 group-hover\/sort:opacity-60/);
   assert.doesNotMatch(html,/rank-table|table-sort-btn|>Columns</);
-  assert.equal((html.match(/<th[^>]*scope="col"[^>]*><button data-slot="button"[^>]*data-variant="ghost"/g)||[]).length,6);
+  assert.equal((html.match(/<th[^>]*scope="col"[^>]*>(?:<div class="flex justify-end">)?<button data-slot="button"[^>]*data-variant="ghost"/g)||[]).length,6);
+  // The arrow sits inside its button (before a right-aligned label, after a
+  // left-aligned one), and a right-aligned header overflows leftward.
+  assert.match(html,/<th[^>]*text-right[^>]*><div class="flex justify-end"><button[^>]*><svg[^>]*>.*?<\/svg>A<\/button><\/div><\/th>/);
+  assert.match(html,/aria-label="Player: sort[^"]*">Player<svg[^>]*>.*?<\/svg><\/button><\/th>/);
+  assert.doesNotMatch(html,/absolute right-full|has-\[&gt;svg\]:px-2\.5/);
   // Number columns are right-aligned, the row header left.
   assert.match(html,/<th(?=[^>]*scope="col")(?=[^>]*class="[^"]*text-right)/);
   assert.match(html,/<td[^>]*class="[^"]*text-right tabular-nums/);
