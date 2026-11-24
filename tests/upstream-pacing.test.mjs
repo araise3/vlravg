@@ -4,7 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {acquireWorkflowPermit,observeWorkflowQuota,WORKFLOW_SPACING_MS,
   acquirePublicPermit,observePublicQuota,PUBLIC_UNKNOWN_SPACING_MS,
-  acquireBorrowedPublicPermit,PUBLIC_BORROW_RESERVE} from '../lib/upstream-pacing.mjs';
+  acquireBorrowedPublicPermit,PUBLIC_BORROW_RESERVE,acquireProfilePermit,PUBLIC_PROFILE_RESERVE} from '../lib/upstream-pacing.mjs';
 
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function database(t){
@@ -162,4 +162,31 @@ test('borrowed slots share the public schedule, keep the site reserve and never 
   clock+=60000;
   assert.ok((await acquireBorrowedPublicPermit(db,{now:()=>clock})).quota);
   assert.equal(sql.prepare('SELECT * FROM workflow_rate_quota').get(),undefined);
+});
+
+test('account lookups keep a reserve of every known window that other public calls cannot spend',async t=>{
+  const {db,sql}=database(t);let clock=100000;
+  const resetAt=clock+60000;
+  sql.prepare('UPDATE rate_quota SET remaining=?,reset_at=?,last_request_at=0,next_start_at=0').run(PUBLIC_PROFILE_RESERVE+1,resetAt);
+  assert.equal((await acquirePublicPermit(db,{now:()=>clock})).quota.remaining,PUBLIC_PROFILE_RESERVE);
+  clock=sql.prepare('SELECT next_start_at FROM rate_quota').get().next_start_at;
+  // Down to the reserve: other calls are told to come back at the reset, at once.
+  assert.equal((await acquirePublicPermit(db,{now:()=>clock,maxWaitMs:60000})).retryAfterMs,resetAt-clock);
+  assert.equal(sql.prepare('SELECT remaining FROM rate_quota').get().remaining,PUBLIC_PROFILE_RESERVE);
+  // Account lookups spend the reserve, still at the shared spacing.
+  for(let left=PUBLIC_PROFILE_RESERVE-1;left>=0;left--){
+    assert.equal((await acquireProfilePermit(db,{now:()=>clock})).quota.remaining,left);
+    if(left)clock=sql.prepare('SELECT next_start_at FROM rate_quota').get().next_start_at;
+  }
+  assert.ok(clock<resetAt);
+  // Spent: even account lookups wait for the reset (or the last slot's spacing).
+  assert.ok((await acquireProfilePermit(db,{now:()=>clock,maxWaitMs:0})).retryAfterMs>=resetAt-clock);
+  // A new window opens to every caller again.
+  clock=Math.max(resetAt,sql.prepare('SELECT next_start_at FROM rate_quota').get().next_start_at);
+  assert.ok((await acquirePublicPermit(db,{now:()=>clock,maxWaitMs:0})).quota);
+});
+
+test('an unknown window enforces no reserve, so the first call can learn the quota',async t=>{
+  const {db}=database(t);
+  assert.equal((await acquirePublicPermit(db,{now:()=>100000})).quota.remaining,null);
 });

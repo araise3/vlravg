@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {onRequestGet} from '../functions/api/[[path]].js';
-import {PUBLIC_BORROW_RESERVE} from '../lib/upstream-pacing.mjs';
+import {PUBLIC_BORROW_RESERVE,PUBLIC_PROFILE_RESERVE} from '../lib/upstream-pacing.mjs';
 import {createRequestScheduler} from '../.github/scripts/request-scheduler.mjs';
 import {main as refresh,requestJSON,createStorageBreaker} from '../.github/scripts/refresh-rr-history.mjs';
 import {assertD1Headroom} from '../.github/scripts/d1-query.mjs';
@@ -29,9 +29,9 @@ function fixture(t){
     upstream.push({target,options});
     return Response.json({data:{}},{headers:{'x-ratelimit-remaining':'7','x-ratelimit-reset':'60'}});
   });
-  async function request(key,target=url){
+  async function request(key,target=url,headers={}){
     const jobs=[];
-    const response=await onRequestGet({env,request:new Request(target,{headers:key===undefined?{}:{'X-Workflow-Key':key}}),waitUntil:p=>jobs.push(p)});
+    const response=await onRequestGet({env,request:new Request(target,{headers:key===undefined?headers:{...headers,'X-Workflow-Key':key}}),waitUntil:p=>jobs.push(p)});
     await Promise.all(jobs);return response;
   }
   return {sql,env,upstream,cacheReads,cacheWrites,request};
@@ -336,4 +336,24 @@ test('archive migration ranges cover every rowid once and a range resumes from t
   assert.deepEqual(result,{after:0,before:7,moved:6,last:6,done:true});
   await assert.rejects(migrateRange({after:0,before:7},{origin:'https://site',key:'k',sleepImpl:async()=>{},
     fetchImpl:async()=>Response.json({error:'Unauthorized'},{status:401})}),/refused the workflow key/);
+});
+
+test('with the public window down to its reserve, a search still resolves its account',async t=>{
+  const f=fixture(t);
+  delete f.env.HENRIK_WORKFLOW_KEY; // teammate names fall back to the public key, as in local dev
+  const reserve=()=>f.sql.prepare('INSERT OR REPLACE INTO rate_quota (id,remaining,reset_at,last_request_at,next_start_at) VALUES(1,?,?,0,0)')
+    .run(PUBLIC_PROFILE_RESERVE,Date.now()+60000);
+  reserve();
+  const rank=await f.request(undefined);
+  assert.equal(rank.status,429);
+  assert.ok((await rank.json()).retryAfterMs>50000,'told to return at the reset');
+  reserve();
+  const teammate=await f.request(undefined,origin+'/api/account-by-puuid/11111111-1111-4111-8111-111111111111',{'X-Name-Lookup':'teammate'});
+  assert.equal(teammate.status,429,'teammate names cannot spend the reserve');
+  assert.equal(f.upstream.length,0);
+  reserve();
+  const account=await f.request(undefined,origin+'/api/account/Alpha/EU');
+  assert.equal(account.status,200);
+  assert.equal(f.upstream.length,1);
+  assert.equal(f.upstream[0].options.headers.Authorization,publicKey);
 });

@@ -91,7 +91,7 @@ import { workflowAuthorized } from "../../lib/workflow-auth.mjs";
 import { SITE_NAME_LOOKUP_RUN } from "../../lib/workflow-quota-audit.mjs";
 import { maintenance } from "../../lib/site-flags.mjs";
 import { matchKey, hasInlinePayload, readArchivedPayload, mapLimit } from "../../lib/match-store.mjs";
-import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, observePublicQuota, acquireBorrowedPublicPermit } from "../../lib/upstream-pacing.mjs";
+import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, acquireProfilePermit, observePublicQuota, acquireBorrowedPublicPermit } from "../../lib/upstream-pacing.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
 const PREFIX = "/api";
@@ -1227,8 +1227,11 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
   // Teammate-name refreshes are optional display data: they spend the
   // collector's workflow key, never the visitors' public quota. Without that
   // key configured (local development) they stay on the public key.
-  const namePool=!workflow&&!!route.accountByPuuid&&!!env.HENRIK_WORKFLOW_KEY
-    &&request.headers.get('X-Name-Lookup')==='teammate';
+  const teammateLookup=request.headers.get('X-Name-Lookup')==='teammate';
+  const namePool=!workflow&&!!route.accountByPuuid&&!!env.HENRIK_WORKFLOW_KEY&&teammateLookup;
+  // A search's account lookup may use the public reserve
+  // (lib/upstream-pacing.mjs PUBLIC_PROFILE_RESERVE); teammate names may not.
+  const profileLookup=!workflow&&!!route.trackAccount&&!teammateLookup;
   let permit,borrowed=false;
   try{
     if(namePool)permit=await acquireWorkflowPermit(env.APP_DB);
@@ -1239,7 +1242,7 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
         if(!loan.retryAfterMs){permit=loan;borrowed=true;}
       }
       if(!borrowed&&permit.retryAfterMs)permit=await acquireWorkflowPermit(env.APP_DB);
-    }else permit=await acquirePublicPermit(env.APP_DB);
+    }else permit=await (profileLookup?acquireProfilePermit:acquirePublicPermit)(env.APP_DB);
   }catch{return json({error:'Upstream quota storage unavailable'},503);}
   if(workflow&&!permit.retryAfterMs)admission.pool=borrowed?'public':'workflow';
   const upstreamKey=namePool?env.HENRIK_WORKFLOW_KEY:borrowed?env.HENRIK_KEY:henrikKey;
