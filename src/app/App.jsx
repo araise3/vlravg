@@ -2,7 +2,7 @@ import {Activity,useEffect,useRef} from 'react';
 import {AlertCircle} from 'lucide-react';
 import {hexToRgb,navigateToPage} from '@/engine/core.mjs';
 import {useEngine,useIsMobile,useSignal} from '@/app/hooks.js';
-import {PageLink} from '@/app/shared.jsx';
+import {PageLink,WIP_PAGES,WipBadge} from '@/app/shared.jsx';
 import {SearchHeader} from '@/app/SearchHeader.jsx';
 import {MobileTabBar} from '@/app/MobileShell.jsx';
 import {OverviewPage} from '@/app/pages/Overview.jsx';
@@ -40,7 +40,7 @@ function PageNav({navRef,mobile}){
         <TabsList className="h-auto max-w-full flex-wrap justify-start max-sm:w-full">
           {NAV.map(([page,label])=>(
             <TabsTrigger key={page} value={page} asChild className="h-8 flex-none px-3 max-sm:flex-1">
-              <PageLink page={page} aria-current={s.activePage===page?'page':undefined}>{label}</PageLink>
+              <PageLink page={page} aria-current={s.activePage===page?'page':undefined}>{label}{WIP_PAGES.has(page)&&<WipBadge/>}</PageLink>
             </TabsTrigger>
           ))}
         </TabsList>

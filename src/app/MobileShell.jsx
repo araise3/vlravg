@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import {analyzeProAccount,proSearchResults,rColor,rName,setSearchText,submitSearch} from '@/engine/core.mjs';
 import {useEngine,useSignal} from '@/app/hooks.js';
-import {PageLink,RankIcon,Sep} from '@/app/shared.jsx';
+import {PageLink,RankIcon,Sep,WIP_PAGES,WipBadge} from '@/app/shared.jsx';
 import {ActPicker,StatusBar} from '@/app/SearchHeader.jsx';
 import {ProAccount,ProGroupHeading,ProRegionFilter,filterProRegion,limitProGroups,proAccountLabel,proGroups,proRegionCounts,useProRowLimit} from '@/app/pro-library.jsx';
 import {cn} from '@/lib/utils';
@@ -249,7 +249,7 @@ export function MobileTabBar(){
                     <PageLink page={target} aria-current={active?'page':undefined} onClickCapture={()=>setMoreOpen(false)}>
                       <ItemMedia variant="icon" className={cn('size-10 rounded-xl bg-card',active&&'border-rank/50 text-rank')}><Icon className="size-[18px]" aria-hidden="true"/></ItemMedia>
                       <ItemContent className="min-w-0 gap-0">
-                        <ItemTitle className="text-base">{label}</ItemTitle>
+                        <ItemTitle className="text-base">{label}{WIP_PAGES.has(target)&&<WipBadge/>}</ItemTitle>
                         <ItemDescription className="line-clamp-1 text-xs">{note}</ItemDescription>
                       </ItemContent>
                       <ItemActions><ChevronRight className="size-4 text-muted-foreground/60" aria-hidden="true"/></ItemActions>

@@ -12,6 +12,19 @@ import {Button} from '@/components/ui/button';
 import {Empty,EmptyDescription} from '@/components/ui/empty';
 import {Separator} from '@/components/ui/separator';
 import {Skeleton} from '@/components/ui/skeleton';
+import {Badge} from '@/components/ui/badge';
+
+// Pages still being built (24 Nov 2026, on request: Replays). The badge sits
+// after the page's name in the tab strip and the phone's More sheet; screen
+// readers hear "work in progress".
+export const WIP_PAGES=new Set(['replays']);
+export function WipBadge({className}){
+  return (
+    <Badge variant="outline" className={cn('px-1.5 py-0 text-[10px] leading-4 font-medium text-muted-foreground',className)} data-slot="wip-badge">
+      <span aria-hidden="true">WIP</span><span className="sr-only">work in progress</span>
+    </Badge>
+  );
+}
 
 // Headline icons (64px+) use the 256px largeIcon PNGs; small badges stay embedded.
 export function RankIcon({tier,size=16,className,style}){

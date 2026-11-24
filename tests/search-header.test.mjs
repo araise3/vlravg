@@ -1,6 +1,6 @@
 import test,{after} from 'node:test';
 import assert from 'node:assert/strict';
-import {closeRenderer,renderHtml} from './helpers/react-render.mjs';
+import {closeRenderer,load,renderHtml} from './helpers/react-render.mjs';
 
 after(closeRenderer);
 
@@ -81,4 +81,16 @@ test('text boxes use a slim 1px focus ring around the 1px border',async()=>{
     assert.match(read(file),/focus-visible:ring-1 /,file);
     assert.doesNotMatch(read(file),/focus-visible:ring-\[3px\]/,file);
   }
+});
+
+test('Replays is marked work in progress in the tab strip, the phone More sheet and on the page',async()=>{
+  const {readFileSync}=await import('node:fs');
+  const src=f=>readFileSync(new URL('../src/app/'+f,import.meta.url),'utf8');
+  const {WIP_PAGES}=await load('/src/app/shared.jsx');
+  assert.deepEqual([...WIP_PAGES],['replays']);
+  const badge=await renderHtml('/src/app/shared.jsx','WipBadge');
+  assert.match(badge,/data-slot="wip-badge"[^>]*><span aria-hidden="true">WIP<\/span><span class="sr-only">work in progress<\/span>/);
+  assert.match(src('App.jsx'),/\{label\}\{WIP_PAGES\.has\(page\)&&<WipBadge\/>\}<\/PageLink>/);
+  assert.match(src('MobileShell.jsx'),/\{label\}\{WIP_PAGES\.has\(target\)&&<WipBadge\/>\}<\/ItemTitle>/);
+  assert.match(src('pages/Replays.jsx'),/<Alert data-slot="wip-notice">[\s\S]*<AlertTitle>Work in progress<\/AlertTitle>/);
 });

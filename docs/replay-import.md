@@ -10,6 +10,11 @@ The Function stores the export and the timeline in R2 and indexes them in D1.
 
 Uploaded replays are **user-supplied data**. They are stored in `replay_*` tables and the `REPLAY_BUCKET` only. Nothing is written to `match_archive`, `rr_history`, the RR corpus or name history, and every API response that serves replay data says `source: "user-upload"` or `X-Replay-Source: user-upload`.
 
+The page is marked **work in progress** (24 Nov 2026, on request): a `WIP`
+badge after "Replays" in the tab strip and the phone's More sheet
+(`WIP_PAGES`, `WipBadge` in `src/app/shared.jsx`) and a notice at the top of
+the page saying uploads can fail or be unavailable and parsed output may change.
+
 ## Status (2026-10-28)
 
 | Part | State |

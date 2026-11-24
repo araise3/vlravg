@@ -1,8 +1,9 @@
 import {useEffect,useRef,useState} from 'react';
-import {Upload} from 'lucide-react';
+import {Construction,Upload} from 'lucide-react';
 import {loadMatchMapMetadata,replayMatchRows,replayRowView,syncReplayImport,toggleReplaySteps,uploadReplay} from '@/engine/core.mjs';
 import {useEngine,useNow} from '@/app/hooks.js';
 import {EmptyState,PageHeading} from '@/app/shared.jsx';
+import {Alert,AlertDescription,AlertTitle} from '@/components/ui/alert';
 import {cn} from '@/lib/utils';
 import {Button} from '@/components/ui/button';
 import {Item,ItemActions,ItemContent,ItemDescription,ItemTitle} from '@/components/ui/item';
@@ -89,6 +90,13 @@ export function ReplaysPage({active}){
   return (
     <main aria-labelledby="replays-title" className="space-y-6">
       <PageHeading id="replays-title" title="Replay import"/>
+      {/* Marked work in progress on request (24 Nov 2026): the parser does
+          not support every game build yet (docs/replay-import.md). */}
+      <Alert data-slot="wip-notice">
+        <Construction aria-hidden="true"/>
+        <AlertTitle>Work in progress</AlertTitle>
+        <AlertDescription>Replay import is still being built. Uploads can fail or be unavailable, and what a parsed replay shows may change.</AlertDescription>
+      </Alert>
       {hasMatches?(
         <>
           {s.replayConfig&&!s.replayConfig.enabled&&<p role="status" aria-live="polite" className="text-sm text-muted-foreground">Replay uploads are not available right now.</p>}
