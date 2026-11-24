@@ -58,19 +58,18 @@ only the chrome around them and the way some data is drawn differ.
   its colour since 22 Nov 2026, short before) and RR change, with any
   performance bonus or refund right after it ("+35+5", `rrExtras`, 23 Nov
   2026), on one line and map, your place ("MVP" in gold for first, else
-  "3rd"), K/D/A and ADR on the next, the lobby and K/D/A right-aligned so
+  "3rd") and K/D/A on the next, the lobby and K/D/A right-aligned so
   the two figure groups line up from card to card. Decluttered 23 Nov 2026
   (on request, our pick of what to drop): the start time left the first
   line (the day header gives the date; the opened card has the time) and
   the PS figure (ACS on older matches) left the second, since your place
   already ranks you by it and both stay in the opened card; ADR took its
-  slot. ACS had left this line on 22 Nov 2026 for the place. At 375px the
-  longest values fit whole; at 320px only extreme lines ("72/12/8", "300
-  ADR") shorten the map name. Desktop shows the same lobby as a "Lobby"
+  slot until 24 Nov 2026, when it left the card on request. ACS had left
+  this line on 22 Nov 2026 for the place. Desktop shows the same lobby as a "Lobby"
   cell between Server and RR. The opened card's `MatchInfo` strip is three
   columns on phones, three full rows: K/D, ACS, DDΔ, HS%, KAST, clutch
   win rate, length, server and start time (the phone's closed card has
-  neither; its ADR tile is hidden, as the closed card has ADR),
+  neither),
   above the roster; the roster uses
   narrower columns, short rank names and agent icons, and drops the #tag
   (kept in the link) so names have room.

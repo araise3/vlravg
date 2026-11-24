@@ -45,7 +45,8 @@ or silver colour and no place in brackets after them. The phone card has no
 agent name, so the place follows the map name there. The agent is still in
 the card's label, its tile and the opened card. Since 23 Nov 2026 the phone
 line no longer shows the PS (or ACS) figure after the place: the place
-already ranks you by it, and ADR took the slot.
+already ranks you by it. ADR took the slot until 24 Nov 2026, when it left
+the card on request.
 
 The same day the average lobby in match history switched to the full rank
 name ("Diamond 2", was "Dia 2") on the closed card, the opened card and the

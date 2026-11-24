@@ -17,12 +17,12 @@ const match={matchId:'m1',mapName:'Abyss',won:true,myR:13,opR:7,myRR:24,startedA
   players:[player('p1','Player','red','Jett'),player('p2','Mate','red','Omen'),player('p3','Foe','blue','Sova')]};
 const s={PUUID:'p1',PLAYER:'Player',TAG:'EU',mhIncludeReset:false};
 
-test('the closed desktop card is one short row of labelled cells: agent, map over your place, result over score, K/D/A, ACS, ADR and PS as one group, server, average lobby and RR, with your rank as a badge on the agent tile',async()=>{
+test('the closed desktop card is one short row of labelled cells: agent, map over your place, result over score, K/D/A, ACS and PS as one group, server, average lobby and RR, with your rank as a badge on the agent tile',async()=>{
   const html=await renderHtml(PAGE,'MatchCard',{m:{...match,myStats:{...match.myStats,adr:162}},s,maps:null,agents,open:false,onOpenChange(){}});
   assert.match(html,/class="match-card win"/);
   assert.match(html,/data-agent="Jett"[^>]*style="[^"]*width:44px[^"]*background:#25607a/);
   assert.match(html,/<img src="https:\/\/media\.valorant-api\.com\/jett\.png" alt=""/);
-  assert.match(text(html),/^10 Oct, \d\d:\d\d Abyss Win 13 : 7 K \/ D \/ A 18 \/ 12 \/ 8 ACS 240 ADR 162 PS 230 Server Frankfurt Lobby Diamond 2 RR \+24$/);
+  assert.match(text(html),/^10 Oct, \d\d:\d\d Abyss Win 13 : 7 K \/ D \/ A 18 \/ 12 \/ 8 ACS 240 PS 230 Server Frankfurt Lobby Diamond 2 RR \+24$/);
   // The start sits in small text over the map, and your place right after the map name
   // (23 Nov 2026, on request).
   assert.match(html,/<span class="mc-cell mc-identity"><span class="mc-started" title="10 Oct, \d\d:\d\d" data-slot="match-started"><span class="mc-started-date">10 Oct, <\/span>\d\d:\d\d<\/span><span class="mc-title"><span class="match-map">Abyss<\/span>/);
@@ -34,23 +34,22 @@ test('the closed desktop card is one short row of labelled cells: agent, map ove
   assert.match(narrow,/\.mc-row \{ display: flex; align-items: center; \}/);
   assert.match(narrow,/\.mc-perf \{[^}]*margin-left: auto; padding-left: 14px; \}/);
   assert.match(narrow,/@container \(max-width: 660px\)/);
-  // ADR (23 Nov 2026) is a fourth performance column at both widths.
-  assert.match(css,/\.mc-perf \{ display: grid; grid-template-columns: (minmax\([^)]+\) ?){4};/);
-  assert.match(narrow,/\.mc-perf \{ flex: 0 1 auto; grid-template-columns: (minmax\([^)]+\) ?){4};/);
+  // Three performance columns at both widths: ADR was a fourth from 23 to 24 Nov 2026 (removed on request).
+  assert.match(css,/\.mc-perf \{ display: grid; grid-template-columns: (minmax\([^)]+\) ?){3};/);
+  assert.match(narrow,/\.mc-perf \{ flex: 0 1 auto; grid-template-columns: (minmax\([^)]+\) ?){3};/);
+  assert.match(css,/minmax\(calc\(228px \+ var\(--mc-gap\)\), 1\.75fr\)/);
   assert.deepEqual([...narrow.matchAll(/([.\w -]+) \{ display: none; \}/g)].map(m=>m[1].trim()),['.mc-server']);
   // The average lobby is the full rank name in the rank colour, without an icon, between server and RR.
   assert.match(html,/<span class="mc-cell mc-lobby">[^]*?<span class="text-fuchsia-300" data-slot="lobby-rank"[^>]*>Diamond 2<\/span>/);
   assert.doesNotMatch(html.slice(html.indexOf('mc-lobby'),html.indexOf('mc-rr')),/<img/);
   assert.match(html,/mc-server[^]*mc-lobby[^]*mc-rr/);
-  // Agent and map share one lead cell; K/D/A, ACS, ADR and PS share the performance group.
+  // Agent and map share one lead cell; K/D/A, ACS and PS share the performance group.
   assert.match(html,/<span class="mc-lead">[^]*data-agent="Jett"[^]*class="match-map">Abyss</);
-  assert.match(html,/<span class="mc-perf">[^]*K \/ D \/ A[^]*ACS[^]*mc-cell mc-adr"[^]*>ADR<[^]*>PS</);
-  // Without damage data the ADR cell says so rather than guess.
-  const noAdr=await renderHtml(PAGE,'MatchCard',{m:match,s,maps:null,agents,open:false,onOpenChange(){}});
-  assert.match(text(noAdr),/ACS 240 ADR — PS 230/);
+  assert.match(html,/<span class="mc-perf">[^]*K \/ D \/ A[^]*ACS[^]*>PS</);
+  assert.doesNotMatch(html,/ADR|mc-adr/);
   // Rank is the icon alone, on the tile; its name and RR are in the hint.
   assert.match(html,/<span class="relative flex shrink-0"><span[^>]*data-agent="Jett"[^]*?<\/span><span class="mc-tile-rank"[^>]*><img src="data:image\//);
-  assert.match(html,/aria-label="Win on Abyss, 13–7\. Played Jett\. 18 \/ 12 \/ 8 KDA, 240 ACS, 162 ADR, 230 Performance Score\. Average lobby Diamond 2 \(0 RR\)\. Show match details and roster"/);
+  assert.match(html,/aria-label="Win on Abyss, 13–7\. Played Jett\. 18 \/ 12 \/ 8 KDA, 240 ACS, 230 Performance Score\. Average lobby Diamond 2 \(0 RR\)\. Show match details and roster"/);
   assert.match(html,/<span class="mc-backdrop" aria-hidden="true"><\/span>/);
   // In the opened card only: the length.
   assert.doesNotMatch(text(html),/35:00|Avg lobby/);
@@ -64,7 +63,7 @@ test('a closed card without a lobby average shows a dash, with the rated count i
   assert.match(text(mobile),/^Win 13 : 7 — \+24 Abyss/);
 });
 
-test('the opened card is a strip of tiles: K/D, ACS, ADR, damage delta, HS%, KAST, clutches and length, then the roster',async()=>{
+test('the opened card is a strip of tiles: K/D, ACS, damage delta, HS%, KAST, clutches and length, then the roster',async()=>{
   const stats={...match.myStats,adr:162,dmg:3726,dmgTaken:2944,ddDelta:34,hsPct:28,kast:74,kastRounds:17,kastTotalRounds:23,kd:1.5};
   const clutches=[{type:2,outcome:'win'},{type:1,outcome:'loss'},{type:3,outcome:'save'}];
   const html=await renderHtml(PAGE,'MatchCard',{m:{...match,myStats:stats,myClutches:clutches,durationMs:35*60000+7000,myPostRR:1674,myPostTierId:18,avgTeamRank:18.4,avgEnemyRank:18.6},s,maps:null,agents,open:true,onOpenChange(){}});
@@ -72,20 +71,25 @@ test('the opened card is a strip of tiles: K/D, ACS, ADR, damage delta, HS%, KAS
   // No agent (the closed row's tile has it), no RR change, and no rank tile (removed on request).
   assert.doesNotMatch(info,/data-agent=|match-agent|Jett|\+24|rank-change|rank-bar|Diamond/);
   // No notes under the values (23 Nov 2026, on request): their counts are in the label hints.
-  assert.match(text(info),/> K\/D 1\.50 ACS 240 ADR 162 DDΔ \+34 HS% 28% KAST 74% Clutches 33% Length 35:07 Server Frankfurt Start \d\d:\d\d$/);
-  // Phones swap the ADR tile (on their closed row) for the start time (not on it): CSS
-  // shows .mc-info-started and hides .mc-info-adr only inside .match-card.mobile.
-  assert.match(info,/<div class="mc-stat-tile mc-info-adr"><dt class="mc-stat-label">/);
+  // No ADR tile (24 Nov 2026, on request).
+  assert.match(text(info),/> K\/D 1\.50 ACS 240 DDΔ \+34 HS% 28% KAST 74% Clutches 33% Length 35:07 Server Frankfurt Start \d\d:\d\d$/);
+  assert.doesNotMatch(info,/ADR|mc-info-adr/);
+  // Phones add the start time, which their closed row does not show: CSS shows
+  // .mc-info-started only inside .match-card.mobile.
   assert.match(info,/<div class="mc-stat-tile mc-info-started"><dt class="mc-stat-label">Start<\/dt>/);
   const {readFileSync}=await import('node:fs');
   const css=readFileSync(new URL('../src/index.css',import.meta.url),'utf8');
-  assert.match(css,/\.mc-stat-tile\.mc-info-started, \.match-card\.mobile \.mc-stat-tile\.mc-info-adr \{ display: none; \}/);
+  assert.match(css,/\.mc-stat-tile\.mc-info-started \{ display: none; \}/);
+  // Seven tiles in a row; eight with the server below 880px; four columns
+  // below 760px (a server name needs the room), three on phones.
+  assert.match(css,/\.mc-stats \{ display: grid; grid-template-columns: repeat\(7, minmax\(0, 1fr\)\);/);
+  assert.match(css,/@container \(max-width: 880px\) \{\n  \.mc-stats \{ grid-template-columns: repeat\(8, minmax\(0, 1fr\)\); \}/);
+  assert.match(css,/@container \(max-width: 760px\) \{\n  \.mc-stats \{ grid-template-columns: repeat\(4, minmax\(0, 1fr\)\); \}\n  \.match-card\.mobile \.mc-stats \{ grid-template-columns: repeat\(3, minmax\(0, 1fr\)\); \}/);
   assert.match(css,/\.match-card\.mobile \.mc-stat-tile\.mc-info-started \{ display: flex; \}/);
   assert.doesNotMatch(info,/mc-stat-foot/);
   const {matchInfoTiles}=await import('./helpers/react-render.mjs').then(r=>r.load(PAGE));
   const hints=Object.fromEntries(matchInfoTiles({...match,myStats:stats,myClutches:clutches},{duration:'35:07'}).map(t=>[t.label,t.hint]));
   assert.equal(hints['K/D'],'Kills divided by deaths (18 kills, 12 deaths)');
-  assert.equal(hints.ADR,'Average damage per round (3,726 damage)');
   assert.equal(hints['DDΔ'],'Damage delta: damage dealt minus damage taken, per round (2,944 taken)');
   assert.equal(hints.KAST,'Rounds with a kill, assist, survival or trade (17 of 23 rounds)');
   assert.equal(hints.Clutches,'1 of 3 won: 1v2 won, 1v1 lost, 1v3 saved');
@@ -118,7 +122,7 @@ test('the opened card is a strip of tiles: K/D, ACS, ADR, damage delta, HS%, KAS
   assert.match(info,/<div class="mc-stat-tile mc-info-server"><dt class="mc-stat-label">Server<\/dt>/);
   // Without per-match data the tiles say so rather than guess.
   const bare=text(await renderHtml(PAGE,'MatchCard',{m:{...match,myClutches:null},s,maps:null,agents,open:true,onOpenChange(){}}));
-  assert.match(bare,/ADR — DDΔ — HS% — KAST — Clutches — Length 35:00/);
+  assert.match(bare,/ACS 240 DDΔ — HS% — KAST — Clutches — Length 35:00/);
   // No debug grid: no queue, no "Recorded payout", no reported-fields footnote.
   assert.doesNotMatch(html,/Your RR details|Recorded payout|Queue|not added again/);
   // Each team header carries its average rank as a short name in its colour, not its rounds (the closed row has the score).
@@ -165,9 +169,9 @@ test('roster parties share a colour on either team, yours first, solos stay plai
 
 test('the phone card is two lines next to a 40px agent tile and names the agent in its label',async()=>{
   const html=await renderHtml(PAGE,'MobileMatchCard',{m:{...match,myStats:{...match.myStats,adr:162}},s,maps:null,agents,open:false,onOpenChange(){}});
-  // Decluttered 23 Nov 2026: no start time and no PS/ACS figure on the closed card; ADR instead.
+  // Decluttered 23 Nov 2026: no start time and no PS/ACS figure on the closed card; no ADR since 24 Nov 2026.
   const visible=text(html.replace(/aria-label="[^"]*"/g,''));
-  assert.match(visible,/^Win 13 : 7 Diamond 2 \+24 Abyss 18 \/ 12 \/ 8 162 ADR$/);
+  assert.match(visible,/^Win 13 : 7 Diamond 2 \+24 Abyss 18 \/ 12 \/ 8$/);
   assert.doesNotMatch(html,/data-slot="match-started"/);
   assert.match(html,/data-agent="Jett"[^>]*width:40px/);
   assert.match(html,/class="mc-backdrop" aria-hidden="true"/);

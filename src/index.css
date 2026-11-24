@@ -356,7 +356,7 @@
    aligned from card to card. The map splash is a faded backdrop on the
    right; the result colours the left edge and a faint wash behind the tile. */
 .mc-row { position: relative; isolation: isolate; display: grid; width: 100%; padding: 10px 16px 10px 14px; text-align: left; cursor: pointer;
-  --mc-gap: 32px; grid-template-columns: minmax(0, 172px) minmax(84px, .65fr) minmax(calc(276px + var(--mc-gap)), 1.75fr) minmax(0, 1.25fr) minmax(108px, .75fr) minmax(56px, .45fr) 16px; align-items: center; column-gap: 0;
+  --mc-gap: 32px; grid-template-columns: minmax(0, 172px) minmax(84px, .65fr) minmax(calc(228px + var(--mc-gap)), 1.75fr) minmax(0, 1.25fr) minmax(108px, .75fr) minmax(56px, .45fr) 16px; align-items: center; column-gap: 0;
   border-left: 3px solid var(--result-color); background: linear-gradient(90deg, color-mix(in oklab, var(--result-color) 10%, transparent), transparent 34%); }
 .mc-row:focus-visible { outline: 2px solid var(--brand); outline-offset: -3px; border-radius: 11px; }
 .mc-backdrop { position: absolute; inset: 0 0 0 auto; z-index: -1; width: min(64%, 560px); overflow: hidden; pointer-events: none; }
@@ -379,8 +379,8 @@
 .mc-lobby { margin-left: 16px; }
 .mc-rr { margin-left: 12px; }
 .mc-chevron { margin-left: 14px; }
-/* K/D/A, ACS, ADR (23 Nov 2026) and PS. */
-.mc-perf { display: grid; grid-template-columns: minmax(94px, 1.25fr) minmax(34px, .75fr) minmax(34px, .75fr) minmax(34px, .75fr); column-gap: 14px; min-width: 0; }
+/* K/D/A, ACS and PS (ADR was a fourth column 23-24 Nov 2026). */
+.mc-perf { display: grid; grid-template-columns: minmax(94px, 1.25fr) minmax(34px, .75fr) minmax(34px, .75fr); column-gap: 14px; min-width: 0; }
 /* Minimum widths keep K/D/A (up to 20 / 22 / 14), scores and RR whole; the
    map column gives way first. */
 .mc-cell { display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 0; }
@@ -427,7 +427,7 @@
   /* K/D/A, ACS and PS keep their wide-card column widths while there is
      room (the assists sat right against the ACS value), and only shrink
      towards their values once the side gaps are used up. */
-  .mc-perf { flex: 0 1 auto; grid-template-columns: minmax(auto, 94px) minmax(auto, 48px) minmax(auto, 48px) minmax(auto, 48px); column-gap: 14px; margin-left: auto; padding-left: 14px; }
+  .mc-perf { flex: 0 1 auto; grid-template-columns: minmax(auto, 94px) minmax(auto, 48px) minmax(auto, 48px); column-gap: 14px; margin-left: auto; padding-left: 14px; }
   .mc-perf > .mc-cell { min-width: max-content; }
   .mc-lobby { margin-left: auto; padding-left: 14px; }
   .mc-rr { margin-left: 12px; }
@@ -450,9 +450,9 @@
    where the row above hides it (the 880px rule above; phone cards are always
    narrower). */
 .mc-info-server, .mc-stat-tile.mc-info-server { display: none; }
-/* Phone cards show ADR on the closed row but not the start time, so their
-   strip swaps the one for the other (23 Nov 2026). */
-.mc-stat-tile.mc-info-started, .match-card.mobile .mc-stat-tile.mc-info-adr { display: none; }
+/* Phone cards do not show the start time on the closed row, so their strip
+   adds it (23 Nov 2026). */
+.mc-stat-tile.mc-info-started { display: none; }
 .match-card.mobile .mc-stat-tile.mc-info-started { display: flex; }
 .m-result-tag { color: var(--result-color); font-size: 10px; font-weight: 750; text-transform: uppercase; letter-spacing: .1em; }
 .match-score { display: flex; align-items: baseline; gap: 5px; font-size: 17px; font-weight: 750; letter-spacing: -.03em; font-variant-numeric: tabular-nums; line-height: 1.25; }
@@ -475,17 +475,22 @@
 .match-card-details { padding: 18px 12px; border-top: 1px solid #222; background: #101012; }
 /* Opened card: rank before → after, with a 100 RR bar below Immortal. The
    base fill takes the rank colour (currentColor); the change is green or red. */
-/* The opened card's stat strip: eight hairline tiles in one row, three
-   columns where the card is narrow (phones, 640px windows; the server tile
-   joins there, making three full rows). */
-.mc-stats { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 1px; overflow: hidden; border: 1px solid #27272a; border-radius: 10px; background: #27272a; }
+/* The opened card's stat strip: seven hairline tiles in one row (eight,
+   with the server, below 880px), four columns below 760px, where one row
+   left a server name like "Frankfurt" too little room, and three on phones
+   (nine tiles with server and start: three full rows). */
+.mc-stats { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px; overflow: hidden; border: 1px solid #27272a; border-radius: 10px; background: #27272a; }
 .mc-stat-tile { display: flex; min-width: 0; flex-direction: column; gap: 4px; padding: 10px 12px; background: #18181b; }
 .mc-stat-label { font-size: 11px; color: #a1a1aa; white-space: nowrap; }
 .mc-stat-value { font-size: 18px; line-height: 1.15; font-weight: 650; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Server names are words: a little smaller, and they wrap at spaces ("Washington DC") instead of being cut. */
 .mc-info-server .mc-stat-value { font-size: 14px; white-space: normal; overflow: visible; }
-@container (max-width: 640px) {
-  .mc-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@container (max-width: 880px) {
+  .mc-stats { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+}
+@container (max-width: 760px) {
+  .mc-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .match-card.mobile .mc-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 /* The performance bonus and refund right after the RR change ("+16+4",
    23 Nov 2026): smaller and lighter than the change, on its baseline. */

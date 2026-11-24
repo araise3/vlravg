@@ -147,7 +147,6 @@ export function matchView(m,s){
   // Your rank going into the match (requested back on the closed card).
   const myRank=matchCardPlayerRank(m);
   const myAcs=myStats?.acs!=null?Math.round(myStats.acs):'—';
-  const adr=Number.isFinite(myStats?.adr)?myStats.adr:'—';
   const performanceScore=Number.isFinite(myStats?.performanceScore)?Math.round(myStats.performanceScore):'—';
   const rt=won===true?'Win':won===false?'Loss':'Draw';
   const awardLabel=award==='match'?'Match MVP':award==='team'?'Team MVP':'';
@@ -167,12 +166,12 @@ export function matchView(m,s){
   // Length tile's note in the opened card). Narrow cards show the time alone.
   const date=startedAtMs!=null?new Date(startedAtMs).toLocaleDateString('en-GB',{day:'numeric',month:'short'}):null;
   return {
-    rt,result:won===true?'win':won===false?'loss':'draw',award,awardLabel,place,placeHint,rank,myRank,performanceScore,acs:myAcs,adr,
+    rt,result:won===true?'win':won===false?'loss':'draw',award,awardLabel,place,placeHint,rank,myRank,performanceScore,acs:myAcs,
     shielded:!!myDerankProtected&&myRR<0,
     time,date,started:date&&time?`${date}, ${time}`:time,
     duration:matchLengthText(m.durationMs),
     me,
-    label:rt+' on '+mapName+', '+score+'. '+(m.myAgent?'Played '+m.myAgent+'. ':'')+(awardLabel?awardLabel+'. ':'')+kda+' KDA, '+myAcs+' ACS, '+(adr==='—'?'':adr+' ADR, ')+performanceScore+' Performance Score.'+(rank?' Average lobby '+lobbyRankText(avgRank)+'.':'')
+    label:rt+' on '+mapName+', '+score+'. '+(m.myAgent?'Played '+m.myAgent+'. ':'')+(awardLabel?awardLabel+'. ':'')+kda+' KDA, '+myAcs+' ACS, '+performanceScore+' Performance Score.'+(rank?' Average lobby '+lobbyRankText(avgRank)+'.':'')
       +rrExtras(m).map(n=>' '+n.text+'.').join(''),
   };
 }
@@ -266,16 +265,18 @@ export function clutchSummaryText(clutches){
 }
 
 // The opened card's head (redesigned 22 Nov 2026, on request: the first
-// version looked empty). One strip of hairline tiles: K/D, ACS, ADR, damage
+// version looked empty). One strip of hairline tiles: K/D, ACS, damage
 // delta per round, headshot %, KAST, clutch win rate and the game length.
+// ADR left the whole match card on 24 Nov 2026 (on request); the day recap
+// keeps it.
 // K/D and ACS were asked for here although the closed row has K/D/A and ACS.
 // The Rank tile (rank before and after) was removed the same day on request.
 // The notes under the values went on 23 Nov 2026 (on request); their counts
 // moved into the label hints, and the start time moved to the closed row.
 // The server joins only where the closed row hides it (`.mc-info-server`).
-// Phones (23 Nov 2026) swap the ADR tile, which their closed row now shows,
-// for the start time, which it no longer does (`.mc-info-adr`/`-started`);
-// the time alone, as the day header above gives the date.
+// Phones (23 Nov 2026) add the start time, which their closed row no longer
+// shows (`.mc-info-started`); the time alone, as the day header above gives
+// the date.
 export function matchInfoTiles(m,v){
   const st=m.myStats||{};
   const clutch=clutchSummaryText(m.myClutches);
@@ -284,7 +285,6 @@ export function matchInfoTiles(m,v){
   return [
     {label:'K/D',value:Number.isFinite(st.kd)?st.kd.toFixed(2):null,hint:hint('Kills divided by deaths',st.kills!=null&&st.deaths!=null&&`${st.kills} kills, ${st.deaths} deaths`)},
     {label:'ACS',value:Number.isFinite(st.acs)?Math.round(st.acs):null,hint:'Average combat score per round'},
-    {label:'ADR',value:st.adr,className:'mc-info-adr',hint:hint('Average damage per round',Number.isFinite(st.dmg)&&`${count(st.dmg)} damage`)},
     {label:'DDΔ',value:Number.isFinite(st.ddDelta)?rrSigned(st.ddDelta,0):null,tone:Number.isFinite(st.ddDelta)&&st.ddDelta!==0?(st.ddDelta>0?'text-positive':'text-negative'):null,
       hint:hint('Damage delta: damage dealt minus damage taken, per round',Number.isFinite(st.dmgTaken)&&`${count(st.dmgTaken)} taken`)},
     {label:'HS%',value:st.hsPct!=null?st.hsPct+'%':null,hint:'Headshots as a share of your hits'},
@@ -314,12 +314,12 @@ function MatchInfo({m,v}){
 }
 
 // Phones: two lines next to the agent tile. Result, score, the average lobby
-// and RR change; then map, your place, K/D/A and ADR. Decluttered 23 Nov 2026
+// and RR change; then map, your place and K/D/A. Decluttered 23 Nov 2026
 // (on request, our pick): the start time left the first line (the day header
 // gives the date; the opened card has the time) and the PS/ACS figure left the
 // second (your place already ranks you by it; both stay in the opened card's
-// tiles and roster), which made room for ADR. Everything else is in the opened
-// card.
+// tiles and roster), which made room for ADR; ADR left again on 24 Nov 2026
+// (on request). Everything else is in the opened card.
 export function MobileMatchCard({m,s,maps,agents,open,onOpenChange}){
   const v=matchView(m,s);
   const art=maps?.get(String(m.mapId||'').toLowerCase())||maps?.get(String(m.mapName).toLowerCase());
@@ -347,7 +347,6 @@ export function MobileMatchCard({m,s,maps,agents,open,onOpenChange}){
               <span className="min-w-0 truncate font-semibold text-foreground">{m.mapName}</span>
               <PlaceTag v={v} className="shrink-0"/>
               <span className="ml-auto shrink-0 font-semibold text-foreground"><KdaValue stats={m.myStats}/></span>
-              <span className="shrink-0"><span className="font-semibold text-foreground">{v.adr}</span> ADR</span>
             </span>
           </span>
           <ChevronDown className={cn('size-4 shrink-0 text-muted-foreground transition-transform duration-200',open&&'rotate-180')} aria-hidden="true"/>
@@ -379,8 +378,8 @@ function MapBackdrop({art}){
 
 // Redesigned 22 Nov 2026 (on request, with agent icons) and slimmed the same
 // day to one short row, grouped by what belongs together: agent and map,
-// result, your performance (K/D/A, ACS, ADR, PS; ADR added 23 Nov 2026 on
-// request), server, RR change. The map splash is a faded backdrop on
+// result, your performance (K/D/A, ACS, PS; ADR was added 23 Nov 2026 and
+// removed 24 Nov 2026, both on request), server, RR change. The map splash is a faded backdrop on
 // the right and the result colours the left edge.
 function DesktopMatchCard({m,s,maps,agents,open,onOpenChange}){
   const v=matchView(m,s);
@@ -413,7 +412,6 @@ function DesktopMatchCard({m,s,maps,agents,open,onOpenChange}){
           <span className="mc-perf">
             <Stat label="K / D / A" className="mc-cell mc-kda"><KdaValue stats={m.myStats}/></Stat>
             <Stat label="ACS" className="mc-cell mc-acs">{v.acs}</Stat>
-            <Stat label="ADR" className="mc-cell mc-adr" title="Average damage per round, to enemies only">{v.adr}</Stat>
             <Stat label="PS" className="mc-cell mc-ps" title={m.myStats?.performanceScore==null?'Performance Score is not provided in this match’s API data':'Performance Score'}>{v.performanceScore}</Stat>
           </span>
           <span className="mc-cell mc-server">

@@ -93,8 +93,8 @@ test('the phone match card keeps result, score, RR change, stats and the roster 
   // Two lines since 22 Nov 2026: length and server are in the opened card;
   // the average lobby (full rank name, no icon) sits before the RR change.
   // Decluttered 23 Nov 2026: the start time moved to the opened card and the
-  // PS figure gave way to ADR (no damage data here, so a dash).
-  assert.match(t,new RegExp(String.raw`^Win 13 : 7 ${avgLabel(tierRR(18.5).tier)} \+24 Abyss 18 / 12 / 8 — ADR$`));
+  // PS figure gave way to ADR, which left again on 24 Nov 2026 (on request).
+  assert.match(t,new RegExp(String.raw`^Win 13 : 7 ${avgLabel(tierRR(18.5).tier)} \+24 Abyss 18 / 12 / 8$`));
   assert.doesNotMatch(html,/data-slot="match-started"/);
   assert.match(html,/data-slot="lobby-rank"[^>]*>Diamond 2<\/span>/);
   assert.match(html,/aria-label="Win on Abyss, 13–7\. 18 \/ 12 \/ 8 KDA, 240 ACS, 230 Performance Score\. Average lobby [^"]+\. Show match details and roster"/);

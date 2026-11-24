@@ -158,10 +158,12 @@ end of `src/index.css` (they outrank Tailwind's utility layer):
   place in the match (agent name until 22 Nov 2026; see
   [match-mvp.md](match-mvp.md)) and the placements badge, the result tag with the quiet MVP
   accolade beside it (trophy only below 760px of card width) over the score,
-  K/D/A, ACS, ADR (23 Nov 2026, on request) and PS, server and the RR change. Spacing follows how related
+  K/D/A, ACS and PS, server and the RR change. ADR was a fourth figure from
+  23 Nov 2026 and left the whole card (closed row, phone line and opened
+  tiles) on 24 Nov 2026, both on request; the day recap keeps it. Spacing follows how related
   the cells are: agent and map share one lead cell (12px), capped at 140px
   (tile plus "Fracture" and "Brimstone") so the result follows 16px after it
-  instead of after an empty stretch; K/D/A, ACS, ADR and PS form one performance
+  instead of after an empty stretch; K/D/A, ACS and PS form one performance
   group (14px apart); and the remaining groups (performance, server, RR) are
   32px apart on wide cards, whose fixed columns line up from card to card.
   Cards of 880px and less (800px until ADR joined, when the server column
@@ -171,7 +173,7 @@ end of `src/index.css` (they outrank Tailwind's utility layer):
   width, agent, map and result stay together, and the spare width goes to
   the gaps before the performance group and the lobby, which shrink to
   14px (10px, with every other gap tightened, from 660px down). K/D/A, ACS
-  ADR and PS keep their 94/48/48/48px column widths while those gaps have room (the
+  and PS keep their 94/48/48px column widths while those gaps have room (the
   assists sat against the ACS value otherwise) and shrink towards their
   values only after; a column is never narrower than its value. The longest
   values together ("Fracture 10th", "20 / 22 / 14", "Ascendant 3",
@@ -183,9 +185,10 @@ end of `src/index.css` (they outrank Tailwind's utility layer):
   a faint wash behind the tile. Opened, `MatchInfo` comes first and repeats
   nothing from the closed row (22 Nov 2026, on request: no agent, no RR
   change, no team rounds; the first tile-less version looked empty). It is
-  one strip of hairline tiles (`.mc-stats`, eight columns on desktop, three
-  where the card is under 640px): K/D and ACS, asked for here although the
-  closed row has K/D/A and ACS; ADR; DDΔ, the damage delta per round
+  one strip of hairline tiles (`.mc-stats`, seven columns on wide desktop
+  cards, eight with the server below 880px, four under 760px and three on
+  phones): K/D and ACS, asked for here although the
+  closed row has K/D/A and ACS; DDΔ, the damage delta per round
   (`ddDelta`: enemy damage dealt minus enemy damage taken, from the round
   damage events, else the summary's `damage.received`; green above zero, red
   below); HS%, KAST, clutch win rate (`clutchSummaryText`) and the length,
