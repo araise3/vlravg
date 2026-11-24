@@ -194,13 +194,101 @@ Test (`tests/rr-collector-workflow.test.mjs`): four workers and a load that
 takes 2.2 s run one reload at a time and one per interval. Without the fix,
 four overlapped.
 
+## Keeping script load off the site (24 Nov 2026)
+
+The overlapping reloads were one bug, but the cause underneath is structural:
+the site and every script share one D1 database, and an overload rejects
+every query of that database for a few seconds, the site's single-row
+quota-gate statements included. So the fix has two sides: scripts can take
+only a bounded share of D1, and the site rides out a brief overload instead
+of answering 503.
+
+### Script side: one governor per process
+
+Every statement a script sends goes through `d1Query` in
+[.github/scripts/d1-query.mjs](../.github/scripts/d1-query.mjs), and so
+through one governor per process (`createD1Governor`, shared via
+`d1Governor()`):
+
+- **One statement at a time.** However many workers or callers a script has,
+  its statements are queued, so no bug like the overlapping reloads can stack
+  heavy reads again.
+- **Pacing.** After each statement the governor leaves D1 alone for
+  `PACE_FACTOR` (4) times the D1 time that statement took, at most 20 s. So
+  scripts use at most about a fifth of D1's time. A failed statement, which
+  reports no D1 time, counts its round trip instead.
+- **Early warning.** A statement that kept D1 busy longer than `D1_SLOW_MS`
+  (1 s) is logged as a GitHub `::warning::` with its SQL, so a read that
+  grows with its tables shows up before it can overload D1. The collector's
+  report gains a `d1` block: statements, total D1 time, slow count and the
+  slowest statement.
+- **No bypasses.** `listPlayers` (refresh-rr-history), `d1DatabaseSize` and
+  [scripts/export-rr-curve-corpus.mjs](../scripts/export-rr-curve-corpus.mjs)
+  used to call D1's REST API directly and now go through `d1Query`. A test
+  fails if any script calls the D1 query endpoint itself.
+
+### Script side: the player reload in self-sizing ranges
+
+`loadTracked` ([.github/scripts/rr-activity-query.mjs](../.github/scripts/rr-activity-query.mjs))
+now reads through `readByPuuidRange`. It starts with 16 PUUID ranges and,
+after each range, resizes the next one so that it should take about
+`SLICE_TARGET_MS` (250 ms) of D1 time, at most doubling or quartering per
+step; without a reported time the size stays. The ranges cover every string
+(the first starts at `''`, the last ends at `'~'`), so each PUUID is read
+exactly once whatever its case. As the tables grow the read uses more,
+smaller ranges instead of one longer statement. Each range repeats the two act
+lookups, which are single index seeks.
+
+Not measured against production yet: the number of ranges and the D1 time per
+range of a real reload. The collector's report and the slow-statement warning
+will show both.
+
+### Site side: retrying a brief overload
+
+[lib/d1-retry.mjs](../lib/d1-retry.mjs) wraps `env.APP_DB` for every request
+of the API proxy (`onRequestGet`, `onRequestPost`) and of the replay routes
+(`withD1RetryContext`). A statement (`first`, `run`, `all`, `raw`) or a
+batch that fails with "D1 DB is overloaded" is retried after about 0.15, 0.4,
+1 and 2.5 s (each ±25% jitter), about 4 s in all; a batch is retried whole.
+Any other error, or an overload that outlasts the waits, is thrown unchanged,
+so the quota gate still fails closed with a 503.
+
+Retried writes are safe: they are upserts, conditional updates or quota-gate
+leases, and an extra lease only holds units back until it expires. Inference,
+not documented by Cloudflare: an overloaded database rejects a statement
+before running it, so a retried write has not run twice.
+
+### Options ruled out
+
+- **D1 read replicas.** Cloudflare documents them only through the Worker
+  binding's Sessions API, not the REST API the scripts use, so they cannot
+  move script reads off the primary.
+- **A Durable Object for the quota gate.** It would shield only the gate, not
+  the other D1-backed routes (`match-archive`, `name-history`, …), and it
+  needs a separate Worker plus dashboard setup.
+
+### Tests
+
+- `tests/d1-governor.test.mjs`: one statement at a time across callers; the
+  pause is four times the D1 time, capped, and a failure counts its round
+  trip; slow statements are reported with their SQL; PUUID ranges read every
+  row exactly once (case and edge values) and shrink or grow with their D1
+  time; every script reaches D1 through `d1Query`.
+- `tests/d1-retry.test.mjs`: an overload is retried with growing waits; one
+  that outlasts the waits, and any other error, is thrown unchanged; a batch
+  is retried whole; the quota gate admits through a brief overload and still
+  fails closed when it lasts; the request context only swaps `APP_DB`.
+- `tests/rr-corpus.test.mjs`: the ranged player read returns the same rows as
+  one statement, each range searching the PUUID key.
+
 ### Not yet done or verified
 
-- The collector picks this up at its next run; the current run keeps the
-  old script.
-- Whether the 503 bursts stop has to be checked with a drain that overlaps
-  a reload.
-- One reload is still a single 2.2 s statement. The 23 Nov target was under
-  about 1 s per statement. Slicing and pacing it like the census would get
-  there.
-- The gate's polling is untouched.
+- Deployed on 25 Nov 2026 (commits 09bc1b6 and 0d37c60). The collector picks
+  up the scripts at its next run; the current run keeps the old ones.
+- Whether the 503 bursts stop has to be checked with a quota drain that
+  overlaps a reload (about :20 or :50 past the hour while a run is going).
+- `wrangler d1 execute` and other ad-hoc queries bypass the governor. Heavy
+  one-off reads should go through a script that uses `d1Query`.
+- The census and inventory reads still use fixed slices (`pacedQuery`). They
+  are paced and get the slow-statement warning, but do not resize themselves.
+- The gate's polling (most of a drain's D1 statements) is untouched.
