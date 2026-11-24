@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {onRequestGet} from '../functions/api/[[path]].js';
-import {PUBLIC_BORROW_RESERVE,PUBLIC_PROFILE_RESERVE} from '../lib/upstream-pacing.mjs';
+import {PUBLIC_BORROW_RESERVE,PUBLIC_PROFILE_RESERVE,RESET_GUARD_MS} from '../lib/upstream-pacing.mjs';
 import {createRequestScheduler} from '../.github/scripts/request-scheduler.mjs';
 import {main as refresh,requestJSON,createStorageBreaker} from '../.github/scripts/refresh-rr-history.mjs';
 import {assertD1Headroom} from '../.github/scripts/d1-query.mjs';
@@ -447,4 +447,23 @@ test('public responses in the reserve are audited with our count beside the head
   f.sql.prepare('UPDATE rate_quota SET remaining=50,next_start_at=0').run();
   assert.equal((await f.request(undefined,origin+'/api/rank/eu/pc/Beta/EU')).status,200);
   assert.equal(auditRows(f).length,1,'responses with quota to spare write nothing');
+});
+
+test('stated whole-second resets are stored a guard later, relative and epoch alike',async t=>{
+  for(const [label,reset,expected] of [
+    ['seconds until reset','30',()=>Date.now()+30000+RESET_GUARD_MS],
+    ['epoch seconds',String(Math.floor(Date.now()/1000)+30),()=>(Math.floor(Date.now()/1000)+30)*1000+RESET_GUARD_MS],
+  ]){
+    await t.test(label,async t=>{
+      const f=fixture(t);
+      f.respond=()=>Response.json({data:{}},{headers:{'x-ratelimit-remaining':'1','x-ratelimit-reset':reset}});
+      const want=expected();
+      assert.equal((await f.request(undefined)).status,200);
+      const {reset_at}=f.sql.prepare('SELECT reset_at FROM rate_quota').get();
+      assert.ok(Math.abs(reset_at-want)<200,`${reset_at} vs ${want}`);
+      // An exhausted window stays shut until that guarded reset.
+      f.sql.prepare('UPDATE rate_quota SET remaining=0,next_start_at=0').run();
+      assert.equal((await f.request(undefined,origin+'/api/rank/eu/pc/Beta/EU')).status,429);
+    });
+  }
 });

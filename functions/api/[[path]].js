@@ -91,7 +91,7 @@ import { workflowAuthorized } from "../../lib/workflow-auth.mjs";
 import { SITE_NAME_LOOKUP_RUN } from "../../lib/workflow-quota-audit.mjs";
 import { maintenance } from "../../lib/site-flags.mjs";
 import { matchKey, hasInlinePayload, readArchivedPayload, mapLimit } from "../../lib/match-store.mjs";
-import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, acquireProfilePermit, observePublicQuota, acquireBorrowedPublicPermit } from "../../lib/upstream-pacing.mjs";
+import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, acquireProfilePermit, observePublicQuota, acquireBorrowedPublicPermit, RESET_GUARD_MS } from "../../lib/upstream-pacing.mjs";
 import { readSavedAccount } from "../../lib/saved-account.mjs";
 import { publicQuotaEvent, recordPublicQuotaEvent } from "../../lib/public-quota-audit.mjs";
 
@@ -940,8 +940,11 @@ async function mergeRRHistory(env, bodyText, route) {
 
 // Parses HenrikDev's real rate-limit headers into {remaining, resetAt}.
 // Same header set as before, just read server-side now instead of forwarded.
+// Reset times come in whole seconds, so the real reset can be up to a second
+// after the stated one; resetAt adds RESET_GUARD_MS so the first call of the
+// next window does not arrive early (lib/upstream-pacing.mjs).
 function parseUpstreamQuota(headers) {
-  let remaining = null, resetSeconds = null;
+  let remaining = null, resetSeconds = null, resetEpoch = null;
   const rl = headers.get("ratelimit");
   if (rl) {
     const mr = rl.match(/(?:^|[;\s])r=(\d+)/i);
@@ -957,12 +960,13 @@ function parseUpstreamQuota(headers) {
     const reset = headers.get("x-ratelimit-reset");
     if (reset != null) {
       const n = parseInt(reset, 10);
-      if (!Number.isNaN(n)) resetSeconds = n > 1e6 ? Math.max(0, Math.round(n - Date.now() / 1000)) : n;
+      if (!Number.isNaN(n)) { if (n > 1e6) resetEpoch = n; else resetSeconds = n; }
     }
   }
   return {
     remaining: Number.isNaN(remaining) ? null : remaining,
-    resetAt: resetSeconds != null && !Number.isNaN(resetSeconds) ? Date.now() + resetSeconds * 1000 : null,
+    resetAt: resetSeconds != null && !Number.isNaN(resetSeconds) ? Date.now() + resetSeconds * 1000 + RESET_GUARD_MS
+      : resetEpoch != null ? Math.max(Date.now(), resetEpoch * 1000) + RESET_GUARD_MS : null,
   };
 }
 

@@ -185,3 +185,33 @@ will not wait, or an empty window, leaves no claim; five-column public tables
 gain the column and the workflow table does not.
 
 Not yet verified on the live site.
+
+## Reset guard, 24 Nov 2026
+
+A third live drain (90 s, 21:03 UTC) had no 503s but reproduced the original
+long wait:
+
+| UTC | event | our count | HenrikDev header |
+| --- | --- | --- | --- |
+| 21:04:04.829 | account lookup spends the last call | 0 | 0, reset in 973 ms |
+| 21:04:05.960 | first call after our computed reset (`mmr-history-by-puuid`) | unknown (window treated as fresh) | 429, 0 left, reset 59.9 s, `Retry-After: 60` |
+
+The call went out 0.16 s after the stated reset. HenrikDev refused it and
+asked for 60 s, and a real 429 stops every caller in the pool until then, so
+searches waited up to a minute; saved accounts still opened from D1.
+
+Inference, not confirmed: HenrikDev states the reset in whole seconds, so
+"973 ms" can mean up to about a second more, and our call reached it just
+before its window reset. Why it then answers with a full 60 s is unknown.
+It was not probed further, because that risks more 429s on the site's key.
+
+Fix: `parseUpstreamQuota` stores every reset (relative seconds or epoch
+seconds) `RESET_GUARD_MS` (1000 ms) later (`lib/upstream-pacing.mjs`). It
+applies to both pools. Cost: at most one second per window, plus slightly
+wider pacing. Test: `tests/workflow-api-key.test.mjs`, both header forms
+store the reset a second later and an exhausted window stays shut until
+then.
+
+Not yet verified live. The 503 burst from the second drain (20:59:07 to
+20:59:22 UTC, every route, fast responses) did not recur and its cause is
+unknown; the drain script now records 5xx bodies.
