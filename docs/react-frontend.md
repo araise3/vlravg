@@ -415,9 +415,11 @@ All hand-built charts follow one system, checked against the dataviz method:
 - Encounters (24 Nov 2026, on request): the same-team / opposing filter is
   the site's `Tabs` (it was an outline `ToggleGroup`), and the table pages
   with numbered buttons between arrow buttons (`SortableTable`'s
-  `numberedPages`, `pageNumbers` in `data-table.jsx`: every page up to seven,
-  else the ends, the current page and its neighbours, with ellipses). Other
-  paged tables keep Previous/Next.
+  `numberedPages`, `pageNumbers` in `data-table.jsx`): three pages around the
+  current one, then an ellipsis and the last page ("1 2 3 … 16"). It shows
+  ten rows a page with no rows-per-page picker and no "1–10 of N players"
+  count (both removed on request). Other paged tables keep Previous/Next and
+  their count.
 - No dot (`·`) separators anywhere in the UI (17 Nov 2026, on request; a
   test enforces it). Inline visual lists use `Sep`, a thin vertical rule
   (`shared.jsx`); text, tooltips and screen-reader labels use commas, colons

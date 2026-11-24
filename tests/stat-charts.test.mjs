@@ -317,10 +317,9 @@ test('servers: the Duos column order and widths, plus your net RR on each server
   assert.match(source,/if\(Number\.isFinite\(m\.myRR\)\)\{row\.rrTotal\+=m\.myRR;row\.rrCount\+\+;\}/);
 });
 
-test('encounters: a database-style table with search, a same-team / opposing filter, team share and rows per page',async()=>{
-  const {ENCOUNTER_FILTERS,ENCOUNTER_PAGE_SIZES}=await load('/src/app/pages/Duos.jsx');
+test('encounters: a database-style table with search, a same-team / opposing filter, team share and numbered pages',async()=>{
+  const {ENCOUNTER_FILTERS}=await load('/src/app/pages/Duos.jsx');
   assert.deepEqual(ENCOUNTER_FILTERS.map(f=>f[1]),['All','Same team','Opposing']);
-  assert.deepEqual(ENCOUNTER_PAGE_SIZES,[10,25,50]);
   const enc=(i,same,opp)=>({key:'e'+i,name:'P'+i,tag:'EU',games:same+opp,sameTeam:same,opponents:opp,lastSeen:Date.UTC(2026,10,1+i)});
   const s={TARGET_SEASON:'act',allEncounters:Array.from({length:12},(_,i)=>enc(i,i%3,2))};
   const html=await renderHtml('/src/app/pages/Duos.jsx','EncountersTable',{s});
@@ -339,8 +338,9 @@ test('encounters: a database-style table with search, a same-team / opposing fil
   assert.deepEqual(heads,['Player','Encounters','Same team','Opposing','Same team %','Last seen']);
   // P1 met once on your team and twice as an opponent: 33%.
   assert.match(html,/title="1 of 3 encounters on your team"[^>]*>.*?data-value="33\.3[0-9]*"[\s\S]*?>33%</);
-  assert.match(html,/1–10 of 12 players/);
-  assert.match(html,/<label for="encounters-list-page-size"[^>]*>Rows per page<\/label>/);
+  // Ten rows a page, with no rows-per-page picker and no row count.
+  assert.equal((html.match(/<tbody[\s\S]*?<\/tbody>/)[0].match(/<tr/g)||[]).length,10);
+  assert.doesNotMatch(html,/Rows per page|<select|of 12 players/);
   const empty=await renderHtml('/src/app/pages/Duos.jsx','EncountersTable',{s:{allEncounters:[]}});
   assert.match(empty,/data-slot="empty"[\s\S]*No players met at least twice outside your party in these matches\./);
   // The Wintrading empty note is the shared shadcn Empty too.

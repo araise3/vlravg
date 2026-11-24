@@ -141,12 +141,11 @@ export function DuoRoster({teammates}){
 
 /* ── Encounters ────────────────────────────────────────────── */
 // A database-style table (20 Nov 2026): search, a same-team / opposing filter
-// (Tabs), numbered pages (24 Nov 2026),
-// sortable columns including each player's same-team share, and a
-// rows-per-page picker. Players who ever queued in your party are excluded
-// by the engine (computeEncounters).
+// (Tabs), numbered pages of ten (24 Nov 2026; the rows-per-page picker and
+// the "1–10 of N players" count were removed on request), and sortable
+// columns including each player's same-team share. Players who ever queued
+// in your party are excluded by the engine (computeEncounters).
 export const ENCOUNTER_FILTERS=[['all','All'],['same','Same team'],['opposing','Opposing']];
-export const ENCOUNTER_PAGE_SIZES=[10,25,50];
 const encounterFilter={all:()=>true,same:e=>e.sameTeam>0,opposing:e=>e.opponents>0};
 
 export function EncountersTable({s}){
@@ -179,7 +178,7 @@ export function EncountersTable({s}){
       columns={[{label:'Player'},{label:'Encounters'},{label:'Same team'},{label:'Opposing'},{label:'Same team %',title:'Share of your encounters with this player where they were on your team'},{label:'Last seen'}]}
       maxima={[{column:1,label:'encounters'}]}
       caption="Players encountered in at least two matches who were never in your party this act"
-      pageSize={ENCOUNTER_PAGE_SIZES[0]} pageSizes={ENCOUNTER_PAGE_SIZES} noun="players" numberedPages/>
+      pageSize={TABLE_PAGE_SIZE} noun="players" numberedPages/>
   );
 }
 

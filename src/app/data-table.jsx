@@ -135,30 +135,25 @@ export function MobileRowList({id,caption,columns,rows,values,order,best,sort,ch
 // Previous/next under a long table, as in shadcn's data-table example; the
 // range on the left says where you are.
 // `pageSizes` adds a rows-per-page picker (a native select, the OS picker on phones).
-// Numbered pages (24 Nov 2026, on request, for Encounters): every page when
-// there are at most seven, else the first, the last and the current page
-// with its neighbours (the first or last five near either end), with an
-// ellipsis for the pages between. Indexes are 0-based; null marks an ellipsis.
+// Numbered pages (24 Nov 2026, on request, for Encounters): three pages
+// around the current one (the first three at the start, the last three at
+// the end), then an ellipsis and the last page, as in "1 2 3 … 16". The arrow
+// buttons step one page. Indexes are 0-based; null marks an ellipsis.
 export function pageNumbers(page,pages){
-  if(pages<=7)return Array.from({length:pages},(_,i)=>i);
-  const keep=new Set([0,pages-1,page-1,page,page+1].filter(i=>i>=0&&i<pages));
-  if(page<=3)[1,2,3,4].forEach(i=>keep.add(i));
-  if(page>=pages-4)[pages-5,pages-4,pages-3,pages-2].forEach(i=>keep.add(i));
-  const sorted=[...keep].sort((a,b)=>a-b),out=[];
-  sorted.forEach((i,k)=>{
-    const prev=sorted[k-1];
-    if(k&&i-prev===2)out.push(i-1);
-    else if(k&&i-prev>2)out.push(null);
-    out.push(i);
-  });
+  const start=Math.max(0,Math.min(page-1,pages-3));
+  const out=Array.from({length:Math.min(3,pages)},(_,i)=>start+i);
+  const end=out.at(-1);
+  if(end<pages-2)out.push(null);
+  if(end<pages-1)out.push(pages-1);
   return out;
 }
 
 export function TablePager({page,pageSize,total,noun,onPrevious,onNext,canPrevious,canNext,controls,pageSizes,onPageSize,onPage}){
   const pages=Math.max(1,Math.ceil(total/pageSize)),start=page*pageSize;
   return (
-    <nav className="flex flex-wrap items-center justify-between gap-3 pt-3 max-sm:px-4 max-sm:pb-1" aria-label={`${noun} pages`} data-slot="table-pager">
-      <span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">{total?`${start+1}–${Math.min(total,start+pageSize)} of ${total} ${noun}`:`0 ${noun}`}</span>
+    // Numbered pages show only the page buttons (on request): no row count.
+    <nav className={cn('flex flex-wrap items-center gap-3 pt-3 max-sm:px-4 max-sm:pb-1',onPage?'justify-end':'justify-between')} aria-label={`${noun} pages`} data-slot="table-pager">
+      {!onPage&&<span className="text-sm text-muted-foreground tabular-nums" aria-live="polite">{total?`${start+1}–${Math.min(total,start+pageSize)} of ${total} ${noun}`:`0 ${noun}`}</span>}
       <div className="flex flex-wrap items-center gap-2">
         {pageSizes&&(
           <span className="mr-2 flex items-center gap-2 text-sm text-muted-foreground">
