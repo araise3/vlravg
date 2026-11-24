@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
-import {costKey,measuredCost,recordCostSample,percentile,QUOTA_COST_CACHE_MS,QUOTA_COST_SAMPLES} from '../lib/upstream-cost.mjs';
+import {costKey,maxUnits,recordCostSample,MATCH_LIST_MAX_SIZE} from '../lib/upstream-cost.mjs';
 import {acquirePublicPermit,observePublicQuota,measuredSample,SAME_WINDOW_MS} from '../lib/upstream-pacing.mjs';
 import {recordPublicQuotaEvent} from '../lib/public-quota-audit.mjs';
 
@@ -18,11 +18,26 @@ function database(t){
 const u=q=>new URL('https://site.test/x'+q);
 const samples=sql=>sql.prepare('SELECT pool,route,cache_status,status,cost FROM quota_cost_samples ORDER BY id').all().map(r=>({...r}));
 
-test('costs are keyed by route, with page size for match lists and phase for name backfill',()=>{
+test('maximum cost per call follows HenrikDev\'s rule: 1 per request plus 1 per Riot fetch it can make',()=>{
+  assert.equal(maxUnits({trackAccount:true},[],u(''),'/account/Alpha/EU'),2);
+  assert.equal(maxUnits({accountByPuuid:true},[],u('?force=true'),'/account-by-puuid/x'),2);
+  assert.equal(maxUnits({},[],u(''),'/rank/eu/pc/Alpha/EU'),2);
+  assert.equal(maxUnits({persistRRHistory:true},[],u(''),'/mmr-history-by-puuid/eu/pc/x'),2);
+  assert.equal(maxUnits({matchDetail:true},[],u(''),'/match-detail/eu/x'),2);
+  for(const route of [{storedMatches:true},{storedMmr:true},{rrHeal:true}])assert.equal(maxUnits(route,[],u('?page=1&size=100'),'/stored'),1,'answered from HenrikDev\'s store');
+  assert.equal(maxUnits({},[],u('?mode=competitive&size=10&start=0'),'/history/eu/pc/Alpha/EU'),11);
+  assert.equal(maxUnits({},[],u('?size=1&start=30'),'/history/eu/pc/Alpha/EU'),2,'a one-match seek');
+  assert.equal(maxUnits({},[],u(''),'/history/eu/pc/Alpha/EU'),1+MATCH_LIST_MAX_SIZE,'no size: a full page');
+  assert.equal(maxUnits({},[],u('?size=500'),'/history/eu/pc/Alpha/EU'),1+MATCH_LIST_MAX_SIZE,'pages are capped');
+  assert.equal(maxUnits({historyByPuuid:true},[],u('?size=10'),'/history-by-puuid/eu/pc/x'),11);
+  const backfill=phase=>maxUnits({nameBackfill:true},Object.assign([],{state:{phase}}),u(''),'/name-backfill/x');
+  assert.deepEqual([backfill('live'),backfill('stored'),backfill('stored-detail')],[11,1,2]);
+});
+
+test('samples are keyed by route, with page size for match lists and phase for name backfill',()=>{
   assert.equal(costKey({trackAccount:true},[],u(''),'/account/Alpha/EU'),'account');
   assert.equal(costKey({},[],u(''),'/rank/eu/pc/Alpha/EU'),'rank');
   assert.equal(costKey({},[],u('?mode=competitive&size=10&start=0'),'/history/eu/pc/Alpha/EU'),'history:10');
-  assert.equal(costKey({},[],u('?size=1&start=30'),'/history/eu/pc/Alpha/EU'),'history:1');
   assert.equal(costKey({},[],u(''),'/history/eu/pc/Alpha/EU'),'history:default');
   assert.equal(costKey({historyByPuuid:true},[],u('?size=10'),'/history-by-puuid/eu/pc/x'),'history-by-puuid:10');
   assert.equal(costKey({nameBackfill:true},Object.assign([],{state:{phase:'stored'}}),u(''),'/name-backfill/x'),'name-backfill:stored');
@@ -51,33 +66,14 @@ test('the gate records serial calls as samples and skips overlapping ones',async
   await (await call(47,{key:'account',cache:'HIT'})).answer();
   assert.deepEqual(samples(sql),[{pool:'public',route:'rank',cache_status:'NONE',status:200,cost:2},
     {pool:'public',route:'account',cache_status:'HIT',status:200,cost:1}]);
-  // Two calls in flight at once: neither is a clean measurement.
   const first=await call(44),second=await call(43);
   await first.answer();await second.answer();
-  assert.equal(samples(sql).length,2);
-  // After the overlap, the next serial call measures again.
+  assert.equal(samples(sql).length,2,'overlapping calls are not measured');
   await (await call(41)).answer();
   assert.deepEqual(samples(sql).at(-1),{pool:'public',route:'rank',cache_status:'HIT',status:200,cost:2});
 });
 
-test('admission uses the route\'s measured cost: 90th percentile of its newest samples',async t=>{
-  const {db}=database(t);let now=1_000_000_000_000;
-  assert.deepEqual(await measuredCost(db,'rank',{now}),{cost:1,source:'minimum',samples:0},'nothing measured yet');
-  for(const cost of [2,2,2,2,2,2,2,2,2,7])await recordCostSample(db,{pool:'public',route:'rank',cost,now});
-  for(const cost of [1,1,1])await recordCostSample(db,{pool:'public',route:'account',cost,now});
-  assert.equal((await measuredCost(db,'rank',{now})).cost,1,'the table is cached between refreshes');
-  now+=QUOTA_COST_CACHE_MS;
-  assert.deepEqual(await measuredCost(db,'rank',{now}),{cost:2,source:'measured',samples:10},'one outlier does not set the price');
-  assert.deepEqual(await measuredCost(db,'account',{now}),{cost:1,source:'measured',samples:3});
-  assert.deepEqual(await measuredCost(db,'history:10',{now}),{cost:2,source:'highest-measured',samples:0},'unmeasured: the highest measured route cost');
-  // Only the newest samples count.
-  for(let i=0;i<QUOTA_COST_SAMPLES;i++)await recordCostSample(db,{pool:'workflow',route:'rank',cost:3,now});
-  now+=QUOTA_COST_CACHE_MS;
-  assert.deepEqual(await measuredCost(db,'rank',{now}),{cost:3,source:'measured',samples:QUOTA_COST_SAMPLES});
-  assert.equal(percentile([1,2,3,4,5,6,7,8,9,10]),9);
-});
-
-test('samples older than the keep window are pruned and ignored',async t=>{
+test('samples older than the keep window are pruned',async t=>{
   const {db,sql}=database(t);const day=86400000,now=1_000_000_000_000;
   await recordCostSample(db,{pool:'public',route:'rank',cost:9,now:now-20*day});
   await recordCostSample(db,{pool:'public',route:'rank',cost:2,now});

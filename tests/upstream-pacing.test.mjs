@@ -5,7 +5,8 @@ import {readFileSync} from 'node:fs';
 import {acquireWorkflowPermit,observeWorkflowQuota,WORKFLOW_SPACING_MS,
   acquirePublicPermit,observePublicQuota,PUBLIC_UNKNOWN_SPACING_MS,
   acquireBorrowedPublicPermit,PUBLIC_BORROW_RESERVE,acquireProfilePermit,PUBLIC_PROFILE_RESERVE,
-  PRIORITY_CLAIM_MARGIN_MS} from '../lib/upstream-pacing.mjs';
+  PRIORITY_CLAIM_MARGIN_MS,QUOTA_MARGIN,PUBLIC_IN_FLIGHT,LEASE_MS,NO_HEADER_429_WAIT_MS,
+  releasePublicLease} from '../lib/upstream-pacing.mjs';
 
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function database(t){
@@ -16,194 +17,186 @@ function database(t){
     async run(){return sql.prepare(query).run(...values);}};return s;}};
   return {db,sql};
 }
-
-test('atomic reservations serialize concurrent callers and keep every rolling minute below 30 starts',async t=>{
-  const {db}=database(t);
+const leases=(sql,table='rate_quota')=>JSON.parse(sql.prepare(`SELECT leases FROM ${table}`).get().leases);
+const nextStart=(sql,table='rate_quota')=>sql.prepare(`SELECT next_start_at FROM ${table}`).get().next_start_at;
+// Run `count` callers through a fake clock; each permit is answered at once.
+async function crowd(acquire,answer,count){
   let clock=100000;const waiting=[],permits=[];
-  const jobs=Array.from({length:40},()=>acquireWorkflowPermit(db,{
-    now:()=>clock,maxWaitMs:100000,sleepImpl:ms=>new Promise(resolve=>waiting.push({at:clock+ms,resolve})),
-  }).then(p=>permits.push(p)));
-  for(let iteration=0;permits.length<40&&iteration<100;iteration++){
-    await tick();
-    if(!waiting.length)continue;
-    clock=Math.min(...waiting.map(w=>w.at));
-    const ready=waiting.filter(w=>w.at<=clock),later=waiting.filter(w=>w.at>clock);
-    waiting.splice(0,waiting.length,...later);ready.forEach(w=>w.resolve());
-  }
-  await Promise.all(jobs);
-  assert.equal(permits.length,40);
-  const starts=permits.map(p=>p.startedAt);
-  for(let i=1;i<starts.length;i++)assert.ok(starts[i]-starts[i-1]>=WORKFLOW_SPACING_MS);
-  for(const start of starts)assert.ok(starts.filter(time=>time>=start&&time<start+60000).length<=29);
-});
-
-test('quota reservations include in-flight calls and headers stretch spacing when budget is scarce',async t=>{
-  const {db,sql}=database(t);let clock=100000;
-  sql.prepare('INSERT INTO workflow_rate_quota (id,remaining,reset_at,last_request_at,next_start_at) VALUES(1,2,110000,0,0)').run();
-  const first=await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0});
-  assert.equal(first.quota.remaining,1);
-  assert.equal(sql.prepare('SELECT next_start_at FROM workflow_rate_quota').get().next_start_at,105000);
-  clock=102100;
-  assert.equal((await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0})).retryAfterMs,2900);
-  clock=105000;
-  assert.equal((await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0})).quota.remaining,0);
-  assert.equal((await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0})).retryAfterMs,5000);
-  clock=110000;
-  assert.equal((await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0})).quota.remaining,null);
-});
-
-test('out-of-order responses cannot restore reserved quota or move the next slot backwards; the newest header sets the count',async t=>{
-  const {db,sql}=database(t);let clock=100000;
-  const first=await acquireWorkflowPermit(db,{now:()=>clock});
-  clock+=2100;const second=await acquireWorkflowPermit(db,{now:()=>clock});
-  await observeWorkflowQuota(db,{remaining:10,resetAt:120000},{startedAt:second.startedAt,now:()=>clock,status:200});
-  const before=sql.prepare('SELECT * FROM workflow_rate_quota').get();
-  await observeWorkflowQuota(db,{remaining:29,resetAt:160000},{startedAt:first.startedAt,now:()=>clock,status:200});
-  assert.deepEqual(sql.prepare('SELECT * FROM workflow_rate_quota').get(),before);
-  await observeWorkflowQuota(db,{remaining:20,resetAt:120000},{startedAt:second.startedAt,now:()=>clock,status:200});
-  assert.equal(sql.prepare('SELECT remaining FROM workflow_rate_quota').get().remaining,20,'a cached answer gives its unused units back');
-});
-
-test('even a late 429 pauses all upstream callers for Retry-After',async t=>{
-  const {db}=database(t);let clock=100000;
-  const first=await acquireWorkflowPermit(db,{now:()=>clock});
-  clock+=2100;await acquireWorkflowPermit(db,{now:()=>clock});
-  const wait=await observeWorkflowQuota(db,{remaining:null,resetAt:null},
-    {startedAt:first.startedAt,now:()=>clock,status:429,retryAfterMs:9000});
-  assert.equal(wait,9000);
-  assert.equal((await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0})).retryAfterMs,9000);
-  clock+=9000;
-  assert.ok((await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0})).quota);
-});
-
-test('busy gates return a bounded retry and missing or failed storage never grants admission',async t=>{
-  const {db}=database(t);
-  await acquireWorkflowPermit(db,{now:()=>100000});
-  assert.equal((await acquireWorkflowPermit(db,{now:()=>100000,maxWaitMs:0})).retryAfterMs,2100);
-  await assert.rejects(acquireWorkflowPermit(null),/requires APP_DB/);
-  await assert.rejects(acquireWorkflowPermit({prepare(){throw new Error('D1 unavailable');}}),/D1 unavailable/);
-});
-
-test('existing four-column quota tables are upgraded without losing exhaustion state',async t=>{
-  const {db,sql}=database(t);
-  sql.exec('DROP TABLE workflow_rate_quota; CREATE TABLE workflow_rate_quota(id INTEGER PRIMARY KEY,remaining INTEGER,reset_at INTEGER,last_request_at INTEGER); INSERT INTO workflow_rate_quota VALUES(1,0,110000,100000)');
-  assert.equal((await acquireWorkflowPermit(db,{now:()=>100000,maxWaitMs:0})).retryAfterMs,10000);
-  assert.equal(sql.prepare('SELECT next_start_at FROM workflow_rate_quota').get().next_start_at,0);
-});
-
-test('concurrent public calls reserve their own observed budget without sharing workflow slots',async t=>{
-  const {db,sql}=database(t);
-  sql.prepare('UPDATE rate_quota SET remaining=89,reset_at=160000').run();
-  let clock=100000;const waiting=[],permits=[];
-  const jobs=Array.from({length:40},()=>acquirePublicPermit(db,{
-    now:()=>clock,maxWaitMs:100000,sleepImpl:ms=>new Promise(resolve=>waiting.push({at:clock+ms,resolve})),
-  }).then(p=>permits.push(p)));
-  for(let iteration=0;permits.length<40&&iteration<100;iteration++){
+  const jobs=Array.from({length:count},()=>acquire({now:()=>clock,maxWaitMs:600000,
+    sleepImpl:ms=>new Promise(resolve=>waiting.push({at:clock+ms,resolve}))})
+    .then(async permit=>{permits.push(permit);await answer(permit,permits.length,()=>clock);}));
+  for(let iteration=0;permits.length<count&&iteration<2000;iteration++){
     await tick();if(!waiting.length)continue;
     clock=Math.min(...waiting.map(w=>w.at));
     const ready=waiting.filter(w=>w.at<=clock),later=waiting.filter(w=>w.at>clock);
     waiting.splice(0,waiting.length,...later);ready.forEach(w=>w.resolve());
   }
   await Promise.all(jobs);
-  assert.equal(permits.length,40);
+  return {permits,clock};
+}
+
+test('serial collector calls keep their spacing and stay below 30 starts a minute',async t=>{
+  const {db}=database(t);
+  const {permits}=await crowd(o=>acquireWorkflowPermit(db,o),
+    (permit,n,now)=>observeWorkflowQuota(db,{remaining:null,resetAt:null},{startedAt:permit.startedAt,now,status:200}),40);
+  const starts=permits.map(p=>p.startedAt);
+  for(let i=1;i<starts.length;i++)assert.ok(starts[i]-starts[i-1]>=WORKFLOW_SPACING_MS);
+  for(const start of starts)assert.ok(starts.filter(time=>time>=start&&time<start+60000).length<=29);
+});
+
+test('the public pool admits more than 30 a minute on a 60-unit key, each answered call setting the count',async t=>{
+  const {db,sql}=database(t);
+  sql.prepare('UPDATE rate_quota SET remaining=89,reset_at=160000').run();
+  const {permits,clock}=await crowd(o=>acquirePublicPermit(db,o),
+    (permit,n,now)=>observePublicQuota(db,{remaining:89-n,resetAt:160000},{startedAt:permit.startedAt,now,status:200}),40);
   const starts=permits.map(p=>p.startedAt);
   assert.equal(new Set(starts).size,40);
-  assert.ok(starts.at(-1)<160000,'higher public budget allows more than 30 admissions in a minute');
+  assert.ok(starts.at(-1)<160000);
   for(let i=1;i<starts.length;i++)assert.ok(starts[i]-starts[i-1]>=Math.ceil(60000/90));
-  assert.equal(sql.prepare('SELECT remaining FROM rate_quota').get().remaining,49);
-  assert.ok((await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0})).quota);
-  assert.equal(sql.prepare('SELECT next_start_at FROM workflow_rate_quota').get().next_start_at,clock+2100);
+  assert.equal(sql.prepare('SELECT remaining FROM rate_quota').get().remaining,49,'HenrikDev\'s count, never a guess');
+  assert.deepEqual(leases(sql),[],'every answered call released its lease');
+  assert.ok((await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0})).quota,'the collector pool is separate');
 });
 
-test('public quota pauses, missing headers and late replies cannot replenish reserved capacity',async t=>{
+test('free units are spread over the window and an empty window waits for its reset',async t=>{
+  const {db,sql}=database(t);let clock=100000;const T='workflow_rate_quota';
+  sql.prepare(`INSERT INTO ${T} (id,remaining,reset_at,last_request_at,next_start_at) VALUES(1,4,110000,0,0)`).run();
+  const answer=async(permit,remaining)=>observeWorkflowQuota(db,{remaining,resetAt:110000},{startedAt:permit.startedAt,now:()=>clock,status:200});
+  const first=await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0});
+  assert.equal(first.quota.remaining,3,'4 known, 1 held');
+  assert.equal(nextStart(sql,T),102500,'10 s over 4 free units');
+  await answer(first,3);
+  clock=102500;const second=await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0});
+  assert.equal(nextStart(sql,T),105000);
+  await answer(second,2);
+  clock=105000;
+  assert.equal((await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0})).retryAfterMs,5000,`${QUOTA_MARGIN} units are kept for outside use`);
+  clock=110000;
+  assert.equal((await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0})).quota.remaining,null,'a new window is learned from its first call');
+});
+
+test('at most PUBLIC_IN_FLIGHT calls run at once; an answer or an expired lease frees a place',async t=>{
   const {db,sql}=database(t);let clock=100000;
-  const first=await acquirePublicPermit(db,{now:()=>clock});
-  assert.equal(sql.prepare('SELECT next_start_at FROM rate_quota').get().next_start_at,clock+PUBLIC_UNKNOWN_SPACING_MS);
-  await observePublicQuota(db,{remaining:29,resetAt:160000},{startedAt:first.startedAt,now:()=>clock,status:200});
-  clock+=2100;const second=await acquirePublicPermit(db,{now:()=>clock});
-  assert.equal(second.quota.remaining,28);
-  const quota=()=>({...sql.prepare('SELECT remaining,reset_at,last_request_at,next_start_at,header_remaining,header_reset_at FROM rate_quota').get()});
-  const before=quota();
-  await observePublicQuota(db,{remaining:null,resetAt:null},{startedAt:second.startedAt,now:()=>clock,status:200});
-  await observePublicQuota(db,{remaining:29,resetAt:180000},{startedAt:first.startedAt,now:()=>clock,status:200});
-  assert.deepEqual(quota(),before);
-  assert.ok(before.next_start_at-clock>=Math.ceil((160000-clock)*1.05/29));
-  assert.equal(await observePublicQuota(db,{remaining:null,resetAt:null},
-    {startedAt:first.startedAt,now:()=>clock,status:429,retryAfterMs:90000}),90000);
-  assert.equal((await acquirePublicPermit(db,{now:()=>clock,maxWaitMs:0})).retryAfterMs,90000);
-  assert.ok((await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0})).quota);
+  sql.prepare('UPDATE rate_quota SET remaining=50,reset_at=160000').run();
+  const held=[];
+  for(let i=0;i<PUBLIC_IN_FLIGHT;i++){held.push(await acquirePublicPermit(db,{now:()=>clock}));clock=nextStart(sql);}
+  assert.equal(leases(sql).length,PUBLIC_IN_FLIGHT);
+  const refused=await acquirePublicPermit(db,{now:()=>clock,maxWaitMs:0});
+  assert.ok(refused.retryAfterMs>0&&refused.retryAfterMs<=250,'busy, not empty: a short wait');
+  await observePublicQuota(db,{remaining:47,resetAt:160000},{startedAt:held[0].startedAt,now:()=>clock,status:200});
+  assert.ok((await acquirePublicPermit(db,{now:()=>clock,maxWaitMs:0})).quota,'an answer frees its place');
+  clock=nextStart(sql);
+  assert.ok((await acquirePublicPermit(db,{now:()=>clock,maxWaitMs:0})).retryAfterMs>0);
+  clock=held[1].startedAt+LEASE_MS+1;
+  assert.ok((await acquirePublicPermit(db,{now:()=>clock,maxWaitMs:0})).quota,'a call that never answered gives its place back');
+  await releasePublicLease(db,clock,{now:()=>clock});
+  assert.ok(!leases(sql).some(lease=>lease.s===clock),'a failed fetch releases its lease at once');
 });
 
-test('public gate upgrades old schema preserving exhaustion and refuses failed storage',async t=>{
-  const {db,sql}=database(t);
-  sql.exec('DROP TABLE rate_quota; CREATE TABLE rate_quota(id INTEGER PRIMARY KEY,remaining INTEGER,reset_at INTEGER,last_request_at INTEGER); INSERT INTO rate_quota VALUES(1,0,110000,100000)');
-  assert.equal((await acquirePublicPermit(db,{now:()=>100000,maxWaitMs:0})).retryAfterMs,10000);
-  assert.equal(sql.prepare('SELECT next_start_at FROM rate_quota').get().next_start_at,0);
-  await assert.rejects(acquirePublicPermit(null),/requires APP_DB/);
+test('calls in flight hold their maximum cost until HenrikDev\'s count arrives',async t=>{
+  const {db,sql}=database(t);let clock=100000;
+  sql.prepare('UPDATE rate_quota SET remaining=30,reset_at=160000').run();
+  const page=await acquirePublicPermit(db,{now:()=>clock,units:11});
+  assert.equal(page.quota.remaining,19,'30 known, 11 held');
+  clock=nextStart(sql);
+  const busy=await acquirePublicPermit(db,{now:()=>clock,units:11,maxWaitMs:0});
+  assert.ok(busy.retryAfterMs<=250,'30 - 11 held - 11 would leave less than the reserve and margin: wait for the answer');
+  const lookup=await acquireProfilePermit(db,{now:()=>clock,units:2});
+  assert.equal(lookup.quota.remaining,17);
+  // HenrikDev had the page cached: it cost 1.
+  await observePublicQuota(db,{remaining:29,resetAt:160000},{startedAt:page.startedAt,now:()=>clock,status:200});
+  assert.equal(sql.prepare('SELECT remaining FROM rate_quota').get().remaining,30,'an older call\'s header never sets the count');
+  await observePublicQuota(db,{remaining:27,resetAt:160000},{startedAt:lookup.startedAt,now:()=>clock,status:200});
+  assert.equal(sql.prepare('SELECT remaining FROM rate_quota').get().remaining,27);
+  assert.deepEqual(leases(sql),[]);
+  clock=nextStart(sql);
+  assert.equal((await acquirePublicPermit(db,{now:()=>clock,units:11})).quota.remaining,16);
+});
+
+test('account lookups keep a reserve that other public calls cannot spend, down to the margin',async t=>{
+  const {db,sql}=database(t);let clock=100000;const resetAt=clock+60000;
+  const floor=QUOTA_MARGIN+PUBLIC_PROFILE_RESERVE;
+  sql.prepare('UPDATE rate_quota SET remaining=?,reset_at=?').run(floor+2,resetAt);
+  assert.equal((await acquirePublicPermit(db,{now:()=>clock,units:2,maxWaitMs:0})).quota.remaining,floor);
+  clock=nextStart(sql);
+  sql.prepare('UPDATE rate_quota SET remaining=?,leases=\'[]\'').run(floor+1);
+  assert.equal((await acquirePublicPermit(db,{now:()=>clock,units:2,maxWaitMs:60000})).retryAfterMs,resetAt-clock,'into the reserve: back at the reset, at once');
+  assert.equal((await acquireProfilePermit(db,{now:()=>clock,units:2})).quota.remaining,floor-1);
+  sql.prepare('UPDATE rate_quota SET remaining=?,leases=\'[]\'').run(QUOTA_MARGIN+1);
+  clock=nextStart(sql);
+  assert.ok((await acquireProfilePermit(db,{now:()=>clock,units:2,maxWaitMs:0})).retryAfterMs>=resetAt-clock,'even account lookups keep the margin');
+  clock=Math.max(resetAt,nextStart(sql));
+  assert.ok((await acquirePublicPermit(db,{now:()=>clock,maxWaitMs:0})).quota,'a new window opens to every caller');
+});
+
+test('a 429 pauses every caller until HenrikDev\'s reset or Retry-After, and briefly without either',async t=>{
+  const {db}=database(t);let clock=100000;
+  const call=async()=>{const permit=await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:600000,sleepImpl:async ms=>{clock+=ms;}});return permit;};
+  let permit=await call();
+  assert.equal(await observeWorkflowQuota(db,{remaining:0,resetAt:clock+40000},{startedAt:permit.startedAt,now:()=>clock,status:429,retryAfterMs:9000}),40000,'the later of the two');
+  assert.equal((await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0})).retryAfterMs,40000);
+  clock+=40000;permit=await call();
+  assert.equal(await observeWorkflowQuota(db,{remaining:null,resetAt:null},{startedAt:permit.startedAt,now:()=>clock,status:429,retryAfterMs:9000}),9000);
+  clock+=9000;permit=await call();
+  assert.equal(await observeWorkflowQuota(db,{remaining:null,resetAt:null},{startedAt:permit.startedAt,now:()=>clock,status:429}),NO_HEADER_429_WAIT_MS,'no 60 s guess');
+});
+
+test('busy gates return a bounded retry and missing or failed storage never grants admission',async t=>{
+  const {db}=database(t);
+  const permit=await acquireWorkflowPermit(db,{now:()=>100000});
+  await observeWorkflowQuota(db,{remaining:null,resetAt:null},{startedAt:permit.startedAt,now:()=>100000,status:200});
+  assert.equal((await acquireWorkflowPermit(db,{now:()=>100000,maxWaitMs:0})).retryAfterMs,2100);
+  await assert.rejects(acquireWorkflowPermit(null),/requires APP_DB/);
+  await assert.rejects(acquireWorkflowPermit({prepare(){throw new Error('D1 unavailable');}}),/D1 unavailable/);
   await assert.rejects(acquirePublicPermit({prepare(){throw new Error('D1 unavailable');}}),/D1 unavailable/);
+});
+
+test('older quota tables are upgraded without losing exhaustion state; only the public one gets claims',async t=>{
+  const {db,sql}=database(t);
+  sql.exec('DROP TABLE workflow_rate_quota; CREATE TABLE workflow_rate_quota(id INTEGER PRIMARY KEY,remaining INTEGER,reset_at INTEGER,last_request_at INTEGER); INSERT INTO workflow_rate_quota VALUES(1,0,110000,100000)');
+  assert.equal((await acquireWorkflowPermit(db,{now:()=>100000,maxWaitMs:0})).retryAfterMs,10000);
+  sql.exec('DROP TABLE rate_quota; CREATE TABLE rate_quota(id INTEGER PRIMARY KEY,remaining INTEGER,reset_at INTEGER,last_request_at INTEGER,next_start_at INTEGER NOT NULL DEFAULT 0); INSERT INTO rate_quota VALUES(1,0,110000,100000,0)');
+  assert.equal((await acquirePublicPermit(db,{now:()=>100000,maxWaitMs:0})).retryAfterMs,10000);
+  const columns=table=>sql.prepare(`PRAGMA table_info(${table})`).all().map(c=>c.name);
+  for(const name of ['next_start_at','leases','header_remaining'])assert.ok(columns('rate_quota').includes(name)&&columns('workflow_rate_quota').includes(name),name);
+  assert.ok(columns('rate_quota').includes('priority_until'));
+  assert.ok(!columns('workflow_rate_quota').includes('priority_until'));
 });
 
 test('borrowed slots share the public schedule, keep the site reserve and never wait',async t=>{
   const {db,sql}=database(t);let clock=100000;
-  // Fresh window: a borrowed call is admitted at the unknown-quota spacing.
   const fresh=await acquireBorrowedPublicPermit(db,{now:()=>clock});
   assert.ok(fresh.quota);
-  assert.equal(sql.prepare('SELECT next_start_at FROM rate_quota').get().next_start_at,clock+PUBLIC_UNKNOWN_SPACING_MS);
-  // The same slot is taken for visitors too: they queue behind it, not beside it.
+  assert.equal(nextStart(sql),clock+PUBLIC_UNKNOWN_SPACING_MS);
   assert.equal((await acquirePublicPermit(db,{now:()=>clock,maxWaitMs:0})).retryAfterMs,PUBLIC_UNKNOWN_SPACING_MS);
   assert.equal((await acquireBorrowedPublicPermit(db,{now:()=>clock,maxWaitMs:60000})).retryAfterMs,PUBLIC_UNKNOWN_SPACING_MS,'never waits');
-  // Known budget: borrowing stops at the reserve; visitors may still use it.
   clock=200000;
-  sql.prepare('UPDATE rate_quota SET remaining=?,reset_at=?,next_start_at=0').run(PUBLIC_BORROW_RESERVE+1,clock+60000);
-  assert.equal((await acquireBorrowedPublicPermit(db,{now:()=>clock})).quota.remaining,PUBLIC_BORROW_RESERVE,'keeps the reserve after the call');
-  clock=sql.prepare('SELECT next_start_at FROM rate_quota').get().next_start_at;
+  const floor=QUOTA_MARGIN+PUBLIC_BORROW_RESERVE;
+  sql.prepare('UPDATE rate_quota SET remaining=?,reset_at=?,next_start_at=0,leases=\'[]\'').run(floor+1,clock+60000);
+  assert.equal((await acquireBorrowedPublicPermit(db,{now:()=>clock})).quota.remaining,floor,'keeps the reserve after the call');
+  clock=nextStart(sql);
   assert.ok((await acquireBorrowedPublicPermit(db,{now:()=>clock})).retryAfterMs>0);
-  assert.equal(sql.prepare('SELECT remaining FROM rate_quota').get().remaining,PUBLIC_BORROW_RESERVE);
-  assert.equal((await acquirePublicPermit(db,{now:()=>clock})).quota.remaining,PUBLIC_BORROW_RESERVE-1);
-  // A new window makes idle capacity borrowable again; the workflow pool is untouched.
+  assert.equal((await acquirePublicPermit(db,{now:()=>clock})).quota.remaining,floor-1,'visitors may still use it');
   clock+=60000;
-  assert.ok((await acquireBorrowedPublicPermit(db,{now:()=>clock})).quota);
+  assert.ok((await acquireBorrowedPublicPermit(db,{now:()=>clock})).quota,'a new window is borrowable again');
   assert.equal(sql.prepare('SELECT * FROM workflow_rate_quota').get(),undefined);
 });
 
-test('account lookups keep a reserve of every known window that other public calls cannot spend',async t=>{
-  const {db,sql}=database(t);let clock=100000;
-  const resetAt=clock+60000;
-  sql.prepare('UPDATE rate_quota SET remaining=?,reset_at=?,last_request_at=0,next_start_at=0').run(PUBLIC_PROFILE_RESERVE+1,resetAt);
-  assert.equal((await acquirePublicPermit(db,{now:()=>clock})).quota.remaining,PUBLIC_PROFILE_RESERVE);
-  clock=sql.prepare('SELECT next_start_at FROM rate_quota').get().next_start_at;
-  // Down to the reserve: other calls are told to come back at the reset, at once.
-  assert.equal((await acquirePublicPermit(db,{now:()=>clock,maxWaitMs:60000})).retryAfterMs,resetAt-clock);
-  assert.equal(sql.prepare('SELECT remaining FROM rate_quota').get().remaining,PUBLIC_PROFILE_RESERVE);
-  // Account lookups spend the reserve, still at the shared spacing.
-  for(let left=PUBLIC_PROFILE_RESERVE-1;left>=0;left--){
-    assert.equal((await acquireProfilePermit(db,{now:()=>clock})).quota.remaining,left);
-    if(left)clock=sql.prepare('SELECT next_start_at FROM rate_quota').get().next_start_at;
-  }
-  assert.ok(clock<resetAt);
-  // Spent: even account lookups wait for the reset (or the last slot's spacing).
-  assert.ok((await acquireProfilePermit(db,{now:()=>clock,maxWaitMs:0})).retryAfterMs>=resetAt-clock);
-  // A new window opens to every caller again.
-  clock=Math.max(resetAt,sql.prepare('SELECT next_start_at FROM rate_quota').get().next_start_at);
-  assert.ok((await acquirePublicPermit(db,{now:()=>clock,maxWaitMs:0})).quota);
-});
-
-test('an unknown window enforces no reserve, so the first call can learn the quota',async t=>{
+test('an unknown window checks no units, so the first call can learn the quota',async t=>{
   const {db}=database(t);
-  assert.equal((await acquirePublicPermit(db,{now:()=>100000})).quota.remaining,null);
+  assert.equal((await acquirePublicPermit(db,{now:()=>100000,units:11})).quota.remaining,null);
 });
 
 test('a waiting account lookup takes the next public slot ahead of other waiting calls',async t=>{
   const {db,sql}=database(t);let clock=100000;
   sql.prepare('UPDATE rate_quota SET remaining=40,reset_at=160000').run();
   await acquirePublicPermit(db,{now:()=>clock});
-  const slot=sql.prepare('SELECT next_start_at FROM rate_quota').get().next_start_at;
+  const slot=nextStart(sql);
   assert.ok(slot>clock);
   clock=100100;
   let wake;const profile=acquireProfilePermit(db,{now:()=>clock,sleepImpl:ms=>new Promise(resolve=>{wake=resolve;clock+=ms;})});
   await tick();await tick();await tick();
   assert.equal(sql.prepare('SELECT priority_until FROM rate_quota').get().priority_until,slot+PRIORITY_CLAIM_MARGIN_MS,'claims the slot it waits for');
-  // At the slot, rank, history and collector loans all stand back.
   const now=()=>slot;
   assert.equal((await acquirePublicPermit(db,{now,maxWaitMs:0})).retryAfterMs,PRIORITY_CLAIM_MARGIN_MS);
   assert.equal((await acquireBorrowedPublicPermit(db,{now})).retryAfterMs,PRIORITY_CLAIM_MARGIN_MS);
@@ -211,8 +204,7 @@ test('a waiting account lookup takes the next public slot ahead of other waiting
   const permit=await profile;
   assert.equal(permit.startedAt,slot);
   assert.equal(sql.prepare('SELECT priority_until FROM rate_quota').get().priority_until,0,'admission clears the claim');
-  const next=sql.prepare('SELECT next_start_at FROM rate_quota').get().next_start_at;
-  assert.ok((await acquirePublicPermit(db,{now:()=>next,maxWaitMs:0})).quota,'the following slot is open to everyone');
+  assert.ok((await acquirePublicPermit(db,{now:()=>nextStart(sql),maxWaitMs:0})).quota,'the following slot is open to everyone');
 });
 
 test('a claim left by a lookup that gave up holds other calls back only until it lapses',async t=>{
@@ -232,32 +224,4 @@ test('an account lookup that will not wait for its slot leaves no claim',async t
   sql.prepare('UPDATE rate_quota SET remaining=0').run();
   assert.equal((await acquireProfilePermit(db,{now:()=>100000})).retryAfterMs,60000,'nor does one refused by an empty window');
   assert.equal(sql.prepare('SELECT priority_until FROM rate_quota').get().priority_until,0);
-});
-
-test('five-column public quota tables gain the claim column; the workflow table does not',async t=>{
-  const {db,sql}=database(t);
-  sql.exec('DROP TABLE rate_quota; CREATE TABLE rate_quota(id INTEGER PRIMARY KEY,remaining INTEGER,reset_at INTEGER,last_request_at INTEGER,next_start_at INTEGER NOT NULL DEFAULT 0); INSERT INTO rate_quota VALUES(1,0,110000,100000,0)');
-  assert.equal((await acquirePublicPermit(db,{now:()=>100000,maxWaitMs:0})).retryAfterMs,10000,'exhaustion survives the upgrade');
-  assert.equal(sql.prepare('SELECT priority_until FROM rate_quota').get().priority_until,0);
-  await acquireWorkflowPermit(db,{now:()=>100000});
-  assert.ok(!sql.prepare('PRAGMA table_info(workflow_rate_quota)').all().some(c=>c.name==='priority_until'));
-});
-
-test('calls reserve their estimated units, and the reserve counts units left after the call',async t=>{
-  const {db,sql}=database(t);
-  const set=remaining=>sql.prepare('UPDATE rate_quota SET remaining=?,reset_at=160000,next_start_at=0,priority_until=0').run(remaining);
-  set(10);
-  assert.equal((await acquireProfilePermit(db,{now:()=>100000,cost:11,maxWaitMs:0})).retryAfterMs,60000,'a full match page waits for the reset');
-  assert.equal((await acquireProfilePermit(db,{now:()=>100000,cost:2})).quota.remaining,8);
-  set(PUBLIC_PROFILE_RESERVE+1);
-  assert.equal((await acquirePublicPermit(db,{now:()=>100000,cost:2,maxWaitMs:0})).retryAfterMs,60000,'would dip into the reserve');
-  assert.equal((await acquirePublicPermit(db,{now:()=>100000,cost:1})).quota.remaining,PUBLIC_PROFILE_RESERVE);
-  set(PUBLIC_PROFILE_RESERVE+20);
-  assert.equal((await acquirePublicPermit(db,{now:()=>100000,cost:11})).quota.remaining,PUBLIC_PROFILE_RESERVE+9);
-  // Workflow: units reserved, then the header settles the real cost.
-  sql.prepare('INSERT INTO workflow_rate_quota (id,remaining,reset_at,last_request_at,next_start_at) VALUES(1,30,160000,0,0)').run();
-  const permit=await acquireWorkflowPermit(db,{now:()=>100000,cost:2});
-  assert.equal(permit.quota.remaining,28);
-  await observeWorkflowQuota(db,{remaining:29,resetAt:160000},{startedAt:permit.startedAt,now:()=>100500,status:200});
-  assert.equal(sql.prepare('SELECT remaining FROM workflow_rate_quota').get().remaining,29,'a cached answer costs one');
 });

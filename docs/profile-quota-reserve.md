@@ -389,3 +389,66 @@ only from the live `rank` call.
 Now a refused search account lookup gets the 429 like any other call and is
 recorded as `profile-refused` (`served_saved` stays empty on new rows).
 Tests: `tests/workflow-api-key.test.mjs`.
+
+## Exact count, capped calls in flight, documented maximum costs, 24 Nov 2026
+
+`lib/upstream-pacing.mjs`, `lib/upstream-cost.mjs`, migration
+`0018_quota_leases.sql`. Replaces admission by measured cost (previous
+sections); the samples stay, as evidence.
+
+### Why
+
+Measured costs were least accurate when they mattered: calls overlap under
+load, so samples are scarce exactly then; a match list costs 1 to 11 by
+HenrikDev's cache, which a percentile cannot know per call; and an
+unmeasured route started at 1. HenrikDev's header is exact after every
+response, so the only unknown is calls still in flight.
+
+### Rules
+
+- `remaining` is HenrikDev's count from the newest response; admissions no
+  longer subtract from it.
+- At most `PUBLIC_IN_FLIGHT` (3) site calls and `WORKFLOW_IN_FLIGHT` (1)
+  collector call run at once. Each admitted call takes a lease in the quota
+  row (`leases`, JSON `[{s, u, e}]`): its start, its documented maximum cost
+  and an expiry `LEASE_MS` (30 s) later. Its response releases it; a failed
+  fetch releases it at once; a Worker that dies leaves it to expire.
+- Documented maximum (`maxUnits`), from "1 request = +1, 1 background
+  request to Riot = +1": 1 for HenrikDev's stored endpoints, 2 for one
+  object (account, rank, RR history, match), 1 + page size for match lists
+  (pages capped at 10). These are upper bounds, not guesses: a call cannot
+  make more Riot requests than objects it asks for.
+- A call is admitted only while HenrikDev's count minus every held maximum
+  minus its own leaves `QUOTA_MARGIN` (2) plus the pool's reserve: 12 for
+  non-account site calls, 30 for collector loans, none for account lookups.
+  Unless something outside the gate uses the key, no admitted call can find
+  it empty.
+- Refusals: not enough units even with nothing in flight waits for the
+  reset; units or places held by calls in flight wait up to 250 ms and retry.
+  Spacing still spreads the free units over the window; priority claims and
+  the reset guard are unchanged.
+- An unknown window (no header yet) checks no units; the cap and the unknown
+  spacing bound it until the first response.
+
+### 429 handling
+
+A 429 now pauses the pool until the later of HenrikDev's reset (plus the
+guard) and `Retry-After`; with neither, `NO_HEADER_429_WAIT_MS` (5 s). It was
+`max(reset, Retry-After or 60 s)`: the second 60 s block of 24 Nov 2026 came
+with a reset header of about one second, so it was either HenrikDev's
+`Retry-After: 60` or that default. `public_quota_audit` now keeps
+HenrikDev's own `Retry-After` in `retry_after_ms` (no longer the derived wait)
+next to its reset, so the next 429 settles which.
+
+### Trade-offs
+
+- A match list needs 11 + 12 + 2 = 25 free units; under load it waits near
+  window ends.
+- Throughput with 3 in flight depends on HenrikDev's response times; not yet
+  measured live.
+- One more JSON update per call in the quota row (take and release).
+
+Tests: `tests/upstream-pacing.test.mjs` (cap, answer and expiry free a
+place, held maxima, margin and reserves, spread spacing, 429 waits, schema
+upgrades, claims) and `tests/upstream-cost.test.mjs` (maxima per route,
+sample rule and recording).

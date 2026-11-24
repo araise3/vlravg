@@ -16,7 +16,8 @@ CREATE TABLE IF NOT EXISTS rate_quota (
   prev_request_at INTEGER NOT NULL DEFAULT 0,     -- the admission before the newest one
   observed_request_at INTEGER NOT NULL DEFAULT 0, -- newest call whose response was seen
   header_remaining INTEGER,                       -- HenrikDev's count after the newest call
-  header_reset_at INTEGER
+  header_reset_at INTEGER,
+  leases TEXT NOT NULL DEFAULT '[]'                -- calls in flight: [{s: start, u: max units, e: expiry}]
 );
 INSERT OR IGNORE INTO rate_quota (id, remaining, reset_at, last_request_at) VALUES (1, NULL, 0, 0);
 
@@ -31,7 +32,8 @@ CREATE TABLE IF NOT EXISTS workflow_rate_quota (
   prev_request_at INTEGER NOT NULL DEFAULT 0,     -- the admission before the newest one
   observed_request_at INTEGER NOT NULL DEFAULT 0, -- newest call whose response was seen
   header_remaining INTEGER,                       -- HenrikDev's count after the newest call
-  header_reset_at INTEGER
+  header_reset_at INTEGER,
+  leases TEXT NOT NULL DEFAULT '[]'                -- calls in flight: [{s: start, u: max units, e: expiry}]
 );
 
 -- Measured HenrikDev units per call (lib/upstream-cost.mjs): one row per

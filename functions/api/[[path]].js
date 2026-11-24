@@ -91,8 +91,8 @@ import { workflowAuthorized } from "../../lib/workflow-auth.mjs";
 import { SITE_NAME_LOOKUP_RUN } from "../../lib/workflow-quota-audit.mjs";
 import { maintenance } from "../../lib/site-flags.mjs";
 import { matchKey, hasInlinePayload, readArchivedPayload, mapLimit } from "../../lib/match-store.mjs";
-import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, acquireProfilePermit, observePublicQuota, acquireBorrowedPublicPermit, RESET_GUARD_MS } from "../../lib/upstream-pacing.mjs";
-import { costKey, measuredCost } from "../../lib/upstream-cost.mjs";
+import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, acquireProfilePermit, observePublicQuota, acquireBorrowedPublicPermit, releaseWorkflowLease, releasePublicLease, RESET_GUARD_MS } from "../../lib/upstream-pacing.mjs";
+import { costKey, maxUnits } from "../../lib/upstream-cost.mjs";
 import { publicQuotaEvent, recordPublicQuotaEvent } from "../../lib/public-quota-audit.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
@@ -1249,20 +1249,21 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
   // A search's account lookup may use the public reserve
   // (lib/upstream-pacing.mjs PUBLIC_PROFILE_RESERVE); teammate names may not.
   const profileLookup=!workflow&&!!route.trackAccount&&!teammateLookup;
-  // The route's measured HenrikDev units (lib/upstream-cost.mjs).
+  // The most this call can cost in HenrikDev units, held while it is in
+  // flight (lib/upstream-cost.mjs); priceKey files its measured cost.
   const priceKey=costKey(route,match,url,requestPath);
-  let cost=1,permit,borrowed=false;
+  const cost=maxUnits(route,match,url,requestPath);
+  let permit,borrowed=false;
   try{
-    cost=(await measuredCost(env.APP_DB,priceKey)).cost;
-    if(namePool)permit=await acquireWorkflowPermit(env.APP_DB,{cost});
+    if(namePool)permit=await acquireWorkflowPermit(env.APP_DB,{units:cost});
     else if(workflow){
-      permit=await acquireWorkflowPermit(env.APP_DB,{maxWaitMs:0,cost});
+      permit=await acquireWorkflowPermit(env.APP_DB,{maxWaitMs:0,units:cost});
       if(permit.retryAfterMs&&env.HENRIK_KEY&&!admission.noBorrow){
-        const loan=await acquireBorrowedPublicPermit(env.APP_DB,{cost});
+        const loan=await acquireBorrowedPublicPermit(env.APP_DB,{units:cost});
         if(!loan.retryAfterMs){permit=loan;borrowed=true;}
       }
-      if(!borrowed&&permit.retryAfterMs)permit=await acquireWorkflowPermit(env.APP_DB,{cost});
-    }else permit=await (profileLookup?acquireProfilePermit:acquirePublicPermit)(env.APP_DB,{cost});
+      if(!borrowed&&permit.retryAfterMs)permit=await acquireWorkflowPermit(env.APP_DB,{units:cost});
+    }else permit=await (profileLookup?acquireProfilePermit:acquirePublicPermit)(env.APP_DB,{units:cost});
   }catch(error){logGateFailure('admission',requestPath,error);return json({error:'Upstream quota storage unavailable'},503);}
   if(workflow&&!permit.retryAfterMs)admission.pool=borrowed?'public':'workflow';
   const upstreamKey=namePool?env.HENRIK_WORKFLOW_KEY:borrowed?env.HENRIK_KEY:henrikKey;
@@ -1298,6 +1299,8 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
       headers: { Authorization: upstreamKey, Accept: "application/json" },
     });
   } catch (e) {
+    // No response will release this call's lease; give the place back now.
+    try { await (ownPool ? releaseWorkflowLease : releasePublicLease)(env.APP_DB, permit.startedAt); } catch {}
     if (route.nameHistory && storedNameHistory.history.length) {
       return savedNameHistoryResponse(storedNameHistory, 'SAVED-REFRESH-DEFERRED', true);
     }
@@ -1319,7 +1322,7 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
   if(!ownPool){
     const event=publicQuotaEvent(parsed,upstream.status);
     if(event)auditPublic({event,gateRemaining:permit.quota.remaining,headerRemaining:parsed.remaining,
-      resetAt:parsed.resetAt,retryAfterMs:upstream.status===429?upstreamRetryMs:null});
+      resetAt:parsed.resetAt,retryAfterMs:upstream.status===429&&retry!=null?retryAfterMs:null});
   }
 
   if (upstream.status === 429) {

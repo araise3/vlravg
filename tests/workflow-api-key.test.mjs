@@ -406,7 +406,8 @@ test('a real upstream 429 on an account lookup reaches the client and is audited
   assert.ok((await response.json()).retryAfterMs>=40000);
   assert.equal(f.upstream.length,1);
   assert.deepEqual(auditRows(f).map(r=>[r.event,r.gate_remaining,r.header_remaining,r.served_saved]),
-    [['upstream-429',19,0,null],['profile-refused',0,null,null]],'an unmeasured route reserves the minimum of one unit');
+    [['upstream-429',18,0,null],['profile-refused',0,null,null]],'an account lookup holds its maximum of two units');
+  assert.equal(f.sql.prepare("SELECT retry_after_ms FROM public_quota_audit WHERE event='upstream-429'").get().retry_after_ms,40000,'HenrikDev\'s own Retry-After is kept');
 });
 
 test('public responses in the reserve are audited with our count beside the header',async t=>{
@@ -414,8 +415,8 @@ test('public responses in the reserve are audited with our count beside the head
   f.respond=()=>Response.json({data:{}},{headers:{'x-ratelimit-remaining':'3','x-ratelimit-reset':'30'}});
   f.sql.prepare('INSERT OR REPLACE INTO rate_quota (id,remaining,reset_at,last_request_at,next_start_at) VALUES(1,20,?,0,0)').run(Date.now()+30000);
   assert.equal((await f.request(undefined)).status,200);
-  assert.deepEqual(auditRows(f),[{event:'low-window',route:'rank',profile:0,gate_remaining:19,header_remaining:3,served_saved:null}]);
-  assert.equal(f.sql.prepare('SELECT cost FROM public_quota_audit').get().cost,1,'the reserved cost is kept beside the counts');
+  assert.deepEqual(auditRows(f),[{event:'low-window',route:'rank',profile:0,gate_remaining:18,header_remaining:3,served_saved:null}]);
+  assert.equal(f.sql.prepare('SELECT cost FROM public_quota_audit').get().cost,2,'the held maximum is kept beside the counts');
   assert.equal(f.sql.prepare('SELECT remaining FROM rate_quota').get().remaining,3,'the newest header sets the count');
   f.respond=()=>Response.json({data:{}},{headers:{'x-ratelimit-remaining':'40','x-ratelimit-reset':'30'}});
   f.sql.prepare('UPDATE rate_quota SET remaining=50,next_start_at=0').run();
