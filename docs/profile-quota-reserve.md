@@ -452,3 +452,64 @@ Tests: `tests/upstream-pacing.test.mjs` (cap, answer and expiry free a
 place, held maxima, margin and reserves, spread spacing, 429 waits, schema
 upgrades, claims) and `tests/upstream-cost.test.mjs` (maxima per route,
 sample rule and recording).
+
+## Held maxima raised by repeated measurements, 24 Nov 2026
+
+The live drain of the lease-based gate (22:52 UTC, 150 s, rank lookups
+only): no HenrikDev 429, no D1 errors, refusals only at window ends (8.8 s
+or less), 44 drain calls answered against 50 before. Measured samples so
+far:
+
+| route | cache status | samples | average | highest |
+| --- | --- | --- | --- | --- |
+| `rr-collect` (collector key) | HIT | 452 | 2.0 | 2 |
+| `rr-collect` (borrowed site slots) | HIT | 408 | 1.99 | 2 |
+| `rank` | HIT | 42 | 1.98 | 3 |
+| `account-by-puuid` | HIT | 23 | 2.83 | 3 |
+| `account-by-puuid` | NONE | 3 | 1 | 1 |
+
+`account-by-puuid` (`force=true`) mostly cost 3, above the documented
+maximum of 2; the 2-unit margin absorbed it. Why it costs 3 is not known.
+
+Change (`lib/upstream-cost.mjs` `heldUnits`): a call in flight holds the
+higher of its documented maximum and the highest cost measured at least
+twice (`QUOTA_COST_MIN_REPEATS`) for its route in the kept samples (14 days),
+capped at 11. A single high sample may be a call that shared the key with
+outside use, which the margin covers; a repeated one is the route's own.
+Measurements only ever raise the bound. The maxima are read at most once a
+minute per isolate; without a readable samples table the documented maxima
+apply.
+
+Tests: `tests/upstream-cost.test.mjs` (repeated cost raises the bound, a
+single one does not, cap, expiry, cache, unreadable table) and
+`tests/workflow-api-key.test.mjs` (an account lookup with a measured cost of
+3 holds 3).
+
+## 429s tested on purpose, 24 Nov 2026
+
+See [henrikdev-429-behaviour.md](henrikdev-429-behaviour.md). A 429 carries no
+penalty: 429'd calls are not counted, calling while limited does not extend
+the wait, and the policy stayed `q=60;w=60`. HenrikDev never sends
+`Retry-After`. A 429 at the window boundary claims a 60 s reset although the
+window opens a second later; the gate now waits 2 s after such a 429.
+
+## Fixed maximum costs, runtime measurement removed, 25 Nov 2026
+
+The 429 test showed a 429 costs nothing beyond the wait. The gate's cost
+tracking therefore matters only for keeping the account-lookup reserve, and
+needs bounds that are safe, not exact. Changes:
+
+- `lib/upstream-cost.mjs` is a fixed table (`maxUnits`): 1 for HenrikDev's
+  stored endpoints, 2 for one object, 1 + page size for match lists, and 3
+  for forced account lookups by PUUID (`account-by-puuid`, `name-history`;
+  `FORCED_ACCOUNT_UNITS`), the one place the measurements exceeded the rule.
+- The runtime measurement is gone: no per-call sample write, no measured
+  maximum lookup, no baseline columns. Migration
+  `0019_drop_cost_measurement.sql` drops `quota_cost_samples` and the four
+  measurement columns; apply it after this code is deployed, because older
+  code re-adds them lazily.
+- Unchanged: HenrikDev's exact count, the in-flight cap, leases, the 2-unit
+  margin, the reserves, the 429 handling and `public_quota_audit` (its
+  `cost` column now holds the fixed maximum).
+
+The sections above on measured costs and held maxima are kept as history.

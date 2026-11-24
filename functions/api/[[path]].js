@@ -92,7 +92,7 @@ import { SITE_NAME_LOOKUP_RUN } from "../../lib/workflow-quota-audit.mjs";
 import { maintenance } from "../../lib/site-flags.mjs";
 import { matchKey, hasInlinePayload, readArchivedPayload, mapLimit } from "../../lib/match-store.mjs";
 import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, acquireProfilePermit, observePublicQuota, acquireBorrowedPublicPermit, releaseWorkflowLease, releasePublicLease, RESET_GUARD_MS } from "../../lib/upstream-pacing.mjs";
-import { costKey, maxUnits } from "../../lib/upstream-cost.mjs";
+import { maxUnits } from "../../lib/upstream-cost.mjs";
 import { publicQuotaEvent, recordPublicQuotaEvent } from "../../lib/public-quota-audit.mjs";
 
 const UPSTREAM = "https://api.henrikdev.xyz";
@@ -1250,8 +1250,7 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
   // (lib/upstream-pacing.mjs PUBLIC_PROFILE_RESERVE); teammate names may not.
   const profileLookup=!workflow&&!!route.trackAccount&&!teammateLookup;
   // The most this call can cost in HenrikDev units, held while it is in
-  // flight (lib/upstream-cost.mjs); priceKey files its measured cost.
-  const priceKey=costKey(route,match,url,requestPath);
+  // flight (lib/upstream-cost.mjs).
   const cost=maxUnits(route,match,url,requestPath);
   let permit,borrowed=false;
   try{
@@ -1316,8 +1315,7 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
   try{upstreamRetryMs=await (ownPool?observeWorkflowQuota:observePublicQuota)(env.APP_DB,parsed,
     {startedAt:permit.startedAt,status:upstream.status,retryAfterMs,
       expectedRemaining:permit.quota.remaining,expectedResetAt:permit.quota.resetAt,
-      runId:namePool?SITE_NAME_LOOKUP_RUN:ownPool?request.headers.get('X-Workflow-Run'):null,
-      baseline:permit.baseline,costKey:priceKey,cacheStatus:upstream.headers.get('x-cache-status')});}
+      runId:namePool?SITE_NAME_LOOKUP_RUN:ownPool?request.headers.get('X-Workflow-Run'):null});}
   catch(error){logGateFailure('update',requestPath,error);return json({error:'Upstream quota update failed'},503);}
   if(!ownPool){
     const event=publicQuotaEvent(parsed,upstream.status);

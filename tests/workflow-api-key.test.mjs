@@ -465,3 +465,12 @@ test('gate storage failures log what D1 said, without player identity',async t=>
   assert.deepEqual(logged,['Quota gate admission failed on account: D1_ERROR: Too many requests queued. retry later']);
   assert.ok(!logged[0].includes('Alpha'));
 });
+
+test('a forced account lookup by PUUID holds its measured three units',async t=>{
+  const f=fixture(t);
+  const puuid='44444444-4444-4444-8444-444444444444';
+  f.respond=()=>Response.json({data:{puuid,name:'Alpha',tag:'EU',region:'eu'}},{headers:{'x-ratelimit-remaining':'5','x-ratelimit-reset':'30'}});
+  f.sql.prepare('INSERT OR REPLACE INTO rate_quota (id,remaining,reset_at,last_request_at,next_start_at) VALUES(1,20,?,0,0)').run(Date.now()+30000);
+  assert.equal((await f.request(undefined,origin+`/api/account-by-puuid/${puuid}`)).status,200);
+  assert.deepEqual(f.sql.prepare('SELECT gate_remaining,cost FROM public_quota_audit').all().map(r=>({...r})),[{gate_remaining:17,cost:3}]);
+});

@@ -6,6 +6,7 @@ import {acquireWorkflowPermit,observeWorkflowQuota,WORKFLOW_SPACING_MS,
   acquirePublicPermit,observePublicQuota,PUBLIC_UNKNOWN_SPACING_MS,
   acquireBorrowedPublicPermit,PUBLIC_BORROW_RESERVE,acquireProfilePermit,PUBLIC_PROFILE_RESERVE,
   PRIORITY_CLAIM_MARGIN_MS,QUOTA_MARGIN,PUBLIC_IN_FLIGHT,LEASE_MS,NO_HEADER_429_WAIT_MS,
+  RESET_GUARD_MS,QUOTA_WINDOW_MS,BOUNDARY_429_WAIT_MS,
   releasePublicLease} from '../lib/upstream-pacing.mjs';
 
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
@@ -139,6 +140,15 @@ test('a 429 pauses every caller until HenrikDev\'s reset or Retry-After, and bri
   assert.equal(await observeWorkflowQuota(db,{remaining:null,resetAt:null},{startedAt:permit.startedAt,now:()=>clock,status:429,retryAfterMs:9000}),9000);
   clock+=9000;permit=await call();
   assert.equal(await observeWorkflowQuota(db,{remaining:null,resetAt:null},{startedAt:permit.startedAt,now:()=>clock,status:429}),NO_HEADER_429_WAIT_MS,'no 60 s guess');
+  // At the boundary HenrikDev answers 429 with a full window's reset (parsed with the guard).
+  clock+=NO_HEADER_429_WAIT_MS;permit=await call();
+  assert.equal(await observeWorkflowQuota(db,{remaining:0,resetAt:clock+QUOTA_WINDOW_MS+RESET_GUARD_MS},{startedAt:permit.startedAt,now:()=>clock,status:429}),BOUNDARY_429_WAIT_MS,'the window opens a second later, not in 60 s');
+  assert.equal((await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0})).retryAfterMs,Math.max(BOUNDARY_429_WAIT_MS,WORKFLOW_SPACING_MS),'only the boundary wait, or the collector spacing');
+  clock+=Math.max(BOUNDARY_429_WAIT_MS,WORKFLOW_SPACING_MS);
+  assert.equal((await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0})).quota.remaining,null,'reopened, learned from the next answer');
+  // A mid-window 429 still waits for the reset it states.
+  permit=await call();
+  assert.equal(await observeWorkflowQuota(db,{remaining:0,resetAt:clock+30000+RESET_GUARD_MS},{startedAt:permit.startedAt,now:()=>clock,status:429}),30000+RESET_GUARD_MS);
 });
 
 test('busy gates return a bounded retry and missing or failed storage never grants admission',async t=>{
@@ -158,7 +168,7 @@ test('older quota tables are upgraded without losing exhaustion state; only the 
   sql.exec('DROP TABLE rate_quota; CREATE TABLE rate_quota(id INTEGER PRIMARY KEY,remaining INTEGER,reset_at INTEGER,last_request_at INTEGER,next_start_at INTEGER NOT NULL DEFAULT 0); INSERT INTO rate_quota VALUES(1,0,110000,100000,0)');
   assert.equal((await acquirePublicPermit(db,{now:()=>100000,maxWaitMs:0})).retryAfterMs,10000);
   const columns=table=>sql.prepare(`PRAGMA table_info(${table})`).all().map(c=>c.name);
-  for(const name of ['next_start_at','leases','header_remaining'])assert.ok(columns('rate_quota').includes(name)&&columns('workflow_rate_quota').includes(name),name);
+  for(const name of ['next_start_at','leases'])assert.ok(columns('rate_quota').includes(name)&&columns('workflow_rate_quota').includes(name),name);
   assert.ok(columns('rate_quota').includes('priority_until'));
   assert.ok(!columns('workflow_rate_quota').includes('priority_until'));
 });
