@@ -497,7 +497,7 @@ export function stepSummary(r){
     `Match features: ${f.saved??0} saved, ${f.deferred??0} deferred by upstream, ${f.failed??0} errors. Discovery: ${r.discovery?.enrolled??0} of ${r.discovery?.probed??0} probes enrolled.\n\n`+
     `Next run starts with ${b.due??'?'} polls due (${b.overdue2x??'?'} over twice their interval) and ${b.gapsQueued??'?'} gaps queued, of ${r.tracked??'?'} tracked accounts.\n\n`+
     `All gaps: ${g.total??'?'} (${JSON.stringify(g.byStatus||{})}); ${g.recovered??'?'} payouts recovered in total.\n\n`+
-    `Upstream calls: ${r.upstreamPools?.workflow??0} on the workflow key, ${r.upstreamPools?.public??0} on borrowed idle site-key slots. Quota check: ${r.quotaCheck?.status}.\n`+
+    `Upstream calls: ${r.upstreamPools?.workflow??0} on the workflow key, ${r.upstreamPools?.public??0} on the site key. Quota check: ${r.quotaCheck?.status}.\n`+
     (r.audit&&!r.audit.skipped&&!r.audit.error?`\nDaily audit: ${r.audit.gapScan?.found??0} discontinuities queued (${r.audit.gapScan?.mode==='changed'?`${r.audit.gapScan.players??0} changed players scanned`:'every player scanned'}); `+
       (r.audit.census?.skipped?`weekly census last ran ${r.audit.census.last}.\n`:
         `observed act ${r.audit.currentAct?.act||r.audit.currentAct?.id||'unknown'} with ${r.audit.currentAct?.payouts??0} payouts.\n`):'')+

@@ -13,7 +13,7 @@ Cloudflare for ordinary visitors.
 
 `Collect act RR corpus` is the only remaining workflow and requires this secret.
 Missing workflow secrets fail explicitly; jobs do not fall back to the public key.
-The only use of the public key is borrowing idle slots (below).
+Collector calls never use the public key (borrowing, below, was removed on 25 Nov 2026).
 
 Jobs authenticate to the existing proxy over HTTPS using `X-Workflow-Key`. The
 proxy verifies that credential before reading stored data or contacting HenrikDev,
@@ -45,7 +45,14 @@ restore capacity already reserved by newer calls; a real 429 pauses upstream
 callers using that key even when its response arrives late. A workflow 429
 never pauses the public pool.
 
-## Borrowing idle site-key slots
+## Borrowing idle site-key slots (removed 25 Nov 2026)
+
+Removed: a live test showed the collector holding the site key at about 32
+units in every quiet minute, too few for a search to reach its first history
+page ([profile-quota-reserve.md](profile-quota-reserve.md#collector-borrowing-removed-25-nov-2026)).
+Collector calls now wait on their own pool only, and
+`X-Workflow-Upstream-Pool` is always `workflow`. The description below is
+kept as history.
 
 The site key (`HENRIK_KEY`, 60 calls/minute) is idle most of the time. Collector
 calls may use its spare capacity, never the capacity visitors need:
@@ -126,8 +133,8 @@ matches were still loading. Other
 public key.
 
 The trade-off: these calls take workflow-pool slots (2.1 s spacing), so the
-collector runs slightly slower while visitors search. The collector then
-borrows idle public slots under the existing `PUBLIC_BORROW_RESERVE` rule.
+collector runs slightly slower while visitors search. (The collector used to borrow idle public slots to make up for it; that was
+removed on 25 Nov 2026.)
 These calls are recorded in `workflow_quota_audit` under the run ID
 `site-teammate-names`. The collector's quota check reports them as
 `siteNameCalls`, not as `other_proxy_activity`.

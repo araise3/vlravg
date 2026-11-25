@@ -57,8 +57,7 @@ export function createRequestScheduler({fetchImpl=fetch,workflowKey,origin,runId
   };
   // FIFO admission avoids workers repeatedly racing for server-side slots.
   // A 429 pauses queued requests too; the proxy remains the quota authority.
-  // inFlight > 1 lets one call wait on the workflow pool while another uses a
-  // borrowed public slot; the proxy still admits every upstream call.
+  // The proxy admits every upstream call; collectors use only the workflow key.
   let active=0;const waiting=[];
   const run=(url,options)=>{
     active++;

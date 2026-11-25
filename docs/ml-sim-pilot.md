@@ -108,7 +108,7 @@ DELETE FROM site_flags WHERE name = 'maintenance';  -- back online (or wait for 
 ```
 
 While it is on, visitors' API requests get a 503 that the app shows as "offline for
-maintenance", collector workflows keep their own key pool but don't borrow public slots, and
+maintenance", collector workflows keep their own key pool (they never use the public key), and
 only requests with `X-Sim-Pilot: <token>` use the public key. Each pilot run reads the token
 from D1 at start and then paces itself to 60 a minute with 4 workers. The proxy rereads the
 switch every 15 s per isolate; a missing table or a storage error counts as off.

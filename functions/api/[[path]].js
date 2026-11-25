@@ -91,7 +91,7 @@ import { workflowAuthorized } from "../../lib/workflow-auth.mjs";
 import { SITE_NAME_LOOKUP_RUN } from "../../lib/workflow-quota-audit.mjs";
 import { maintenance } from "../../lib/site-flags.mjs";
 import { matchKey, hasInlinePayload, readArchivedPayload, mapLimit } from "../../lib/match-store.mjs";
-import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, acquireProfilePermit, observePublicQuota, acquireBorrowedPublicPermit, releaseWorkflowLease, releasePublicLease, RESET_GUARD_MS } from "../../lib/upstream-pacing.mjs";
+import { acquireWorkflowPermit, observeWorkflowQuota, acquirePublicPermit, acquireProfilePermit, observePublicQuota, releaseWorkflowLease, releasePublicLease, RESET_GUARD_MS } from "../../lib/upstream-pacing.mjs";
 import { maxUnits } from "../../lib/upstream-cost.mjs";
 import { publicQuotaEvent, recordPublicQuotaEvent } from "../../lib/public-quota-audit.mjs";
 import { withD1RetryContext } from "../../lib/d1-retry.mjs";
@@ -1014,7 +1014,7 @@ export async function onRequestGet(rawContext) {
     if(!await workflowAuthorized(request,env.HENRIK_WORKFLOW_KEY))return json({error:'Unauthorized workflow request'},401);
   }
   // Maintenance (lib/site-flags.mjs): visitors get a 503; the ML pilot job (X-Sim-Pilot = the
-  // switch's token) has the public key to itself; collectors keep their own pool but don't borrow.
+  // switch's token) has the public key to itself; collectors keep their own pool.
   const maint=await maintenance(env.APP_DB);
   if(maint&&!workflow&&request.headers.get('X-Sim-Pilot')!==maint.token){
     const res=json({error:'vlravg is offline for maintenance. Please try again later.',maintenance:true,until:maint.until},503);
@@ -1022,7 +1022,7 @@ export async function onRequestGet(rawContext) {
     return res;
   }
   const henrikKey=workflow?env.HENRIK_WORKFLOW_KEY:env.HENRIK_KEY;
-  const admission={pool:null,noBorrow:!!maint};
+  const admission={pool:null};
   const response=await handleGet(context,{workflow,henrikKey,admission});
   if(workflow){
     response.headers.set('X-Workflow-Pacing','upstream-v1');
@@ -1241,10 +1241,10 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
 
   // Cache and D1-only responses have already returned. Reserve a distinct slot
   // atomically for the selected key immediately before a real upstream call.
-  // A collector call takes its own slot if one is free now. Otherwise it may
-  // borrow an idle public slot (lib/upstream-pacing.mjs PUBLIC_BORROW_RESERVE),
-  // and only then waits on its own pool. Storage failure never borrows.
-  // Teammate-name refreshes are optional display data: they spend the
+  // A collector call waits on its own pool only. It used to borrow site-key
+  // units while 30 stayed free, which left every visitor window at about 32:
+  // too few for a search to reach its first history page (live test, 25 Nov
+  // 2026, docs/profile-quota-reserve.md). Teammate-name refreshes are optional display data: they spend the
   // collector's workflow key, never the visitors' public quota. Without that
   // key configured (local development) they stay on the public key.
   const teammateLookup=request.headers.get('X-Name-Lookup')==='teammate';
@@ -1255,24 +1255,17 @@ async function handleGet(context,{workflow,henrikKey,admission={}}){
   // The most this call can cost in HenrikDev units, held while it is in
   // flight (lib/upstream-cost.mjs).
   const cost=maxUnits(route,match,url,requestPath);
-  let permit,borrowed=false;
+  let permit;
   try{
-    if(namePool)permit=await acquireWorkflowPermit(env.APP_DB,{units:cost});
-    else if(workflow){
-      permit=await acquireWorkflowPermit(env.APP_DB,{maxWaitMs:0,units:cost});
-      if(permit.retryAfterMs&&env.HENRIK_KEY&&!admission.noBorrow){
-        const loan=await acquireBorrowedPublicPermit(env.APP_DB,{units:cost});
-        if(!loan.retryAfterMs){permit=loan;borrowed=true;}
-      }
-      if(!borrowed&&permit.retryAfterMs)permit=await acquireWorkflowPermit(env.APP_DB,{units:cost});
-    }else permit=await (profileLookup?acquireProfilePermit:acquirePublicPermit)(env.APP_DB,{units:cost});
+    if(namePool||workflow)permit=await acquireWorkflowPermit(env.APP_DB,{units:cost});
+    else permit=await (profileLookup?acquireProfilePermit:acquirePublicPermit)(env.APP_DB,{units:cost});
   }catch(error){logGateFailure('admission',requestPath,error);return json({error:'Upstream quota storage unavailable'},503);}
-  if(workflow&&!permit.retryAfterMs)admission.pool=borrowed?'public':'workflow';
-  const upstreamKey=namePool?env.HENRIK_WORKFLOW_KEY:borrowed?env.HENRIK_KEY:henrikKey;
-  const ownPool=namePool||(workflow&&!borrowed);
+  if(workflow&&!permit.retryAfterMs)admission.pool='workflow';
+  const upstreamKey=namePool?env.HENRIK_WORKFLOW_KEY:henrikKey;
+  const ownPool=namePool||workflow;
   // Public-pool diagnostics (lib/public-quota-audit.mjs): written after the
   // response, and a failed write never affects it.
-  const routeLabel=(borrowed?'borrowed:':'')+(requestPath.split('/')[1]||'');
+  const routeLabel=requestPath.split('/')[1]||'';
   const auditPublic=fields=>{
     const job=(async()=>{
       let gateRemaining=fields.gateRemaining;

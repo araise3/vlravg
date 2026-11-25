@@ -42,11 +42,11 @@ test('maintenance: the pilot token reaches the upstream with the public key',asy
   assert.equal(r.status,200);assert.equal(f.upstream.length,1);
 });
 
-test('maintenance: collectors keep their own pool but never borrow public slots',async t=>{
+test('maintenance: collectors keep their own pool',async t=>{
   const f=fixture(t,{token:'tok-3'});
   f.sql.prepare('INSERT OR REPLACE INTO workflow_rate_quota (id,remaining,reset_at,last_request_at,next_start_at) VALUES (1,0,?,0,0)').run(Date.now()+60000);
   const r=await f.request({'X-Workflow-Key':'HDEV-workflow-fixture'});
-  assert.equal(r.status,429,'own pool exhausted: waits instead of borrowing');
+  assert.equal(r.status,429,'own pool exhausted: waits');
   assert.equal(f.upstream.length,0);
 });
 

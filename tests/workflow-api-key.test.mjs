@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {onRequestGet} from '../functions/api/[[path]].js';
-import {PUBLIC_BORROW_RESERVE,PUBLIC_PROFILE_RESERVE,RESET_GUARD_MS} from '../lib/upstream-pacing.mjs';
+import {PUBLIC_PROFILE_RESERVE,RESET_GUARD_MS} from '../lib/upstream-pacing.mjs';
 import {createRequestScheduler} from '../.github/scripts/request-scheduler.mjs';
 import {main as refresh,requestJSON,createStorageBreaker} from '../.github/scripts/refresh-rr-history.mjs';
 import {assertD1Headroom} from '../.github/scripts/d1-query.mjs';
@@ -103,38 +103,31 @@ test('real public 429 with HTTP-date Retry-After pauses only the public pool and
   assert.equal(f.sql.prepare('SELECT * FROM workflow_rate_quota').get(),undefined);
 });
 
-test('exhausted workflow quota with no idle site slot returns only retryAfterMs without contacting upstream',async t=>{
+test('exhausted workflow quota returns only retryAfterMs without contacting upstream, even with the site key idle',async t=>{
   const f=fixture(t);
   f.sql.prepare('INSERT INTO workflow_rate_quota (id,remaining,reset_at,last_request_at) VALUES(1,0,?,0)').run(Date.now()+60000);
-  f.sql.prepare('UPDATE rate_quota SET remaining=?,reset_at=? WHERE id=1').run(PUBLIC_BORROW_RESERVE-1,Date.now()+60000);
+  f.sql.prepare('UPDATE rate_quota SET remaining=60,reset_at=? WHERE id=1').run(Date.now()+60000);
+  const siteBefore=f.sql.prepare('SELECT * FROM rate_quota').get();
   const response=await f.request(workflowKey),body=await response.json();
   assert.equal(response.status,429);assert.ok(body.retryAfterMs>0);
   assert.deepEqual(Object.keys(body).sort(),['error','retryAfterMs']);
   assert.equal(response.headers.get('x-ratelimit-remaining'),null);
   assert.equal(f.upstream.length,0);
+  assert.deepEqual(f.sql.prepare('SELECT * FROM rate_quota').get(),siteBefore,'the site quota is never touched');
 });
 
-test('a busy workflow pool borrows an idle site-key slot through the public schedule',async t=>{
+// Collectors used to borrow site-key units while 30 stayed free; that left
+// every quiet window at about 32 and searches unable to load a history page
+// (live test, 25 Nov 2026, docs/profile-quota-reserve.md).
+test('a busy workflow pool waits on its own key and never uses the site key',async t=>{
   const f=fixture(t);
   f.sql.prepare('INSERT INTO workflow_rate_quota (id,remaining,reset_at,last_request_at,next_start_at) VALUES(1,NULL,0,0,?)').run(Date.now()+60000);
-  const workflowBefore=f.sql.prepare('SELECT * FROM workflow_rate_quota').get();
-  const response=await f.request(workflowKey);
-  assert.equal(response.status,200);
-  assert.equal(f.upstream[0].options.headers.Authorization,publicKey);
-  assert.equal(response.headers.get('X-Workflow-Upstream-Pool'),'public');
-  assert.equal(response.headers.get('x-ratelimit-remaining'),null);
-  assert.equal(f.cacheReads.length,0);assert.equal(f.cacheWrites.length,0);
-  assert.equal(f.sql.prepare('SELECT remaining FROM rate_quota').get().remaining,7,'site quota learns from the borrowed call');
-  assert.deepEqual(f.sql.prepare('SELECT * FROM workflow_rate_quota').get(),workflowBefore);
-});
-
-test('collector calls never borrow below the site reserve or when their own slot is free',async t=>{
-  const f=fixture(t);
-  f.sql.prepare('INSERT INTO workflow_rate_quota (id,remaining,reset_at,last_request_at,next_start_at) VALUES(1,NULL,0,0,?)').run(Date.now()+60000);
-  f.sql.prepare('UPDATE rate_quota SET remaining=?,reset_at=? WHERE id=1').run(PUBLIC_BORROW_RESERVE-1,Date.now()+60000);
+  const siteBefore=f.sql.prepare('SELECT * FROM rate_quota').get();
   const busy=await f.request(workflowKey);
-  assert.equal(busy.status,429);assert.equal(f.upstream.length,0);
-  assert.equal(f.sql.prepare('SELECT remaining FROM rate_quota').get().remaining,PUBLIC_BORROW_RESERVE-1);
+  assert.equal(busy.status,429);assert.ok((await busy.json()).retryAfterMs>0);
+  assert.equal(f.upstream.length,0);
+  assert.equal(busy.headers.get('X-Workflow-Upstream-Pool'),null);
+  assert.deepEqual(f.sql.prepare('SELECT * FROM rate_quota').get(),siteBefore);
   const g=fixture(t);
   const own=await g.request(workflowKey);
   assert.equal(g.upstream[0].options.headers.Authorization,workflowKey);

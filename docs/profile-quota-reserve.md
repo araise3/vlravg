@@ -537,3 +537,51 @@ retry deployed. It got no 503 and the tail logged no gate failure; the reload
 minute read 572,236 rows instead of 1.71M. 107 of 112 account-lookup probes
 were answered. Details:
 [rr-collector-d1-load.md](rr-collector-d1-load.md#live-check-25-nov-2026).
+
+## Collector borrowing removed, 25 Nov 2026
+
+`functions/api/[[path]].js`, `lib/upstream-pacing.mjs`.
+
+### Live test
+
+A random saved EU account was searched on the live site at 15:18 UTC, with
+every `/api` call logged in the browser and the `rate_quota` row read about
+every 3 s:
+
+| UTC | site key units left | what used them |
+| --- | --- | --- |
+| 15:18:05 | 54, window just opened | no visitor traffic: borrowed `rr-collect` calls, 2 units about every 3 s |
+| 15:18:26 | 32 | borrowing stops: `PUBLIC_BORROW_RESERVE` (30) plus the 2-unit margin |
+| 15:18:29 | 32 to 21 | the search: account, rank, mmr-history, name-history, stored-matches, all 200 (about 11 units) |
+| 15:18:31 | 21 | all three history pages (`start=0/10/20`) answered 429, `retryAfterMs` 26,370 |
+| 15:19:03 | window reset | the pages load; 32 matches shown a few seconds later |
+
+A history page may cost 11 units (1 + 10 matches), and a non-account call
+needs its units plus `PUBLIC_PROFILE_RESERVE` (12) plus the margin (2) free:
+25 units. With the collector keeping every quiet window at about 32, a search
+had about 21 left after its own lookups, so no page could start before the
+reset. Other visitors were not involved. Earlier `low-window` and
+`upstream-429` rows on `history-by-puuid` (25 Nov 13:16 UTC) fit the same
+pattern.
+
+### Change
+
+Collector calls (`X-Workflow-Key`) wait on their own pool only and never use
+`HENRIK_KEY`. `acquireBorrowedPublicPermit` and `PUBLIC_BORROW_RESERVE` are
+gone, `X-Workflow-Upstream-Pool` is always `workflow`, and the `borrowed:`
+route prefix no longer appears in `public_quota_audit`. Teammate-name lookups
+still use the workflow key, unchanged.
+
+Cost: the collector loses up to about 14 calls a minute that it took from the
+site key (28 units at 2 each). Its own key still allows 30 units a minute.
+
+Not changed: a full window (60 units) admits only about three uncached
+live pages after a search's own lookups (49 left, each page needing 25 free), so a long act still waits for one or more
+resets. A 60-match load is about 6 pages, up to 66 units, more than one window.
+
+Tests: `tests/workflow-api-key.test.mjs` (a busy or exhausted workflow pool
+gets a 429 and never touches the site key, even with the site window full;
+both fail on the old proxy), plus the removed borrowing tests in
+`tests/upstream-pacing.test.mjs`. Not yet verified live: repeat the search
+after deploying and check that `rate_quota` stays untouched between visitor
+searches.

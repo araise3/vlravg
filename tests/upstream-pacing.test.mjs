@@ -4,7 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {acquireWorkflowPermit,observeWorkflowQuota,WORKFLOW_SPACING_MS,
   acquirePublicPermit,observePublicQuota,PUBLIC_UNKNOWN_SPACING_MS,
-  acquireBorrowedPublicPermit,PUBLIC_BORROW_RESERVE,acquireProfilePermit,PUBLIC_PROFILE_RESERVE,
+  acquireProfilePermit,PUBLIC_PROFILE_RESERVE,
   PRIORITY_CLAIM_MARGIN_MS,QUOTA_MARGIN,PUBLIC_IN_FLIGHT,LEASE_MS,NO_HEADER_429_WAIT_MS,
   RESET_GUARD_MS,QUOTA_WINDOW_MS,BOUNDARY_429_WAIT_MS,
   releasePublicLease} from '../lib/upstream-pacing.mjs';
@@ -173,25 +173,6 @@ test('older quota tables are upgraded without losing exhaustion state; only the 
   assert.ok(!columns('workflow_rate_quota').includes('priority_until'));
 });
 
-test('borrowed slots share the public schedule, keep the site reserve and never wait',async t=>{
-  const {db,sql}=database(t);let clock=100000;
-  const fresh=await acquireBorrowedPublicPermit(db,{now:()=>clock});
-  assert.ok(fresh.quota);
-  assert.equal(nextStart(sql),clock+PUBLIC_UNKNOWN_SPACING_MS);
-  assert.equal((await acquirePublicPermit(db,{now:()=>clock,maxWaitMs:0})).retryAfterMs,PUBLIC_UNKNOWN_SPACING_MS);
-  assert.equal((await acquireBorrowedPublicPermit(db,{now:()=>clock,maxWaitMs:60000})).retryAfterMs,PUBLIC_UNKNOWN_SPACING_MS,'never waits');
-  clock=200000;
-  const floor=QUOTA_MARGIN+PUBLIC_BORROW_RESERVE;
-  sql.prepare('UPDATE rate_quota SET remaining=?,reset_at=?,next_start_at=0,leases=\'[]\'').run(floor+1,clock+60000);
-  assert.equal((await acquireBorrowedPublicPermit(db,{now:()=>clock})).quota.remaining,floor,'keeps the reserve after the call');
-  clock=nextStart(sql);
-  assert.ok((await acquireBorrowedPublicPermit(db,{now:()=>clock})).retryAfterMs>0);
-  assert.equal((await acquirePublicPermit(db,{now:()=>clock})).quota.remaining,floor-1,'visitors may still use it');
-  clock+=60000;
-  assert.ok((await acquireBorrowedPublicPermit(db,{now:()=>clock})).quota,'a new window is borrowable again');
-  assert.equal(sql.prepare('SELECT * FROM workflow_rate_quota').get(),undefined);
-});
-
 test('an unknown window checks no units, so the first call can learn the quota',async t=>{
   const {db}=database(t);
   assert.equal((await acquirePublicPermit(db,{now:()=>100000,units:11})).quota.remaining,null);
@@ -209,7 +190,6 @@ test('a waiting account lookup takes the next public slot ahead of other waiting
   assert.equal(sql.prepare('SELECT priority_until FROM rate_quota').get().priority_until,slot+PRIORITY_CLAIM_MARGIN_MS,'claims the slot it waits for');
   const now=()=>slot;
   assert.equal((await acquirePublicPermit(db,{now,maxWaitMs:0})).retryAfterMs,PRIORITY_CLAIM_MARGIN_MS);
-  assert.equal((await acquireBorrowedPublicPermit(db,{now})).retryAfterMs,PRIORITY_CLAIM_MARGIN_MS);
   wake();
   const permit=await profile;
   assert.equal(permit.startedAt,slot);
