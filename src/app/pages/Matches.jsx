@@ -1,4 +1,4 @@
-import {Fragment,memo,useCallback,useEffect,useState} from 'react';
+import {Fragment,memo,useCallback,useEffect,useMemo,useState} from 'react';
 import {ChevronDown,Shield} from 'lucide-react';
 import {
   avgLabel,avgLabelShort,dayHeaderLabel,loadMatchMapMetadata,loadMoreMatches,matchAward,placeText,
@@ -351,10 +351,12 @@ export function MobileMatchCard({m,s,maps,agents,open,onOpenChange}){
           </span>
           <ChevronDown className={cn('size-4 shrink-0 text-muted-foreground transition-transform duration-200',open&&'rotate-180')} aria-hidden="true"/>
         </CollapsibleTrigger>
-        <CollapsibleContent className="match-card-details space-y-4">
-          <MatchInfo m={m} v={v}/>
-          <PlayersGrid m={m} me={v.me} agents={agents} compact/>
-        </CollapsibleContent>
+        {open&&(
+          <CollapsibleContent className="match-card-details space-y-4">
+            <MatchInfo m={m} v={v}/>
+            <PlayersGrid m={m} me={v.me} agents={agents} compact/>
+          </CollapsibleContent>
+        )}
       </div>
     </Collapsible>
   );
@@ -370,8 +372,14 @@ export function MatchCard({m,s,maps,agents,open,onOpenChange}){
 // log (every card, day recap and the session chart), so a toggle cost grew
 // with the number of cards shown: about 23 ms with 15 and 79 ms with 120 in a
 // production build (24 Nov 2026, docs/match-card-expand-speed.md). Memoized
-// with a stable `onToggle(matchId,open)`, only the toggled card renders; the
-// rest re-render on engine changes as before (`s` is the engine snapshot).
+// with a stable `onToggle(matchId,open)`, only the toggled card renders.
+// `s` is not the engine snapshot but the few fields a card reads
+// (matchCardState): with the whole snapshot, any engine change, such as
+// "Load More", re-rendered every card shown, about 1 s per click with 500
+// cards in a dev build (25 Nov 2026, docs/match-log-load-speed.md).
+// `postReset` is passed on its own because the engine re-tags it on the same
+// match object as acts load (tagPostResetPlacements); as a prop, a change
+// still re-renders the card.
 export const MatchLogCard=memo(function MatchLogCard({m,s,maps,agents,open,onToggle}){
   const id=m.matchId;
   const onOpenChange=useCallback(next=>onToggle(id,next),[onToggle,id]);
@@ -440,10 +448,16 @@ function DesktopMatchCard({m,s,maps,agents,open,onOpenChange}){
           </span>
           <ChevronDown className="mc-chevron" aria-hidden="true"/>
         </CollapsibleTrigger>
-        <CollapsibleContent className="match-card-details space-y-4">
-          <MatchInfo m={m} v={v}/>
-          <PlayersGrid m={m} me={v.me} agents={agents}/>
-        </CollapsibleContent>
+        {/* Only an opened card mounts its content. Radix measures the content
+            in a layout effect that runs again each time the page is shown;
+            for every closed card that forced a layout of the card, which
+            undid content-visibility (index.css) and cost more than it saved. */}
+        {open&&(
+          <CollapsibleContent className="match-card-details space-y-4">
+            <MatchInfo m={m} v={v}/>
+            <PlayersGrid m={m} me={v.me} agents={agents}/>
+          </CollapsibleContent>
+        )}
       </div>
     </Collapsible>
   );
@@ -536,8 +550,16 @@ export function toggleExpanded(previous,matchId,next){
   return copy;
 }
 
+// What a match card reads from the engine. Kept as one object that changes
+// only when one of these does, so memoized cards skip unrelated updates.
+export function useMatchCardState(s){
+  const {PUUID,PLAYER,TAG,mhIncludeReset}=s;
+  return useMemo(()=>({PUUID,PLAYER,TAG,mhIncludeReset}),[PUUID,PLAYER,TAG,mhIncludeReset]);
+}
+
 export function MatchesPage(){
   const s=useEngine();
+  const cardState=useMatchCardState(s);
   const maps=useMapArt();
   const agents=useAgentArt();
   const [expanded,setExpanded]=useState(()=>new Set());
@@ -569,7 +591,7 @@ export function MatchesPage(){
               return (
                 <Fragment key={m.matchId}>
                   {header}
-                  <MatchLogCard m={m} s={s} maps={maps} agents={agents} open={expanded.has(m.matchId)} onToggle={toggle}/>
+                  <MatchLogCard m={m} postReset={m.postReset} s={cardState} maps={maps} agents={agents} open={expanded.has(m.matchId)} onToggle={toggle}/>
                 </Fragment>
               );
             })}

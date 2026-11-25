@@ -349,6 +349,13 @@
 .match-card:hover { border-color: #52525b; }
 .match-card[data-state="open"] { border-color: #52647c; }
 .match-card { container-type: inline-size; }
+/* Cards off screen skip style, layout and paint. With every card shown (500),
+   showing the Match History page again spent about 275 ms on style and layout
+   and 60 ms on paint in a production build, 33 ms in all with this (25 Nov 2026,
+   docs/match-log-load-speed.md). `auto` keeps each card's last rendered height;
+   66px is a closed desktop card. Cards already clip to their border (overflow:
+   hidden), so paint containment hides nothing. */
+.match-card { content-visibility: auto; contain-intrinsic-size: auto 66px; }
 /* Match card (redesigned 22 Nov 2026, slimmed the same day, then laid out
    as labelled columns spread over the row): agent tile, map with agent and
    MVP under it, result over score, K/D/A, ACS and RR, each a small label

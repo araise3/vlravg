@@ -1,13 +1,19 @@
 // Dev-only synthetic data, ported from scripts/ui-stress-fixtures.js. Fixtures
 // enter processMatch as v4 API-shaped matches; no API request is made.
 // Open http://localhost:5173/?fixture=demo (or worst, draws, malformed, one,
-// empty, loading, error, climb (Immortal 1 to Radiant over 106 games), or a
-// match count such as 120).
+// empty, loading, error, climb (Immortal 1 to Radiant over 106 games), crowd
+// or crowd<n> (varied players), or a match count such as 120).
 import {loadFixtureAnalysis} from '@/engine/core.mjs';
 
 export function loadFixture(stressCase='demo'){
   const climb=stressCase==='climb';
-  const demo=stressCase==='demo';
+  // crowd (or crowd<n>, default 169 matches): the demo data with a realistic
+  // spread of other players, about 1,000 distinct ones per 169 matches, so the
+  // teammate and encounter tables reach real sizes. Every other fixture
+  // repeats the same nine players.
+  const crowd=/^crowd\d*$/.test(stressCase);
+  const crowdCount=crowd?Number(stressCase.slice(5))||169:0;
+  const demo=stressCase==='demo'||crowd;
   const stressWorst=!demo&&!climb;
   // demo: lobbies spread from Platinum 3 to Ascendant 1 around the player's Diamond 1.
   const demoLobbyTier=(i,j)=>Math.max(3,18+[0,-1,1,0,2,-2,1,0,-1,3,0,1][i%12]+[0,1,-1,0,1,-1,0,2,-2,0][j]);
@@ -67,10 +73,13 @@ export function loadFixture(stressCase='demo'){
     const lost=climb?!climbWon(i):i%2;
     const myRounds=overtime?26:draw?14:lost?8:13,enemyRounds=overtime?24:draw?14:lost?13:7;
     const rounds=myRounds+enemyRounds;
+    // crowd: the duo (j=1) is always there; a quarter of the others come from
+    // a pool of 60 regulars, the rest are new each match.
+    const crowdId=j=>j<=1?j+1:(i+j)%4===0?100+(i*7+j*13)%60:1000+i*10+j;
     const players=stressNames.map((name,j)=>({
-      name:stressWorst&&i%5===3&&j===9?undefined:name,
+      name:stressWorst&&i%5===3&&j===9?undefined:crowd&&j>1?'Player'+crowdId(j):name,
       tag:stressWorst&&i%5===3&&j===9?undefined:tag,
-      puuid:j===0?stressPuuid:'00000000-0000-4000-8000-'+String(j+1).padStart(12,'0'),
+      puuid:j===0?stressPuuid:'00000000-0000-4000-8000-'+String(crowd?crowdId(j):j+1).padStart(12,'0'),
       team_id:j<5?'Red':'Blue',party_id:j<(stressWorst?(i%5===4?5:i%5===0?3:i%5===2?1:2):demo?[2,1,2,3][i%4]:2)?'fixture-party':demo&&i%2===0&&(j===5||j===7)?'fixture-enemy-party':'solo-'+j,
       tier:stressWorst&&i%5===3?{id:0,patched:'Unranked'}:stressWorst?{id:j===0?27:26,patched:j===0?'Radiant':'Immortal 3'}
         :{id:demo&&j?demoLobbyTier(i,j):18,patched:demo&&j?undefined:'Diamond 1'},
@@ -101,7 +110,7 @@ export function loadFixture(stressCase='demo'){
     const roundData=demo||climb?clutchRounds(i,players,myRounds,enemyRounds):{};
     return{...roundData,metadata:{match_id:matchId,map:{name:['Abyss','Ascent','Sunset','Lotus','Breeze'][i%5]},cluster:stressWorst?'Singapore':'Frankfurt',started_at:new Date(Date.UTC(2026,10,15,22,30)-i*(climb?27000000:7200000)).toISOString(),game_length_in_ms:(overtime?105:35)*60000,season:{short:'e10a6',id:'fixture-act'}},players,teams:[{team_id:'Red',rounds:{won:myRounds}},{team_id:'Blue',rounds:{won:enemyRounds}}]};
   }
-  const count=['empty','loading','error'].includes(stressCase)?0:stressCase==='one'?1:climb?climbCount:/^\d+$/.test(stressCase)?Number(stressCase):stressWorst?30:12;
+  const count=['empty','loading','error'].includes(stressCase)?0:stressCase==='one'?1:climb?climbCount:crowd?crowdCount:/^\d+$/.test(stressCase)?Number(stressCase):stressWorst?30:12;
   const raw=Array.from({length:count},(_,i)=>stressRawMatch(i));
   // demo: two queue dodges (MMR-history entries with match_length 0 and no match) and a refund.
   if(demo){

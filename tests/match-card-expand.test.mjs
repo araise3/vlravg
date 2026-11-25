@@ -36,8 +36,31 @@ test('the match log, its day recaps and the session chart skip re-rendering when
   // The page hands every card the same callback, never a new closure per render.
   const body=source.slice(source.indexOf('export function MatchesPage('));
   assert.match(body,/const toggle=useCallback\(\(matchId,next\)=>setExpanded\(previous=>toggleExpanded\(previous,matchId,next\)\),\[\]\);/);
-  assert.match(body,/<MatchLogCard m=\{m\} s=\{s\} maps=\{maps\} agents=\{agents\} open=\{expanded\.has\(m\.matchId\)\} onToggle=\{toggle\}\/>/);
-  assert.doesNotMatch(body,/<MatchCard |onOpenChange=\{next=>/);
+  // Cards get the few engine fields they read (useMatchCardState), not the
+  // snapshot, which is new on every engine change (25 Nov 2026,
+  // docs/match-log-load-speed.md); postReset is re-tagged in place, so it is
+  // a prop of its own.
+  assert.match(body,/const cardState=useMatchCardState\(s\);/);
+  assert.match(body,/<MatchLogCard m=\{m\} postReset=\{m\.postReset\} s=\{cardState\} maps=\{maps\} agents=\{agents\} open=\{expanded\.has\(m\.matchId\)\} onToggle=\{toggle\}\/>/);
+  assert.doesNotMatch(body,/<MatchCard |onOpenChange=\{next=>|s=\{s\}/);
+});
+
+test('a card reads only the player identity and the placements switch from the engine',async()=>{
+  const {useMatchCardState}=await load(PAGE);
+  const source=useMatchCardState.toString();
+  for(const field of ['PUUID','PLAYER','TAG','mhIncludeReset'])assert.match(source,new RegExp(field));
+  // Every field a card reads from `s` is in the card state.
+  const cards=readFileSync(new URL('../src/app/pages/Matches.jsx',import.meta.url),'utf8');
+  const read=new Set([...cards.slice(0,cards.indexOf('export function useMatchCardState(')).matchAll(/\bs\.([A-Za-z_]+)/g)].map(match=>match[1]));
+  assert.deepEqual([...read].sort(),['PLAYER','PUUID','TAG','mhIncludeReset']);
+});
+
+test('a closed card mounts no details; an opened one does',async()=>{
+  const closed=await renderHtml(PAGE,'MatchCard',{m:match,s,maps:null,agents:null,open:false,onOpenChange(){}});
+  const opened=await renderHtml(PAGE,'MatchCard',{m:match,s,maps:null,agents:null,open:true,onOpenChange(){}});
+  assert.doesNotMatch(closed,/match-card-details/);
+  assert.match(opened,/match-card-details/);
+  for(const name of ['Mate','Foe'])assert.match(opened,new RegExp(name));
 });
 
 test('toggling adds or removes one match id and keeps the set when nothing changes',async()=>{
