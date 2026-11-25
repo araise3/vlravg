@@ -371,8 +371,8 @@ read.
 reads every account (`loadTracked`) at the start of a run, every
 `FULL_RELOAD_MS` (3 hours), when more than 5,000 accounts changed, and when
 the act start moved (it is the same on every row, so a new act, or an earlier
-game of the current one, changes every account). Otherwise one statement
-lists the accounts that may have changed since the last read, and only those
+game of the current one, changes every account). Otherwise two statements
+list the accounts that may have changed since the last read, and only those
 are re-read by key (`loadTrackedPuuids`, 500 per statement). An account is
 listed when:
 
@@ -389,17 +389,32 @@ listed when:
   written when that happens, so the two date ranges are read on their indexes.
 
 Times are D1's own clock, with a minute of margin on every bound; listing an
-account that did not change only costs a key lookup. The statement uses
-`UNION ALL` and is de-duplicated in JavaScript: with `UNION`, SQLite merged
+account that did not change only costs a key lookup. The statements use
+`UNION ALL` and are de-duplicated in JavaScript: with `UNION`, SQLite merged
 sorted streams and walked `rr_history`'s PUUID index, every row, instead of
 seeking the rowid (seen in `EXPLAIN QUERY PLAN`, now a test).
+
+The list was first one statement of seven `UNION ALL` terms. D1 refuses a
+compound SELECT of more than five terms ("too many terms in compound SELECT",
+probed on 25 Nov 2026: five ran, six failed), while local SQLite allows 500,
+so the tests passed and the first change-only reload on production (about
+01:49 UTC, run 45524773002) failed. The collector logs that as a warning and
+keeps its last plan, so polling went on without the changes. It is now two
+statements: saves (three terms) and added rows plus aged-out games (four
+terms). The tests' query refuses more than five terms, as D1 does.
+
+Measured on production at 02:05 UTC for a 30-minute window: the saves
+statement read 46,963 rows (646 ms of D1 time), the added-rows statement
+5,109 rows (139 ms). The rowid bounds of that measurement were approximated
+(the last 3,000 `rr_history` and 1,000 `rr_candidate_games` rows), so its
+account counts are not those of a real reload.
 
 Assumption: rowids only grow. SQLite gives a new row the highest rowid plus
 one unless the row holding the highest rowid was deleted. Nothing deletes from
 these tables, and the 3-hour full read bounds any miss. A database export and
 re-import could renumber rows; the next full read then restores the plan.
 
-Expected cost, not measured yet: the change list scans `rr_collection`,
+Expected cost, partly measured: the change list scans `rr_collection`,
 `rr_players` and `rr_candidate_checks` (about 23k rows each for the first
 two) and seeks the rest; the re-read costs about 25 rows per changed account.
 That is roughly 50 to 100k rows a reload instead of 570k, plus about eight

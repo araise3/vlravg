@@ -92,17 +92,22 @@ const MARKS_SQL=`SELECT strftime('%Y-%m-%dT%H:%M:%fZ','now') AS at,
   (SELECT MAX(rowid) FROM rr_candidate_games) AS candidates`;
 // UNION ALL, de-duplicated here: with UNION, SQLite merges sorted streams and
 // walks rr_history's PUUID index (every row) instead of seeking the rowid.
-const CHANGED_SQL=`SELECT puuid FROM rr_collection WHERE checked_at>=?1
+// Two statements, because D1 refuses a compound SELECT of more than five
+// terms ("too many terms in compound SELECT"; seven failed the first
+// change-only reload on 25 Nov 2026, local SQLite allows 500).
+export const D1_MAX_COMPOUND_TERMS=5;
+const SAVED_SQL=`SELECT puuid FROM rr_collection WHERE checked_at>=?1
   UNION ALL SELECT puuid FROM rr_candidate_checks WHERE checked_at>=?1
-  UNION ALL SELECT puuid FROM rr_players WHERE rowid>?3 OR updated_at>=?1
-  UNION ALL SELECT puuid FROM rr_history WHERE rowid>?2
-  UNION ALL SELECT puuid FROM rr_history WHERE date>=?5 AND date<?6
+  UNION ALL SELECT puuid FROM rr_players WHERE rowid>?2 OR updated_at>=?1`;
+const ADDED_SQL=`SELECT puuid FROM rr_history WHERE rowid>?1
+  UNION ALL SELECT puuid FROM rr_history WHERE date>=?2 AND date<?3
   UNION ALL SELECT puuid FROM rr_candidate_games WHERE rowid>?4
-  UNION ALL SELECT puuid FROM rr_candidate_games WHERE played_at>=?7 AND played_at<?8`;
+  UNION ALL SELECT puuid FROM rr_candidate_games WHERE played_at>=?5 AND played_at<?6`;
 export async function changedPuuids(env,since,{at,history,players,candidates},query=readQuery,margin=RELOAD_MARGIN_MS){
-  const rows=await query(env,CHANGED_SQL,[shift(since,-margin),Number(history)||0,Number(players)||0,Number(candidates)||0,
-    shift(since,-7*DAY-margin),shift(at,-7*DAY+margin),shift(since,-2*DAY-margin),shift(at,-2*DAY+margin)]);
-  return [...new Set(rows.map(row=>row.puuid))];
+  const saved=await query(env,SAVED_SQL,[shift(since,-margin),Number(players)||0]);
+  const added=await query(env,ADDED_SQL,[Number(history)||0,shift(since,-7*DAY-margin),shift(at,-7*DAY+margin),
+    Number(candidates)||0,shift(since,-2*DAY-margin),shift(at,-2*DAY+margin)]);
+  return [...new Set([...saved,...added].map(row=>row.puuid))];
 }
 export function createTrackedLoader(env,{query=readQuery,fullEveryMs=FULL_RELOAD_MS,maxChanged=5000,
   now=Date.now,options}={}){

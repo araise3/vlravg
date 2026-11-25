@@ -7,7 +7,7 @@ import {collectPlayers,corpusReport} from '../.github/scripts/collect-rr-corpus.
 import {retryOnD1Overload,pacedQuery,recentDateBound,d1Query,D1_MS} from '../.github/scripts/d1-query.mjs';
 import {onRequestGet} from '../functions/api/[[path]].js';
 import {pollingPolicy,selectPollingPlayers,selectDiscoveryCandidates,discoverMatchPlayers,DISCOVERY_BAND_TARGET,POLL_HOURS} from '../lib/rr-activity.mjs';
-import {loadActivity,loadCandidates,loadTracked,createTrackedLoader,changedPuuids,FULL_RELOAD_MS} from '../.github/scripts/rr-activity-query.mjs';
+import {loadActivity,loadCandidates,loadTracked,createTrackedLoader,changedPuuids,FULL_RELOAD_MS,D1_MAX_COMPOUND_TERMS} from '../.github/scripts/rr-activity-query.mjs';
 import {loadFeatureQueue} from '../.github/scripts/rr-feature-plan.mjs';
 
 // Pacing sleeps are skipped in tests; the pacing itself has its own tests.
@@ -796,7 +796,10 @@ async function trackedFixture(t){
   sql.prepare('UPDATE rr_collection SET checked_at=?').run(ago(DAY));
   sql.prepare('UPDATE rr_players SET updated_at=?').run(ago(DAY));
   const statements=[];
-  const query=async(_env,text,params=[])=>{statements.push(text);return (await db.prepare(text).bind(...params).all()).results;};
+  // Like D1, refuse a compound SELECT of more than five terms.
+  const query=async(_env,text,params=[])=>{
+    if((text.match(/UNION/g)||[]).length>=D1_MAX_COMPOUND_TERMS)throw new Error('too many terms in compound SELECT');
+    statements.push(text);return (await db.prepare(text).bind(...params).all()).results;};
   return {db,sql,ids,ago,DAY,query,statements};
 }
 
@@ -834,7 +837,7 @@ test('a change-only player reload ends where a full read does, reading only the 
   assert.equal(merged.get(d).region,'ap');
   // The change list reads rr_history and rr_candidate_games on their keys and
   // date indexes, never a whole table.
-  const plan=sql.prepare(`EXPLAIN QUERY PLAN ${statements[1]}`).all().map(row=>row.detail);
+  const plan=[statements[1],statements[2]].flatMap(text=>sql.prepare(`EXPLAIN QUERY PLAN ${text}`).all().map(row=>row.detail));
   assert.ok(!plan.some(line=>/^SCAN (rr_history|rr_candidate_games)\b/.test(line)),plan.join('\n'));
   assert.equal(loader.stats.full,1);assert.equal(loader.stats.changed,1);
 });
