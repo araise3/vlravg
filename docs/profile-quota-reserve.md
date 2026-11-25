@@ -602,3 +602,77 @@ both fail on the old proxy), plus the removed borrowing tests in
   and no response showed 12 or fewer units left.
 
 One sample per case. Two searches in one minute still share one window.
+
+## No spread spacing and six calls in flight for a known site window, 25 Nov 2026
+
+`lib/upstream-pacing.mjs`.
+
+### What was measured
+
+Two production searches for hiro#luna (164 saved matches, coverage verified),
+in the in-app browser, single runs:
+
+- 15:59 UTC: saved matches on screen at 3.7 s, all 164 at 6.1 s. Rank and
+  live pages 0 and 10 were held about 7 s and then answered 429 by the gate;
+  the retry of page 10 waited for the next window and loaded at 61 s.
+  `public_quota_audit` has no row for that search, so HenrikDev refused
+  nothing: every 429 came from the gate.
+- 16:02 UTC, with `rate_quota` read every 3 s: the whole search took about
+  6 s, no 429. HenrikDev's count went from 59 to 55; most answers were
+  edge-cache or HenrikDev-cache hits from the first search.
+
+Correction: rows from 13:16 UTC (`gate_remaining` 14, `header_remaining` 3)
+were first read as part of the 15:59 search. They are not: the query
+compared `datetime('now', …)` (space-separated) with ISO `observed_at`
+values, which matched every row of the day. They predate the end of
+collector borrowing.
+
+Why the 15:59 search's page 10 then needed a new window is not known: the
+search's own calls explain about 20 units by then, and at least 35 were
+gone. Another visitor in the same window is likely but not shown.
+
+### Cause
+
+With a known count, the gate spaced every site call so the free units would
+last the window: about 1 s apart with a full window, whatever the call
+cost, and at most 3 calls in flight. A search asks for rank, RR history,
+name history and two or three live pages at once, so they queued; with slow
+answers (name history took 7.6 s at 15:59) the queue passed the gate's 8 s
+wait and the gate answered 429.
+
+The held maxima already make overspending impossible once the count is
+known (a call is admitted only while the count minus every held maximum
+leaves the margin and reserve), so neither rule protected the key there.
+
+A replay of the search through the real gate with a fake clock and the
+first search's timings (account 2.5 s, RR history 3.5 s, name history 3 s,
+rank 2 s, pages 5 s; full window):
+
+| Gate | Pages 0 and 10 admitted | Last call answered |
+| --- | --- | --- |
+| Before | 6.2 s and 7.3 s | 12.3 s |
+| 6 in flight only | 5.7 s and 6.8 s | 11.8 s |
+| No spread spacing only | 2.8 s and 5.8 s | 10.8 s |
+| Both (this change) | 2.8 s and 3.0 s | 8.0 s |
+
+A model, not a measurement; the live saving depends on HenrikDev's times.
+
+### Change
+
+- Site pools with a known count space calls by their 150 ms floor only
+  (`percent: 0`); the collector still spreads its units (`percent: 100`).
+- Site calls in flight: `PUBLIC_IN_FLIGHT_KNOWN` (6) with a known count,
+  `PUBLIC_IN_FLIGHT` (3) while it is unknown.
+- Unchanged: an unknown window's 2.1 s spacing and 3-call cap (there
+  admission checks no units), held maxima, margin, account-lookup reserve,
+  priority claims, 429 handling, the collector pool.
+
+Trade-off: a busy window is now spent at its start instead of spread over
+it, so a visitor arriving late in a window spent by another waits for the
+reset either way; before, both waited part of it. The account-lookup
+reserve still keeps 12 units for profile lookups.
+
+Tests (`tests/upstream-pacing.test.mjs`): a search's six opening calls are
+admitted 150 ms apart with a known count and a seventh waits; an unknown
+window keeps the 3-call cap and 2.1 s spacing; 40 public calls start 150 ms
+apart. The first two fail on the old gate.

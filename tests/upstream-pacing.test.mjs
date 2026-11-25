@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 import {acquireWorkflowPermit,observeWorkflowQuota,WORKFLOW_SPACING_MS,
   acquirePublicPermit,observePublicQuota,PUBLIC_UNKNOWN_SPACING_MS,
   acquireProfilePermit,PUBLIC_PROFILE_RESERVE,
-  PRIORITY_CLAIM_MARGIN_MS,QUOTA_MARGIN,PUBLIC_IN_FLIGHT,LEASE_MS,NO_HEADER_429_WAIT_MS,
+  PRIORITY_CLAIM_MARGIN_MS,QUOTA_MARGIN,PUBLIC_IN_FLIGHT,PUBLIC_IN_FLIGHT_KNOWN,LEASE_MS,NO_HEADER_429_WAIT_MS,
   RESET_GUARD_MS,QUOTA_WINDOW_MS,BOUNDARY_429_WAIT_MS,
   releasePublicLease} from '../lib/upstream-pacing.mjs';
 
@@ -52,8 +52,8 @@ test('the public pool admits more than 30 a minute on a 60-unit key, each answer
     (permit,n,now)=>observePublicQuota(db,{remaining:89-n,resetAt:160000},{startedAt:permit.startedAt,now,status:200}),40);
   const starts=permits.map(p=>p.startedAt);
   assert.equal(new Set(starts).size,40);
-  assert.ok(starts.at(-1)<160000);
-  for(let i=1;i<starts.length;i++)assert.ok(starts[i]-starts[i-1]>=Math.ceil(60000/90));
+  // A known count is not spread over the window: only the 150 ms floor.
+  for(let i=1;i<starts.length;i++)assert.equal(starts[i]-starts[i-1],150);
   assert.equal(sql.prepare('SELECT remaining FROM rate_quota').get().remaining,49,'HenrikDev\'s count, never a guess');
   assert.deepEqual(leases(sql),[],'every answered call released its lease');
   assert.ok((await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0})).quota,'the collector pool is separate');
@@ -76,12 +76,41 @@ test('free units are spread over the window and an empty window waits for its re
   assert.equal((await acquireWorkflowPermit(db,{now:()=>clock,maxWaitMs:0})).quota.remaining,null,'a new window is learned from its first call');
 });
 
-test('at most PUBLIC_IN_FLIGHT calls run at once; an answer or an expired lease frees a place',async t=>{
+test('a known count lets a search\'s opening burst start together instead of queueing',async t=>{
+  // Rank, RR history and name history, then three live pages, asked at once
+  // with a full window: each starts one 150 ms floor after the last.
+  const {db,sql}=database(t);const clock=100000;
+  sql.prepare('UPDATE rate_quota SET remaining=58,reset_at=157500').run();
+  const starts=[];
+  for(const units of [2,2,3,11,11,11]){
+    const permit=await acquirePublicPermit(db,{now:()=>clock+150*starts.length,units,maxWaitMs:0});
+    assert.ok(permit.quota,`call ${starts.length+1} admitted at once`);
+    starts.push(permit.startedAt);
+  }
+  assert.equal(starts.at(-1)-starts[0],750);
+  assert.equal(leases(sql).length,PUBLIC_IN_FLIGHT_KNOWN);
+  assert.equal(nextStart(sql),clock+900,'no spread spacing after the burst');
+  const seventh=await acquirePublicPermit(db,{now:()=>clock+900,units:2,maxWaitMs:0});
+  assert.ok(seventh.retryAfterMs>0&&seventh.retryAfterMs<=250,'the cap still holds');
+});
+
+test('a window whose count is unknown keeps the 3-call cap and the unknown spacing',async t=>{
+  const {db,sql}=database(t);let clock=100000;
+  for(let i=0;i<PUBLIC_IN_FLIGHT;i++){
+    assert.ok((await acquirePublicPermit(db,{now:()=>clock,units:11,maxWaitMs:0})).quota);
+    assert.equal(nextStart(sql),clock+PUBLIC_UNKNOWN_SPACING_MS);
+    clock=nextStart(sql);
+  }
+  const refused=await acquirePublicPermit(db,{now:()=>clock,maxWaitMs:0});
+  assert.ok(refused.retryAfterMs>0&&refused.retryAfterMs<=250,'full at PUBLIC_IN_FLIGHT, not PUBLIC_IN_FLIGHT_KNOWN');
+});
+
+test('at most PUBLIC_IN_FLIGHT_KNOWN calls run at once; an answer or an expired lease frees a place',async t=>{
   const {db,sql}=database(t);let clock=100000;
   sql.prepare('UPDATE rate_quota SET remaining=50,reset_at=160000').run();
   const held=[];
-  for(let i=0;i<PUBLIC_IN_FLIGHT;i++){held.push(await acquirePublicPermit(db,{now:()=>clock}));clock=nextStart(sql);}
-  assert.equal(leases(sql).length,PUBLIC_IN_FLIGHT);
+  for(let i=0;i<PUBLIC_IN_FLIGHT_KNOWN;i++){held.push(await acquirePublicPermit(db,{now:()=>clock}));clock=nextStart(sql);}
+  assert.equal(leases(sql).length,PUBLIC_IN_FLIGHT_KNOWN);
   const refused=await acquirePublicPermit(db,{now:()=>clock,maxWaitMs:0});
   assert.ok(refused.retryAfterMs>0&&refused.retryAfterMs<=250,'busy, not empty: a short wait');
   await observePublicQuota(db,{remaining:47,resetAt:160000},{startedAt:held[0].startedAt,now:()=>clock,status:200});
