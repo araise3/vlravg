@@ -106,7 +106,10 @@ No secrets or bindings are added. New tables:
   did not reach the saved history.
 - `rr_gaps`: those windows and rank discontinuities found by the daily scan,
   with their healing state (`open`, `incomplete`, `connected`, `healed`,
-  `unresolved`). `rr_collector_state` records the last daily audit.
+  `unresolved`). `rr_collector_state` records the last daily audit
+  (`audit_at`), the last full gap scan (`gap_scan_full_at`), the marks the
+  next changed-player scan starts from (`gap_scan_mark`) and the last census
+  (`census_at`, weekly since 25 Nov 2026).
 - `rr_predecessors`: consecutive match IDs witnessed together in real upstream
   responses. Database neighbors alone do not establish adjacency.
 - `rr_match_features`: compact, trusted match context for every saved payout:

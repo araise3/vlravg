@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {DatabaseSync} from 'node:sqlite';
 import {readFileSync} from 'node:fs';
 import {collectRR,healRR,rankBreaks,rankCoordinate,storedGapEntries,HEAL_ATTEMPTS,HEAL_MAX_PAGES,HEAL_PAGE_SIZE} from '../lib/rr-corpus.mjs';
-import {scanGaps,loadOpenGaps,gapSummary} from '../.github/scripts/rr-gap-queries.mjs';
+import {scanGaps,loadOpenGaps,gapSummary,historyMarks,changedHistoryPlayers} from '../.github/scripts/rr-gap-queries.mjs';
 import {D1_MS} from '../.github/scripts/d1-query.mjs';
 import {onRequestGet} from '../functions/api/[[path]].js';
 
@@ -188,6 +188,22 @@ test('the heal route treats a missing stored history as an empty page and reject
   assert.equal(gapRow(id(19)).attempts,1);
 });
 
+test('the changed-player list holds added rows (any date) and saves since the marks, nothing else',async t=>{
+  const {db,sql,query}=database(t);
+  const other='ffffffff-1111-4111-8111-111111111111',third='eeeeeeee-1111-4111-8111-111111111111';
+  await collectRR(db,payload(newestFirst(0,4)),scope);
+  await collectRR(db,{data:{account:{puuid:other,name:'B',tag:'EU'},history:[game(1)]}},{puuid:other,region:'eu',platform:'pc'});
+  await collectRR(db,{data:{account:{puuid:third,name:'C',tag:'EU'},history:[game(2)]}},{puuid:third,region:'eu',platform:'pc'});
+  sql.prepare('UPDATE rr_collection SET checked_at=?').run('2026-11-01T00:00:00.000Z');
+  const marks=await historyMarks({},query);
+  assert.ok(marks.history>0&&marks.at);
+  assert.deepEqual(await changedHistoryPlayers({},marks,query),[]);
+  // A heal adds an old payout to one player; a visitor's save touches another.
+  sql.prepare('INSERT INTO rr_history(puuid,match_id,data,date) VALUES(?,?,?,?)').run(other,id(40),JSON.stringify(game(0)),at(0));
+  sql.prepare('UPDATE rr_collection SET checked_at=? WHERE puuid=?').run(new Date().toISOString(),third);
+  assert.deepEqual((await changedHistoryPlayers({},marks,query)).sort(),[other,third].sort());
+});
+
 test('the daily scan queues unwitnessed rank discontinuities once and matches one whole-table statement',async t=>{
   const {db,sql,query}=database(t);
   const other='ffffffff-1111-4111-8111-111111111111';
@@ -214,6 +230,13 @@ test('the daily scan queues unwitnessed rank discontinuities once and matches on
   }
   sql.exec('DELETE FROM rr_gaps');
   await scanGaps({},query,{slices:16,pauseMs:0,sleep:async()=>{}});
+  // The daily scan of changed players finds the same gap from the list alone,
+  // and nothing for a list without the player.
+  sql.exec('DELETE FROM rr_gaps');
+  assert.deepEqual(await scanGaps({},query,{puuids:[puuid,other],pauseMs:0,sleep:async()=>{}}),{found:1,players:2,statements:1});
+  sql.exec('DELETE FROM rr_gaps');
+  assert.equal((await scanGaps({},query,{puuids:[other],pauseMs:0,sleep:async()=>{}})).found,0);
+  await scanGaps({},query,{puuids:[puuid],pauseMs:0,sleep:async()=>{}});
   const open=await loadOpenGaps({},10,query);
   assert.deepEqual(open.map(g=>g.after_match_id),[id(9)]);
   const summary=await gapSummary({},query);

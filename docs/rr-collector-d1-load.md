@@ -352,6 +352,107 @@ about 13.5M rows in all, against about 6,000 a minute when idle. No drain
 overlapped it, so whether it affects the site is unknown. Before the change
 the same passes overloaded D1 at the end of every run (23 Nov).
 
+## Reading less (25 Nov 2026)
+
+Pacing and self-sizing ranges keep D1 from being overloaded, but they do not
+reduce what is read. D1's analytics for the 24 hours to 00:40 UTC on 25 Nov
+counted 114.8M rows read, 94% of them in 79 heavy minutes: the player reloads
+(two to four overlapping copies of about 570k rows, every 30 minutes) and the
+daily audit (about 13.5M rows). With one reload copy at a time, the estimate
+was about 27M rows a day for the reloads, 13.5M for the audit and about 7M
+for everything else, site traffic included (about 4,700 rows a minute).
+Most of what the reloads and the audit read had not changed since the last
+read.
+
+### Player reload: changed accounts only
+
+`createTrackedLoader` in
+[.github/scripts/rr-activity-query.mjs](../.github/scripts/rr-activity-query.mjs)
+reads every account (`loadTracked`) at the start of a run, every
+`FULL_RELOAD_MS` (3 hours), when more than 5,000 accounts changed, and when
+the act start moved (it is the same on every row, so a new act, or an earlier
+game of the current one, changes every account). Otherwise one statement
+lists the accounts that may have changed since the last read, and only those
+are re-read by key (`loadTrackedPuuids`, 500 per statement). An account is
+listed when:
+
+- a save touched it: `rr_collection.checked_at` moves on every `collectRR`,
+  the collector's and visitors' alike, which also covers rows updated in
+  place and region changes made by `collectRR`; `rr_candidate_checks`
+  (failed probes) likewise;
+- rows were added to `rr_history`, `rr_players` or `rr_candidate_games`:
+  their rowids above the highest seen at the last read. Dates cannot tell new
+  rows apart, because heals and late saves carry old dates;
+- `rr_players.updated_at` moved (account lookups update the region and name);
+- time passed: a game left the 7-day count (`rr_history.date`) or the 2-day
+  roster (`rr_candidate_games.played_at`) since the last read. Nothing is
+  written when that happens, so the two date ranges are read on their indexes.
+
+Times are D1's own clock, with a minute of margin on every bound; listing an
+account that did not change only costs a key lookup. The statement uses
+`UNION ALL` and is de-duplicated in JavaScript: with `UNION`, SQLite merged
+sorted streams and walked `rr_history`'s PUUID index, every row, instead of
+seeking the rowid (seen in `EXPLAIN QUERY PLAN`, now a test).
+
+Assumption: rowids only grow. SQLite gives a new row the highest rowid plus
+one unless the row holding the highest rowid was deleted. Nothing deletes from
+these tables, and the 3-hour full read bounds any miss. A database export and
+re-import could renumber rows; the next full read then restores the plan.
+
+Expected cost, not measured yet: the change list scans `rr_collection`,
+`rr_players` and `rr_candidate_checks` (about 23k rows each for the first
+two) and seeks the rest; the re-read costs about 25 rows per changed account.
+That is roughly 50 to 100k rows a reload instead of 570k, plus about eight
+full reads a day: roughly 7 to 9M rows a day instead of 27M.
+
+### Gap scan: changed players daily, every player weekly
+
+`dailyAudit` in
+[.github/scripts/collect-rr-corpus.mjs](../.github/scripts/collect-rr-corpus.mjs)
+still runs once a day. Its gap scan covers only the players whose saved
+history may have changed since the last scan (`changedHistoryPlayers` in
+[.github/scripts/rr-gap-queries.mjs](../.github/scripts/rr-gap-queries.mjs)):
+`rr_history` rows above the rowid read before the last scan, and players
+whose `rr_collection.checked_at` moved since then. Each statement scans all
+rows of 200 such players. A gap can only appear between a player's rows, so
+a player without new or changed rows has no new gap. Every 7 days
+(`FULL_GAP_SCAN_EVERY_MS`), and whenever the stored mark is missing or does
+not parse, the scan covers every player as before. That also catches what the
+list cannot see: a gap row that was removed or reset, and a changed scan rule.
+State: `gap_scan_mark` (the marks read before the last scan, so rows saved
+during a scan are scanned next time) and `gap_scan_full_at` in
+`rr_collector_state`.
+
+### Census: weekly
+
+The act/tier census is monitoring only; nothing on the site reads it, and the
+act-end corpus analysis reads the raw rows. It now runs every 7 days
+(`CENSUS_EVERY_MS`, state `census_at`). On the other days the report says
+`census: {skipped: true, last}`, and the run summary names the last census.
+An incremental census was not built: rows change after they are saved (match
+features arrive later, stored-history rows are replaced), so running totals
+would drift.
+
+Expected cost of the audit, not measured yet: a daily scan of the changed
+players (several thousand, about 70 rows each) plus a full scan and census
+once a week, roughly 3M rows a day on average instead of 13.5M.
+
+### Tests
+
+- `tests/rr-corpus.test.mjs`: after a full read, a change-only reload merged
+  into it equals a fresh full read, and re-reads exactly the accounts with a
+  new game, an added older payout, a new enrolment, a region change, a roster
+  game, a failed probe and a game that left the 7-day count; the change list
+  never scans `rr_history` or `rr_candidate_games`; full reads come first,
+  after `FULL_RELOAD_MS`, for a new act and above `maxChanged`.
+- `tests/rr-gap-healing.test.mjs`: the changed-player scan finds the same gap
+  as the full scan and nothing without the player; the changed-player list
+  holds added rows of any date and saves since the marks, and nothing else.
+- `tests/rr-collector-workflow.test.mjs`: the first audit scans every player
+  and writes the census; the next day scans only the changed players from the
+  last marks and skips the census; a week later both run in full; a mark that
+  does not parse means a full scan.
+
 ### Not yet done or verified
 
 - Deployed on 25 Nov 2026 (commits 09bc1b6 and 0d37c60; self-sizing census
@@ -362,6 +463,9 @@ the same passes overloaded D1 at the end of every run (23 Nov).
   that overlaps it.
 - The governor's per-run stats (ranges, D1 time, slow statements) from the
   run that started at 00:00 UTC on 25 Nov.
+- The rows a change-only reload and a changed-player gap scan actually read,
+  and the daily total, once a run with them has gone through a day. The
+  report's `playerReloads` and the audit's `gapScan` show what they did.
 - `wrangler d1 execute` and other ad-hoc queries bypass the governor. Heavy
   one-off reads should go through a script that uses `d1Query`.
 - The gate's polling (most of a drain's D1 statements) is untouched.

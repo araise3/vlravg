@@ -7,7 +7,7 @@ import {collectPlayers,corpusReport} from '../.github/scripts/collect-rr-corpus.
 import {retryOnD1Overload,pacedQuery,recentDateBound,d1Query,D1_MS} from '../.github/scripts/d1-query.mjs';
 import {onRequestGet} from '../functions/api/[[path]].js';
 import {pollingPolicy,selectPollingPlayers,selectDiscoveryCandidates,discoverMatchPlayers,DISCOVERY_BAND_TARGET,POLL_HOURS} from '../lib/rr-activity.mjs';
-import {loadActivity,loadCandidates,loadTracked} from '../.github/scripts/rr-activity-query.mjs';
+import {loadActivity,loadCandidates,loadTracked,createTrackedLoader,changedPuuids,FULL_RELOAD_MS} from '../.github/scripts/rr-activity-query.mjs';
 import {loadFeatureQueue} from '../.github/scripts/rr-feature-plan.mjs';
 
 // Pacing sleeps are skipped in tests; the pacing itself has its own tests.
@@ -777,6 +777,86 @@ test('the player read in PUUID ranges returns what one statement returns, each r
   const shown=plan.join('\n');
   assert.ok(!plan.some(line=>/^SCAN (p|rr_players)\b/.test(line)),shown);
   assert.ok(plan.some(line=>/^SEARCH p USING INDEX \S+ \(puuid>\? AND puuid<\?\)/.test(line)),shown);
+});
+
+// Thirty accounts saved a day ago, one of them with a game that left the
+// 7-day count five minutes ago.
+async function trackedFixture(t){
+  const {db,sql}=database(t);
+  const now=Date.now(),DAY=86400000,ago=ms=>new Date(now-ms).toISOString();
+  const ids=[];
+  for(let i=0;i<30;i++){
+    const id=crypto.randomUUID();ids.push(id);
+    const history=[0.5,3,8].slice(0,1+i%3).map(days=>({...entry(crypto.randomUUID()),date:ago(days*DAY+i*60000),
+      tier:{id:3+i%20},season:{id:'new-act',short:'x'}}));
+    await collectRR(db,{data:{account:{puuid:id,name:`P${i}`,tag:'EU'},history}},{puuid:id,region:'eu',platform:'pc'});
+  }
+  sql.prepare('INSERT INTO rr_history(puuid,match_id,data,date) VALUES(?,?,?,?)')
+    .run(ids[6],'aged',JSON.stringify({...entry('aged'),date:ago(7*DAY+5*60000),season:{id:'new-act'}}),ago(7*DAY+5*60000));
+  sql.prepare('UPDATE rr_collection SET checked_at=?').run(ago(DAY));
+  sql.prepare('UPDATE rr_players SET updated_at=?').run(ago(DAY));
+  const statements=[];
+  const query=async(_env,text,params=[])=>{statements.push(text);return (await db.prepare(text).bind(...params).all()).results;};
+  return {db,sql,ids,ago,DAY,query,statements};
+}
+
+test('a change-only player reload ends where a full read does, reading only the changed accounts',async t=>{
+  const {db,sql,ids,ago,DAY,query,statements}=await trackedFixture(t);
+  const [a,b,,d,e,f,g]=ids;
+  const loader=createTrackedLoader({},{query});
+  const merged=new Map();
+  const apply=rows=>{for(const row of rows)merged.set(row.puuid,{...row});return rows;};
+  assert.equal(apply(await loader.load()).reload,'full');
+  // The aged game left the count after this read: as if read ten minutes ago,
+  // when it still counted.
+  merged.get(g).games_7d++;
+  loader.last={...loader.last,at:ago(10*60000)};
+  // a: a poll saved a new game (collectRR). b: a heal added an older payout
+  // and nothing else. A new enrolment. d: an account lookup moved its region.
+  // e: a roster game. f: a failed probe.
+  await collectRR(db,{data:{account:{puuid:a,name:'P0',tag:'EU'},history:[{...entry(crypto.randomUUID()),date:ago(60000),
+    tier:{id:20},season:{id:'new-act',short:'x'}}]}},{puuid:a,region:'eu',platform:'pc'});
+  sql.prepare('INSERT INTO rr_history(puuid,match_id,data,date) VALUES(?,?,?,?)')
+    .run(b,'healed',JSON.stringify({...entry('healed'),date:ago(DAY),tier:{id:22},season:{id:'new-act'}}),ago(DAY));
+  const fresh=crypto.randomUUID();
+  sql.prepare('INSERT INTO rr_players(puuid,region,platform,name,tag,updated_at) VALUES(?,?,?,?,?,?)').run(fresh,'na','pc','N','EU',ago(0));
+  sql.prepare("UPDATE rr_players SET region='ap',updated_at=? WHERE puuid=?").run(ago(0),d);
+  sql.prepare('INSERT INTO rr_candidate_games VALUES(?,?,?,?,?,?,?)').run(e,'pc','roster-e','eu',12,ago(3600000),ago(0));
+  sql.prepare('INSERT INTO rr_candidate_checks VALUES(?,?,?)').run(f,'pc',ago(0));
+  statements.length=0;
+  const changed=apply(await loader.load());
+  assert.equal(changed.reload,'changed');
+  assert.deepEqual(new Set(changed.map(row=>row.puuid)),new Set([a,b,fresh,d,e,f,g]));
+  const full=await loadTracked({},query);
+  assert.equal(merged.size,full.length);
+  for(const row of full)assert.deepEqual(merged.get(row.puuid),{...row},row.puuid);
+  assert.equal(merged.get(g).games_7d,full.find(row=>row.puuid===g).games_7d);
+  assert.equal(merged.get(d).region,'ap');
+  // The change list reads rr_history and rr_candidate_games on their keys and
+  // date indexes, never a whole table.
+  const plan=sql.prepare(`EXPLAIN QUERY PLAN ${statements[1]}`).all().map(row=>row.detail);
+  assert.ok(!plan.some(line=>/^SCAN (rr_history|rr_candidate_games)\b/.test(line)),plan.join('\n'));
+  assert.equal(loader.stats.full,1);assert.equal(loader.stats.changed,1);
+});
+
+test('the player reload reads everything at first, after FULL_RELOAD_MS, for a new act and for a long change list',async t=>{
+  const {sql,ids,ago,query}=await trackedFixture(t);
+  let clock=Date.now();
+  const loader=createTrackedLoader({},{query,now:()=>clock});
+  assert.equal((await loader.load()).reload,'full');
+  assert.equal((await loader.load()).reload,'changed');
+  clock+=FULL_RELOAD_MS;
+  assert.equal((await loader.load()).reload,'full');
+  // A game of a new act moves every row's act start.
+  sql.prepare('INSERT INTO rr_history(puuid,match_id,data,date) VALUES(?,?,?,?)')
+    .run(ids[0],'next',JSON.stringify({...entry('next'),date:ago(0),season:{id:'next-act'}}),ago(0));
+  assert.equal((await loader.load()).reload,'full');
+  const small=createTrackedLoader({},{query,maxChanged:2});
+  await small.load();
+  for(const id of ids.slice(0,3))sql.prepare('INSERT INTO rr_candidate_checks VALUES(?,?,?)').run(id,'pc',ago(0));
+  assert.equal((await small.load()).reload,'full');
+  // Nothing written after the last read's marks and clock: an empty list.
+  assert.equal((await changedPuuids({},ago(-2*60000),{...small.last,at:ago(-2*60000)},query)).length,0);
 });
 
 test('pacing uses the time D1 reports for a statement, not the network round trip',async()=>{

@@ -131,17 +131,39 @@ test('the initial load is retried before the run gives up',async()=>{
   await assert.rejects(harness({players:[]}).run({loadPlayers:async()=>{throw new Error('fetch failed');}}),/fetch failed/);
 });
 
-test('the daily audit runs once a day',async()=>{
-  const events=[];
-  const fake={log:()=>{},scan:async()=>{events.push('scan');return {found:2};},census:async()=>{events.push('census');return {currentAct:null,ranks:[]};},
-    write:async(_env,name,value)=>events.push(`write:${name}`)};
-  assert.equal((await dailyAudit({},{...fake,read:async()=>({value:new Date(Date.now()-HOUR).toISOString()})})).skipped,true);
+test('the audit runs once a day: changed players daily, every player and the census weekly',async()=>{
+  const DAY=24*HOUR;
+  let clock=Date.parse('2026-11-25T00:00:00Z');
+  const state=new Map(),events=[];
+  const fake={log:()=>{},now:()=>clock,
+    read:async(_env,name)=>state.has(name)?{value:state.get(name)}:null,
+    write:async(_env,name,value)=>{state.set(name,value);events.push(`write:${name}`);},
+    marks:async()=>({at:new Date(clock).toISOString(),history:clock/1000}),
+    changed:async(_env,since)=>{events.push(`changed:${since.history}`);return ['a','b'];},
+    scan:async(_env,_run,options)=>{events.push(options?.puuids?`scan:${options.puuids.join()}`:'scan:all');return {found:2,...(options?.puuids?{players:2}:{ranges:64})};},
+    census:async()=>{events.push('census');return {currentAct:null,ranks:[]};}};
+  // First audit: no mark yet, so every player, and the census.
+  let done=await dailyAudit({},fake);
+  assert.deepEqual([done.skipped,done.gapScan.mode,done.gapScan.found],[false,'full',2]);
+  assert.ok(events.includes('scan:all')&&events.includes('census'));
+  // Within the day: nothing.
+  events.length=0;clock+=HOUR;
+  assert.equal((await dailyAudit({},fake)).skipped,true);
   assert.deepEqual(events,[]);
-  const done=await dailyAudit({},{...fake,read:async()=>({value:new Date(Date.now()-25*HOUR).toISOString()})});
-  assert.deepEqual([done.skipped,done.gapScan.found],[false,2]);
-  assert.deepEqual(events,['scan','census','write:audit_at']);
-  await dailyAudit({},{...fake,read:async()=>null});
-  assert.equal(events.filter(e=>e==='scan').length,2);
+  // Next day: only the players changed since the last marks; no census.
+  clock+=DAY;const before=JSON.parse(state.get('gap_scan_mark')).history;
+  done=await dailyAudit({},fake);
+  assert.deepEqual(events.slice(0,2),[`changed:${before}`,'scan:a,b']);
+  assert.equal(done.gapScan.mode,'changed');assert.equal(done.gapScan.players,2);
+  assert.equal(done.census.skipped,true);assert.ok(!events.includes('census'));
+  assert.ok(JSON.parse(state.get('gap_scan_mark')).history>before,'the mark moves on');
+  // A week after the full scan: every player and the census again.
+  events.length=0;clock+=6*DAY;
+  done=await dailyAudit({},fake);
+  assert.equal(done.gapScan.mode,'full');assert.ok(events.includes('census'));
+  // A mark that does not parse means a full scan.
+  events.length=0;clock+=DAY;state.set('gap_scan_mark','{broken');
+  assert.equal((await dailyAudit({},fake)).gapScan.mode,'full');
 });
 
 // main() with every network and file dependency stubbed.
@@ -155,7 +177,7 @@ function fixture({collector,databaseFull=false}={}){
     readQuotaAudit:async()=>({available:true,calls:0}),quotaCheckReport:()=>({status:'insufficient_evidence'}),
     assertD1Headroom:async()=>{events.push('headroom');if(databaseFull){const e=new Error('D1 database is full');e.code='WORKFLOW_STORAGE';throw e;}},
     createRequestScheduler:()=>Object.assign(()=>{},{pools:{workflow:3,public:0}}),
-    loadTracked:async()=>[],loadOpenGaps:async()=>[],loadFeatureQueue:async()=>[],loadCandidates:async()=>[],
+    createTrackedLoader:()=>({load:async()=>[],stats:{full:1,changed:0,accounts:0}}),loadOpenGaps:async()=>[],loadFeatureQueue:async()=>[],loadCandidates:async()=>[],
     d1Governor:()=>({stats:{statements:12,busyMs:340.6,slow:0,slowest:{ms:90,sql:'SELECT 1'}}}),
     runCollector:async options=>{events.push('collect');assert.ok(options.deadline>Date.now());return collector?collector():{polls:{done:3},heals:{},backlog:{due:0,overdue2x:0}};},
     dailyAudit:async()=>{events.push('audit');return {skipped:true};},gapSummary:async()=>({total:0,byStatus:{}}),

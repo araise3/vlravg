@@ -122,8 +122,8 @@ first, until a page reaches the gap's start or ends (at most 10 pages):
   counts as an empty page.
 
 The daily audit also scans saved history for unwitnessed discontinuities
-(`scanGaps`, 64 paced PUUID slices, about 0.2 s of D1 time each) and queues
-them (`source='scan'`), so earlier gaps get the same treatment. A gap is
+(`scanGaps`: daily for the players whose history changed, weekly for every
+player in paced, self-sizing PUUID ranges) and queues them (`source='scan'`), so earlier gaps get the same treatment. A gap is
 recorded once per `(puuid, after_match_id)`.
 
 ### Polling (`pollingPolicy`, lib/rr-activity.mjs)
@@ -160,14 +160,17 @@ Four workers always take the most important task:
    first (a 15 ms query, against 7.4 s for the old inventory);
 4. up to 40 discovery probes per run.
 
-Players are re-read from D1 every 30 minutes (one 3–5 s indexed query), so new
-enrolments and visitors' fetches count; a poll made in this run is kept over
+Players are re-read from D1 every 30 minutes, so new enrolments and visitors'
+fetches count: a full read at the start of a run and every 3 hours, otherwise
+only the accounts that may have changed
+([rr-collector-d1-load.md](rr-collector-d1-load.md#reading-less-25-nov-2026)); a poll made in this run is kept over
 a lagging replica row. A failed poll or heal is retried 10 minutes later in
 the same run. Only a configuration error (pacing not deployed, key mismatch)
 or D1 refusing writes stops a run, fails the workflow and skips the chained
-run. A backlog is a warning, not a failure. The daily audit (gap scan and the
-act/tier census) runs beside polling, paced, once per 24 hours
-(`rr_collector_state`). The census now also counts payouts filled from
+run. A backlog is a warning, not a failure. The daily audit runs beside polling, paced, once per 24 hours
+(`rr_collector_state`): the gap scan covers the players whose saved history
+changed since the last scan, and every player once a week; the act/tier
+census runs once a week. The census now also counts payouts filled from
 stored history (`stored`).
 
 The step summary lists polls, new payouts, windows that missed the head,

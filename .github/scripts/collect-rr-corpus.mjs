@@ -10,8 +10,11 @@
 //   3. with calls to spare: match features for recent payouts and discovery
 //      probes of recent opponents.
 // Players are re-read from D1 every RELOAD_MS (new enrolments and visitors'
-// own fetches count as polls). Once a day the run also scans saved history for
-// rank discontinuities and writes the act/tier census (D1 only, paced).
+// own fetches count as polls): only the accounts that may have changed, with a
+// full read at the start and every few hours (createTrackedLoader). Once a day
+// the run also scans the players whose saved history changed for rank
+// discontinuities; once a week it scans every player and writes the act/tier
+// census (D1 only, paced).
 //
 // Failures never end the run: a failed poll or heal is retried later in the
 // same run, and anything unfinished stays in D1 for the next one. Only a
@@ -24,9 +27,9 @@ import {refreshPlayer,requestJSON} from './refresh-rr-history.mjs';
 import {createRequestScheduler} from './request-scheduler.mjs';
 import {d1Query,retryOnD1Overload,assertD1Headroom,pacedQuery,PACE_FACTOR,d1Governor,forEachPuuidRange,SLICE_TARGET_MS} from './d1-query.mjs';
 import {readQuotaAudit,quotaCheckReport} from './workflow-quota-check.mjs';
-import {loadTracked,loadCandidates} from './rr-activity-query.mjs';
+import {createTrackedLoader,loadCandidates} from './rr-activity-query.mjs';
 import {loadFeatureQueue} from './rr-feature-plan.mjs';
-import {loadOpenGaps,gapSummary,readState,writeState,scanGaps} from './rr-gap-queries.mjs';
+import {loadOpenGaps,gapSummary,readState,writeState,scanGaps,historyMarks,changedHistoryPlayers} from './rr-gap-queries.mjs';
 import {pollingPolicy,comparePolling,selectDiscoveryCandidates} from '../../lib/rr-activity.mjs';
 
 const MINUTE=60000,HOUR=60*MINUTE;
@@ -38,6 +41,8 @@ export const FEATURE_BATCH=500;
 export const FEATURE_RELOAD_MS=15*MINUTE;
 export const DISCOVERY_LIMIT=40;
 export const AUDIT_EVERY_MS=24*HOUR;
+export const FULL_GAP_SCAN_EVERY_MS=7*24*HOUR;
+export const CENSUS_EVERY_MS=7*24*HOUR;
 const REGIONS=['eu','na','ap','kr','latam','br'];
 const fatal=error=>['WORKFLOW_CONFIGURATION','WORKFLOW_STORAGE'].includes(error?.code);
 const budget=error=>error?.code==='WORKFLOW_BUDGET';
@@ -390,13 +395,38 @@ export async function corpusReport(env,query=retryOnD1Overload(d1Query),
 }
 
 // Runs at most once a day, recorded in rr_collector_state, beside the polling.
-export async function dailyAudit(env,{log=console.log,read=readState,write=writeState,scan=scanGaps,census=corpusReport}={}){
+// Both passes read all of rr_history, about 13.5M rows on 25 Nov 2026
+// (docs/rr-collector-d1-load.md), so:
+// - the gap scan covers only the players whose saved history may have changed
+//   since the last scan (changedHistoryPlayers), and every player once a week
+//   (FULL_GAP_SCAN_EVERY_MS), which also catches what the change list cannot
+//   see: a gap row reset or removed, or a changed scan rule;
+// - the census, monitoring only (nothing on the site reads it), runs once a
+//   week (CENSUS_EVERY_MS).
+// gap_scan_mark holds the marks read before the last scan; without one, or
+// with one that does not parse, the scan is full.
+export async function dailyAudit(env,{log=console.log,read=readState,write=writeState,scan=scanGaps,census=corpusReport,
+  marks=historyMarks,changed=changedHistoryPlayers,now=Date.now}={}){
   const last=await read(env,'audit_at');
-  if(last&&Date.now()-Date.parse(last.value)<AUDIT_EVERY_MS)return {skipped:true,last:last.value};
-  const scanned=await scan(env);
-  log(`Gap scan: ${scanned.found} rank discontinuities queued for healing.`);
-  const report=await census(env);
-  await write(env,'audit_at',new Date().toISOString());
+  if(last&&now()-Date.parse(last.value)<AUDIT_EVERY_MS)return {skipped:true,last:last.value};
+  const due=(state,every)=>!state||!(now()-Date.parse(state.value)<every);
+  const mark=await marks(env);
+  let previous=null;
+  try{previous=JSON.parse((await read(env,'gap_scan_mark'))?.value||'null');}catch{previous=null;}
+  let scanned;
+  if(!previous?.at||due(await read(env,'gap_scan_full_at'),FULL_GAP_SCAN_EVERY_MS)){
+    scanned={mode:'full',...await scan(env)};
+    await write(env,'gap_scan_full_at',new Date(now()).toISOString());
+  }else scanned={mode:'changed',...await scan(env,undefined,{puuids:await changed(env,previous)})};
+  await write(env,'gap_scan_mark',JSON.stringify(mark));
+  log(`Gap scan (${scanned.mode}): ${scanned.found} rank discontinuities queued for healing.`);
+  const censusAt=await read(env,'census_at');
+  let report;
+  if(due(censusAt,CENSUS_EVERY_MS)){
+    report=await census(env);
+    await write(env,'census_at',new Date(now()).toISOString());
+  }else report={census:{skipped:true,last:censusAt.value}};
+  await write(env,'audit_at',new Date(now()).toISOString());
   return {skipped:false,gapScan:scanned,...report};
 }
 
@@ -419,16 +449,19 @@ export async function main(env=process.env){
   await mkdir('.local/rr-corpus',{recursive:true});
   // The daily audit only reads and writes D1 (paced); it runs beside polling.
   const audit=dailyAudit(env).catch(error=>({error:error.message}));
+  const tracked=createTrackedLoader(env);
   let fatalError=null;
   try{
     Object.assign(report,await runCollector({origin,fetchImpl,deadline,
-      loadPlayers:()=>loadTracked(env),loadGaps:()=>loadOpenGaps(env),
+      loadPlayers:()=>tracked.load(),loadGaps:()=>loadOpenGaps(env),
       loadFeatures:limit=>loadFeatureQueue(env,limit),loadCandidates:()=>loadCandidates(env),featureLimit}));
   }catch(error){
     if(!fatal(error))throw error;
     fatalError=error;report.fatal={code:error.code,message:error.message};
     console.error(`::error::${error.message}`);
   }
+  // Player reloads: full reads, change-only reads and the accounts they re-read.
+  report.playerReloads={...tracked.stats};
   report.audit=await audit;
   if(report.audit?.error)console.warn(`::warning::Daily audit failed: ${report.audit.error}`);
   try{report.gaps=await gapSummary(env);}catch(error){report.gaps={error:error.message};}
@@ -465,7 +498,10 @@ export function stepSummary(r){
     `Next run starts with ${b.due??'?'} polls due (${b.overdue2x??'?'} over twice their interval) and ${b.gapsQueued??'?'} gaps queued, of ${r.tracked??'?'} tracked accounts.\n\n`+
     `All gaps: ${g.total??'?'} (${JSON.stringify(g.byStatus||{})}); ${g.recovered??'?'} payouts recovered in total.\n\n`+
     `Upstream calls: ${r.upstreamPools?.workflow??0} on the workflow key, ${r.upstreamPools?.public??0} on borrowed idle site-key slots. Quota check: ${r.quotaCheck?.status}.\n`+
-    (r.audit&&!r.audit.skipped&&!r.audit.error?`\nDaily audit: ${r.audit.gapScan?.found??0} discontinuities queued; observed act ${r.audit.currentAct?.act||r.audit.currentAct?.id||'unknown'} with ${r.audit.currentAct?.payouts??0} payouts.\n`:'');
+    (r.audit&&!r.audit.skipped&&!r.audit.error?`\nDaily audit: ${r.audit.gapScan?.found??0} discontinuities queued (${r.audit.gapScan?.mode==='changed'?`${r.audit.gapScan.players??0} changed players scanned`:'every player scanned'}); `+
+      (r.audit.census?.skipped?`weekly census last ran ${r.audit.census.last}.\n`:
+        `observed act ${r.audit.currentAct?.act||r.audit.currentAct?.id||'unknown'} with ${r.audit.currentAct?.payouts??0} payouts.\n`):'')+
+    (r.playerReloads?`\nPlayer reloads: ${r.playerReloads.full} full, ${r.playerReloads.changed} change-only (${r.playerReloads.accounts} accounts re-read).\n`:'');
 }
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href)main().catch(error=>{console.error(error.message);process.exitCode=1;});
