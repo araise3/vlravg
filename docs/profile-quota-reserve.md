@@ -582,6 +582,23 @@ resets. A 60-match load is about 6 pages, up to 66 units, more than one window.
 Tests: `tests/workflow-api-key.test.mjs` (a busy or exhausted workflow pool
 gets a 429 and never touches the site key, even with the site window full;
 both fail on the old proxy), plus the removed borrowing tests in
-`tests/upstream-pacing.test.mjs`. Not yet verified live: repeat the search
-after deploying and check that `rate_quota` stays untouched between visitor
-searches.
+`tests/upstream-pacing.test.mjs`.
+
+### Live check, 25 Nov 2026 (deployment `84e009f`)
+
+- Collector: for 40 s with no visitors (15:23:47 to 15:24:24 UTC) the
+  workflow key went from 14 to 2 units left while `rate_quota` stayed
+  untouched (last call 39 s earlier).
+- First search, `haimiya#waifu` (9 matches this act), in a window no one else
+  had used: rank, RR history and pages 0 and 20 were answered at once. Page
+  10 got one 429 from the gate, not from HenrikDev, with a 1.7 s wait. It had
+  spent the gate's 8 s waiting behind three slow calls in flight (name history
+  took 8.7 s), and it loaded on the retry.
+- Second search, `marta#0001` (143 matches), 50 s later in the same window:
+  the first pages and RR history got 429s with 10.5 s waits until the reset,
+  because the first search had spent that window. After the reset, six live
+  pages loaded within 15 s.
+- No `public_quota_audit` rows between 15:20 and 15:27 UTC: no HenrikDev 429,
+  and no response showed 12 or fewer units left.
+
+One sample per case. Two searches in one minute still share one window.
