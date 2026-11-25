@@ -676,3 +676,24 @@ Tests (`tests/upstream-pacing.test.mjs`): a search's six opening calls are
 admitted 150 ms apart with a known count and a seventh waits; an unknown
 window keeps the 3-call cap and 2.1 s spacing; 40 public calls start 150 ms
 apart. The first two fail on the old gate.
+
+### Live check, 25 Nov 2026 (deployment `bc6ba1b`)
+
+kaajak (`FNATIC#mommy`, 78 matches this act) searched from the pro-player
+list at 16:23 UTC, every `/api` call timed in the browser and `rate_quota`
+read about every 3 s. One run, no before/after pair for this player.
+
+- Account lookup answered at 16:23:05.97; rank, RR history and name history
+  went out together and were answered by 16:23:08.46.
+- Live pages 0, 10 and 20 went out together at 08.68; the quota row held
+  three 11-unit leases started within 0.3 s of each other. The scan then
+  kept three pages in flight (the client's look-ahead) and read 11 pages,
+  the last answered at 16:23:18.80. Coverage finished at 16:23:18.37,
+  about 12.4 s after the account lookup.
+- No site call got a 429. One teammate-name lookup got a 429 from the
+  workflow pool, which this change does not touch.
+- HenrikDev's count went from 58 to 36 for the whole search: most pages were
+  in HenrikDev's cache and cost far less than their 11-unit maximum. A
+  search of uncached pages would still be bound by units (11 per page plus
+  the 14-unit floor), not by the in-flight cap.
+- No `public_quota_audit` rows after 16:20 UTC.
