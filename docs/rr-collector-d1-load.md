@@ -305,13 +305,63 @@ before running it, so a retried write has not run twice.
 - `tests/rr-corpus.test.mjs`: the ranged player read returns the same rows as
   one statement, each range searching the PUUID key.
 
+### Live check, 25 Nov 2026
+
+The collector run that started at 21:17 UTC on the old scripts was cancelled
+and a new run was started at 00:00 UTC on 115a0a3, so both fixes were live:
+the site retry (Pages deployment of 115a0a3) and the collector's single,
+ranged, governed reload. A seventh drain against the live site, using the
+same method as the drains in [profile-quota-reserve.md](profile-quota-reserve.md)
+(16 workers on uncached `rank` lookups, which write only quota rows, plus an
+account-lookup probe every 4 s), ran 360 s from 00:29:30 UTC around the new
+run's first 30-minute reload. A `wrangler pages deployment tail` of
+production ran from 00:29 to 00:36:30 UTC.
+
+| | sixth drain, 24 Nov 23:20 UTC (old scripts, no retry) | seventh drain, 25 Nov 00:29:30 UTC (both fixes) |
+| --- | --- | --- |
+| length | 150 s | 360 s |
+| reload in the window | yes (23:20) | yes (00:31) |
+| D1 rows read in the reload minute | 1,710,066 | 572,236 |
+| `503` responses | 98 (97 "quota storage unavailable", 1 "quota update failed") | 0 |
+| gate-failure logs in the tail | "D1 DB is overloaded" | none (1,410 requests, no exceptions) |
+
+Drain responses: 94 answered from upstream, 90 edge-cache hits, 1,152 gate
+429s, no 5xx. Account-lookup probes: 107 of 112 answered, 5 refused with a
+429.
+
+The reload minute read 572,236 rows, about one copy of the player read
+(568,153 rows measured on 24 Nov), where the reload minutes of the old run
+read about three times that (1,710,066 at 23:20, 1,710,553 at 23:51). So
+the reloads no longer overlap.
+
+What this does not show:
+
+- Which of the two fixes prevented the 503s. Both were live. The retry logs
+  nothing when it succeeds, so whether any statement was retried is unknown.
+  Inference: with a single reload copy, D1 most likely was not overloaded at
+  all.
+- The number of ranges and the D1 time per range of the reload. The
+  collector's report holds the governor's stats, but that run's logs and
+  report are not available until it ends (about 05:30 UTC).
+- One drain is one sample.
+
+The new run's startup also ran the daily audit (gap scan, then census;
+`audit_at` was written at 00:09:39 UTC). D1 read about 1.9 to 2.1M rows a
+minute from 00:01 to 00:05 and 0.5 to 0.76M a minute from 00:06 to 00:09,
+about 13.5M rows in all, against about 6,000 a minute when idle. No drain
+overlapped it, so whether it affects the site is unknown. Before the change
+the same passes overloaded D1 at the end of every run (23 Nov).
+
 ### Not yet done or verified
 
 - Deployed on 25 Nov 2026 (commits 09bc1b6 and 0d37c60; self-sizing census
   and gap scan in a later commit). The collector picks up the scripts at its
   next run; the current run keeps the old ones.
-- Whether the 503 bursts stop has to be checked with a quota drain that
-  overlaps a reload (about :20 or :50 past the hour while a run is going).
+- Whether the daily audit (about 10 minutes of sustained reads at the start
+  of the first run each day) affects the site has to be checked with a drain
+  that overlaps it.
+- The governor's per-run stats (ranges, D1 time, slow statements) from the
+  run that started at 00:00 UTC on 25 Nov.
 - `wrangler d1 execute` and other ad-hoc queries bypass the governor. Heavy
   one-off reads should go through a script that uses `d1Query`.
 - The gate's polling (most of a drain's D1 statements) is untouched.

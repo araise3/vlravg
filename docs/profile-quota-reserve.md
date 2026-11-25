@@ -530,3 +530,10 @@ last 10 s of a window, with 2 or 4 units left. Each one holds 3 units and
 needs the 2-unit margin on top. The probes (about 15 forced lookups a minute,
 3 units each) used up the 12-unit reserve within the window. That is more
 than the reserve is meant to cover, not a gate fault.
+
+A seventh drain (25 Nov 2026, 00:29:30 UTC, 360 s, `rank` only) ran around
+a reload of a collector run on the fixed scripts, with the site's D1 overload
+retry deployed. It got no 503 and the tail logged no gate failure; the reload
+minute read 572,236 rows instead of 1.71M. 107 of 112 account-lookup probes
+were answered. Details:
+[rr-collector-d1-load.md](rr-collector-d1-load.md#live-check-25-nov-2026).
