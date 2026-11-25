@@ -755,3 +755,107 @@ test('an older-act search seeds from MMR and starts its scan on a newer-act over
   assert.ok(rows.slice(27,37).every(row=>row.metadata.season.id===NEWER),'the first page is all newer act');
   assert.equal(client.context.allMatches.length,25);
 });
+
+// ── Remembered PUUIDs: the archive read starts beside the account lookup ──
+function memoryStorage(entries={}){
+  const store=new Map(Object.entries(entries));
+  return{store,getItem:key=>store.has(key)?store.get(key):null,setItem:(key,value)=>{store.set(key,String(value));}};
+}
+const rememberedSource=extract('const REMEMBERED_PUUIDS_KEY=', '\nasync function loadAll(');
+const otherPuuid='33333333-3333-4333-8333-333333333333';
+const remembered=id=>({'vlravg:puuid-by-riot-id':JSON.stringify({'example#123':{puuid:id,at:1}})});
+// A name#tag search (no PUUID yet, as runAnalysis starts it) whose account
+// lookup waits until released. Archive reads are recorded, each with one row.
+function earlyArchiveClient(storage,{account=()=>({j:{data:{puuid,name:'Example',tag:'123',region:'eu'}}})}={}){
+  const client=analysisClient({count:30});
+  const {context}=client;
+  context.localStorage=storage;
+  context.PUUID='';
+  const lookup=deferred(),reads=[];
+  let answered=false;
+  const apiGet=context.apiGet;
+  context.apiGet=async(url,...rest)=>{
+    if(url.includes('/account/')){await lookup.promise;answered=true;return account();}
+    return apiGet(url,...rest);
+  };
+  context.fetchWithRetry=(...args)=>context.apiGet(...args);
+  context.readServerMatchArchive=async(id,act,_gen,relevant,opts)=>{
+    const read={id,act,beforeLookup:!answered};reads.push(read);
+    await tick();
+    if(!relevant())return [];
+    const row={metadata:{match_id:`saved-${id.slice(0,8)}`,season:{id:season},started_at:new Date(2000000000000+1000).toISOString()},players:[{puuid:id}]};
+    opts.onPage([row]);opts.onComplete();return [row];
+  };
+  return{...client,lookup,reads};
+}
+const savedIds=client=>[...client.context.allMatches.map(m=>m.id).filter(id=>id.startsWith('saved-'))];
+
+test('a remembered PUUID starts the archive read before the lookup answers, and nothing shows until it confirms',async()=>{
+  const client=earlyArchiveClient(memoryStorage(remembered(puuid)));
+  const pending=client.loadAll();
+  await settle();
+  assert.deepEqual(client.reads.map(r=>[r.id,r.beforeLookup]),[[puuid,true]],'read beside the lookup');
+  assert.deepEqual(savedIds(client),[],'held until the lookup confirms');
+  client.lookup.resolve();await pending;
+  assert.equal(client.reads.length,1,'the early read is the archive read');
+  assert.deepEqual(savedIds(client),[`saved-${puuid.slice(0,8)}`]);
+});
+
+test('a lookup that returns another PUUID discards the early read and reads the live one',async()=>{
+  const storage=memoryStorage(remembered(otherPuuid));
+  const client=earlyArchiveClient(storage);
+  const pending=client.loadAll();
+  await settle();
+  client.lookup.resolve();await pending;
+  assert.deepEqual(client.reads.map(r=>[r.id,r.beforeLookup]),[[otherPuuid,true],[puuid,false]]);
+  assert.deepEqual(savedIds(client),[`saved-${puuid.slice(0,8)}`],'no row from the remembered account');
+  assert.equal(JSON.parse(storage.store.get('vlravg:puuid-by-riot-id'))['example#123'].puuid,puuid,'the live answer replaces the memory');
+});
+
+test('a failed lookup shows nothing from the early read and remembers nothing',async()=>{
+  const storage=memoryStorage(remembered(otherPuuid));
+  const client=earlyArchiveClient(storage,{account:()=>{throw new Error('Unavailable');}});
+  const pending=client.loadAll();
+  await settle();
+  client.lookup.resolve();await pending;
+  assert.deepEqual(client.reads.map(r=>r.id),[otherPuuid]);
+  assert.deepEqual(savedIds(client),[]);
+  assert.equal(JSON.parse(storage.store.get('vlravg:puuid-by-riot-id'))['example#123'].puuid,otherPuuid,'unchanged');
+});
+
+test('a PUUID search reads the archive beside its lookup without any memory',async()=>{
+  const client=earlyArchiveClient(memoryStorage());
+  Object.assign(client.context,{PLAYER:'',TAG:'',PUUID:puuid});
+  const pending=client.loadAll();
+  await settle();
+  assert.deepEqual(client.reads.map(r=>[r.id,r.beforeLookup]),[[puuid,true]]);
+  assert.deepEqual(savedIds(client),[]);
+  client.lookup.resolve();await pending;
+  assert.equal(client.reads.length,1);
+  assert.deepEqual(savedIds(client),[`saved-${puuid.slice(0,8)}`]);
+});
+
+test('without storage or a memory the archive still waits for the lookup',async()=>{
+  const client=earlyArchiveClient(undefined);
+  const pending=client.loadAll();
+  await settle();
+  assert.deepEqual(client.reads,[]);
+  client.lookup.resolve();await pending;
+  assert.deepEqual(client.reads.map(r=>[r.id,r.beforeLookup]),[[puuid,false]]);
+});
+
+test('remembered PUUIDs ignore case, reject malformed ids and keep the newest fifty',()=>{
+  const storage=memoryStorage();let now=0;
+  const api=runInNewContext(rememberedSource+'\n({rememberedPuuid,rememberPuuid})',
+    {localStorage:storage,PUUID_RE:/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,Date:{now:()=>++now},JSON,Object,String});
+  api.rememberPuuid('Example','123',puuid.toUpperCase());
+  assert.equal(api.rememberedPuuid('EXAMPLE','123'),puuid);
+  api.rememberPuuid('Bad','1','not-a-puuid');
+  assert.equal(api.rememberedPuuid('Bad','1'),'');
+  for(let i=0;i<60;i++)api.rememberPuuid(`p${i}`,'1',puuid);
+  const kept=Object.keys(JSON.parse(storage.store.get('vlravg:puuid-by-riot-id')));
+  assert.equal(kept.length,50);
+  assert.ok(kept.includes('p59#1')&&!kept.includes('example#123'));
+  storage.store.set('vlravg:puuid-by-riot-id','{broken');
+  assert.equal(api.rememberedPuuid('p59','1'),'','unreadable storage is no memory');
+});

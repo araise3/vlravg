@@ -268,6 +268,61 @@ case found the binary search's offset, in 1,593 rounds and 1,799 probes,
 where the binary search needed 3,705 probes in a row; the worst case was 8
 rounds.
 
+## Archive read beside the account lookup (25 Nov 2026)
+
+The saved-match archive is keyed by PUUID, so its first page waited for the
+live account lookup. In a production search for hiro#luna that day the
+lookup took 2.5 s (0.28 to 2.79 s) and the archive started at 2.79 s.
+
+`loadAll` now starts the archive read (`readServerMatchArchive`, first page
+and plan) beside the lookup when the PUUID is known before it:
+
+- **PUUID searches**, including picks from the pro-player list: the input is
+  the PUUID.
+- **Riot ID searches this browser has resolved before**: after every live
+  lookup that returns a name and tag, the PUUID is kept in `localStorage`
+  (`vlravg:puuid-by-riot-id`, keyed by the lowercased Riot ID the lookup
+  returned, newest 50). It stays in that browser and is never sent anywhere.
+
+The lookup still decides, as before (account lookups are always answered
+live; the saved-account fallback stays removed):
+
+- Pages that arrive before the lookup answers are held, not shown.
+- The lookup returns the same PUUID: the held pages publish in order and
+  the read continues as the act's archive read; nothing is requested twice.
+- It returns another PUUID, fails, the search is superseded, or the act
+  differs from the one read early: the early read stops after its requests
+  in flight, none of its rows are shown, and the archive is read for the
+  live PUUID as before. A failed lookup also leaves the memory unchanged.
+- A search whose account came from the typing prefetch (`prefetchSnapshot`)
+  needs neither: the lookup is already done.
+
+Cost: none upstream (the archive routes are D1/R2 only). A wrong memory
+costs the early read's first requests (one page and the plan).
+
+Checked locally against the deployed API (`npm run dev:live`), hiro#luna,
+single runs:
+
+- First search with no memory: account answered at 1.20 s, archive started
+  at 1.21 s, PUUID remembered.
+- Repeat search: archive and account requests both started at 0.27 s; ten
+  archive requests for one PUUID, none repeated. The account answered at
+  once in that run (0 ms, apparently cached), so the run shows the order,
+  not the saving. The saving is whatever the lookup takes uncached (2.5 s
+  in the production run above).
+- Memory set to another real account's PUUID: one archive request for it,
+  then the ten for hiro#luna after the lookup; 164 rated lobbies shown, as
+  before, and the memory corrected.
+
+Tests (`tests/fetch-efficiency.test.mjs`): a remembered PUUID reads the
+archive before the lookup answers and shows nothing until it confirms; a
+lookup with another PUUID shows only the live account's rows and replaces
+the memory; a failed lookup shows nothing early and remembers nothing; a
+PUUID search reads beside its lookup with no memory; without storage the
+read waits as before; memory ignores case, rejects malformed ids, keeps 50
+and survives unreadable storage. The first four fail with the early read
+turned off.
+
 ## Tests
 
 - `tests/fetch-efficiency.test.mjs`: planned pages load in parallel and

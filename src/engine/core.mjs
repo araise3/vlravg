@@ -2880,6 +2880,39 @@ async function readStoredSeasonIndex(myGen,onRateLimit,opts={}){
   return {rows,complete};
 }
 
+// ── Remembered PUUIDs (25 Nov 2026) ───────────────────────────────────────
+// The saved-match archive is keyed by PUUID, so it used to wait for the live
+// account lookup (about 2.5 s uncached). This browser remembers which PUUID
+// each Riot ID resolved to, and the next search starts reading the archive
+// beside the lookup. The lookup still decides: nothing read early is shown
+// until it answers with the same PUUID, and a different PUUID, an error or a
+// superseded search discards it. A PUUID search needs no memory: the input is
+// the PUUID. Per browser only (localStorage); never sent anywhere.
+const REMEMBERED_PUUIDS_KEY='vlravg:puuid-by-riot-id';
+const REMEMBERED_PUUIDS_MAX=50;
+const riotIdKey=(name,tag)=>`${String(name||'').trim().toLowerCase()}#${String(tag||'').trim().toLowerCase()}`;
+function readRememberedPuuids(){
+  try{
+    const parsed=JSON.parse(globalThis.localStorage?.getItem(REMEMBERED_PUUIDS_KEY)||'{}');
+    return parsed&&typeof parsed==='object'&&!Array.isArray(parsed)?parsed:{};
+  }catch(_){return{};}
+}
+function rememberedPuuid(name,tag){
+  if(!name||!tag)return '';
+  const id=readRememberedPuuids()[riotIdKey(name,tag)]?.puuid;
+  return typeof id==='string'&&PUUID_RE.test(id)?id.toLowerCase():'';
+}
+function rememberPuuid(name,tag,puuid){
+  if(!name||!tag||!PUUID_RE.test(puuid||''))return;
+  try{
+    const entries=readRememberedPuuids();
+    delete entries[riotIdKey(name,tag)];
+    entries[riotIdKey(name,tag)]={puuid:puuid.toLowerCase(),at:Date.now()};
+    // Newest last; keep the most recent REMEMBERED_PUUIDS_MAX.
+    const kept=Object.entries(entries).sort((a,b)=>(a[1]?.at||0)-(b[1]?.at||0)).slice(-REMEMBERED_PUUIDS_MAX);
+    globalThis.localStorage?.setItem(REMEMBERED_PUUIDS_KEY,JSON.stringify(Object.fromEntries(kept)));
+  }catch(_){}
+}
 
 async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
   const myGen=++_analysisGen; // supersede any in-flight analysis
@@ -2941,6 +2974,19 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
     // get them — unlike a name#tag search, it can't be skipped past on error.
     const byPuuid=!PLAYER&&!!PUUID;
     let resolvedAccount=false;
+    // Early archive read for a PUUID known before the lookup (see
+    // rememberedPuuid). Its pages wait in `held` until the lookup confirms.
+    const earlyActId=TARGET_SEASON||currentActId();
+    const earlyPuuid=prefetchSnapshot?.acctJ||!earlyActId?'':byPuuid?PUUID.toLowerCase():rememberedPuuid(PLAYER,TAG);
+    const early=earlyPuuid?{puuid:earlyPuuid,actId:earlyActId.toLowerCase(),state:'pending',matched:false,held:[],completed:false,publish:null}:null;
+    if(early){
+      early.promise=readServerMatchArchive(earlyPuuid,earlyActId,myGen,
+        ()=>early.state!=='rejected'&&(!TARGET_SEASON||TARGET_SEASON.toLowerCase()===early.actId),
+        {...requestOpts,
+          onComplete:()=>{early.completed=true;early.publish?.(null,true);},
+          onPage:page=>{if(early.state==='confirmed')early.publish(page);else if(early.state==='pending')early.held.push(page);}})
+        .catch(()=>[]);
+    }
     try{
       let acctJ;
       if(prefetchSnapshot?.acctJ){
@@ -2959,13 +3005,18 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
       if(acctData.region){
         REGION=acctData.region.toLowerCase();
       }
+      // Only a live answer is remembered, under the Riot ID it returned.
+      if(resolvedAccount&&acctData.puuid)rememberPuuid(acctData.name,acctData.tag,acctData.puuid);
+      // The early read counts only for the PUUID the lookup returned.
+      if(early&&resolvedAccount&&String(acctData.puuid||'').toLowerCase()===early.puuid)early.matched=true;
     }catch(e){
+      if(early)early.state='rejected';
       if(myGen!==_analysisGen)return;
       // If account lookup fails, fall back to name+tag matching — except for
       // a PUUID search, which has nothing to fall back to.
       if(byPuuid)throw e;
     }
-    if(byPuuid&&(!PLAYER||!TAG))throw new Error('No account found for that PUUID');
+    if(byPuuid&&(!PLAYER||!TAG)){if(early)early.state='rejected';throw new Error('No account found for that PUUID');}
     if(myGen!==_analysisGen)return;
     // Account-level history loads independently of match/act availability.
     if(PUUID)void loadNameHistory(PUUID,myGen,requestOpts);
@@ -2994,8 +3045,23 @@ async function loadAll(prefetchSnapshot=null,pendingRoutePush=false){
           publishMatches(page);
         }}).catch(()=>[]);
     };
-    if(PUUID&&previewActId){
-      archivePromise=startArchive(previewActId);
+    if(early&&early.matched&&early.state==='pending'&&PUUID&&previewActId&&previewActId.toLowerCase()===early.actId){
+      // Confirmed: publish what arrived early, in order, then pass pages on.
+      archiveActId=early.actId;
+      archiveComplete=false;
+      early.publish=(page,done=false)=>{
+        if(myGen!==_analysisGen)return;
+        if(page){if(!TARGET_SEASON)TARGET_SEASON=previewActId;publishMatches(page);}
+        if(done&&archiveActId===early.actId)archiveComplete=true;
+      };
+      early.state='confirmed';
+      early.held.splice(0).forEach(page=>early.publish(page));
+      if(early.completed)early.publish(null,true);
+      archivePromise=early.promise;
+    }else{
+      // Not confirmed (other PUUID, failed lookup, other act): drop it.
+      if(early)early.state='rejected';
+      if(PUUID&&previewActId)archivePromise=startArchive(previewActId);
     }
 
     // Live history pages, keyed by URL so the scan below reuses any page
