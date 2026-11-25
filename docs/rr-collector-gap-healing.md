@@ -131,11 +131,11 @@ recorded once per `(puuid, after_match_id)`.
 | Cohort | 7-day ranked games | Interval |
 | --- | --- | --- |
 | heavy | 35+ | 12 h |
-| regular | 15–34 | 16 h |
-| casual | 5–14 | 24 h |
-| light | 1–4 | 24 h |
-| quiet | none, but played in 30 days | 48 h |
-| inactive | none in 30 days, or never | 72 h |
+| regular | 15–34 | 24 h (16 h until 25 Nov 2026) |
+| casual | 5–14 | 36 h (24 h) |
+| light | 1–4 | 48 h (24 h) |
+| quiet | none, but played in 30 days | 96 h (48 h) |
+| inactive | none in 30 days, or never | 96 h (72 h) |
 
 Window turnover: the last window's oldest ranked game bounds how long the
 player's last 20 matches took. If that was less than the cohort interval, the
@@ -144,7 +144,9 @@ interval for players mixing in other modes. Roster evidence and a newly
 observed act still wake an account early; a failed probe (404) retries after
 the interval, at most a day.
 
-For the 23,392 players of 23 November this needs about 29,000 polls a day
+(Lengthened on 25 Nov 2026; see "Intervals fitted to the workflow key"
+below.) For the 23,392 players of 23 November the earlier intervals needed
+about 29,000 polls a day
 (the old intervals: about 60,000), leaving about 11,000 for heals, match
 features, discovery and the site's teammate-name lookups.
 
@@ -210,3 +212,65 @@ daily audit queues the existing discontinuities (128 on 23 Nov).
 Tests: `tests/rr-gap-healing.test.mjs` (detection, healing, verification,
 retries, paging, the route, the scan) and `tests/rr-collector-workflow.test.mjs`
 (scheduling order, heal interleaving, retries, reloads, exit and chain rules).
+
+## Intervals fitted to the workflow key, 25 Nov 2026
+
+`lib/rr-activity.mjs` `POLL_HOURS`.
+
+### Why
+
+The collector stopped borrowing the site's HenrikDev key on 25 Nov 2026
+([profile-quota-reserve.md](profile-quota-reserve.md#collector-borrowing-removed-25-nov-2026)).
+It now has only the workflow key: 30 units a minute, 43,200 a day. The
+"about 40,000 calls a day" above counted calls. Since the gate counts
+HenrikDev units, a poll (`rr-collect`) costs 2, so the key allows about
+21,600 polls a day.
+
+The last full run with borrowing (25 Nov, 07:33 to 12:58 UTC, 23,481 players)
+made 8,960 upstream calls, 4,378 of them on borrowed site units: 6,374 polls
+(19.3 a minute), 2,564 match features and 10 heals. It ended with 155 due
+and none overdue twice. The intervals give the same demand: about 19.1 polls
+a minute (27,500 a day, 55,000 units). In the 20 minutes after borrowing was
+removed, polls fell to 11-14 a minute.
+
+### Change
+
+| Cohort | Players (25 Nov) | Before | Now |
+| --- | --- | --- | --- |
+| heavy | 3,067 | 12 h | 12 h |
+| regular | 6,563 | 16 h | 24 h |
+| casual | 6,366 | 24 h | 36 h |
+| light | 3,059 | 24 h | 48 h |
+| quiet | 3,803 | 48 h | 96 h |
+| inactive | 623 | 72 h | 96 h |
+
+Demand: about 13.6 polls a minute, 19,600 a day, 39,200 units. That leaves
+about 4,000 units a day for heals, the site's teammate-name lookups, newly
+enrolled accounts (up to 7 units each by the fixed maxima: name history, RR
+history, the poll)
+and match features. Window turnover (at least 4 h) and wake-ups still
+shorten individual intervals, so real demand is somewhat higher.
+
+### Risk
+
+From the burst table above (21+ ranked games within the interval, per
+10,000 moments):
+
+- heavy: unchanged at 12 h (16 h would be 15-38);
+- regular at 24 h: 3.4-9.7, measured;
+- casual at 36 h, light at 48 h, quiet at 96 h and inactive at 96 h: not
+  measured. The nearest measured cells are casual 24 h 0-5.6, light 36 h
+  0.5-30, quiet 48 h 7.5 and inactive 72 h 46. Inactive gets the same 96 h as
+  quiet; at 623 players a shorter interval would save little.
+
+An overflow becomes an `rr_gaps` row. Stored history filled 2 of 10 sampled
+discontinuities, so some overflows will lose games.
+
+What else changes: match features and discovery run only when no poll is
+due, so with about 4,000 spare units a day they slow down sharply (the
+last two runs with borrowing saved 2,564 and 4,916 features in 5.5 hours). Heals still take every fifth task while polls
+are due.
+
+Tests: `tests/rr-corpus.test.mjs` (the new intervals per cohort). Not
+verified live: the next run's report shows `backlog.due` and
+`overdue2x`; due polls should stay near zero.

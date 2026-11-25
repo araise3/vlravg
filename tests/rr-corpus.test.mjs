@@ -514,14 +514,14 @@ test('activity policy: intervals by weekly games, shortened when the live window
   assert.deepEqual(shape(player),['heavy',12]);
   assert.equal(pollingPolicy(player,now).due,true);
   assert.equal(pollingPolicy({...player,checked_at:ago(11)},now).due,false);
-  assert.deepEqual(shape({...player,games_7d:15}),['regular',16]);
-  assert.deepEqual(shape({...player,games_7d:14}),['casual',24]);
-  assert.deepEqual(shape({...player,games_7d:5}),['casual',24]);
-  assert.deepEqual(shape({...player,games_7d:1}),['light',24]);
-  assert.deepEqual(shape({...player,games_7d:0,last_played_at:ago(200)}),['quiet',48]);
-  assert.deepEqual(shape({...player,games_7d:0,last_played_at:ago(40*24)}),['inactive',72]);
-  assert.deepEqual(shape({...player,games_7d:0,last_played_at:null}),['inactive',72]);
-  assert.deepEqual(POLL_HOURS,{heavy:12,regular:16,casual:24,light:24,quiet:48,inactive:72});
+  assert.deepEqual(shape({...player,games_7d:15}),['regular',24]);
+  assert.deepEqual(shape({...player,games_7d:14}),['casual',36]);
+  assert.deepEqual(shape({...player,games_7d:5}),['casual',36]);
+  assert.deepEqual(shape({...player,games_7d:1}),['light',48]);
+  assert.deepEqual(shape({...player,games_7d:0,last_played_at:ago(200)}),['quiet',96]);
+  assert.deepEqual(shape({...player,games_7d:0,last_played_at:ago(40*24)}),['inactive',96]);
+  assert.deepEqual(shape({...player,games_7d:0,last_played_at:null}),['inactive',96]);
+  assert.deepEqual(POLL_HOURS,{heavy:12,regular:24,casual:36,light:48,quiet:96,inactive:96});
   // The last window's ranked games span 6 hours: its 20 matches (any mode)
   // took at most that long, so the next poll comes within 6 hours.
   const mixed={...player,games_7d:5,window_from:ago(19)};
