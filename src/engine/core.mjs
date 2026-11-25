@@ -18,10 +18,20 @@ let _version=0,_emitPending=false;
 function emit(){
   if(_emitPending)return;
   _emitPending=true;
-  queueMicrotask(()=>{_emitPending=false;_version++;_listeners.forEach(fn=>fn());});
+  queueMicrotask(()=>{_emitPending=false;_version++;_listeners.forEach(fn=>fn());_searchListeners.forEach(fn=>fn());});
 }
 function subscribe(fn){_listeners.add(fn);return()=>{_listeners.delete(fn);};}
 function getVersion(){return _version;}
+
+// The search field's text is its own store, outside the snapshot: a keystroke
+// re-renders only the search fields, not every page. Through the snapshot,
+// each keystroke re-rendered the whole app, about 440 ms per key in a dev
+// build with 169 match cards shown (25 Nov 2026). Code that sets searchText
+// and calls emit() still reaches these listeners; typing goes through
+// setSearchText, which notifies them at once.
+const _searchListeners=new Set();
+function subscribeSearch(fn){_searchListeners.add(fn);return()=>{_searchListeners.delete(fn);};}
+function getSearchText(){return searchText;}
 
 let searchText='';
 let statusText='',statusSpin=false;
@@ -1212,12 +1222,17 @@ async function submitSearch(){
 }
 
 function setSearchText(value){
+  if(value===searchText)return;
   searchText=value;
-  onManualInput();
-  emit();
+  _searchListeners.forEach(fn=>fn());
+  // Only a change the rest of the UI shows (the Tracker.gg pill, the act
+  // picker) re-renders the pages.
+  if(onManualInput())emit();
 }
+// Returns whether state outside the search text changed.
 function onManualInput(){
-  if(headerInfo)headerInfo={...headerInfo,showTracker:false};
+  let changed=false;
+  if(headerInfo?.showTracker){headerInfo={...headerInfo,showTracker:false};changed=true;}
   const raw=searchText.trim();
   const parsed=parseSearchInput(raw);
   const valid=parsed!=null;
@@ -1225,7 +1240,10 @@ function onManualInput(){
   // Return to the compact act picker if the name is invalid, or if it's changed
   // from the acts we already loaded — so the user can load acts for the new name.
   if(!valid || (_seasonOptionsKey && key!==_seasonOptionsKey) || (_pendingPrefetchKey && key!==_pendingPrefetchKey)){
-    showSeasonIdle();
+    if(seasonUi.mode!=='idle'||seasonUi.label!=='Most recent act'||seasonOptions.length||seasonValue){
+      showSeasonIdle();
+      changed=true;
+    }
     seasonOptions=[];seasonValue='';
     _prefetchId++;
     _prefetchController?.abort();
@@ -1234,6 +1252,7 @@ function onManualInput(){
     _pendingPrefetchKey='';
     _prefetchCache=null;
   }
+  return changed;
 }
 
 async function prefetchPlayerActs(openAfter=false){
@@ -4634,7 +4653,7 @@ function getSnapshot(){
     version:_version,
     PLAYER,TAG,REGION,PLATFORM,TARGET_SEASON,PUUID,
     activePage,analysisState,playerRoute,hasAnalysis,
-    searchText,statusText,statusSpin,progressValue,errorMessage,
+    statusText,statusSpin,progressValue,errorMessage,
     accentColor,rankColored,headerInfo,headerRevealPending,
     seasonOptions,seasonValue,seasonUi,seasonTriggerLabel:seasonTriggerLabel(),
     seasonOpenSignal,searchShakeSignal,searchFocusSignal,pageFocusSignal,scrollResultsSignal,
@@ -4653,7 +4672,7 @@ function getSnapshot(){
 }
 
 export {
-  subscribe,getSnapshot,initEngine,loadFixtureAnalysis,
+  subscribe,getSnapshot,subscribeSearch,getSearchText,initEngine,loadFixtureAnalysis,
   // actions
   setSearchText,submitSearch,runAnalysis,requestSeasonDropdown,selectSeasonOption,
   analyzeProAccount,proSearchResults,navigateToPage,pageHref,

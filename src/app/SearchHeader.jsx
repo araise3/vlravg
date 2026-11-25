@@ -4,7 +4,7 @@ import {
   analyzeProAccount,proSearchResults,requestSeasonDropdown,rColor,rName,
   seasonOptionCountText,selectSeasonOption,setSearchText,submitSearch,
 } from '@/engine/core.mjs';
-import {useEngine,useIsMobile,useSignal} from '@/app/hooks.js';
+import {useEngine,useIsMobile,useSearchText,useSignal} from '@/app/hooks.js';
 import {RankIcon} from '@/app/shared.jsx';
 import {ProAccount,ProGroupHeading,ProRegionFilter,filterProRegion,limitProGroups,proAccountLabel,proGroups,proRegionCounts,useProRowLimit} from '@/app/pro-library.jsx';
 import {MobileSearchSheet,MobileTopBar} from '@/app/MobileShell.jsx';
@@ -250,7 +250,8 @@ export function SearchHeader(){
   const [sheetOpen,setSheetOpen]=useState(false);
   const landing=!s.hasAnalysis&&s.activePage==='overview';
   const info=s.headerInfo;
-  const compactTracker=useCompactTracker(inputRef,info,s.searchText);
+  const searchText=useSearchText();
+  const compactTracker=useCompactTracker(inputRef,info,searchText);
   useSignal(s.searchShakeSignal,()=>{setShaking(false);requestAnimationFrame(()=>setShaking(true));});
   useSignal(s.searchFocusSignal,()=>inputRef.current?.focus());
   useEffect(()=>{
@@ -277,7 +278,7 @@ export function SearchHeader(){
           <InputGroup className={cn(height,'min-w-0 flex-1 max-sm:basis-full',shaking&&'animate-[shake-bar_.4s_ease]')}
             onAnimationEnd={()=>setShaking(false)}>
             <InputGroupAddon><Search aria-hidden="true"/></InputGroupAddon>
-            <InputGroupInput ref={inputRef} value={s.searchText} onChange={event=>setSearchText(event.target.value)}
+            <InputGroupInput ref={inputRef} value={searchText} onChange={event=>setSearchText(event.target.value)}
               placeholder="name#tag, pro player or PUUID" aria-label="Player name and tag, pro player, or PUUID"
               autoComplete="off" spellCheck={false} className="max-sm:text-base"/>
             <InputGroupAddon align="inline-end">

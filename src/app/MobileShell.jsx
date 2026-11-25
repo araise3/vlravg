@@ -3,7 +3,7 @@ import {
   ArrowRight,ChevronRight,Crosshair,Ellipsis,ExternalLink,Film,Gauge,History,IdCard,LayoutGrid,Search,Server,TrendingUp,Users,X,
 } from 'lucide-react';
 import {analyzeProAccount,proSearchResults,rColor,rName,setSearchText,submitSearch} from '@/engine/core.mjs';
-import {useEngine,useSignal} from '@/app/hooks.js';
+import {useEngine,useSearchText,useSignal} from '@/app/hooks.js';
 import {PageLink,RankIcon,Sep,WIP_PAGES,WipBadge} from '@/app/shared.jsx';
 import {ActPicker,StatusBar} from '@/app/SearchHeader.jsx';
 import {ProAccount,ProGroupHeading,ProRegionFilter,filterProRegion,limitProGroups,proAccountLabel,proGroups,proRegionCounts,useProRowLimit} from '@/app/pro-library.jsx';
@@ -82,7 +82,8 @@ export function MobileSearchSheet({open,onOpenChange}){
   useEffect(()=>{
     if(submitted.current&&s.analysisState==='loading'){submitted.current=false;onOpenChange(false);}
   },[s.version]); // eslint-disable-line react-hooks/exhaustive-deps
-  const query=s.searchText.trim();
+  const searchText=useSearchText();
+  const query=searchText.trim();
   const [region,setRegion]=useState('all');
   const allPros=s.proLibraryState==='ready'?proSearchResults(query):[];
   const pros=filterProRegion(allPros,region);
@@ -100,10 +101,10 @@ export function MobileSearchSheet({open,onOpenChange}){
           onSubmit={event=>{event.preventDefault();submitted.current=true;submitSearch();}}>
           <InputGroup className={cn('h-11 min-w-0 flex-1',shaking&&'animate-[shake-bar_.4s_ease]')} onAnimationEnd={()=>setShaking(false)}>
             <InputGroupAddon><Search aria-hidden="true"/></InputGroupAddon>
-            <InputGroupInput ref={inputRef} value={s.searchText} onChange={event=>setSearchText(event.target.value)}
+            <InputGroupInput ref={inputRef} value={searchText} onChange={event=>setSearchText(event.target.value)}
               placeholder="name#tag, pro player or PUUID" aria-label="Player name and tag, pro player, or PUUID"
               autoComplete="off" autoCapitalize="off" autoCorrect="off" spellCheck={false} enterKeyHint="search" className="text-base"/>
-            {s.searchText&&(
+            {searchText&&(
               <InputGroupAddon align="inline-end">
                 <InputGroupButton type="button" size="icon-xs" variant="ghost" aria-label="Clear search" onClick={()=>{setSearchText('');inputRef.current?.focus();}}>
                   <X aria-hidden="true"/>

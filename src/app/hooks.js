@@ -1,10 +1,16 @@
 import {useEffect,useRef,useState,useSyncExternalStore} from 'react';
-import {getSnapshot,subscribe} from '@/engine/core.mjs';
+import {getSearchText,getSnapshot,subscribe,subscribeSearch} from '@/engine/core.mjs';
 
 // The engine's current state; re-renders on every engine change. The server
 // snapshot is the same state, so components also render in tests.
 export function useEngine(){
   return useSyncExternalStore(subscribe,getSnapshot,getSnapshot);
+}
+
+// The search field's text. Not in the snapshot, so typing re-renders only the
+// components that read it.
+export function useSearchText(){
+  return useSyncExternalStore(subscribeSearch,getSearchText,getSearchText);
 }
 
 // Runs `effect` whenever a counter signal increases (not on mount).
