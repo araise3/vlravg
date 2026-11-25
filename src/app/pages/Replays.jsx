@@ -47,15 +47,17 @@ function ReplayRow({row,art}){
     <li>
       {/* An outline Item: the match on the left, status and actions on the
           right, then full-width rows for the error, the steps and Turnstile. */}
-      <Item variant="outline" className="relative items-start gap-3 overflow-hidden rounded-xl bg-card p-4 text-base shadow-sm">
+      <Item variant="outline" className="relative gap-x-3 gap-y-2 overflow-hidden rounded-xl bg-card px-4 py-2 text-base shadow-sm">
         {art&&<img src={art} alt="" loading="lazy" decoding="async" className="absolute inset-y-0 right-0 h-full w-1/2 object-cover opacity-20 [mask-image:linear-gradient(to_left,black,transparent)]" onError={event=>event.currentTarget.remove()}/>}
-        <ItemContent className="relative min-w-0 gap-0">
-          <ItemTitle className="flex-wrap items-baseline text-base font-normal">
+        {/* One line from sm up (the match ID sits after the date and
+            truncates); two lines on phones. */}
+        <ItemContent className="relative min-w-0 gap-0 sm:flex-row sm:items-baseline sm:gap-3">
+          <ItemTitle className="shrink-0 flex-wrap items-baseline text-base font-normal">
             <strong>{row.map}</strong>
             <span className={cn('font-semibold tabular',row.result==='win'?'text-positive':row.result==='loss'?'text-negative':'text-draw')}>{row.score}</span>
             <span className="text-sm text-muted-foreground">{row.date}</span>
           </ItemTitle>
-          <ItemDescription className="line-clamp-1 font-mono text-xs break-all">{row.matchId}</ItemDescription>
+          <ItemDescription className="min-w-0 line-clamp-1 font-mono text-xs break-all">{row.matchId}</ItemDescription>
         </ItemContent>
         <ItemActions className="relative flex-wrap">
           <span role="status" className={cn('text-sm font-medium',TONES[view.tone]||'text-muted-foreground')}>{view.label}</span>
