@@ -15,10 +15,11 @@ import {Separator} from '@/components/ui/separator';
 import {Skeleton} from '@/components/ui/skeleton';
 import {Badge} from '@/components/ui/badge';
 
-// Pages still being built (24 Nov 2026, on request: Replays). The badge sits
-// after the page's name in the tab strip and the phone's More sheet; screen
-// readers hear "work in progress".
-export const WIP_PAGES=new Set(['replays']);
+// Pages still being built. The badge sits after the page's name in the tab
+// strip and the phone's More sheet; screen readers hear "work in progress".
+// Empty since the Replays page went (26 Nov 2026); the badge now marks the
+// replay row on opened match cards (replay-section.jsx).
+export const WIP_PAGES=new Set();
 export function WipBadge({className}){
   return (
     <Badge variant="outline" className={cn('px-1.5 py-0 text-[10px] leading-4 font-medium text-muted-foreground',className)} data-slot="wip-badge">

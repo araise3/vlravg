@@ -587,19 +587,6 @@ const REPLAY_FAILED_STEP={upload_aborted:'upload',upload_abandoned:'upload',down
 // notes: a file rejected in the browser before upload, shown until the row next changes.
 const replayImport={config:null,configLoad:null,status:new Map(),busy:new Set(),live:new Map(),uploadFailed:new Set(),expanded:new Set(),notes:new Map(),pollTimer:null,polls:0,turnstileLoad:null};
 
-// One row per loaded match with a valid ID, newest first.
-function replayMatchRows(matches){
-  const seen=new Set();
-  return matches.filter(m=>{
-    const id=String(m.matchId||'').toLowerCase();
-    if(!PUUID_RE.test(id)||seen.has(id))return false;
-    seen.add(id);return true;
-  }).sort((a,b)=>(b.startedAtMs??0)-(a.startedAtMs??0)).map(m=>({
-    matchId:m.matchId.toLowerCase(),map:m.mapName||'Unknown',date:m.startedAt||'',
-    score:m.myR!=null&&m.opR!=null?`${m.myR}–${m.opR}`:'—',
-    result:m.won===true?'win':m.won===false?'loss':'draw',
-  }));
-}
 
 // The replay header carries the match UUID (UTF-16 FString at offset 44).
 function replayFileMatchId(bytes){
@@ -793,15 +780,21 @@ function toggleReplaySteps(id){
   if(!replayImport.expanded.delete(id))replayImport.expanded.add(id);
   emit();
 }
-// Loads the upload config and any missing statuses for the loaded matches.
-async function syncReplayImport(){
-  const ids=replayMatchRows(allMatches).map(r=>r.matchId);
-  emit();
-  await loadReplayConfig();
-  const missing=ids.filter(id=>!replayImport.status.has(id));
-  if(missing.length)await refreshReplayStatuses(missing);
-  emit();
-  scheduleReplayPoll();
+// Loads the upload config and the replay status of one opened match card
+// (the Replays page was folded into the match cards on 26 Nov 2026).
+// A card that mounts twice (a width change, React's dev double effects)
+// shares the lookup already in flight.
+const replayWatches=new Map();
+function watchReplay(id){
+  if(replayWatches.has(id))return replayWatches.get(id);
+  const run=(async()=>{
+    await loadReplayConfig();
+    if(!replayImport.status.has(id))await refreshReplayStatuses([id]);
+    emit();
+    scheduleReplayPoll();
+  })().finally(()=>replayWatches.delete(id));
+  replayWatches.set(id,run);
+  return run;
 }
 
 function scheduleReplayPoll(){
@@ -809,7 +802,7 @@ function scheduleReplayPoll(){
   const waiting=[...replayImport.status].filter(([,s])=>['pending','parsing'].includes(s.status)).map(([id])=>id);
   if(!waiting.length||replayImport.polls>=REPLAY_POLL_LIMIT){replayImport.polls=0;return;}
   replayImport.pollTimer=setTimeout(async()=>{
-    if(activePage!=='replays')return;
+    if(activePage!=='matches')return;
     if(document.hidden){scheduleReplayPoll();return;}
     replayImport.polls++;
     await refreshReplayStatuses(waiting);
@@ -951,7 +944,7 @@ async function uploadReplay(matchId,file,host){
   scheduleReplayPoll();
 }
 
-const PAGE_SLUGS={overview:'',duos:'duos',matches:'matches','lobby-rank':'lobbyrank',servers:'servers',rr:'rr',clutches:'clutches',names:'names',replays:'replays'};
+const PAGE_SLUGS={overview:'',duos:'duos',matches:'matches','lobby-rank':'lobbyrank',servers:'servers',rr:'rr',clutches:'clutches',names:'names'};
 function playerRouteUrl(name,tag,page='overview',act=''){
   const base=`/player/${encodeURIComponent(name)}/${encodeURIComponent(tag)}`;
   const suffix=PAGE_SLUGS[page];
@@ -961,7 +954,8 @@ function playerRouteUrl(name,tag,page='overview',act=''){
 function parsePlayerRoute(){
   const segments=location.pathname.replace(/\/+$/,'').split('/');
   if(segments.length<4||segments.length>5||segments[1]!=='player')return null;
-  const page=segments[4]||'overview';
+  // `replays` was a page until 26 Nov 2026; its uploads are on the match cards now.
+  const page=segments[4]==='replays'?'matches':segments[4]||'overview';
   if(!Object.prototype.hasOwnProperty.call(PAGE_SLUGS,page)&&page!=='lobbyrank')return null;
   try{
     const name=decodeURIComponent(segments[2]);
@@ -994,8 +988,8 @@ function loadPlayerFromRoute(){
   runAnalysis(undefined,{fromUrl:true,initialAct:route.act});
 }
 
-const PAGE_TITLES={overview:'vlravg — Average Lobby Rank & Valorant Stats',duos:'Duos — vlravg',matches:'Match History — vlravg','lobby-rank':'Lobby Rank — vlravg',servers:'Servers — vlravg',rr:'RR Breakdown — vlravg',clutches:'Clutches — vlravg',names:'Name History — vlravg',replays:'Replay Import — vlravg'};
-const PROFILE_TITLES={overview:'Overview',duos:'Duos',matches:'Match History','lobby-rank':'Lobby Rank',servers:'Servers',rr:'RR Breakdown',clutches:'Clutches',names:'Name History',replays:'Replay Import'};
+const PAGE_TITLES={overview:'vlravg — Average Lobby Rank & Valorant Stats',duos:'Duos — vlravg',matches:'Match History — vlravg','lobby-rank':'Lobby Rank — vlravg',servers:'Servers — vlravg',rr:'RR Breakdown — vlravg',clutches:'Clutches — vlravg',names:'Name History — vlravg'};
+const PROFILE_TITLES={overview:'Overview',duos:'Duos',matches:'Match History','lobby-rank':'Lobby Rank',servers:'Servers',rr:'RR Breakdown',clutches:'Clutches',names:'Name History'};
 let playerRoute=null;
 function applyPage(focus=false){
   playerRoute=parsePlayerRoute();
@@ -1006,7 +1000,7 @@ function applyPage(focus=false){
     path='/lobbyrank';
     history.replaceState(history.state,'',path+location.search+location.hash);
   }
-  activePage=playerRoute?.page||(path==='/duos'?'duos':path==='/matches'?'matches':path==='/lobbyrank'?'lobby-rank':path==='/servers'?'servers':path==='/rr'?'rr':path==='/clutches'?'clutches':path==='/names'?'names':path==='/replays'?'replays':'overview');
+  activePage=playerRoute?.page||(path==='/duos'?'duos':path==='/matches'?'matches':path==='/lobbyrank'?'lobby-rank':path==='/servers'?'servers':path==='/rr'?'rr':path==='/clutches'?'clutches':path==='/names'?'names':path==='/replays'?'matches':'overview');
   document.title=playerRoute?`${playerRoute.name}#${playerRoute.tag} — ${PROFILE_TITLES[activePage]} — vlravg`:PAGE_TITLES[activePage];
   if(focus)pageFocusSignal++;
   emit();
@@ -4744,7 +4738,7 @@ export {
   analyzeProAccount,proSearchResults,navigateToPage,pageHref,
   toggleIncludeReset,setServerPartySize,setLobbyRankPartySize,
   setRRRange,setRRMovementZoomTier,loadMoreMatches,loadOlderNames,loadNameHistory,
-  syncReplayImport,uploadReplay,toggleReplaySteps,replayRowView,replayMatchRows,
+  watchReplay,uploadReplay,toggleReplaySteps,replayRowView,
   // presentation helpers
   overviewStatValues,PARTY_LABELS,PER_PAGE,MIN_RATED,RANK_MAP,rName,rColor,rClass,avgLabel,avgLabelShort,tierRR,lobbyRR,lobbyRankText,hexToRgb,
   seasonOptionCountText,playerRouteUrl,PUUID_RE,

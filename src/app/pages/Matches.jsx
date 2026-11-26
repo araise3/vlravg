@@ -8,6 +8,7 @@ import {useEngine,useIsMobile} from '@/app/hooks.js';
 import {EmptyState,Hint,PageHeading,PlacementToggle,RankIcon} from '@/app/shared.jsx';
 import {RRSessionCard} from '@/app/pages/RR.jsx';
 import {AgentIcon,agentTint,useAgentArt} from '@/app/agent-icon.jsx';
+import {ReplaySection} from '@/app/replay-section.jsx';
 import {cn} from '@/lib/utils';
 import {Badge} from '@/components/ui/badge';
 import {Button} from '@/components/ui/button';
@@ -355,6 +356,7 @@ export function MobileMatchCard({m,s,maps,agents,open,onOpenChange}){
           <CollapsibleContent className="match-card-details space-y-4">
             <MatchInfo m={m} v={v}/>
             <PlayersGrid m={m} me={v.me} agents={agents} compact/>
+            <ReplaySection m={m}/>
           </CollapsibleContent>
         )}
       </div>
@@ -456,6 +458,7 @@ function DesktopMatchCard({m,s,maps,agents,open,onOpenChange}){
           <CollapsibleContent className="match-card-details space-y-4">
             <MatchInfo m={m} v={v}/>
             <PlayersGrid m={m} me={v.me} agents={agents}/>
+            <ReplaySection m={m}/>
           </CollapsibleContent>
         )}
       </div>

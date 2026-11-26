@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {
-  ArrowRight,ChevronRight,Crosshair,Ellipsis,ExternalLink,Film,Gauge,History,IdCard,LayoutGrid,Search,Server,TrendingUp,Users,X,
+  ArrowRight,ChevronRight,Crosshair,Ellipsis,ExternalLink,Gauge,History,IdCard,LayoutGrid,Search,Server,TrendingUp,Users,X,
 } from 'lucide-react';
 import {analyzeProAccount,proSearchResults,rColor,rName,setSearchText,submitSearch} from '@/engine/core.mjs';
 import {useEngine,useSearchText,useSignal} from '@/app/hooks.js';
@@ -34,7 +34,6 @@ export const MOBILE_MORE=[
   {page:'lobby-rank',label:'Lobby Rank',icon:Gauge,note:'Your stats by lobby rank, team vs enemy'},
   {page:'servers',label:'Servers',icon:Server,note:'Results per server and the EU ping map'},
   {page:'names',label:'Name History',icon:IdCard,note:'Riot IDs this account has used'},
-  {page:'replays',label:'Replays',icon:Film,note:'Upload a .vrf replay for a loaded match'},
 ];
 
 function rankSummary(info){

@@ -57,7 +57,7 @@ test('empty states are shadcn Empty; loading pages show skeletons with the loadi
   assert.match(loading,/role="status"[^>]*><span class="sr-only">Loading this player’s matches…<\/span>/);
   assert.equal((loading.match(/data-slot="skeleton"/g)||[]).length,3);
   // Every detail page passes its loading state.
-  for(const page of ['Duos','LobbyRank','Servers','RR','Matches','Replays'])
+  for(const page of ['Duos','LobbyRank','Servers','RR','Matches'])
     assert.match(source(`app/pages/${page}.jsx`),/<EmptyState loading=\{s\.analysisState==='loading'\}>/,page);
   // The overview shows its own skeleton on every width now.
   assert.match(source('app/pages/Overview.jsx'),/if\(s\.hasAnalysis&&s\.analysisState==='loading'\)return <OverviewSkeleton mobile=\{mobile\}\/>/);
@@ -88,9 +88,6 @@ test('list rows are shadcn Items: pro players with an avatar initial, the More s
   assert.match(shell,/<Item asChild size="sm"[^>]*>\s*<button type="button"[^\n]*\n\s*<ProAccount /);
   assert.match(source('app/pro-library.jsx'),/<AvatarFallback[^>]*>\{row\.handle\.slice\(0,1\)\}<\/AvatarFallback>/);
   assert.match(shell,/<Item asChild size="sm"[^>]*>\s*<PageLink page=\{target\}/);
-  const replays=source('app/pages/Replays.jsx');
-  assert.match(replays,/<Item variant="outline"/);
-  assert.doesNotMatch(replays,/<Card /);
   // Vertical rules between inline items are shadcn Separators.
   // A span, since it sits inside inline text and the match card's button.
   assert.match(await renderHtml('/src/app/shared.jsx','Sep',{}),/^<span data-orientation="vertical" role="none" data-slot="separator" class="[^"]*inline-block/);

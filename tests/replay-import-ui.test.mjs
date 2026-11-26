@@ -1,15 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { replayHeader } from '../lib/replay-import.mjs';
+import { after } from 'node:test';
+import { closeRenderer, renderHtml } from './helpers/react-render.mjs';
+
+after(closeRenderer);
 
 // Pure helpers from the Replay import block, run in isolation.
 const html = readFileSync(new URL('../src/engine/core.mjs', import.meta.url), 'utf8');
 const start = html.indexOf('const REPLAY_MAGIC=');
 const end = html.indexOf('async function loadReplayConfig(', start);
 assert.ok(start > 0 && end > start);
-const ui = runInNewContext(html.slice(start, end) + '\n({replayMatchRows,replayFileMatchId,replayFileBuild,replayStatusView,replayProgressSteps,replayBuildRange,replayDuration,replaySpeed})', {
+const ui = runInNewContext(html.slice(start, end) + '\n({replayFileMatchId,replayFileBuild,replayStatusView,replayProgressSteps,replayBuildRange,replayDuration,replaySpeed})', {
   PUUID_RE: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, TextDecoder, DataView, Uint8Array, Map, Set, String, Math, Date, Number, Array, Boolean, Object,
 });
 const matchId = 'a27d4487-c781-4b73-8a9e-f4a468139bba';
@@ -26,20 +30,6 @@ function header(embedded) {
   for (let i = 0; i < name.length; i++) view.setUint16(48 + i * 2, name.charCodeAt(i), true);
   return bytes;
 }
-
-test('replay rows list each loaded match once, newest first, with score and result', () => {
-  const rows = ui.replayMatchRows([
-    { matchId: matchId.toUpperCase(), mapName: 'Bind', startedAt: '15 Oct, 19:00', startedAtMs: 1, myR: 13, opR: 9, won: true },
-    { matchId: 'bd2ea657-0865-4cd7-934c-f6478cd43a64', mapName: 'Lotus', startedAt: '16 Oct, 19:00', startedAtMs: 2, myR: 12, opR: 14, won: false },
-    { matchId, mapName: 'Bind', startedAtMs: 1 },
-    { matchId: null, mapName: 'Ghost' },
-    { matchId: 'not-a-match', mapName: 'Ghost' },
-  ]);
-  assert.deepEqual(JSON.parse(JSON.stringify(rows)), [
-    { matchId: 'bd2ea657-0865-4cd7-934c-f6478cd43a64', map: 'Lotus', date: '16 Oct, 19:00', score: '12–14', result: 'loss' },
-    { matchId, map: 'Bind', date: '15 Oct, 19:00', score: '13–9', result: 'win' },
-  ]);
-});
 
 test('the browser header check agrees with the server header check', () => {
   assert.equal(ui.replayFileMatchId(header(matchId)), matchId);
@@ -128,9 +118,37 @@ test('upload speed is measured over the last few seconds', () => {
   assert.equal(ui.replaySpeed(samples, 6000, 12 * 1048576), 4 * 1048576 / 4, 'older samples age out');
 });
 
-test('the page is routed like the other detail pages', () => {
-  assert.match(readFileSync(new URL('../_redirects', import.meta.url), 'utf8'), /^\/replays \/index\.html 200$/m);
-  assert.match(readFileSync(new URL('../src/app/App.jsx', import.meta.url), 'utf8'), /\['replays','Replays'\]/);
-  assert.match(html, /path==='\/replays'\?'replays'/);
-  assert.match(html, /replays:'replays'\}/);
+test('the Replays page is gone and its links lead to Match History', () => {
+  const redirects = readFileSync(new URL('../_redirects', import.meta.url), 'utf8');
+  for (const from of ['/replays', '/replays/', '/replays.html']) assert.ok(redirects.includes(`\n${from} /matches 301\n`), from);
+  const player = redirects.indexOf('/player/:name/:tag/replays /player/:name/:tag/matches 301');
+  assert.ok(player >= 0 && player < redirects.indexOf('/player/* /index.html 200'), 'the specific player rule comes before the catch-all');
+  assert.ok(!existsSync(new URL('../src/app/pages/Replays.jsx', import.meta.url)));
+  const app = readFileSync(new URL('../src/app/App.jsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(app, /replays/i);
+  assert.doesNotMatch(readFileSync(new URL('../src/app/MobileShell.jsx', import.meta.url), 'utf8'), /page:'replays'/);
+  assert.match(html, /path==='\/replays'\?'matches'/);
+  assert.match(html, /segments\[4\]==='replays'\?'matches'/);
+  assert.doesNotMatch(html, /replays:'replays'/);
+  assert.match(html, /if\(activePage!=='matches'\)return;/, 'statuses poll while Match History is shown');
+});
+
+test('an opened match card carries the replay row: match ID, status and upload', async () => {
+  const PAGE = '/src/app/pages/Matches.jsx';
+  const player = (puuid, team) => ({ puuid, name: puuid, tag: 'EU', team_id: team, agent: 'Jett', _tier: 18, _label: 'Diamond 1', _acs: 200, _kd: 1 });
+  const m = { matchId: matchId.toUpperCase(), mapName: 'Abyss', won: true, myR: 13, opR: 7, myRR: 20, startedAtMs: Date.UTC(2026, 10, 1), players: [player('p1', 'red'), player('p2', 'blue')], myStats: { kills: 1, deaths: 1, assists: 1, acs: 200 } };
+  const s = { PUUID: 'p1', PLAYER: 'p1', TAG: 'EU', mhIncludeReset: false };
+  // Server rendering always takes the desktop branch, so the phone card is rendered by name.
+  for (const card of ['MatchCard', 'MobileMatchCard']) {
+    const render = props => renderHtml(PAGE, card, { s, maps: null, agents: null, onOpenChange() {}, ...props });
+    const opened = await render({ m, open: true });
+    assert.match(opened, /data-slot="match-replay"/);
+    assert.match(opened, new RegExp(`data-slot="match-id"[^>]*>${matchId}<`), 'the ID, lowercase, in the opened card');
+    assert.match(opened, /data-slot="wip-badge"/, 'still marked work in progress');
+    assert.match(opened, /role="status"[^>]*>Checking…</);
+    assert.doesNotMatch(await render({ m, open: false }), /data-slot="match-(replay|id)"/, 'a closed card shows no replay row');
+    assert.doesNotMatch(await render({ m: { ...m, matchId: 'fixture-1' }, open: true }), /match-replay/, 'no row without a real match ID');
+  }
+  const source = readFileSync(new URL('../src/app/pages/Matches.jsx', import.meta.url), 'utf8');
+  assert.equal(source.match(/<ReplaySection m=\{m\}\/>/g)?.length, 2, 'desktop and phone cards');
 });

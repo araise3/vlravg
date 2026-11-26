@@ -13,7 +13,6 @@ import {RRPage} from '@/app/pages/RR.jsx';
 import {MatchesPage} from '@/app/pages/Matches.jsx';
 import {ClutchesPage} from '@/app/pages/Clutches.jsx';
 import {NamesPage} from '@/app/pages/Names.jsx';
-import {ReplaysPage} from '@/app/pages/Replays.jsx';
 import {Alert,AlertDescription,AlertTitle} from '@/components/ui/alert';
 import {Tabs,TabsList,TabsTrigger} from '@/components/ui/tabs';
 import {TooltipProvider} from '@/components/ui/tooltip';
@@ -21,7 +20,7 @@ import {cn} from '@/lib/utils';
 
 const NAV=[
   ['overview','Overview'],['duos','Duos'],['lobby-rank','Lobby Rank'],['servers','Servers'],
-  ['rr','RR Breakdown'],['clutches','Clutches'],['matches','Match History'],['names','Name History'],['replays','Replays'],
+  ['rr','RR Breakdown'],['clutches','Clutches'],['matches','Match History'],['names','Name History'],
 ];
 
 // shadcn Tabs as page navigation. Each trigger is a real link (new-tab and
@@ -123,7 +122,6 @@ export default function App(){
           <PageSlot id="clutches" page={page}><ClutchesPage/></PageSlot>
           <PageSlot id="matches" page={page}><MatchesPage/></PageSlot>
           <PageSlot id="names" page={page}><NamesPage/></PageSlot>
-          <PageSlot id="replays" page={page}><ReplaysPage active={page==='replays'}/></PageSlot>
         </div>
       </div>
     </TooltipProvider>

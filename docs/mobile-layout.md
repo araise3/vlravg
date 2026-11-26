@@ -28,7 +28,8 @@ only the chrome around them and the way some data is drawn differ.
   its "Pro players" button opens this sheet instead of a popover.
 - **Bottom tab bar** (`MobileTabBar`, fixed, safe-area padded): Overview,
   Matches, RR and Duos as real links, plus **More**, a bottom sheet with Clutches,
-  Lobby Rank, Servers, Name History and Replays. While one of those is open, the More
+  Lobby Rank, Servers and Name History (Replays left on 26 Nov 2026; uploads are
+  on the opened match card). While one of those is open, the More
   tab takes that page's icon and name. The bar appears as soon as a search
   starts. `MOBILE_TABS` + `MOBILE_MORE` cover every page in `App.jsx`'s `NAV`
   exactly once (tested).

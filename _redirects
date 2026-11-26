@@ -17,7 +17,8 @@
 /ping-map.html /servers 301
 /names / 200
 /names/ /names 301
+/player/:name/:tag/replays /player/:name/:tag/matches 301
 /player/* /index.html 200
-/replays /index.html 200
-/replays/ /replays 301
-/replays.html /replays 301
+/replays /matches 301
+/replays/ /matches 301
+/replays.html /matches 301

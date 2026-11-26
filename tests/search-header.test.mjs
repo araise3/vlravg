@@ -96,14 +96,15 @@ test('text boxes use a slim 1px focus ring around the 1px border',async()=>{
   }
 });
 
-test('Replays is marked work in progress in the tab strip, the phone More sheet and on the page',async()=>{
+test('replay import is marked work in progress on the match card, and no page is',async()=>{
   const {readFileSync}=await import('node:fs');
   const src=f=>readFileSync(new URL('../src/app/'+f,import.meta.url),'utf8');
   const {WIP_PAGES}=await load('/src/app/shared.jsx');
-  assert.deepEqual([...WIP_PAGES],['replays']);
+  assert.deepEqual([...WIP_PAGES],[]);
   const badge=await renderHtml('/src/app/shared.jsx','WipBadge');
   assert.match(badge,/data-slot="wip-badge"[^>]*><span aria-hidden="true">WIP<\/span><span class="sr-only">work in progress<\/span>/);
   assert.match(src('App.jsx'),/\{label\}\{WIP_PAGES\.has\(page\)&&<WipBadge\/>\}<\/PageLink>/);
   assert.match(src('MobileShell.jsx'),/\{label\}\{WIP_PAGES\.has\(target\)&&<WipBadge\/>\}<\/ItemTitle>/);
-  assert.match(src('pages/Replays.jsx'),/<Alert data-slot="wip-notice">[\s\S]*<AlertTitle>Work in progress<\/AlertTitle>/);
+  assert.match(src('replay-section.jsx'),/<Hint content=\{DEMOS_HINT\}>Replay<\/Hint><WipBadge\/>/);
+  assert.match(src('replay-section.jsx'),/Replay import is still being built/);
 });

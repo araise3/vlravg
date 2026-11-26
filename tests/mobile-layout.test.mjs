@@ -123,9 +123,9 @@ test('hidden pages stay mounted in a hidden Activity, so they render only when i
   const slots=[...app.matchAll(/<PageSlot id="([a-z-]+)" page=\{page\}>/g)].map(m=>m[1]);
   assert.deepEqual(slots,desktop,'every page sits in a PageSlot');
   assert.match(app,/<div hidden=\{!shown\}><Activity mode=\{shown\?'visible':'hidden'\}>\{children\}<\/Activity><\/div>/);
-  // Server renders show the active page only: the eight hidden slots are empty.
+  // Server renders show the active page only: the seven hidden slots are empty.
   const html=await renderHtml('/src/app/App.jsx','default');
   const hidden=[...html.matchAll(/<div hidden="">(.*?)<\/div>/g)];
-  assert.equal(hidden.length,8);
+  assert.equal(hidden.length,7);
   assert.ok(hidden.every(m=>m[1]===''),'hidden Activity content is not server-rendered');
 });

@@ -1,6 +1,6 @@
 # Replay import
 
-The Replays page (`/replays`, `/player/<name>/<tag>/replays`) lists every loaded match of the searched player with its map, score, date and match ID. Each row accepts that match's VALORANT replay (`.vrf`). The file goes to R2. A sandboxed GitHub Actions job parses it with this repository's own parser, `parser/` (a fork of vrfkit; [replay-parser.md](replay-parser.md)), and three things are kept:
+Every opened match card in Match History ends with a replay row: the match ID, the replay's status, and an **Upload .vrf** button that accepts that match's VALORANT replay (`.vrf`). This replaced the Replays page on 26 Nov 2026 (on request); `/replays` and `/player/<name>/<tag>/replays` now redirect to Match History (`_redirects`, and `parsePlayerRoute` for links opened in the app). Only an opened card mounts the row (`src/app/replay-section.jsx`), so the page asks `/api/replays/status` about opened matches only, one request per card (`watchReplay` shares one in flight), and polls queued or parsing replays while Match History is shown. The file goes to R2. A sandboxed GitHub Actions job parses it with this repository's own parser, `parser/` (a fork of vrfkit; [replay-parser.md](replay-parser.md)), and three things are kept:
 
 - **the raw `.vrf`**, the only lossless source. A future decoder can extract more from it
 - **the full export**: every table `vrfkit export --checkpoints` writes, stored unchanged under `export/<match>/`. This is the tier meant for future exact line-of-sight work. It holds full-rate movement with pitch, velocity and movement state, every replicated field and RPC (including the typed overlay, raw payloads for unknown properties, crouch, equips, ability state, `VisibleCharacterOverrides` and `ActiveBlinds`), actor opens and closes with spawn transforms, net GUIDs, events and all checkpoint tables
@@ -10,10 +10,12 @@ The Function stores the export and the timeline in R2 and indexes them in D1.
 
 Uploaded replays are **user-supplied data**. They are stored in `replay_*` tables and the `REPLAY_BUCKET` only. Nothing is written to `match_archive`, `rr_history`, the RR corpus or name history, and every API response that serves replay data says `source: "user-upload"` or `X-Replay-Source: user-upload`.
 
-The page is marked **work in progress** (24 Nov 2026, on request): a `WIP`
-badge after "Replays" in the tab strip and the phone's More sheet
-(`WIP_PAGES`, `WipBadge` in `src/app/shared.jsx`) and a notice at the top of
-the page saying uploads can fail or be unavailable and parsed output may change.
+Replay import is marked **work in progress** (24 Nov 2026, on request): a
+`WIP` badge (`WipBadge` in `src/app/shared.jsx`) after "Replay" on the card's
+row, whose hint says uploads can fail or be unavailable and parsed output may
+change, and gives the Demos folder and the upload rules. Until 26 Nov 2026 the
+badge sat after "Replays" in the tab strip and the More sheet (`WIP_PAGES`,
+now empty), with the same notice at the top of the page.
 
 ## Status (2026-10-28)
 
