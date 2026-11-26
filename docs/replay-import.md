@@ -1,9 +1,9 @@
 # Replay import
 
-The Replays page (`/replays`, `/player/<name>/<tag>/replays`) lists every loaded match of the searched player with its map, score, date and match ID. Each row accepts that match's VALORANT replay (`.vrf`). The file goes to R2. A sandboxed GitHub Actions job parses it with vrfkit, and three things are kept:
+The Replays page (`/replays`, `/player/<name>/<tag>/replays`) lists every loaded match of the searched player with its map, score, date and match ID. Each row accepts that match's VALORANT replay (`.vrf`). The file goes to R2. A sandboxed GitHub Actions job parses it with this repository's own parser, `parser/` (a fork of vrfkit; [replay-parser.md](replay-parser.md)), and three things are kept:
 
 - **the raw `.vrf`**, the only lossless source. A future decoder can extract more from it
-- **the full vrfkit export**: every table `vrfkit export --checkpoints` writes, stored unchanged under `export/<match>/`. This is the tier meant for future exact line-of-sight work. It holds full-rate movement with pitch, velocity and movement state, every replicated field and RPC (including the typed overlay, raw payloads for unknown properties, crouch, equips, ability state, `VisibleCharacterOverrides` and `ActiveBlinds`), actor opens and closes with spawn transforms, net GUIDs, events and all checkpoint tables
+- **the full export**: every table `vrfkit export --checkpoints` writes, stored unchanged under `export/<match>/`. This is the tier meant for future exact line-of-sight work. It holds full-rate movement with pitch, velocity and movement state, every replicated field and RPC (including the typed overlay, raw payloads for unknown properties, crouch, equips, ability state, `VisibleCharacterOverrides` and `ActiveBlinds`), actor opens and closes with spawn transforms, net GUIDs, events and all checkpoint tables
 - **a compact timeline** for the site: rounds, kills, spike events, ultimates, and player positions every 250 ms
 
 The Function stores the export and the timeline in R2 and indexes them in D1.
@@ -26,27 +26,23 @@ the page saying uploads can fail or be unavailable and parsed output may change.
 | `fetch` and `submit` scripts | Verified locally against the dev server, and by `tests/replay-parser-workflow.test.mjs` |
 | `parse` job (Docker sandbox) and the GitHub Actions workflow | Verified in production on 2026-10-28, run 40786014791: fetch, toolchain (vrfkit build 2 min 18 s), sandboxed parse (21 s) and submit (46 s) all succeeded. The development PC still has no Docker; the local runs replaced the container with the same commands |
 | 13.08 replays | Decoded by vrfkit v0.3.0 (validate passes, 0 malformed packets, on `79397d00…` and `a27d4487…`) |
-| 13.09 replays | Decoded in production by the patched decoder (see [Decoder support](#decoder-support)): `97d3b0af…` (Abyss, 5–13) parsed with 18 rounds, which matches the HenrikDev score, 144 kills and a 33,943,170 B full export, recorded with `decoder.patch` `715ba5f8…`. Plain v0.3.0 rejects 13.09 (`no payload transform is registered…`). The patched decoder was never built on the development PC, because this session's sandbox refused to build unmerged upstream code |
+| 13.09 replays | Decoded in production by the patched decoder (see [Decoder support](#decoder-support)): `97d3b0af…` (Abyss, 5–13) parsed with 18 rounds, which matches the HenrikDev score, 144 kills and a 33,943,170 B full export, recorded with `decoder.patch` `715ba5f8…`. Plain v0.3.0 rejects 13.09 (`no payload transform is registered…`) |
+| 13.10 replays and later builds | `parser/` (2026-11-26): 13.10 decodes from a line solved from the replays themselves; an unknown build is solved in the sandbox. Verified locally on two 13.10 replays, not yet in production ([replay-parser.md](replay-parser.md)) |
 | Retry after a decoder change | Verified by `tests/replay-import.test.mjs` |
 
 ## Decoder support
 
-VALORANT changes the replay payload transform with every patch. Each of upstream's 26 registry lines has its own seed and operation list, so no decoder can read a build released after it. Each new build needs a new transform line. vrfkit derives those from the game client's reader function; this project does not do that work itself. What is automated instead:
+VALORANT changes the replay payload transform with every patch, so each new build needs a new transform line. Until 2026-11-26 those lines came from upstream vrfkit releases (pinned revision plus a reviewed patch, and a daily watcher for new releases). Now the decoder is `parser/`, this repository's fork, and a build needs no release:
 
-- **Retry.** A failure a newer decoder could fix (`decoder_validate_failed`, `decoder_export_failed`) keeps its raw file, for at most 30 days and within 2 GiB of such files in total, and records the decoder build (`decoder_id`). Every parser run names its decoder build when it claims jobs. The Function re-queues those uploads exactly once per new build, and never for other failures or when the raw file is gone. Pushing a decoder change runs the parser (`push` trigger on the workflow and `.github/replay-decoder/`), so pending uploads are retried at once. The page tells the uploader this.
-- **Watch.** `.github/workflows/vrfkit-watch.yml` checks daily whether upstream released a vrfkit newer than the pin. If so, it opens one issue naming the builds the release adds. Bumping the pin stays a reviewed change, because new upstream code is read before it runs.
+- **Solved from the upload.** A build with no transform line is solved from the uploaded replay inside the sandbox (`export --solve-unknown`), and the record is published only if the whole oracle then passes. The record names the line it used: `decoder.transform {source: "solved", line}`. The submit job prints that line as a run notice so it can be added to `parser/transforms.txt`, after a check on a second replay. The next upload of the build then skips the solve.
+- **Registry as data.** A build is one line in `parser/transforms.txt`. Compiled builds stay in `crates/vrf-transform/src/lib.rs`.
+- **Retry.** A failure a newer decoder could fix (`decoder_validate_failed`, `decoder_export_failed`) keeps its raw file, for at most 30 days and within 2 GiB of such files in total, and records the decoder build (`decoder_id`). Every parser run names its decoder build when it claims jobs. The Function re-queues those uploads exactly once per new build, and never for other failures or when the raw file is gone. Any change under `parser/` is a new build (the decoder ID is the upstream base plus the SHA-256 of the fork's tree) and runs the parser (`push` trigger), so pending uploads are retried at once. The page tells the uploader this.
 
-Current decoder: upstream [vrfkit](https://github.com/yakisoba0728/vrfkit) v0.3.0, `b9496df61c40fa304d4f539689c1dd627804946e` (2026-10-16, Apache-2.0, 11.06–13.08). Its 13.08 registry line is identical to the one the `valorant-replay-los` research build carries. On `79397d00…` its compact output is byte-identical to that build's, apart from the `decoder` field. Upstream's own verification lists 13.08 as 1 of 2 replays clean. The failing one fails the checkpoint GUID cross-check on a case-only name difference.
+Method, measurements and limits are in [replay-parser.md](replay-parser.md). In short: the solver recovered 13.09 blind (identical to the registry) and 13.10 from two replays independently (the same function as upstream v0.7.0's line). It finds only transforms of the template every known build fits; a build outside it fails as `decoder_validate_failed` until the decoder is changed.
 
-On top of it, the workflow applies [`.github/replay-decoder/vrfkit-13.09.patch`](../.github/replay-decoder/vrfkit-13.09.patch) (SHA-256 `715ba5f8…`, checked before `git apply`). The patch is the complete `crates/` diff of upstream's open PR [yakisoba0728/vrfkit#37](https://github.com/yakisoba0728/vrfkit/pull/37) at `e86a376` (2026-10-27). Every code line was read before it was taken:
+A clean oracle verdict is container and net-stream decoding, not semantic validation of every field. Records name their decoder in `decoder {revision, patch, transform}`, and the submit job refuses a record from any other build.
 
-- the 13.09 registry line `0x7e8c_b50f 0x0f: add 8, add 7, sbox, sub 5, swap, sub 3, sbox, rev`
-- the RoundResults decoder learning 13.09's new `WinningTeamMode` byte and skipping the nested `TeamResults` array
-- the matching export column, and test data
-
-It applies cleanly to v0.3.0. Upstream's PR reports 4 of 4 13.09 replays meeting every criterion (validation 1,883,501/1,883,501, checkpoint export with no transform, framing, field-stream, array, struct-blob or typed-overlay failure). Its 79 native vectors were captured by emulating the 13.09 client's reader: that is upstream's method, not one this project runs. None of this was reproduced here. Once a vrfkit release includes 13.09, the watcher opens an issue, and the patch should be dropped for the release pin.
-
-A clean `validate` is container and net-stream decoding, not semantic validation of every field. Records name their decoder in `decoder {revision, patch}`, and the submit job refuses a record from any other build.
+History: production used upstream vrfkit v0.3.0 (`b9496df…`) plus the 13.09 code of upstream PR #37 (`.github/replay-decoder/vrfkit-13.09.patch`, SHA-256 `715ba5f8…`, applied at build time) from 2026-10-28 to 2026-11-26. `parser/` starts from exactly that tree.
 
 ## Live progress on the page
 
@@ -58,12 +54,12 @@ Each match card shows the match's map art (the valorant-api.com `splash` the mat
 | Uploading: MB sent, %, MB/s, parts done | `XMLHttpRequest` upload progress events, summed over parts. Part 1 goes first, because the server checks its header, then 3 parts at a time. Speed is measured over the last 3 s and shown only after at least 0.5 s has been measured |
 | Uploaded: build per the replay header, time | Part 1's header, read by the Function (`progress.build`) |
 | Queued: position, dispatch | Queue order in D1. Whether `workflow_dispatch` was requested and accepted (`progress.dispatch`), or that the daily run will pick it up |
-| Downloaded, Decoder ready (built or from cache), Decoding in the sandbox, Checked and stored | The parser run's GitHub job states and times. The fetch job sends its `GITHUB_RUN_ID` with the claim. The status route asks the GitHub API (with `GITHUB_DISPATCH_TOKEN`) at most every 15 s per row. Without the token only a single "Parser run" step with a link to the run is shown |
+| Downloaded, Decoder ready (built or from cache), Decoding in the sandbox (including any transform solve), Checked and stored | The parser run's GitHub job states and times. The fetch job sends its `GITHUB_RUN_ID` with the claim. The status route asks the GitHub API (with `GITHUB_DISPATCH_TOKEN`) at most every 15 s per row. Without the token only a single "Parser run" step with a link to the run is shown |
 | Result validated, export files *k* of *n*, MB stored | The accepted summary's time (`progress.decoded_at`), and stored export files and parts counted in D1 |
 | Stored | `parsed_at` and the summary |
-| Failure | The failing step and reason from the error code. An unsupported build names the header's build and the builds the decoder registers (`supported_builds`, written by the toolchain job from the patched transform registry) |
+| Failure | The failing step and reason from the error code. A build the decoder could not read names the header's build and the builds the decoder registers (`supported_builds`, written by the toolchain job with `vrfkit builds`) |
 
-Inside the sandbox nothing reports live: it has no network by design. So decoding, export and compacting are one step, timed by the parse job.
+Inside the sandbox nothing reports live: it has no network by design. So solving, decoding, export and compacting are one step, timed by the parse job.
 
 Migration `0009_replay_progress.sql` adds the `progress` JSON column.
 
@@ -80,7 +76,8 @@ The first production run (2026-10-28, run 40786014791, one 50.8 MB replay) took 
 
 Changes since then:
 
-- The toolchain job no longer waits for fetch. It runs on every parser run, and its cache key names only what the binaries are built from (vrfkit revision, patch, DuckDB version, image digests). Editing the workflow no longer forces a rebuild. A decoder change is compiled by the run that its push triggers, not while an upload waits.
+- The toolchain job no longer waits for fetch. It runs on every parser run, and its cache key names only what the binary is built from (the `parser/` tree digest and the Rust image). Editing the workflow no longer forces a rebuild. A decoder change is compiled by the run that its push triggers, not while an upload waits.
+- The parse step is one `vrfkit export` call (2026-11-26): no separate `validate` decode, no Python reducer, no DuckDB ([replay-parser.md](replay-parser.md#single-pass-export)). A build the decoder does not know adds a transform solve, about 4 minutes on 2 threads locally.
 - The submit job uploads export parts 4 at a time.
 - The browser uploads replay parts 3 at a time after part 1. Locally this raised a 120 MB synthetic upload from 15–19 MB/s to a peak of 28 MB/s. On the site, the user's connection is the limit.
 
@@ -97,7 +94,7 @@ Production timings after these changes have not been measured. With a cached too
 
    The conditional D1 upsert acts as the lock. Part 1 must carry the replay magic `0x43F4EFDD` and the same embedded match UUID, or nothing is written to R2. On completion the Function starts `parse-replays.yml` via `workflow_dispatch` with no inputs.
 3. **`fetch` job** (holds `HENRIK_WORKFLOW_KEY`). It claims up to 2 pending replays and downloads them. It records each file's size and SHA-256 in a `claims` artifact that the parse job never receives.
-4. **`parse` job** (`permissions: {}`, no secrets, no checkout, no cache). For each replay, `replay-parse-sandbox.sh` runs `vrfkit validate`, `vrfkit export --checkpoints` and `scripts/replay-compact.py` in a throwaway container (see the next section). The only output is a tar on stdout, capped at 640 MiB. `.github/scripts/replay-unpack.py` accepts only `compact.json` and the 14 known export file names, as regular files within size limits. Any link, path, unknown name or duplicate rejects the whole archive (`output_rejected`). Failures map to fixed exit codes.
+4. **`parse` job** (`permissions: {}`, no secrets, no checkout, no cache). For each replay, `replay-parse-sandbox.sh` runs one `vrfkit export --checkpoints --require-pass --solve-unknown --compact …` in a throwaway container (see the next section): it solves the transform of an unknown build, then validates, exports and writes `compact.json` in one pass. The only output is a tar on stdout, capped at 640 MiB. `.github/scripts/replay-unpack.py` accepts only `compact.json` and the 14 known export file names, as regular files within size limits. Any link, path, unknown name or duplicate rejects the whole archive (`output_rejected`). Failures map to fixed exit codes.
 5. **`submit` job** (holds the key). It parses each output with the strict validator in `lib/replay-compact.mjs` and requires its source size and hash to match the fetch job's record. It requires an export containing `manifest.json` and `movement.parquet` with only allowlisted names (`export_missing` otherwise). It gzips the document and posts a summary (`POST /result/<match>`). It then declares the export files with their sizes and SHA-256 (`POST /result/<match>/export`), uploads each in 10 MiB parts, and finally sends the compact blob (`PUT /result/<match>/compact`). The export tables are never opened in this job.
 6. **Function.** It validates the summary strictly and cross-checks it against the HenrikDev match in `match_archive` (see [Match cross-check](#match-cross-check)). A mismatch makes the upload `rejected` with the failing check's code, and its raw file is deleted. The export is accepted only after the summary, only for allowlisted names, up to 256 MiB per file and 512 MiB in total. Every declared file must be complete before the compact blob is accepted. The blob is stored only if its size, gzip magic and SHA-256 equal the summary's, and storing it is what marks the replay `parsed`.
 
@@ -124,17 +121,17 @@ What this does and does not establish: a forged replay now has to reproduce the 
 
 ## Threat model
 
-An uploaded `.vrf` is hostile input to a binary decoder. vrfkit forbids `unsafe` in its own crates, but its Oodle dependency `oozextract` contains `unsafe` code. A crafted file could crash it, exhaust memory, or in the worst case execute code. The design assumes that can happen.
+An uploaded `.vrf` is hostile input to a binary decoder. The parser forbids `unsafe` in its own crates, but its Oodle dependency `oozextract` contains `unsafe` code. A crafted file could crash it, exhaust memory, or in the worst case execute code. The design assumes that can happen.
 
 - **Never on a personal machine.** Production parsing runs only on GitHub-hosted, single-use VMs.
 - **The parser holds nothing worth stealing.** The parse job has no secrets and an empty token scope. Claim IDs and source hashes stay in the fetch/submit artifacts. The container runs with:
   - `--network none` and `--read-only`
   - `--cap-drop ALL` and `no-new-privileges`
   - user `65534` and an init process
-  - a 6 GB memory cap (no swap), 256 PIDs, 2 CPUs and a 15-minute timeout
+  - a 6 GB memory cap (no swap), 256 PIDs, 2 CPUs and a 30-minute timeout (room for a transform solve)
   - tmpfs scratch space and no writable bind mount
 
-  The base images are pinned by digest, and vrfkit is built `--locked` at a pinned revision.
+  The base images are pinned by digest, and the parser is built `--locked` from this repository's `parser/`.
 - **The export is opaque, untrusted data.** No part of the site or the Function reads the parquet tables. Their SHA-256s come from the trusted submit job and are kept in D1 and in each object's metadata, but R2 multipart uploads are not re-hashed server-side. Research tooling must check the hashes and open the tables in a sandbox: they are parser output from hostile input, and parquet readers are themselves parsers.
 - **Output is data, not trusted.** The submit job and the Function validate every key, type, range and length, and unknown keys are rejected. Error codes outside a fixed list become `parser_failed`. The page renders all replay-derived text with `textContent`.
 - **Abuse and cost.** The controls are:
@@ -155,7 +152,7 @@ Residual risks, stated plainly:
 - Someone holding a replay of a match can upload it before the player does. The replay itself is genuine, and the match cross-check rejects a replay from another match.
 - A forged replay that reproduces the published round count, map and kill tally is accepted and occupies the match until an admin reset. Nothing checks its positions or timings.
 - A forged header can still pass the upload checks and use up a match's attempts for the day until the parser rejects it, and junk uploads can use up the global daily budget. Each upload start needs a Turnstile pass.
-- A file that hangs the decoder holds the parser queue for up to 15 minutes.
+- A file that hangs the decoder, or a build whose solve finds nothing, holds the parser queue for up to 30 minutes.
 
 ## Why the Function does not re-parse the compact document
 
@@ -163,10 +160,10 @@ Measured in Node on this PC for the 731 KB document of `a27d4487…`: gunzip too
 
 ## Compact format, version 1
 
-The format is JSON (`compact/<match>.json.gz` in R2), produced by `scripts/replay-compact.py` from vrfkit's `manifest.json`, `events.parquet` and `movement.parquet`:
+The format is JSON (`compact/<match>.json.gz` in R2), produced by `vrfkit export --compact` in the export pass (`parser/crates/vrfkit/src/driver/compact.rs`; until 2026-11-26 by `scripts/replay-compact.py` from the export's `manifest.json`, `events.parquet` and `movement.parquet`):
 
 - `match_id`. The replay's `friendly_name` must equal it.
-- `source {bytes, sha256}` and `decoder {name: "vrfkit", revision, patch}`. `patch` is the SHA-256 of the patch applied on top of upstream, or `null` for an unpatched build.
+- `source {bytes, sha256}` and `decoder {name: "vrfkit", revision, patch, transform}`. `revision` is the upstream vrfkit base; `patch` is the SHA-256 of `parser/`'s tracked tree (before 2026-11-26: of the patch applied on top of upstream), or `null`. `transform {source, line}` is the payload transform the replay was decoded with: `compiled`, `registry` (`parser/transforms.txt`) or `solved` (from this replay).
 - `replay {build, map_path, duration_ms, recorded_ticks}`. `recorded_ticks` is UE `FDateTime` ticks, not a Windows FILETIME.
 - `quality`: content blocks lost, movement/event rows, malformed packets, transform failures.
 - `players[] {subject, character_id}`: account and agent UUIDs from the manifest and `playerLoadouts`. Indices below refer to this array. `-1` means an unresolved character.
@@ -175,7 +172,7 @@ The format is JSON (`compact/<match>.json.gz` in R2), produced by `scripts/repla
   - `kills [[t_ms, killer, killed]]`, from vrfkit's documented `characterDeath` order: `word0` killer, `word1` killed
   - `ultimates [[t_ms, player]]`. vrfkit warns these events outnumber real casts, so they are only a cross-check
   - `plants`, `defuses`, `detonations`, `switch_teams` as lists of `t_ms`
-- `movement {interval_ms: 250, encoding: "delta-v1", tracks[] {player, samples}}`. `samples` is a flat integer list of 5-tuples `(tick, x, y, z, yaw)`, each a delta from the previous tuple. The first tuple is a delta from zero, and `t_ms = tick × 250`. Each tuple is the last finite sample of any of the player's pawns in that 250 ms bucket, in whole cm and whole degrees (0–359). Buckets without samples, for example while dead, are absent.
+- `movement {interval_ms: 250, encoding: "delta-v1", tracks[] {player, samples}}`. `samples` is a flat integer list of 5-tuples `(tick, x, y, z, yaw)`, each a delta from the previous tuple. The first tuple is a delta from zero, and `t_ms = tick × 250`. Each tuple is the last finite sample (by time, packet, then stream order) of any of the player's pawns in that 250 ms bucket, in whole cm and whole degrees (0–359). Buckets without samples, for example while dead, are absent.
 
 Nothing in this format is HenrikDev data, and it is not a rendered view. Positions are replicated movement samples, not line-of-sight evidence. For line-of-sight work, use the full export, which keeps every movement sample (pitch included) and every replicated field.
 
@@ -222,6 +219,6 @@ Local development uses the `vlravg-replays` entry in `.claude/launch.json` (port
 
 - `tests/replay-import.test.mjs`: routes, gating, quotas (including the per-day match count), claims, the match cross-check (players, rounds, map, kills), export file list and multipart storage, the storage cap and storage sweep, the admin reset, blob hash, and isolation from the trusted tables
 - `tests/replay-import-ui.test.mjs`: row building, browser header and build checks, status labels, the progress steps (queued, parsing by job, failure with supported builds), upload speed, routing
-- `tests/replay-parser-workflow.test.mjs`: artifact separation, untrusted-output validation, static checks of the sandbox and workflow, the pinned 13.09 patch, the vrfkit watcher
-- `tests/replay_compact_test.py`: kill order, pawn joins, bucketing, rounding and delta encoding
+- `tests/replay-parser-workflow.test.mjs`: artifact separation, untrusted-output validation, static checks of the sandbox and workflow, the decoder identity, `decoder.transform`, the registered 13.09/13.10 lines
+- `parser/`: `cargo test --release -p vrf-transform -p vrfkit` covers the transform spec and solver and the compact document (kill order, pawn joins, bucketing, rounding, ties, delta encoding); see [replay-parser.md](replay-parser.md#tests)
 - `tests/replay_unpack_test.py`: traversal, absolute paths, links, unknown and duplicate names, missing compact

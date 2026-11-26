@@ -39,3 +39,6 @@ __pycache__/
 /scripts/test-review-exit-candidates.py
 dist/
 node_modules/
+
+# The in-repo replay parser's build output.
+parser/target/

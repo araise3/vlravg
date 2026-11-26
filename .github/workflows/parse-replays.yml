@@ -3,6 +3,7 @@ name: Parse uploaded replays
 # Uploaded .vrf files are hostile input (docs/replay-import.md). Three jobs keep
 # the key away from the parser: fetch (key) -> parse (no secrets, sandboxed
 # container) -> submit (key, validates the parser's output as untrusted data).
+# The parser is this repository's own fork, parser/ (docs/replay-parser.md).
 on:
   # Started by the Function after each completed upload (GITHUB_DISPATCH_TOKEN,
   # Actions: write only). No inputs: every run just drains the queue.
@@ -15,8 +16,8 @@ on:
     branches: [main]
     paths:
       - .github/workflows/parse-replays.yml
-      - .github/replay-decoder/**
-      - scripts/replay-compact.py
+      - .github/scripts/replay-parse-sandbox.sh
+      - parser/**
 
 # One run at a time; a newer queued trigger replaces an older queued one.
 concurrency:
@@ -24,17 +25,13 @@ concurrency:
   cancel-in-progress: false
 permissions: {}
 env:
-  # vrfkit v0.3.0: payload transforms for 11.06-13.08.
-  VRFKIT_REVISION: b9496df61c40fa304d4f539689c1dd627804946e
-  # Optional patch on top of upstream (a repo path) and its SHA-256, recorded
-  # as decoder.patch in every compact record. Empty: plain upstream.
-  # 13.09: the code of upstream PR yakisoba0728/vrfkit#37 (e86a376), reviewed
-  # line by line; drop it once a release contains 13.09 (vrfkit-watch.yml).
-  VRFKIT_PATCH: .github/replay-decoder/vrfkit-13.09.patch
-  VRFKIT_PATCH_SHA256: 715ba5f85d1c7dc48a77c18b3c224c1c6178fde9b77ddebe96f651f8a78a03a9
-  PYTHON_IMAGE: python:3.12-slim-bookworm@sha256:e697c81897302a4c4333bade000d98038fbb21eb064f8ee1fd42d02ebcd9d337
+  # Upstream vrfkit v0.3.0, the base of parser/. Records name it as
+  # decoder.revision; decoder.patch is the SHA-256 of parser/'s tracked tree
+  # (`git ls-files -s parser`), so every source change is a new decoder build.
+  DECODER_REVISION: b9496df61c40fa304d4f539689c1dd627804946e
+  # The sandbox runtime: Debian bookworm, the glibc the parser is built for.
+  RUNTIME_IMAGE: python:3.12-slim-bookworm@sha256:e697c81897302a4c4333bade000d98038fbb21eb064f8ee1fd42d02ebcd9d337
   RUST_IMAGE: rust:1.86-slim-bookworm@sha256:57d415bbd61ce11e2d5f73de068103c7bd9f3188dc132c97cef4a8f62989e944
-  DUCKDB_VERSION: '1.4.3'
 
 jobs:
   fetch:
@@ -49,10 +46,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+      - id: decoder
+        run: echo "patch=$(git ls-files -s parser | sha256sum | cut -c1-64)" >> "$GITHUB_OUTPUT"
       - id: claim
         env:
           HENRIK_WORKFLOW_KEY: ${{ secrets.HENRIK_WORKFLOW_KEY }}
           SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg1.pages.dev' }}
+          DECODER_PATCH: ${{ steps.decoder.outputs.patch }}
         run: node .github/scripts/replay-fetch.mjs replay-work
       - if: steps.claim.outputs.count != '0'
         uses: actions/upload-artifact@v4
@@ -69,41 +69,36 @@ jobs:
 
   # Runs alongside fetch on every run, so a decoder change is compiled once by
   # the push that makes it, never while an upload waits. The key names only
-  # what the cached binaries are built from: the workflow's other edits reuse it.
+  # what the cached binary is built from: the workflow's other edits reuse it.
   toolchain:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     permissions:
       contents: read
+    outputs:
+      patch: ${{ steps.decoder.outputs.patch }}
     steps:
       - uses: actions/checkout@v4
+      - id: decoder
+        run: echo "patch=$(git ls-files -s parser | sha256sum | cut -c1-64)" >> "$GITHUB_OUTPUT"
       - id: cache
         uses: actions/cache@v4
         with:
           path: toolchain-cache
-          key: replay-toolchain-v2-${{ env.VRFKIT_REVISION }}-${{ env.VRFKIT_PATCH_SHA256 }}-${{ hashFiles('.github/replay-decoder/**') }}-${{ env.DUCKDB_VERSION }}-${{ env.RUST_IMAGE }}-${{ env.PYTHON_IMAGE }}
-      # Built inside the same Debian release as the parse image, so the binary
-      # links against the glibc it will run with.
+          key: replay-toolchain-v3-${{ steps.decoder.outputs.patch }}-${{ env.RUST_IMAGE }}
+      # Built inside the same Debian release as the runtime image, so the
+      # binary links against the glibc it will run with.
       - if: steps.cache.outputs.cache-hit != 'true'
         run: |
-          git clone --filter=blob:none https://github.com/yakisoba0728/vrfkit.git vrfkit
-          git -C vrfkit checkout --detach "$VRFKIT_REVISION"
-          if [ -n "$VRFKIT_PATCH" ]; then
-            echo "$VRFKIT_PATCH_SHA256  $VRFKIT_PATCH" | sha256sum -c -
-            git -C vrfkit apply "$PWD/$VRFKIT_PATCH"
-          fi
-          docker run --rm -v "$PWD/vrfkit:/src" -w /src "$RUST_IMAGE" cargo build --release --locked -p vrfkit
+          docker run --rm -v "$PWD/parser:/src" -w /src "$RUST_IMAGE" cargo build --release --locked -p vrfkit
           mkdir -p toolchain-cache
-          cp vrfkit/target/release/vrfkit toolchain-cache/vrfkit
-          # The builds this decoder registers, shown when a replay is unsupported.
-          grep -oE '^\s+V[0-9]+ V[0-9]+_[0-9]+ "[0-9]+\.[0-9]+"' vrfkit/crates/vrf-transform/src/lib.rs \
-            | grep -oE '[0-9]+\.[0-9]+' | jq -R . | jq -sc . > toolchain-cache/supported-builds.json
-          docker run --rm -v "$PWD/toolchain-cache:/out" "$PYTHON_IMAGE" \
-            pip install --no-cache-dir --only-binary=:all: --target /out/pydeps "duckdb==$DUCKDB_VERSION"
+          cp parser/target/release/vrfkit toolchain-cache/vrfkit
+          # The builds this decoder registers, shown when a replay fails anyway.
+          toolchain-cache/vrfkit builds > toolchain-cache/supported-builds.json
       - run: |
           mkdir -p toolchain
           cp -r toolchain-cache/. toolchain/
-          cp scripts/replay-compact.py .github/scripts/replay-parse-sandbox.sh .github/scripts/replay-unpack.py toolchain/
+          cp .github/scripts/replay-parse-sandbox.sh .github/scripts/replay-unpack.py toolchain/
       - uses: actions/upload-artifact@v4
         with:
           name: toolchain
@@ -119,9 +114,11 @@ jobs:
     needs: [fetch, toolchain]
     if: needs.fetch.outputs.count != '0'
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 90
     # No secrets, no repository token scopes, no checkout, no cache.
     permissions: {}
+    env:
+      DECODER_PATCH: ${{ needs.toolchain.outputs.patch }}
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -131,8 +128,8 @@ jobs:
         with:
           name: toolchain
           path: toolchain
-      - run: docker pull "$PYTHON_IMAGE"
-      - run: bash toolchain/replay-parse-sandbox.sh replay-work toolchain "$PYTHON_IMAGE"
+      - run: docker pull "$RUNTIME_IMAGE"
+      - run: bash toolchain/replay-parse-sandbox.sh replay-work toolchain "$RUNTIME_IMAGE"
       - uses: actions/upload-artifact@v4
         with:
           name: parsed
@@ -140,7 +137,7 @@ jobs:
           retention-days: 1
 
   submit:
-    needs: [fetch, parse]
+    needs: [fetch, toolchain, parse]
     # A failed parse job leaves its claims to go stale and be retried.
     if: needs.parse.result == 'success'
     runs-on: ubuntu-24.04
@@ -167,4 +164,5 @@ jobs:
       - env:
           HENRIK_WORKFLOW_KEY: ${{ secrets.HENRIK_WORKFLOW_KEY }}
           SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg1.pages.dev' }}
+          DECODER_PATCH: ${{ needs.toolchain.outputs.patch }}
         run: node .github/scripts/replay-submit.mjs replay-work

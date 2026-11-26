@@ -43,7 +43,7 @@ export async function fetchJobs({ origin, key, out, decoder = '', runId = '', fe
 }
 
 if (process.argv[1]?.endsWith('replay-fetch.mjs')) {
-  const decoder = (process.env.VRFKIT_REVISION || '') + (process.env.VRFKIT_PATCH_SHA256 ? `+${process.env.VRFKIT_PATCH_SHA256}` : '');
+  const decoder = (process.env.DECODER_REVISION || '') + (process.env.DECODER_PATCH ? `+${process.env.DECODER_PATCH}` : '');
   const claims = await fetchJobs({ origin: process.env.SITE_ORIGIN, key: process.env.HENRIK_WORKFLOW_KEY, out: process.argv[2] || 'replay-work', decoder,
     runId: process.env.GITHUB_RUN_ID || '' });
   console.log(`Claimed ${claims.length} replay(s)`);

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -10,6 +10,7 @@ import { rm } from 'node:fs/promises';
 import { EXPORT_FILES } from '../lib/replay-import.mjs';
 import { fetchJobs } from '../.github/scripts/replay-fetch.mjs';
 import { prepareResult, submitAll } from '../.github/scripts/replay-submit.mjs';
+import { validateCompact } from '../lib/replay-compact.mjs';
 
 const matchId = 'a27d4487-c781-4b73-8a9e-f4a468139bba';
 const claimId = '11111111-1111-4111-8111-111111111111';
@@ -18,7 +19,8 @@ const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const claim = { match_id: matchId, claim: claimId, bytes: raw.byteLength, sha256: sha(raw), error: null };
 const compact = () => ({
   format: 'vlravg.replay-compact', version: 1, match_id: matchId,
-  source: { bytes: raw.byteLength, sha256: sha(raw) }, decoder: { name: 'vrfkit', revision: 'b9496df61c40fa304d4f539689c1dd627804946e', patch: null },
+  source: { bytes: raw.byteLength, sha256: sha(raw) }, decoder: { name: 'vrfkit', revision: 'b9496df61c40fa304d4f539689c1dd627804946e', patch: null,
+    transform: { source: 'compiled', line: '0x3c17_a9fa -0x06: add 8, rev, rotl 6, sbox, rotr 4, sbox, sbox, rev' } },
   replay: { build: '++Ares-Core+release-13.08', map_path: '/Game/Maps/Duality/Duality', duration_ms: 60000, recorded_ticks: '1' },
   quality: { content_blocks_lost: 0, movement_rows: 0, event_rows: 0, malformed_packets: 0, transform_failures: 0 },
   players: [{ subject: claimId, character_id: null }],
@@ -114,7 +116,7 @@ test('the parse job holds no secrets and runs the parser in a locked-down contai
   assert.match(parse, /permissions: \{\}/);
   assert.doesNotMatch(parse, /secrets\.|actions\/checkout|actions\/cache/);
   assert.doesNotMatch(workflow, /workflow_dispatch:\n\s+inputs:/, 'dispatch takes no inputs');
-  assert.match(workflow, /python:3\.12-slim-bookworm@sha256:[0-9a-f]{64}/);
+  assert.match(workflow, /RUNTIME_IMAGE: python:3\.12-slim-bookworm@sha256:[0-9a-f]{64}/);
   const sandbox = readFileSync(new URL('../.github/scripts/replay-parse-sandbox.sh', import.meta.url), 'utf8');
   for (const flag of ['--network none', '--read-only', '--cap-drop ALL', 'no-new-privileges', '--user 65534:65534', '--memory 6g', '--pids-limit']) {
     assert.ok(sandbox.includes(flag), flag);
@@ -122,18 +124,54 @@ test('the parse job holds no secrets and runs the parser in a locked-down contai
   assert.doesNotMatch(sandbox, /:\/out:rw|-v "[^"]*:rw"/, 'no writable bind mount');
 });
 
-test('the decoder is upstream vrfkit v0.3.0 and its identity is checked on submit', async () => {
+test('the decoder is parser/, named by its upstream base and its tree digest, and checked on submit', async () => {
   const workflow = readFileSync(new URL('../.github/workflows/parse-replays.yml', import.meta.url), 'utf8');
-  assert.match(workflow, /VRFKIT_REVISION: b9496df61c40fa304d4f539689c1dd627804946e/);
-  assert.ok(workflow.includes('if [ -n "$VRFKIT_PATCH" ]; then\n            echo "$VRFKIT_PATCH_SHA256  $VRFKIT_PATCH" | sha256sum -c -\n            git -C vrfkit apply'),
-    'an optional patch is hash-checked before it is applied');
+  assert.match(workflow, /DECODER_REVISION: b9496df61c40fa304d4f539689c1dd627804946e/);
+  const digest = 'echo "patch=$(git ls-files -s parser | sha256sum | cut -c1-64)" >> "$GITHUB_OUTPUT"';
+  for (const [job, next] of [['fetch', 'toolchain'], ['toolchain', 'parse']]) {
+    const body = workflow.slice(workflow.indexOf(`\n  ${job}:`), workflow.indexOf(`\n  ${next}:`));
+    assert.ok(body.includes(digest), `${job} computes the tree digest`);
+  }
+  assert.doesNotMatch(workflow, /git clone|git -C vrfkit|VRFKIT_/, 'no upstream clone or patch');
   const dir = await mkdtemp(join(tmpdir(), 'replay-decoder-'));
   await writeFile(join(dir, 'compact.json'), JSON.stringify(compact()));
   await writeExport(dir);
-  const upstream = { revision: 'b9496df61c40fa304d4f539689c1dd627804946e', patch: null };
-  assert.equal((await prepareResult(claim, dir, upstream)).ok, true);
-  assert.deepEqual(await prepareResult(claim, dir, { ...upstream, patch: 'a'.repeat(64) }), { ok: false, error: 'compact_invalid' },
+  const base = { revision: 'b9496df61c40fa304d4f539689c1dd627804946e', patch: null };
+  assert.equal((await prepareResult(claim, dir, base)).ok, true);
+  assert.deepEqual(await prepareResult(claim, dir, { ...base, patch: 'a'.repeat(64) }), { ok: false, error: 'compact_invalid' },
     'a record from another decoder build is refused');
+});
+
+test('records name the payload transform they were decoded with', () => {
+  const doc = compact();
+  assert.equal(validateCompact(doc), doc);
+  for (const transform of [
+    { source: 'guessed', line: doc.decoder.transform.line },
+    { source: 'solved', line: '0x2c24_9eb3 0x33: sub 9' },
+    { source: 'solved', line: '0x2c24_9eb3 0x33: sub 8; rm -rf /' },
+    { source: 'solved', line: '0x2c24_9eb3 0x33: ' + Array(9).fill('not').join(', ') },
+    { source: 'solved' },
+    null,
+  ]) {
+    assert.throws(() => validateCompact({ ...doc, decoder: { ...doc.decoder, transform } }), /decoder\.transform/);
+  }
+  const { transform, ...without } = doc.decoder;
+  assert.throws(() => validateCompact({ ...doc, decoder: without }), /decoder is missing transform/);
+  assert.ok(validateCompact({ ...doc, decoder: { ...doc.decoder, transform: { source: 'solved', line: '0x2c24_9eb3 0x33: sub 8, rotl 6, swap, xor 3, sub 1' } } }));
+});
+
+test('submit reports a transform solved from an upload', async () => {
+  const work = await mkdtemp(join(tmpdir(), 'replay-solved-'));
+  await mkdir(join(work, 'claims'), { recursive: true });
+  await mkdir(join(work, 'parsed', matchId), { recursive: true });
+  await writeFile(join(work, 'claims/claims.json'), JSON.stringify([claim]));
+  const doc = compact();
+  doc.replay.build = '++Ares-Core+release-13.10';
+  doc.decoder.transform = { source: 'solved', line: '0x2c24_9eb3 0x33: sub 8, rotl 6, swap, xor 3, sub 1' };
+  await writeFile(join(work, 'parsed', matchId, 'compact.json'), JSON.stringify(doc));
+  await writeExport(join(work, 'parsed', matchId));
+  const outcomes = await submitAll({ origin: 'https://site.test', key: 'k', work, fetchImpl: async () => Response.json({ data: { status: 'failed' } }) });
+  assert.equal(outcomes[0].solved, '13.10 0x2c24_9eb3 0x33: sub 8, rotl 6, swap, xor 3, sub 1');
 });
 
 test('the unpacker accepts exactly the export allowlist the Function accepts', () => {
@@ -141,33 +179,20 @@ test('the unpacker accepts exactly the export allowlist the Function accepts', (
   const listed = [...unpack.match(/EXPORT_FILES = \(([^)]*)\)/)[1].matchAll(/"([^"]+)"/g)].map(m => m[1]);
   assert.deepEqual(listed, EXPORT_FILES);
   const sandbox = readFileSync(new URL('../.github/scripts/replay-parse-sandbox.sh', import.meta.url), 'utf8');
-  assert.match(sandbox, /vrfkit export \/in\/replay\.vrf --out \/work\/export --checkpoints/);
+  assert.match(sandbox, /vrfkit export \/in\/replay\.vrf --out \/work\/export --checkpoints --require-pass --solve-unknown/);
+  assert.doesNotMatch(sandbox, /python3 -s|vrfkit validate/, 'one parser call: no second decode, no Python reducer');
   assert.match(sandbox, /replay-unpack\.py/);
 });
 
-test('the 13.09 patch is the pinned, reviewed upstream PR code', () => {
+test('the fork carries the reviewed 13.09 line and the solved 13.10 line, and a change to it runs the parser', () => {
   const workflow = readFileSync(new URL('../.github/workflows/parse-replays.yml', import.meta.url), 'utf8');
-  const patch = readFileSync(new URL('../.github/replay-decoder/vrfkit-13.09.patch', import.meta.url));
-  assert.ok(workflow.includes('VRFKIT_PATCH: .github/replay-decoder/vrfkit-13.09.patch\n'));
-  assert.equal(sha(patch), workflow.match(/VRFKIT_PATCH_SHA256: ([0-9a-f]{64})/)[1]);
-  assert.ok(!patch.includes(13), 'LF-only, so it applies to the upstream blobs');
-  assert.ok(patch.toString().includes('\n+    V1309 V13_09 "13.09" 0x7e8c_b50f  0x0f: add 8, add 7, sbox, sub 5, swap, sub 3, sbox, rev;\n'));
+  const lib = readFileSync(new URL('../parser/crates/vrf-transform/src/lib.rs', import.meta.url), 'utf8');
+  assert.ok(lib.includes('\n    V1309 V13_09 "13.09" 0x7e8c_b50f  0x0f: add 8, add 7, sbox, sub 5, swap, sub 3, sbox, rev;\n'));
+  const registry = readFileSync(new URL('../parser/transforms.txt', import.meta.url), 'utf8');
+  assert.match(registry, /^13\.10 0x2c24_9eb3 0x33: sub 8, rotl 6, swap, xor 3, sub 1$/m);
   const push = workflow.slice(workflow.indexOf('  push:'), workflow.indexOf('\nconcurrency:'));
-  assert.ok(push.includes('branches: [main]') && push.includes('- .github/replay-decoder/**'), 'a decoder change runs the parser');
-});
-
-test('the vrfkit watcher names the builds a newer release adds', async () => {
-  const { registeredBuilds, pinnedDecoder, plan } = await import('../.github/scripts/vrfkit-watch.mjs');
-  const lib = builds => builds.map(b => `    V${b.replace('.', '')} V${b.replace('.', '_')} "${b}" 0x1234_5678  0x78: not;`).join('\n');
-  assert.deepEqual(registeredBuilds(lib(['13.06', '13.08'])), ['13.06', '13.08']);
-  const workflow = readFileSync(new URL('../.github/workflows/parse-replays.yml', import.meta.url), 'utf8');
-  const pinned = pinnedDecoder(workflow);
-  assert.equal(pinned.patch, '.github/replay-decoder/vrfkit-13.09.patch');
-  assert.equal(plan({ pinned, release: 'v0.3.0', releaseSha: pinned.revision, pinnedBuilds: [], releaseBuilds: [] }), null);
-  const issue = plan({ pinned, release: 'v0.4.0', releaseSha: 'f'.repeat(40), pinnedBuilds: ['13.08'], releaseBuilds: ['13.08', '13.09', '13.10'] });
-  assert.equal(issue.title, 'vrfkit v0.4.0 is available (adds 13.09, 13.10)');
-  assert.match(issue.body, /drop the patch/);
-  assert.deepEqual(pinnedDecoder("  VRFKIT_REVISION: " + 'a'.repeat(40) + "\n  VRFKIT_PATCH: ''\n"), { revision: 'a'.repeat(40), patch: '' });
+  assert.ok(push.includes('branches: [main]') && push.includes('- parser/**'), 'a decoder change runs the parser');
+  assert.ok(!existsSync(new URL('../.github/workflows/vrfkit-watch.yml', import.meta.url)), 'no upstream release watcher');
 });
 
 test('mapLimit runs at most the limit at once and covers every item', async () => {
@@ -188,7 +213,8 @@ test('the toolchain builds in parallel with fetch under a key that ignores unrel
   const toolchain = workflow.slice(workflow.indexOf('\n  toolchain:'), workflow.indexOf('\n  parse:'));
   assert.doesNotMatch(toolchain, /needs:/, 'no wait for fetch');
   assert.doesNotMatch(toolchain, /hashFiles\('\.github\/workflows/, 'editing the workflow does not force a rebuild');
-  assert.match(toolchain, /key: replay-toolchain-v2-\$\{\{ env\.VRFKIT_REVISION \}\}-\$\{\{ env\.VRFKIT_PATCH_SHA256 \}\}/);
+  assert.match(toolchain, /key: replay-toolchain-v3-\$\{\{ steps\.decoder\.outputs\.patch \}\}-\$\{\{ env\.RUST_IMAGE \}\}/);
+  assert.match(toolchain, /cargo build --release --locked -p vrfkit/);
   const parse = workflow.slice(workflow.indexOf('\n  parse:'), workflow.indexOf('\n  submit:'));
   assert.match(parse, /needs: \[fetch, toolchain\]\n\s+if: needs\.fetch\.outputs\.count != '0'/);
 });

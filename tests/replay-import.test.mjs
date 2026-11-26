@@ -129,7 +129,8 @@ function compactDoc(bytes, subjects = players) {
   return {
     format: 'vlravg.replay-compact', version: 1, match_id: matchId,
     source: { bytes: bytes.byteLength, sha256: sha(bytes) },
-    decoder: { name: 'vrfkit', revision: 'b9496df61c40fa304d4f539689c1dd627804946e', patch: null },
+    decoder: { name: 'vrfkit', revision: 'b9496df61c40fa304d4f539689c1dd627804946e', patch: null,
+      transform: { source: 'compiled', line: '0x3c17_a9fa -0x06: add 8, rev, rotl 6, sbox, rotr 4, sbox, sbox, rev' } },
     replay: { build: '++Ares-Core+release-13.08', map_path: '/Game/Maps/Duality/Duality', duration_ms: 1784630, recorded_ticks: '639275987627950000' },
     quality: { content_blocks_lost: 0, movement_rows: 10, event_rows: 3, malformed_packets: 0, transform_failures: 0 },
     players: subjects.map(subject => ({ subject, character_id: null })),

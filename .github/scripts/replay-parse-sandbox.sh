@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Parser job 2 of 3. Runs with no secrets and permissions: {}. Each uploaded
-# replay is hostile input, so vrfkit and the compact reducer run in a
-# throwaway container: no network, read-only root and inputs, no writable bind
+# replay is hostile input, so the parser (parser/: one `vrfkit export` call
+# that solves an unknown build's transform first, then validates, exports and
+# writes the compact document in one pass) runs in a throwaway container: no network, read-only root and inputs, no writable bind
 # mount, all capabilities dropped, no privilege escalation, an unprivileged
 # user, and memory/PID/CPU/time limits. The only way out is stdout: a tar of
 # compact.json and the full `vrfkit export --checkpoints` tables, capped at
@@ -21,18 +22,23 @@ jq -c '.[]' "$work/replays/jobs.json" | while read -r job; do
   [[ $id =~ ^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$ && $bytes =~ ^[0-9]+$ && $sha =~ ^[0-9a-f]{64}$ ]] || continue
   out="$work/parsed/$id"
   mkdir -p "$out"
-  timeout --kill-after=15 900 docker run --rm --name "parse-$id" --init \
+  # 30 minutes: solving an unknown build's transform takes minutes on 2 CPUs.
+  timeout --kill-after=15 1800 docker run --rm --name "parse-$id" --init \
     --network none --read-only --cap-drop ALL --security-opt no-new-privileges \
     --user 65534:65534 --memory 6g --memory-swap 6g --pids-limit 256 --cpus 2 --ulimit nofile=1024:1024 \
     --tmpfs /work:rw,size=3g,mode=1777 --tmpfs /tmp:rw,size=64m,mode=1777 \
     -v "$work/replays/$id/replay.vrf:/in/replay.vrf:ro" -v "$tool:/opt/tool:ro" \
-    -e MATCH_ID="$id" -e SOURCE_BYTES="$bytes" -e SOURCE_SHA256="$sha" -e VRFKIT_REVISION="$VRFKIT_REVISION" -e VRFKIT_PATCH_SHA256="$VRFKIT_PATCH_SHA256" \
-    -e PYTHONPATH=/opt/tool/pydeps -e HOME=/tmp -e PYTHONDONTWRITEBYTECODE=1 \
+    -e MATCH_ID="$id" -e SOURCE_BYTES="$bytes" -e SOURCE_SHA256="$sha" -e DECODER_REVISION="$DECODER_REVISION" -e DECODER_PATCH="$DECODER_PATCH" \
+    -e HOME=/tmp \
     "$image" sh -c '
-      /opt/tool/vrfkit validate /in/replay.vrf >/dev/null 2>&1 || exit 10
-      /opt/tool/vrfkit export /in/replay.vrf --out /work/export --checkpoints >/dev/null 2>&1 || exit 11
-      python3 -s /opt/tool/replay-compact.py /work/export --match-id "$MATCH_ID" --source-bytes "$SOURCE_BYTES" \
-        --source-sha256 "$SOURCE_SHA256" --decoder-revision "$VRFKIT_REVISION" --decoder-patch "$VRFKIT_PATCH_SHA256" --out /work/compact.json >/dev/null 2>&1 || exit 12
+      # One pass: oracle verdict, export and compact. Exit 10: no transform
+      # (none registered and none solved) or the oracle did not pass; 12: the
+      # compact document was refused; anything else is an export failure.
+      /opt/tool/vrfkit export /in/replay.vrf --out /work/export --checkpoints --require-pass --solve-unknown \
+        --compact /work/compact.json --match-id "$MATCH_ID" --source-bytes "$SOURCE_BYTES" --source-sha256 "$SOURCE_SHA256" \
+        --decoder-revision "$DECODER_REVISION" --decoder-patch "$DECODER_PATCH" >/dev/null 2>&1
+      s=$?
+      if [ $s -eq 10 ] || [ $s -eq 12 ]; then exit $s; elif [ $s -ne 0 ]; then exit 11; fi
       cd /work && tar -cf - compact.json export' \
     | head -c $((cap + 1)) > "$out/result.tar"
   status=${PIPESTATUS[0]}

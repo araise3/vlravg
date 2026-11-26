@@ -6,7 +6,7 @@
 // The full export tables are never opened here: only their names (an exact
 // allowlist) and sizes are checked before they are stored as opaque files.
 import { createHash } from 'node:crypto';
-import { open, readFile, readdir, stat } from 'node:fs/promises';
+import { appendFile, open, readFile, readdir, stat } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import { validateCompact, summarizeCompact, COMPACT_MAX_JSON_BYTES } from '../../lib/replay-compact.mjs';
 import { EXPORT_FILES, EXPORT_MAX_BYTES } from '../../lib/replay-import.mjs';
@@ -128,14 +128,27 @@ export async function submitAll({ origin, key, work, decoder = null, fetchImpl =
         status = (await put.json().catch(() => ({})))?.data?.status || `http_${put.status}`;
       }
     }
-    outcomes.push({ match_id: claim.match_id, status, error: result.ok ? null : result.error });
+    // A build the decoder did not know, decoded with a transform solved from
+    // this replay. Validated by validateCompact, so safe to print; adding it
+    // to parser/transforms.txt saves the next upload the solve.
+    const transform = result.ok ? result.summary.decoder.transform : null;
+    const solved = transform?.source === 'solved'
+      ? `${result.summary.replay.build.replace(/^\+\+Ares-Core\+release-/, '')} ${transform.line}` : null;
+    outcomes.push({ match_id: claim.match_id, status, error: result.ok ? null : result.error, ...(solved && { solved }) });
   }
   return outcomes;
 }
 
 if (process.argv[1]?.endsWith('replay-submit.mjs')) {
-  const decoder = process.env.VRFKIT_REVISION ? { revision: process.env.VRFKIT_REVISION, patch: process.env.VRFKIT_PATCH_SHA256 || null } : null;
+  const decoder = process.env.DECODER_REVISION ? { revision: process.env.DECODER_REVISION, patch: process.env.DECODER_PATCH || null } : null;
   const outcomes = await submitAll({ origin: process.env.SITE_ORIGIN, key: process.env.HENRIK_WORKFLOW_KEY, work: process.argv[2] || 'replay-work', decoder });
   for (const o of outcomes) console.log(`${o.match_id} ${o.status}${o.error ? ` (${o.error})` : ''}`);
+  for (const line of new Set(outcomes.map(o => o.solved).filter(Boolean))) {
+    console.log(`::notice title=Payload transform solved from an upload::parser/transforms.txt line: ${line}`);
+    if (process.env.GITHUB_STEP_SUMMARY) {
+      await appendFile(process.env.GITHUB_STEP_SUMMARY,
+        `Solved payload transform (add to \`parser/transforms.txt\` after checking it on a second replay):\n\n    ${line}\n`);
+    }
+  }
   if (outcomes.some(o => !['parsed', 'failed', 'rejected'].includes(o.status))) process.exitCode = 1;
 }
