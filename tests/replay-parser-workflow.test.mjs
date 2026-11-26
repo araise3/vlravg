@@ -105,8 +105,13 @@ test('submit posts the summary, then the matching blob', async () => {
   const movementDone = requests.findIndex(r => r.url.includes('/export/movement.parquet/complete'));
   assert.ok(requests.slice(movementDone).every(r => !r.url.includes('/export/movement.parquet/part/')), 'a file completes after all its parts');
   assert.equal(sha(Buffer.concat(movementParts.map(r => r.body))), sha(exportBytes()['movement.parquet']));
-  assert.equal(requests.at(-1).url, `${base}/compact?claim=${claimId}`, 'compact last, after every export file');
-  assert.equal(JSON.parse(requests[0].body).summary.compact.sha256, sha(requests.at(-1).body));
+  // Declared, then the compact record (which marks the replay stored), then the
+  // export's parts: the export no longer delays the record (26 Nov 2026).
+  const compactAt = requests.findIndex(r => r.url === `${base}/compact?claim=${claimId}`);
+  assert.equal(requests[1].url, base + '/export');
+  assert.equal(compactAt, 2, 'compact right after the export is declared');
+  assert.ok(requests.slice(compactAt + 1).some(r => r.url.includes('/part/')), 'parts follow the record');
+  assert.equal(JSON.parse(requests[0].body).summary.compact.sha256, sha(requests[compactAt].body));
 });
 
 test('the parse job holds no secrets and runs the parser in a locked-down container', () => {

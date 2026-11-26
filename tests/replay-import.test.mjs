@@ -402,6 +402,56 @@ test('the full vrfkit export is stored opaque, file by file, before the compact 
   assert.equal(f.db.prepare('SELECT COUNT(*) AS n FROM replay_export_parts').get().n, 0);
 });
 
+test('a replay is stored before its full export, which then completes, or is retried without unstoring it', async t => {
+  const f = await fixture(t);
+  const bytes = replayBytes(2 * 1024 * 1024);
+  await upload(f, bytes);
+  const [job] = (await f.call('POST', '/claim', { workflow: true })).json.data;
+  const doc = compactDoc(bytes);
+  const blob = await gzip(JSON.stringify(doc));
+  const summary = summarizeCompact(doc, { bytes: blob.byteLength, sha256: sha(blob) });
+  const files = exportFiles();
+  const list = Object.entries(files).map(([name, b]) => ({ name, bytes: b.byteLength, sha256: sha(b) }));
+  const status = async () => (await f.call('GET', `/status?ids=${matchId}`)).json.data[matchId];
+  const row = () => f.db.prepare('SELECT status,claim_id,export_bytes FROM replay_imports WHERE match_id=?').get(matchId);
+
+  await f.call('POST', `/result/${matchId}`, { body: { claim: job.claim, ok: true, summary }, workflow: true });
+  assert.equal((await f.call('PUT', `/result/${matchId}/compact?claim=${job.claim}`, { body: blob, workflow: true })).status, 409,
+    'the export is declared (its storage reserved) first');
+  assert.equal((await f.call('POST', `/result/${matchId}/export`, { body: { claim: job.claim, files: list }, workflow: true })).status, 201);
+  assert.equal((await f.call('PUT', `/result/${matchId}/compact?claim=${job.claim}`, { body: blob, workflow: true })).json.data.status, 'parsed');
+  let s = await status();
+  assert.equal(s.status, 'parsed', 'stored before any export part');
+  assert.equal(s.export_complete, false);
+  assert.equal(s.export_bytes, null);
+  assert.deepEqual({ files: s.progress.export.files, done: s.progress.export.files_done }, { files: list.length, done: 0 });
+  assert.equal((await f.call('GET', `/compact/${matchId}`)).status, 200, 'the record is readable at once');
+  assert.equal(row().claim_id, job.claim, 'the claim is held for the export');
+
+  // The submit job dies here. After the claim goes stale the replay is claimed
+  // again and stays stored; a failed retry only releases the claim.
+  f.db.prepare("UPDATE replay_imports SET claimed_at='2000-01-01T00:00:00.000Z' WHERE match_id=?").run(matchId);
+  const [retry] = (await f.call('POST', '/claim', { workflow: true })).json.data;
+  assert.equal(retry.match_id, matchId);
+  assert.equal((await status()).status, 'parsed');
+  assert.equal((await f.call('POST', `/result/${matchId}`, { body: { claim: retry.claim, ok: false, error: 'timeout' }, workflow: true })).json.data.status, 'parsed');
+  assert.deepEqual({ ...row() }, { status: 'parsed', claim_id: null, export_bytes: null });
+
+  // A retry that gets through finishes the export.
+  f.db.prepare("UPDATE replay_imports SET claim_id='99999999-9999-4999-8999-999999999999',claimed_at='2000-01-01T00:00:00.000Z' WHERE match_id=?").run(matchId);
+  const [again] = (await f.call('POST', '/claim', { workflow: true })).json.data;
+  assert.equal((await f.call('POST', `/result/${matchId}`, { body: { claim: again.claim, ok: true, summary }, workflow: true })).json.data.status, 'awaiting_export');
+  assert.equal((await f.call('PUT', `/result/${matchId}/compact?claim=${again.claim}`, { body: blob, workflow: true })).json.data.status, 'parsed',
+    'storing the record again is a no-op');
+  await uploadExport(f, again, files);
+  s = await status();
+  assert.equal(s.export_complete, true);
+  assert.equal(s.export_bytes, Object.values(files).reduce((sum, b) => sum + b.byteLength, 0));
+  assert.equal(row().claim_id, null, 'the claim is released with the last file');
+  for (const [name, b] of Object.entries(files)) assert.equal(sha(f.r2.objects.get(`export/${matchId}/${name}`)), sha(b), name);
+  assert.deepEqual((await f.call('POST', '/claim', { workflow: true })).json.data, [], 'nothing left to claim');
+});
+
 test('stored exports count against the storage cap', async t => {
   const f = await fixture(t);
   const saved = { ...REPLAY_LIMITS };

@@ -68,13 +68,18 @@ export async function prepareResult(claim, dir, decoder = null) {
   return { ok: true, blob, files, summary: summarizeCompact(doc, { bytes: blob.byteLength, sha256: createHash('sha256').update(blob).digest('hex') }) };
 }
 
-async function uploadExport({ origin, key, claim, files, fetchImpl }) {
-  const base = `${origin}/api/replays/result/${claim.match_id}/export`;
-  const json = res => res.json().catch(() => ({}));
-  const start = await fetchImpl(base, { method: 'POST', headers: { 'X-Workflow-Key': key, 'Content-Type': 'application/json' },
+// Declares the export (the Function reserves its storage); returns the part
+// plan, or an error code.
+async function declareExport({ origin, key, claim, files, fetchImpl }) {
+  const res = await fetchImpl(`${origin}/api/replays/result/${claim.match_id}/export`, { method: 'POST',
+    headers: { 'X-Workflow-Key': key, 'Content-Type': 'application/json' },
     body: JSON.stringify({ claim: claim.claim, files: files.map(({ name, bytes, sha256 }) => ({ name, bytes, sha256 })) }) });
-  if (start.status !== 201) return `export_http_${start.status}`;
-  const { partBytes, files: plan } = (await json(start)).data;
+  if (res.status !== 201) return `export_http_${res.status}`;
+  return (await res.json().catch(() => ({}))).data;
+}
+
+async function uploadExport({ origin, key, claim, files, plan: { partBytes, files: plan }, fetchImpl }) {
+  const base = `${origin}/api/replays/result/${claim.match_id}/export`;
   // Parts upload EXPORT_CONCURRENCY at a time across all files (sequential
   // uploads of a 34 MB export took 39 s); each file completes after its parts.
   const left = new Map(plan.map(({ name, parts }) => [name, parts]));
@@ -97,7 +102,8 @@ async function uploadExport({ origin, key, claim, files, fetchImpl }) {
   return failure;
 }
 
-const EXPORT_CONCURRENCY = 4;
+// 4 at a time took 24 s for a 58 MB export (2026-11-26, run 45750830809).
+const EXPORT_CONCURRENCY = 8;
 export async function mapLimit(items, limit, fn) {
   let next = 0;
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
@@ -119,13 +125,24 @@ export async function submitAll({ origin, key, work, decoder = null, fetchImpl =
         ...(Array.isArray(supported) && { supported_builds: supported }) };
     const res = await fetchImpl(`${origin}/api/replays/result/${claim.match_id}`, { method: 'POST', headers, body: JSON.stringify(body) });
     let status = (await res.json().catch(() => ({})))?.data?.status || `http_${res.status}`;
-    if (result.ok && status === 'awaiting_compact') {
-      // The export goes first: the compact upload is what marks a replay parsed.
-      status = await uploadExport({ origin, key, claim, files: result.files, fetchImpl }) || status;
-      if (status === 'awaiting_compact') {
-        const put = await fetchImpl(`${origin}/api/replays/result/${claim.match_id}/compact?claim=${claim.claim}`, {
-          method: 'PUT', headers: { 'X-Workflow-Key': key, 'Content-Type': 'application/gzip' }, body: result.blob });
-        status = (await put.json().catch(() => ({})))?.data?.status || `http_${put.status}`;
+    if (result.ok && ['awaiting_compact', 'awaiting_export'].includes(status)) {
+      // The export is declared first (its storage reserved), then the compact
+      // record is stored, which marks the replay parsed, and the export's parts
+      // follow (26 Nov 2026: they were most of the wait). The Function keeps
+      // the claim until every export file is complete, and a stale claim is
+      // retried; `awaiting_export` is such a retry of a stored replay.
+      const plan = await declareExport({ origin, key, claim, files: result.files, fetchImpl });
+      if (typeof plan === 'string') status = plan;
+      else {
+        if (status === 'awaiting_compact') {
+          const put = await fetchImpl(`${origin}/api/replays/result/${claim.match_id}/compact?claim=${claim.claim}`, {
+            method: 'PUT', headers: { 'X-Workflow-Key': key, 'Content-Type': 'application/gzip' }, body: result.blob });
+          status = (await put.json().catch(() => ({})))?.data?.status || `http_${put.status}`;
+        } else status = 'parsed';
+        if (status === 'parsed') {
+          const failure = await uploadExport({ origin, key, claim, files: result.files, plan, fetchImpl });
+          if (failure) status = `parsed_${failure}`;
+        }
       }
     }
     // A build the decoder did not know, decoded with a transform solved from

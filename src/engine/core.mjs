@@ -712,6 +712,12 @@ function replayProgressSteps(status){
     steps.push({key:'stored',label:'Stored',state:'done',detail:[status.parsed_at&&replayClock(status.parsed_at),c.rounds!=null&&`${c.rounds} rounds`,c.kills!=null&&`${c.kills} kills`,
       status.duration_ms&&`${Math.round(status.duration_ms/60000)} min`,status.build&&status.build.replace(/^\+\+Ares-Core\+release-/,'build '),
       status.export_bytes&&`full export ${replayMB(status.export_bytes)} MB`].filter(Boolean).join('; ')});
+    // Stored before its full export (26 Nov 2026); the research export follows.
+    if(status.export_complete===false){
+      const e=p.export;
+      steps.push({key:'export',label:e?'Storing the full export':'Full export',state:e?'active':'pending',
+        detail:e?`${e.files_done} of ${e.files} files, ${replayMB(e.bytes_done)} of ${replayMB(e.bytes)} MB`:'not stored yet; the parser retries it'});
+    }
   }
   if(s==='failed'||s==='rejected'){
     const key=REPLAY_FAILED_STEP[status.error]||'decode';
@@ -799,7 +805,7 @@ function watchReplay(id){
 
 function scheduleReplayPoll(){
   clearTimeout(replayImport.pollTimer);
-  const waiting=[...replayImport.status].filter(([,s])=>['pending','parsing'].includes(s.status)).map(([id])=>id);
+  const waiting=[...replayImport.status].filter(([,s])=>['pending','parsing'].includes(s.status)||(s.status==='parsed'&&s.export_complete===false)).map(([id])=>id);
   if(!waiting.length||replayImport.polls>=REPLAY_POLL_LIMIT){replayImport.polls=0;return;}
   replayImport.pollTimer=setTimeout(async()=>{
     if(activePage!=='matches')return;

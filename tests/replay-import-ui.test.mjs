@@ -152,3 +152,16 @@ test('an opened match card carries the replay row: match ID, status and upload',
   const source = readFileSync(new URL('../src/app/pages/Matches.jsx', import.meta.url), 'utf8');
   assert.equal(source.match(/<ReplaySection m=\{m\}\/>/g)?.length, 2, 'desktop and phone cards');
 });
+
+test('a stored replay shows its full export finishing after Stored', () => {
+  const base = { status: 'parsed', parsed_at: '2026-11-26T03:46:02Z', counts: { rounds: 28, kills: 211 }, progress: {} };
+  const plain = value => JSON.parse(JSON.stringify(value));
+  const keys = status => plain(ui.replayProgressSteps(status).map(step => [step.key, step.state]));
+  assert.deepEqual(keys({ ...base, export_complete: true, export_bytes: 1048576 }).at(-1), ['stored', 'done']);
+  const uploading = ui.replayProgressSteps({ ...base, export_complete: false,
+    progress: { export: { files: 14, files_done: 3, bytes: 60 * 1048576, bytes_done: 20 * 1048576 } } });
+  assert.deepEqual(plain(uploading.slice(-2).map(step => [step.key, step.state])), [['stored', 'done'], ['export', 'active']]);
+  assert.equal(uploading.at(-1).detail, '3 of 14 files, 20.0 of 60.0 MB');
+  assert.deepEqual(keys({ ...base, export_complete: false }).at(-1), ['export', 'pending'], 'waiting for a retry');
+  assert.deepEqual(keys({ ...base, export_complete: null }).at(-1), ['stored', 'done'], 'records stored before this change');
+});

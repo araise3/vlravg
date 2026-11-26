@@ -42,10 +42,14 @@ jobs:
     outputs:
       count: ${{ steps.claim.outputs.count }}
     steps:
+      # Speed (docs/replay-import.md#pipeline-timing): only the scripts are
+      # checked out (the index still lists parser/ for the digest), and the
+      # runner's own Node runs them.
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          sparse-checkout: |
+            .github/scripts
+            lib
       - id: decoder
         run: echo "patch=$(git ls-files -s parser | sha256sum | cut -c1-64)" >> "$GITHUB_OUTPUT"
       - id: claim
@@ -60,6 +64,8 @@ jobs:
           name: replays
           path: replay-work/replays
           retention-days: 1
+          # A .vrf is already compressed; zipping it again only costs time.
+          compression-level: 0
       - if: steps.claim.outputs.count != '0'
         uses: actions/upload-artifact@v4
         with:
@@ -78,7 +84,10 @@ jobs:
     outputs:
       patch: ${{ steps.decoder.outputs.patch }}
     steps:
+      # parser/ is checked out only when the cached binary is missing.
       - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
       - id: decoder
         run: echo "patch=$(git ls-files -s parser | sha256sum | cut -c1-64)" >> "$GITHUB_OUTPUT"
       - id: cache
@@ -90,6 +99,7 @@ jobs:
       # binary links against the glibc it will run with.
       - if: steps.cache.outputs.cache-hit != 'true'
         run: |
+          git sparse-checkout add parser
           docker run --rm -v "$PWD/parser:/src" -w /src "$RUST_IMAGE" cargo build --release --locked -p vrfkit
           mkdir -p toolchain-cache
           cp parser/target/release/vrfkit toolchain-cache/vrfkit
@@ -120,6 +130,9 @@ jobs:
     env:
       DECODER_PATCH: ${{ needs.toolchain.outputs.patch }}
     steps:
+      # The image pull runs while the artifacts download; the second pull
+      # waits for it (or for a pull of its own if the first one failed).
+      - run: (docker pull -q "$RUNTIME_IMAGE" >/tmp/pull.log 2>&1 &)
       - uses: actions/download-artifact@v4
         with:
           name: replays
@@ -128,13 +141,15 @@ jobs:
         with:
           name: toolchain
           path: toolchain
-      - run: docker pull "$RUNTIME_IMAGE"
+      - run: docker pull -q "$RUNTIME_IMAGE"
       - run: bash toolchain/replay-parse-sandbox.sh replay-work toolchain "$RUNTIME_IMAGE"
       - uses: actions/upload-artifact@v4
         with:
           name: parsed
           path: replay-work/parsed
           retention-days: 1
+          # Parquet and gzip are already compressed.
+          compression-level: 0
 
   submit:
     needs: [fetch, toolchain, parse]
@@ -146,9 +161,10 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          sparse-checkout: |
+            .github/scripts
+            lib
       - uses: actions/download-artifact@v4
         with:
           name: claims
