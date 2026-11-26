@@ -7,7 +7,7 @@
 // The full export tables are never opened here: only their names (an exact
 // allowlist) and sizes are checked before they are stored as opaque files.
 import { createHash } from 'node:crypto';
-import { appendFile, open, readFile, readdir, stat } from 'node:fs/promises';
+import { appendFile, lstat, open, readFile, stat, writeFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import { validateCompact, summarizeCompact, COMPACT_MAX_JSON_BYTES } from '../../lib/replay-compact.mjs';
 import { EXPORT_FILES, EXPORT_MAX_BYTES } from '../../lib/replay-import.mjs';
@@ -31,21 +31,40 @@ async function sha256File(path) {
   return hash.digest('hex');
 }
 
-// [{name, path, bytes, sha256}] or an error code.
-async function exportFiles(dir) {
-  let names;
-  try { names = await readdir(dir); } catch { return 'export_missing'; }
-  if (names.some(name => !EXPORT_FILES.includes(name)) || !names.includes('manifest.json') || !names.includes('movement.parquet'))
-    return 'export_missing';
-  const files = [];
-  for (const name of names) {
-    const info = await stat(`${dir}/${name}`);
-    if (!info.isFile() || info.size < 1) return 'export_missing';
-    if (info.size > EXPORT_FILE_MAX_BYTES) return 'oversize';
-    files.push({ name, path: `${dir}/${name}`, bytes: info.size, sha256: await sha256File(`${dir}/${name}`) });
+// The export's declared files [{name, bytes, sha256}] from the parse job's
+// export-files.json (replay-export-list.mjs), validated as untrusted, or an
+// error code. The files themselves arrive later (verifyExport).
+async function exportList(dir) {
+  const listed = await readSmall(`${dir}/export-files.json`, 16 * 1024);
+  if (listed?.oversize) return 'export_missing';
+  let files;
+  try { files = JSON.parse(listed?.text ?? 'null'); } catch { return 'export_missing'; }
+  if (!Array.isArray(files)) return 'export_missing';
+  const names = new Set();
+  for (const file of files) {
+    if (!file || Object.keys(file).sort().join() !== 'bytes,name,sha256' || !EXPORT_FILES.includes(file.name) || names.has(file.name)
+      || !Number.isSafeInteger(file.bytes) || file.bytes < 1 || !/^[0-9a-f]{64}$/.test(file.sha256)) return 'export_missing';
+    if (file.bytes > EXPORT_FILE_MAX_BYTES) return 'oversize';
+    names.add(file.name);
   }
+  if (!names.has('manifest.json') || !names.has('movement.parquet')) return 'export_missing';
   if (files.reduce((sum, file) => sum + file.bytes, 0) > EXPORT_MAX_BYTES) return 'oversize';
-  return files;
+  return files.map(({ name, bytes, sha256 }) => ({ name, bytes, sha256 }));
+}
+
+// The declared files with their paths, once each file under `dir` has exactly
+// its declared size and SHA-256; otherwise an error code.
+export async function verifyExport(files, dir) {
+  const out = [];
+  for (const file of files) {
+    const path = `${dir}/${file.name}`;
+    try {
+      const info = await lstat(path);
+      if (!info.isFile() || info.size !== file.bytes || await sha256File(path) !== file.sha256) return 'export_mismatch';
+    } catch { return 'export_mismatch'; }
+    out.push({ ...file, path });
+  }
+  return out;
 }
 
 // Returns {ok:true, summary, blob, files} or {ok:false, error}.
@@ -68,7 +87,7 @@ export async function prepareResult(claim, dir, decoder = null) {
   try { const s = JSON.parse(source?.text || 'null'); if (s?.bytes === claim.bytes && /^[0-9a-f]{64}$/.test(s.sha256)) sha256 = s.sha256; } catch {}
   if (!sha256 || doc.source.bytes !== claim.bytes || doc.source.sha256 !== sha256) return { ok: false, error: 'compact_invalid' };
   if (decoder && (doc.decoder.revision !== decoder.revision || doc.decoder.patch !== decoder.patch)) return { ok: false, error: 'compact_invalid' };
-  const files = await exportFiles(`${dir}/export`);
+  const files = await exportList(dir);
   if (typeof files === 'string') return { ok: false, error: files };
   const blob = gzipSync(JSON.stringify(doc), { level: 9 });
   return { ok: true, blob, files, summary: summarizeCompact(doc, { bytes: blob.byteLength, sha256: createHash('sha256').update(blob).digest('hex') }) };
@@ -117,13 +136,16 @@ export async function mapLimit(items, limit, fn) {
   }));
 }
 
-export async function submitAll({ origin, key, work, decoder = null, fetchImpl = fetch }) {
+// Phase 1: report each result and, for a good one, declare the export and
+// store the compact record (which marks the replay parsed). Needs only the
+// small `parsed` artifact. Returns the outcomes and the exports still to send.
+export async function submitRecords({ origin, key, work, decoder = null, fetchImpl = fetch }) {
   const claims = JSON.parse(await readFile(`${work}/claims/claims.json`, 'utf8'));
   // Written by the trusted toolchain job from the decoder's transform registry.
   let supported = null;
   try { supported = JSON.parse(await readFile(`${work}/decoder/supported-builds.json`, 'utf8')); } catch {}
   const headers = { 'X-Workflow-Key': key, 'Content-Type': 'application/json' };
-  const outcomes = [];
+  const outcomes = [], pending = [];
   for (const claim of claims) {
     const result = await prepareResult(claim, `${work}/parsed/${claim.match_id}`, decoder);
     const body = result.ok ? { claim: claim.claim, ok: true, summary: result.summary }
@@ -134,9 +156,9 @@ export async function submitAll({ origin, key, work, decoder = null, fetchImpl =
     if (result.ok && ['awaiting_compact', 'awaiting_export'].includes(status)) {
       // The export is declared first (its storage reserved), then the compact
       // record is stored, which marks the replay parsed, and the export's parts
-      // follow (26 Nov 2026: they were most of the wait). The Function keeps
-      // the claim until every export file is complete, and a stale claim is
-      // retried; `awaiting_export` is such a retry of a stored replay.
+      // follow in phase 2 (26 Nov 2026: they were most of the wait). The
+      // Function keeps the claim until every export file is complete, and a
+      // stale claim is retried; `awaiting_export` is such a retry.
       const plan = await declareExport({ origin, key, claim, files: result.files, fetchImpl });
       if (typeof plan === 'string') status = plan;
       else {
@@ -145,10 +167,7 @@ export async function submitAll({ origin, key, work, decoder = null, fetchImpl =
             method: 'PUT', headers: { 'X-Workflow-Key': key, 'Content-Type': 'application/gzip' }, body: result.blob });
           status = (await put.json().catch(() => ({})))?.data?.status || `http_${put.status}`;
         } else status = 'parsed';
-        if (status === 'parsed') {
-          const failure = await uploadExport({ origin, key, claim, files: result.files, plan, fetchImpl });
-          if (failure) status = `parsed_${failure}`;
-        }
+        if (status === 'parsed') pending.push({ claim, files: result.files, plan });
       }
     }
     // A build the decoder did not know, decoded with a transform solved from
@@ -159,12 +178,27 @@ export async function submitAll({ origin, key, work, decoder = null, fetchImpl =
       ? `${result.summary.replay.build.replace(/^\+\+Ares-Core\+release-/, '')} ${transform.line}` : null;
     outcomes.push({ match_id: claim.match_id, status, error: result.ok ? null : result.error, ...(solved && { solved }) });
   }
+  return { outcomes, pending };
+}
+
+// Phase 2: the export files, from the `parsed-export` artifact, each checked
+// against what phase 1 declared before any part is sent.
+export async function submitExports({ origin, key, work, pending, outcomes, fetchImpl = fetch }) {
+  for (const { claim, files, plan } of pending) {
+    const outcome = outcomes.find(o => o.match_id === claim.match_id);
+    const checked = await verifyExport(files, `${work}/parsed-export/${claim.match_id}/export`);
+    const failure = typeof checked === 'string' ? checked : await uploadExport({ origin, key, claim, files: checked, plan, fetchImpl });
+    if (failure) outcome.status = `parsed_${failure}`;
+  }
   return outcomes;
 }
 
-if (process.argv[1]?.endsWith('replay-submit.mjs')) {
-  const decoder = process.env.DECODER_REVISION ? { revision: process.env.DECODER_REVISION, patch: process.env.DECODER_PATCH || null } : null;
-  const outcomes = await submitAll({ origin: process.env.SITE_ORIGIN, key: process.env.HENRIK_WORKFLOW_KEY, work: process.argv[2] || 'replay-work', decoder });
+export async function submitAll(options) {
+  const { outcomes, pending } = await submitRecords(options);
+  return submitExports({ ...options, pending, outcomes });
+}
+
+async function finish(outcomes) {
   for (const o of outcomes) console.log(`${o.match_id} ${o.status}${o.error ? ` (${o.error})` : ''}`);
   for (const line of new Set(outcomes.map(o => o.solved).filter(Boolean))) {
     console.log(`::notice title=Payload transform solved from an upload::parser/transforms.txt line: ${line}`);
@@ -174,4 +208,23 @@ if (process.argv[1]?.endsWith('replay-submit.mjs')) {
     }
   }
   if (outcomes.some(o => !['parsed', 'failed', 'rejected'].includes(o.status))) process.exitCode = 1;
+}
+
+// `record` (phase 1) saves what `export` (phase 2) sends, on the runner's disk
+// only; the workflow downloads the large export artifact between the two, and
+// `export` reports every outcome. Default: both phases in one process.
+if (process.argv[1]?.endsWith('replay-submit.mjs')) {
+  const work = process.argv[2] || 'replay-work', phase = process.argv[3] || 'all';
+  const options = { origin: process.env.SITE_ORIGIN, key: process.env.HENRIK_WORKFLOW_KEY, work };
+  const state = `${work}/submit-state.json`;
+  if (phase === 'export') {
+    await finish(await submitExports({ ...options, ...JSON.parse(await readFile(state, 'utf8')) }));
+  } else {
+    const decoder = process.env.DECODER_REVISION ? { revision: process.env.DECODER_REVISION, patch: process.env.DECODER_PATCH || null } : null;
+    const recorded = await submitRecords({ ...options, decoder });
+    if (phase === 'record') {
+      await writeFile(state, JSON.stringify(recorded));
+      for (const o of recorded.outcomes) console.log(`${o.match_id} ${o.status} (record)`);
+    } else await finish(await submitExports({ ...options, ...recorded }));
+  }
 }

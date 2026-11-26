@@ -32,9 +32,13 @@ const compact = () => ({
 });
 
 const exportBytes = () => ({ 'manifest.json': Buffer.from('{}'), 'movement.parquet': Buffer.alloc(20 * 1024 * 1024 + 5, 9) });
-async function writeExport(dir, files = exportBytes()) {
-  await mkdir(join(dir, 'export'), { recursive: true });
-  for (const [name, bytes] of Object.entries(files)) await writeFile(join(dir, 'export', name), bytes);
+// The parse job's split output: export-files.json beside compact.json, and the
+// tables in the large artifact's folder (replay-export-list.mjs).
+async function writeExport(dir, files = exportBytes(), exportDir = join(dir, 'export')) {
+  await mkdir(exportDir, { recursive: true });
+  for (const [name, bytes] of Object.entries(files)) await writeFile(join(exportDir, name), bytes);
+  const list = Object.entries(files).map(([name, bytes]) => ({ name, bytes: Buffer.byteLength(bytes), sha256: sha(bytes) }));
+  await writeFile(join(dir, 'export-files.json'), JSON.stringify(list));
 }
 
 test('fetch only claims: claim IDs stay with the submit job, the parse job gets match IDs and sizes', async () => {
@@ -95,6 +99,8 @@ test('submit validates parser output as untrusted data', async () => {
   await writeExport(dir, { 'notes.txt': 'x' });
   assert.deepEqual(await prepareResult(claim, dir), { ok: false, error: 'export_missing' }, 'only allowlisted export files');
   await rm(join(dir, 'export'), { recursive: true });
+  await writeFile(join(dir, 'export-files.json'), JSON.stringify([{ name: 'manifest.json', bytes: 2, sha256: 'x' }]));
+  assert.deepEqual(await prepareResult(claim, dir), { ok: false, error: 'export_missing' }, 'the list is validated as untrusted');
   await writeExport(dir);
   const ok = await prepareResult(claim, dir);
   assert.equal(ok.ok, true);
@@ -110,7 +116,7 @@ test('submit posts the summary, then the matching blob', async () => {
   await writeFile(join(work, 'claims/claims.json'), JSON.stringify([claim]));
   await writeFile(join(work, 'parsed', matchId, 'compact.json'), JSON.stringify(compact()));
   await writeSource(join(work, 'parsed', matchId));
-  await writeExport(join(work, 'parsed', matchId));
+  await writeExport(join(work, 'parsed', matchId), exportBytes(), join(work, 'parsed-export', matchId, 'export'));
   const requests = [];
   const base = `https://site.test/api/replays/result/${matchId}`;
   const outcomes = await submitAll({ origin: 'https://site.test', key: 'k', work, fetchImpl: async (url, init) => {
@@ -206,9 +212,28 @@ test('submit reports a transform solved from an upload', async () => {
   doc.decoder.transform = { source: 'solved', line: '0x2c24_9eb3 0x33: sub 8, rotl 6, swap, xor 3, sub 1' };
   await writeFile(join(work, 'parsed', matchId, 'compact.json'), JSON.stringify(doc));
   await writeSource(join(work, 'parsed', matchId));
-  await writeExport(join(work, 'parsed', matchId));
+  await writeExport(join(work, 'parsed', matchId), exportBytes(), join(work, 'parsed-export', matchId, 'export'));
   const outcomes = await submitAll({ origin: 'https://site.test', key: 'k', work, fetchImpl: async () => Response.json({ data: { status: 'failed' } }) });
   assert.equal(outcomes[0].solved, '13.10 0x2c24_9eb3 0x33: sub 8, rotl 6, swap, xor 3, sub 1');
+});
+
+test('the parse job lists and moves each export; submit sends a file only if it matches the list', async () => {
+  const { splitExports } = await import('../.github/scripts/replay-export-list.mjs');
+  const { verifyExport } = await import('../.github/scripts/replay-submit.mjs');
+  const work = await mkdtemp(join(tmpdir(), 'replay-split-'));
+  const files = exportBytes();
+  await mkdir(join(work, 'parsed', matchId, 'export'), { recursive: true });
+  for (const [name, bytes] of Object.entries(files)) await writeFile(join(work, 'parsed', matchId, 'export', name), bytes);
+  await mkdir(join(work, 'parsed', 'failed-one'), { recursive: true });
+  assert.deepEqual(await splitExports(work), [matchId]);
+  const list = JSON.parse(await readFile(join(work, 'parsed', matchId, 'export-files.json'), 'utf8'));
+  assert.deepEqual(list, Object.entries(files).map(([name, bytes]) => ({ name, bytes: bytes.byteLength, sha256: sha(bytes) })));
+  assert.ok(!existsSync(join(work, 'parsed', matchId, 'export')), 'the tables left the small artifact');
+  const dir = join(work, 'parsed-export', matchId, 'export');
+  assert.deepEqual((await verifyExport(list, dir)).map(f => f.path), list.map(f => `${dir}/${f.name}`));
+  await writeFile(join(dir, 'manifest.json'), '{"x":1}');
+  assert.equal(await verifyExport(list, dir), 'export_mismatch', 'a changed file is not sent');
+  assert.equal(await verifyExport(list, join(work, 'missing')), 'export_mismatch');
 });
 
 test('the unpacker accepts exactly the export allowlist the Function accepts', () => {
@@ -252,6 +277,13 @@ test('the toolchain builds in parallel with fetch under a key that ignores unrel
   assert.doesNotMatch(toolchain, /hashFiles\('\.github\/workflows/, 'editing the workflow does not force a rebuild');
   assert.match(toolchain, /key: replay-toolchain-v3-\$\{\{ steps\.decoder\.outputs\.patch \}\}-\$\{\{ env\.RUST_IMAGE \}\}/);
   assert.match(toolchain, /cargo build --release --locked -p vrfkit/);
+  // The submit job stores the records before it downloads the large export.
+  const submit = workflow.slice(workflow.indexOf('\n  submit:'));
+  const at = text => submit.indexOf(text);
+  assert.ok(at('replay-submit.mjs replay-work record') > 0 && at('replay-submit.mjs replay-work record') < at('name: parsed-export')
+    && at('name: parsed-export') < at('replay-submit.mjs replay-work export'));
+  assert.match(workflow.slice(workflow.indexOf('\n  parse:'), workflow.indexOf('\n  submit:')),
+    /replay-export-list\.mjs replay-work[\s\S]*name: parsed\n[\s\S]*name: parsed-export\n/);
   const parse = workflow.slice(workflow.indexOf('\n  parse:'), workflow.indexOf('\n  submit:'));
   assert.match(parse, /needs: \[fetch, toolchain\]\n\s+if: needs\.fetch\.outputs\.count != '0'/);
 });

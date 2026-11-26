@@ -102,7 +102,7 @@ jobs:
       - run: |
           mkdir -p toolchain
           cp -r toolchain-cache/. toolchain/
-          cp .github/scripts/replay-parse-sandbox.sh .github/scripts/replay-unpack.py .github/scripts/replay-download.mjs toolchain/
+          cp .github/scripts/replay-parse-sandbox.sh .github/scripts/replay-unpack.py .github/scripts/replay-download.mjs .github/scripts/replay-export-list.mjs toolchain/
       - uses: actions/upload-artifact@v4
         with:
           name: toolchain
@@ -141,12 +141,22 @@ jobs:
         run: node toolchain/replay-download.mjs replay-work
       - run: docker pull -q "$RUNTIME_IMAGE"
       - run: bash toolchain/replay-parse-sandbox.sh replay-work toolchain "$RUNTIME_IMAGE"
+      # Two artifacts, so the submit job stores the record before it downloads
+      # the large export: the small one carries compact.json, source.json and
+      # export-files.json (names, sizes, SHA-256), the large one the tables.
+      - run: node toolchain/replay-export-list.mjs replay-work
       - uses: actions/upload-artifact@v4
         with:
           name: parsed
           path: replay-work/parsed
           retention-days: 1
-          # Parquet and gzip are already compressed.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: parsed-export
+          path: replay-work/parsed-export
+          retention-days: 1
+          if-no-files-found: ignore
+          # Parquet and JSON tables, already compressed or small.
           compression-level: 0
 
   submit:
@@ -175,8 +185,19 @@ jobs:
         with:
           name: decoder
           path: replay-work/decoder
+      # Phase 1 stores the records (the replays show as stored); phase 2 sends
+      # the exports, each file checked against the list phase 1 declared.
       - env:
           HENRIK_WORKFLOW_KEY: ${{ secrets.HENRIK_WORKFLOW_KEY }}
           SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg1.pages.dev' }}
           DECODER_PATCH: ${{ needs.toolchain.outputs.patch }}
-        run: node .github/scripts/replay-submit.mjs replay-work
+        run: node .github/scripts/replay-submit.mjs replay-work record
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: parsed-export
+          path: replay-work/parsed-export
+      - env:
+          HENRIK_WORKFLOW_KEY: ${{ secrets.HENRIK_WORKFLOW_KEY }}
+          SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg1.pages.dev' }}
+        run: node .github/scripts/replay-submit.mjs replay-work export
