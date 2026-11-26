@@ -1,8 +1,9 @@
 // Parser job 3 of 3 (holds HENRIK_WORKFLOW_KEY): validate what the sandboxed
 // parse job produced and report it. The parse job processed hostile input, so
 // its files are data only: each compact.json is size-capped, parsed and run
-// through the strict validator; its source size and hash must equal what the
-// fetch job recorded; error codes outside the fixed list become parser_failed.
+// through the strict validator; its source size must equal the claim's and its
+// hash the one the parse job computed outside its sandbox while downloading
+// (source.json); error codes outside the fixed list become parser_failed.
 // The full export tables are never opened here: only their names (an exact
 // allowlist) and sizes are checked before they are stored as opaque files.
 import { createHash } from 'node:crypto';
@@ -60,7 +61,12 @@ export async function prepareResult(claim, dir, decoder = null) {
   try {
     doc = validateCompact(JSON.parse(compact.text), { matchId: claim.match_id });
   } catch { return { ok: false, error: 'compact_invalid' }; }
-  if (doc.source.bytes !== claim.bytes || doc.source.sha256 !== claim.sha256) return { ok: false, error: 'compact_invalid' };
+  // The size the Function declared at claim time, and the hash the parse job
+  // computed outside its sandbox while downloading (replay-download.mjs).
+  const source = await readSmall(`${dir}/source.json`, 256);
+  let sha256 = null;
+  try { const s = JSON.parse(source?.text || 'null'); if (s?.bytes === claim.bytes && /^[0-9a-f]{64}$/.test(s.sha256)) sha256 = s.sha256; } catch {}
+  if (!sha256 || doc.source.bytes !== claim.bytes || doc.source.sha256 !== sha256) return { ok: false, error: 'compact_invalid' };
   if (decoder && (doc.decoder.revision !== decoder.revision || doc.decoder.patch !== decoder.patch)) return { ok: false, error: 'compact_invalid' };
   const files = await exportFiles(`${dir}/export`);
   if (typeof files === 'string') return { ok: false, error: files };

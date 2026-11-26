@@ -41,6 +41,8 @@ jobs:
       contents: read
     outputs:
       count: ${{ steps.claim.outputs.count }}
+      # Match IDs and sizes only; the parse job downloads the files itself.
+      jobs: ${{ steps.claim.outputs.jobs }}
     steps:
       # Speed (docs/replay-import.md#pipeline-timing): only the scripts are
       # checked out (the index still lists parser/ for the digest), and the
@@ -58,14 +60,6 @@ jobs:
           SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg1.pages.dev' }}
           DECODER_PATCH: ${{ steps.decoder.outputs.patch }}
         run: node .github/scripts/replay-fetch.mjs replay-work
-      - if: steps.claim.outputs.count != '0'
-        uses: actions/upload-artifact@v4
-        with:
-          name: replays
-          path: replay-work/replays
-          retention-days: 1
-          # A .vrf is already compressed; zipping it again only costs time.
-          compression-level: 0
       - if: steps.claim.outputs.count != '0'
         uses: actions/upload-artifact@v4
         with:
@@ -108,7 +102,7 @@ jobs:
       - run: |
           mkdir -p toolchain
           cp -r toolchain-cache/. toolchain/
-          cp .github/scripts/replay-parse-sandbox.sh .github/scripts/replay-unpack.py toolchain/
+          cp .github/scripts/replay-parse-sandbox.sh .github/scripts/replay-unpack.py .github/scripts/replay-download.mjs toolchain/
       - uses: actions/upload-artifact@v4
         with:
           name: toolchain
@@ -125,22 +119,26 @@ jobs:
     if: needs.fetch.outputs.count != '0'
     runs-on: ubuntu-24.04
     timeout-minutes: 90
-    # No secrets, no repository token scopes, no checkout, no cache.
-    permissions: {}
+    # No secrets, no repository token scopes, no checkout, no cache. The one
+    # permission is an OIDC token naming this job: the Function serves the
+    # replays this run claimed to it, once each (lib/actions-oidc.mjs). The
+    # sandbox never receives it (only the -e variables it lists).
+    permissions:
+      id-token: write
     env:
       DECODER_PATCH: ${{ needs.toolchain.outputs.patch }}
     steps:
-      # The image pull runs while the artifacts download; the second pull
+      # The image pull runs while the replays download; the second pull
       # waits for it (or for a pull of its own if the first one failed).
       - run: (docker pull -q "$RUNTIME_IMAGE" >/tmp/pull.log 2>&1 &)
       - uses: actions/download-artifact@v4
         with:
-          name: replays
-          path: replay-work/replays
-      - uses: actions/download-artifact@v4
-        with:
           name: toolchain
           path: toolchain
+      - env:
+          JOBS: ${{ needs.fetch.outputs.jobs }}
+          SITE_ORIGIN: ${{ vars.SITE_ORIGIN || 'https://vlravg1.pages.dev' }}
+        run: node toolchain/replay-download.mjs replay-work
       - run: docker pull -q "$RUNTIME_IMAGE"
       - run: bash toolchain/replay-parse-sandbox.sh replay-work toolchain "$RUNTIME_IMAGE"
       - uses: actions/upload-artifact@v4

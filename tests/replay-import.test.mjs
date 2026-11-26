@@ -452,6 +452,47 @@ test('a replay is stored before its full export, which then completes, or is ret
   assert.deepEqual((await f.call('POST', '/claim', { workflow: true })).json.data, [], 'nothing left to claim');
 });
 
+test('the parse job downloads a claimed replay once, with an OIDC token of the run that claimed it', async t => {
+  const { privateKey, publicKey } = await crypto.subtle.generateKey(
+    { name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign', 'verify']);
+  const jwk = { ...(await crypto.subtle.exportKey('jwk', publicKey)), kid: 'k1', alg: 'RS256', use: 'sig' };
+  const f = await fixture(t, { env: { REPLAY_OIDC_JWKS: JSON.stringify({ keys: [jwk] }) } });
+  const bytes = replayBytes(2 * 1024 * 1024);
+  await upload(f, bytes);
+  const [job] = (await f.call('POST', '/claim', { workflow: true, body: { run_id: '4242' } })).json.data;
+  const b64 = value => Buffer.from(typeof value === 'string' ? value : JSON.stringify(value)).toString('base64url');
+  const now = Math.floor(Date.now() / 1000);
+  const good = { iss: 'https://token.actions.githubusercontent.com', aud: 'vlravg-replay-raw', repository: 'araise3/vlravg',
+    job_workflow_ref: 'araise3/vlravg/.github/workflows/parse-replays.yml@refs/heads/main', run_id: '4242', iat: now, nbf: now, exp: now + 300 };
+  const sign = async (claims, { kid = 'k1', key = privateKey } = {}) => {
+    const head = `${b64({ alg: 'RS256', typ: 'JWT', kid })}.${b64(claims)}`;
+    return `${head}.${Buffer.from(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, Buffer.from(head))).toString('base64url')}`;
+  };
+  const get = async token => f.call('GET', `/raw-once/${matchId}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+
+  assert.equal((await get(null)).status, 401);
+  assert.equal((await f.call('GET', `/raw-once/${matchId}`, { workflow: true })).status, 401, 'the workflow key alone is not enough');
+  const other = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign']);
+  for (const [token, why] of [
+    [await sign(good, { key: other.privateKey }), 'another key'],
+    [await sign(good, { kid: 'k2' }), 'an unknown key ID'],
+    [await sign({ ...good, aud: 'sts.amazonaws.com' }), 'another audience'],
+    [await sign({ ...good, iss: 'https://evil.test' }), 'another issuer'],
+    [await sign({ ...good, exp: now - 600 }), 'expired'],
+    [await sign({ ...good, repository: 'someone/fork', job_workflow_ref: 'someone/fork/.github/workflows/parse-replays.yml@refs/heads/main' }), 'a fork'],
+    [await sign({ ...good, job_workflow_ref: 'araise3/vlravg/.github/workflows/parse-replays.yml@refs/heads/feature' }), 'another branch'],
+    [await sign({ ...good, job_workflow_ref: 'araise3/vlravg/.github/workflows/other.yml@refs/heads/main' }), 'another workflow'],
+  ]) assert.equal((await get(token)).status, 401, why);
+  assert.equal((await get(await sign({ ...good, run_id: '4243' }))).status, 404, 'another run did not claim it');
+
+  const res = await get(await sign(good));
+  assert.equal(res.status, 200);
+  assert.equal(res.response.headers.get('Cache-Control'), 'no-store');
+  assert.equal(sha(new Uint8Array(await res.response.arrayBuffer())), sha(bytes));
+  assert.equal((await get(await sign(good))).status, 404, 'once per claim');
+  assert.equal(job.match_id, matchId);
+});
+
 test('stored exports count against the storage cap', async t => {
   const f = await fixture(t);
   const saved = { ...REPLAY_LIMITS };

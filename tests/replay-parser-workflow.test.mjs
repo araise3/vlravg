@@ -8,7 +8,8 @@ import { createHash } from 'node:crypto';
 import { gunzipSync } from 'node:zlib';
 import { rm } from 'node:fs/promises';
 import { EXPORT_FILES } from '../lib/replay-import.mjs';
-import { fetchJobs } from '../.github/scripts/replay-fetch.mjs';
+import { fetchJobs, parseJobs } from '../.github/scripts/replay-fetch.mjs';
+import { actionsToken, downloadJobs } from '../.github/scripts/replay-download.mjs';
 import { prepareResult, submitAll } from '../.github/scripts/replay-submit.mjs';
 import { validateCompact } from '../lib/replay-compact.mjs';
 
@@ -16,7 +17,9 @@ const matchId = 'a27d4487-c781-4b73-8a9e-f4a468139bba';
 const claimId = '11111111-1111-4111-8111-111111111111';
 const raw = new Uint8Array(64).map((_, i) => i);
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
-const claim = { match_id: matchId, claim: claimId, bytes: raw.byteLength, sha256: sha(raw), error: null };
+const claim = { match_id: matchId, claim: claimId, bytes: raw.byteLength };
+// What the parse job's download step writes beside the sandbox output.
+const writeSource = dir => writeFile(join(dir, 'source.json'), JSON.stringify({ bytes: raw.byteLength, sha256: sha(raw) }));
 const compact = () => ({
   format: 'vlravg.replay-compact', version: 1, match_id: matchId,
   source: { bytes: raw.byteLength, sha256: sha(raw) }, decoder: { name: 'vrfkit', revision: 'b9496df61c40fa304d4f539689c1dd627804946e', patch: null,
@@ -34,21 +37,40 @@ async function writeExport(dir, files = exportBytes()) {
   for (const [name, bytes] of Object.entries(files)) await writeFile(join(dir, 'export', name), bytes);
 }
 
-test('fetch keeps claim IDs out of the parse job artifact', async () => {
+test('fetch only claims: claim IDs stay with the submit job, the parse job gets match IDs and sizes', async () => {
   const out = await mkdtemp(join(tmpdir(), 'replay-fetch-'));
   const calls = [];
   const claims = await fetchJobs({ origin: 'https://site.test', key: 'k', out, decoder: 'd', runId: '42', fetchImpl: async (url, init) => {
     calls.push([url, init.headers['X-Workflow-Key']]);
-    if (url.endsWith('/claim')) assert.deepEqual(JSON.parse(init.body), { decoder: 'd', run_id: '42' }, 'the claim names the decoder build and the run');
-    if (url.endsWith('/claim')) return Response.json({ data: [{ match_id: matchId, claim: claimId, bytes: raw.byteLength }, { match_id: '../x', claim: claimId, bytes: 1 }] });
-    return new Response(raw);
+    assert.deepEqual(JSON.parse(init.body), { decoder: 'd', run_id: '42' }, 'the claim names the decoder build and the run');
+    return Response.json({ data: [{ match_id: matchId, claim: claimId, bytes: raw.byteLength }, { match_id: '../x', claim: claimId, bytes: 1 }] });
   } });
-  assert.equal(claims.length, 1, 'malformed job IDs are dropped');
-  assert.ok(calls.every(([, key]) => key === 'k'));
-  const jobs = await readFile(join(out, 'replays/jobs.json'), 'utf8');
-  assert.deepEqual(JSON.parse(jobs), [{ match_id: matchId, bytes: raw.byteLength, sha256: sha(raw) }]);
-  assert.ok(!jobs.includes(claimId));
-  assert.equal(JSON.parse(await readFile(join(out, 'claims/claims.json'), 'utf8'))[0].claim, claimId);
+  assert.deepEqual(calls, [['https://site.test/api/replays/claim', 'k']], 'no download: the parse job fetches the files');
+  assert.deepEqual(claims, [claim], 'malformed job IDs are dropped');
+  assert.deepEqual(JSON.parse(await readFile(join(out, 'claims/claims.json'), 'utf8')), [claim]);
+  assert.deepEqual(parseJobs(claims), [{ match_id: matchId, bytes: raw.byteLength }]);
+  assert.ok(!JSON.stringify(parseJobs(claims)).includes(claimId));
+});
+
+test('the parse job downloads each claimed replay with its OIDC token and records size and hash outside the sandbox', async () => {
+  const token = await actionsToken({ url: 'https://oidc.test/token?x=1', token: 'req', fetchImpl: async (url, init) => {
+    assert.equal(url, 'https://oidc.test/token?x=1&audience=vlravg-replay-raw');
+    assert.equal(init.headers.Authorization, 'bearer req');
+    return Response.json({ value: 'jwt' });
+  } });
+  assert.equal(token, 'jwt');
+  await assert.rejects(actionsToken({ url: '', token: '' }), /id-token: write/);
+  const out = await mkdtemp(join(tmpdir(), 'replay-download-'));
+  const other = 'bd2ea657-0865-4cd7-934c-f6478cd43a64';
+  const requests = [];
+  const ready = await downloadJobs({ origin: 'https://site.test', out, idToken: 'jwt',
+    jobs: [{ match_id: matchId, bytes: raw.byteLength }, { match_id: other, bytes: 999 }, { match_id: '../x', bytes: 1 }],
+    fetchImpl: async (url, init) => { requests.push([url, init.headers.Authorization]); return new Response(raw); } });
+  assert.deepEqual(requests.sort(), [[`https://site.test/api/replays/raw-once/${matchId}`, 'Bearer jwt'], [`https://site.test/api/replays/raw-once/${other}`, 'Bearer jwt']]);
+  assert.deepEqual(ready, [{ match_id: matchId, bytes: raw.byteLength, sha256: sha(raw) }]);
+  assert.deepEqual(JSON.parse(await readFile(join(out, 'replays/jobs.json'), 'utf8')), ready);
+  assert.deepEqual(JSON.parse(await readFile(join(out, 'parsed', matchId, 'source.json'), 'utf8')), { bytes: raw.byteLength, sha256: sha(raw) });
+  assert.equal(await readFile(join(out, 'parsed', other, 'error.txt'), 'utf8'), 'download_failed\n', 'a wrong size is a failed download');
 });
 
 test('submit validates parser output as untrusted data', async () => {
@@ -61,8 +83,13 @@ test('submit validates parser output as untrusted data', async () => {
   assert.deepEqual(await prepareResult(claim, dir), { ok: false, error: 'parser_failed' });
   await write('compact.json', '{not json');
   assert.deepEqual(await prepareResult(claim, dir), { ok: false, error: 'compact_invalid' });
+  await write('compact.json', JSON.stringify(compact()));
+  assert.deepEqual(await prepareResult(claim, dir), { ok: false, error: 'compact_invalid' }, 'no record of the downloaded file');
+  await write('source.json', JSON.stringify({ bytes: raw.byteLength + 1, sha256: sha(raw) }));
+  assert.deepEqual(await prepareResult(claim, dir), { ok: false, error: 'compact_invalid' }, 'the download must have the claimed size');
+  await writeSource(dir);
   await write('compact.json', JSON.stringify({ ...compact(), source: { bytes: raw.byteLength, sha256: '0'.repeat(64) } }));
-  assert.deepEqual(await prepareResult(claim, dir), { ok: false, error: 'compact_invalid' }, 'source hash must match the fetch job');
+  assert.deepEqual(await prepareResult(claim, dir), { ok: false, error: 'compact_invalid' }, 'source hash must match the downloaded file');
   await write('compact.json', JSON.stringify(compact()));
   assert.deepEqual(await prepareResult(claim, dir), { ok: false, error: 'export_missing' }, 'the full export is required');
   await writeExport(dir, { 'notes.txt': 'x' });
@@ -82,6 +109,7 @@ test('submit posts the summary, then the matching blob', async () => {
   await mkdir(join(work, 'parsed', matchId), { recursive: true });
   await writeFile(join(work, 'claims/claims.json'), JSON.stringify([claim]));
   await writeFile(join(work, 'parsed', matchId, 'compact.json'), JSON.stringify(compact()));
+  await writeSource(join(work, 'parsed', matchId));
   await writeExport(join(work, 'parsed', matchId));
   const requests = [];
   const base = `https://site.test/api/replays/result/${matchId}`;
@@ -118,8 +146,8 @@ test('the parse job holds no secrets and runs the parser in a locked-down contai
   const workflow = readFileSync(new URL('../.github/workflows/parse-replays.yml', import.meta.url), 'utf8');
   const parse = workflow.slice(workflow.indexOf('\n  parse:'), workflow.indexOf('\n  submit:'));
   assert.match(workflow, /^permissions: \{\}$/m);
-  assert.match(parse, /permissions: \{\}/);
-  assert.doesNotMatch(parse, /secrets\.|actions\/checkout|actions\/cache/);
+  assert.match(parse, /permissions:\n\s+id-token: write\n\s+env:/, 'the only permission is its OIDC token');
+  assert.doesNotMatch(parse, /secrets\.|actions\/checkout|actions\/cache|name: replays/);
   assert.doesNotMatch(workflow, /workflow_dispatch:\n\s+inputs:/, 'dispatch takes no inputs');
   assert.match(workflow, /RUNTIME_IMAGE: python:3\.12-slim-bookworm@sha256:[0-9a-f]{64}/);
   const sandbox = readFileSync(new URL('../.github/scripts/replay-parse-sandbox.sh', import.meta.url), 'utf8');
@@ -127,6 +155,8 @@ test('the parse job holds no secrets and runs the parser in a locked-down contai
     assert.ok(sandbox.includes(flag), flag);
   }
   assert.doesNotMatch(sandbox, /:\/out:rw|-v "[^"]*:rw"/, 'no writable bind mount');
+  assert.doesNotMatch(sandbox, /ACTIONS_ID_TOKEN|--env-file|-e [A-Z_]+ /, 'the OIDC token never reaches the container');
+  assert.ok([...sandbox.matchAll(/-e ([A-Z_]+)=/g)].every(m => ['MATCH_ID', 'SOURCE_BYTES', 'SOURCE_SHA256', 'DECODER_REVISION', 'DECODER_PATCH', 'HOME'].includes(m[1])));
 });
 
 test('the decoder is parser/, named by its upstream base and its tree digest, and checked on submit', async () => {
@@ -140,6 +170,7 @@ test('the decoder is parser/, named by its upstream base and its tree digest, an
   assert.doesNotMatch(workflow, /git clone|git -C vrfkit|VRFKIT_/, 'no upstream clone or patch');
   const dir = await mkdtemp(join(tmpdir(), 'replay-decoder-'));
   await writeFile(join(dir, 'compact.json'), JSON.stringify(compact()));
+  await writeSource(dir);
   await writeExport(dir);
   const base = { revision: 'b9496df61c40fa304d4f539689c1dd627804946e', patch: null };
   assert.equal((await prepareResult(claim, dir, base)).ok, true);
@@ -174,6 +205,7 @@ test('submit reports a transform solved from an upload', async () => {
   doc.replay.build = '++Ares-Core+release-13.10';
   doc.decoder.transform = { source: 'solved', line: '0x2c24_9eb3 0x33: sub 8, rotl 6, swap, xor 3, sub 1' };
   await writeFile(join(work, 'parsed', matchId, 'compact.json'), JSON.stringify(doc));
+  await writeSource(join(work, 'parsed', matchId));
   await writeExport(join(work, 'parsed', matchId));
   const outcomes = await submitAll({ origin: 'https://site.test', key: 'k', work, fetchImpl: async () => Response.json({ data: { status: 'failed' } }) });
   assert.equal(outcomes[0].solved, '13.10 0x2c24_9eb3 0x33: sub 8, rotl 6, swap, xor 3, sub 1');
