@@ -1,0 +1,82 @@
+//! The values the decoder produces. The exporter builds Parquet columns
+//! straight from [`MovementMove`], so its field names and units are a contract.
+
+/// A single decoded movement sample (one "move" from one character update).
+#[derive(Debug, Clone, Copy)]
+pub struct MovementMove {
+    /// The character's network GUID (identifies which player/character).
+    pub shooter_character_net_guid: u32,
+    /// Position in Unreal world coordinates (cm).
+    pub pos_x: f64,
+    pub pos_y: f64,
+    pub pos_z: f64,
+    /// Yaw in degrees [0, 360).
+    pub yaw: f64,
+    /// Pitch in degrees [0, 360).
+    pub pitch: f64,
+    /// Velocity (cm/s). Only present for variant-1 moves; zero for variant-0.
+    pub vel_x: f64,
+    pub vel_y: f64,
+    pub vel_z: f64,
+    /// Server-assigned timestamp (VLQ-encoded tick).
+    pub timestamp: u32,
+    /// Movement state byte.
+    pub movement_state: u8,
+    /// Mode flags byte (same as movement_state in the wire format).
+    pub mode_flags: u8,
+    /// 0 = variant0, 1 = variant1.
+    pub move_type: u8,
+}
+
+/// A character update descriptor. The decoder never builds one (moves go out
+/// through its callback); kept for callers that construct it.
+#[derive(Debug, Clone)]
+pub struct MovementUpdate {
+    /// Index within the batch.
+    pub index: u32,
+    /// The character GUID this update belongs to.
+    pub shooter_character_net_guid: Option<u32>,
+    /// Number of moves decoded for this update.
+    pub move_count: u32,
+}
+
+/// Result of decoding the full RPC payload.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct RpcDecodeResult {
+    /// Total moves decoded across all updates.
+    pub total_moves: u32,
+    /// Declared array capacity, not the number of changed character updates.
+    pub update_count: u32,
+    /// Losses, per occurrence; nonzero keeps the batch's payload as a raw row.
+    /// A failed component stream loses itself, a failed framing read the rest
+    /// of its updates array. Also counted, as each would otherwise look like
+    /// empty updates: an index past the declared count, a field longer than its
+    /// window, a shooter-GUID field not 32 bits wide, a stream with no GUID,
+    /// a missing array zero index, and bits after it other than one IntPacked byte.
+    pub error_count: u32,
+    /// Sections in a `movementBitCount`-sized window that stopped with bits
+    /// unread: at a zero marker (a drifted cursor loses every later move), or
+    /// too short for the magic or the first marker. Not counted: an empty
+    /// window, or the unread end within 31 bits of a move. A tally, not an error.
+    pub sized_section_tails: u32,
+    /// Bits left unread by the sections counted in [`Self::sized_section_tails`].
+    pub sized_section_tail_bits: u64,
+    /// The same for windows that ran to the end of the component stream, kept
+    /// apart: after a zero marker there, the rest may be component data.
+    pub open_section_tails: u32,
+    /// Bits left unread by the sections counted in [`Self::open_section_tails`].
+    pub open_section_tail_bits: u64,
+    /// Components with bits after a nonzero, fitting `movementBitCount`
+    /// window. Separate from unread bits inside it and outside the envelope.
+    pub sized_section_trailers: u32,
+    /// Bits after the windows counted in [`Self::sized_section_trailers`],
+    /// tallied even when parsing the section fails. A tally, not an error.
+    pub sized_section_trailer_bits: u64,
+    /// Byte-wrapped streams, counted when the envelope is cut out, before its
+    /// section is parsed and whether or not bits follow: a vanished trailer
+    /// reads as bits short of 24 per stream.
+    pub envelope_trailer_streams: u32,
+    /// Bits after those envelopes, never read: 24 per stream on every measured
+    /// replay. A tally like the section tails.
+    pub envelope_trailer_bits: u64,
+}

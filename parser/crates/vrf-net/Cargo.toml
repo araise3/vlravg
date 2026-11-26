@@ -1,0 +1,24 @@
+[package]
+name = "vrf-net"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Unreal Engine replication: packets, bunches, and content-block framing"
+
+[dependencies]
+vrf-bitio = { workspace = true }
+vrf-transform = { workspace = true }
+# Direct path: only a direct entry can turn the checkpoint default off.
+vrf-schema = { path = "../vrf-schema", default-features = false }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+vrf-testkit = { workspace = true }
+
+# `diagnostics` is a no-op kept for dependents that name it: the event log is
+# always built.
+[features]
+default = ["diagnostics"]
+diagnostics = []

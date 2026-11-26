@@ -1,0 +1,7 @@
+[package]
+name = "vrf-testkit"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+description = "Test-only encoders for the wire formats vrfkit reads"

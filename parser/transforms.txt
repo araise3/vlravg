@@ -1,0 +1,10 @@
+# Payload transforms added as data (vlravg fork; docs/replay-parser.md).
+# One build per line: <build> <SEED_ADDEND> <[-]INIT_A_OFFSET>: <steps>
+# Builds compiled into crates/vrf-transform/src/lib.rs need no line here; a
+# line here overrides the compiled one. Each line records how it was obtained.
+
+# 13.10: solved by `vrfkit solve` from replay 41403afd (2026-11-26), oracle
+# PASS on every ReplayData block. Upstream vrfkit v0.7.0 spells the same
+# function `sub 8, not, rotl 6, swap, xor 3, not, sub 1` (the two `not`s
+# commute with rotl/swap/xor and cancel); tests hold the two equal.
+13.10 0x2c24_9eb3 0x33: sub 8, rotl 6, swap, xor 3, sub 1

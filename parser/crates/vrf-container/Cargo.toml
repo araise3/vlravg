@@ -1,0 +1,36 @@
+[package]
+name = "vrf-container"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The .vrf container: replay info, header, chunk stream and Oodle decompression"
+
+[features]
+# What each flag turns off: the feature table in src/lib.rs. All on by default:
+# in-tree consumers use everything, and the default sets what `cargo test` covers.
+default = ["oodle", "event", "checkpoint"]
+
+# The only flag that removes a dependency.
+oodle = ["dep:oozextract"]
+
+event = []
+
+# Independent of `oodle`: without it a checkpoint parses but cannot be inflated.
+checkpoint = []
+
+# The corpus test parses Event chunks and inflates ReplayData. Cargo silently
+# skips it in a reduced feature set, even with VRFKIT_REQUIRE_CORPUS set.
+[[test]]
+name = "corpus"
+required-features = ["event", "oodle"]
+
+[dependencies]
+vrf-bitio = { workspace = true }
+thiserror = { workspace = true }
+# MIT-licensed; not `oozle`, whose GPL-3.0-or-later would relicense this crate.
+oozextract = { workspace = true, optional = true }
+
+[dev-dependencies]
+vrf-testkit = { workspace = true }

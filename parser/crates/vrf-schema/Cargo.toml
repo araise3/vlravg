@@ -1,0 +1,21 @@
+[package]
+name = "vrf-schema"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "The replay's own dynamic schema: net field export groups and the GUID cache"
+
+[features]
+default = ["checkpoint"]
+
+# The Checkpoint-chunk table reader; a consumer of ReplayData alone can drop it.
+checkpoint = []
+
+[dependencies]
+vrf-bitio = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+vrf-testkit = { workspace = true }

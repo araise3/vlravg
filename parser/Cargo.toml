@@ -1,0 +1,39 @@
+[workspace]
+resolver = "3"
+members = ["crates/*", "dev/vrf-testkit"]
+
+[workspace.package]
+version = "0.3.0"
+edition = "2024"
+rust-version = "1.86"
+license = "Apache-2.0"
+repository = "https://github.com/yakisoba0728/vrfkit"
+description = "VALORANT replay (.vrf) parser and analysis toolkit"
+
+[workspace.dependencies]
+vrf-bitio = { path = "crates/vrf-bitio" }
+vrf-transform = { path = "crates/vrf-transform" }
+vrf-container = { path = "crates/vrf-container" }
+vrf-schema = { path = "crates/vrf-schema" }
+vrf-net = { path = "crates/vrf-net" }
+# Off here: a member cannot turn off a workspace dependency's default features.
+vrf-export = { path = "crates/vrf-export", default-features = false }
+vrf-frame = { path = "crates/vrf-frame" }
+vrf-movement = { path = "crates/vrf-movement" }
+vrf-decode = { path = "crates/vrf-decode" }
+vrf-testkit = { path = "dev/vrf-testkit" }
+thiserror = "2"
+oozextract = "0.5.4"
+# Payloads <=16 bytes stay inline; `union`'s unsafe is smallvec's, not ours.
+smallvec = { version = "1", features = ["union"] }
+
+# Fat LTO and one codegen unit let the bit reader inline into the transform loops.
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+debug = 1
+
+# Corpus tests decode whole replays; debug assertions stay on for the bit reader.
+[profile.test]
+opt-level = 2

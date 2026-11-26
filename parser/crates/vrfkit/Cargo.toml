@@ -1,0 +1,44 @@
+[package]
+name = "vrfkit"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "CLI for inspecting, validating, and exporting VALORANT replay files"
+
+[[bin]]
+name = "vrfkit"
+path = "src/main.rs"
+
+[features]
+# `export` is the only optional part: without it `inspect`, `validate` and `diag`
+# remain and arrow, parquet and zstd leave the graph. The decode crates get no
+# flag: `validate` runs all of them on every packet.
+default = ["export"]
+export = [
+    "vrf-export/fields",
+    "vrf-export/movement",
+    "vrf-export/actors",
+    "vrf-export/net-guids",
+    "vrf-export/events",
+    "vrf-export/partials",
+    "vrf-export/checkpoint-context",
+]
+
+[dependencies]
+vrf-bitio = { workspace = true }
+vrf-container = { workspace = true }
+vrf-schema = { workspace = true }
+vrf-net = { workspace = true }
+vrf-export = { workspace = true }
+vrf-frame = { workspace = true }
+vrf-movement = { workspace = true }
+vrf-decode = { workspace = true }
+smallvec = { workspace = true }
+thiserror = { workspace = true }
+vrf-transform = { workspace = true }
+serde_json = "1"
+
+[dev-dependencies]
+vrf-testkit = { workspace = true }
